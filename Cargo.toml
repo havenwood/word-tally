@@ -1,0 +1,16 @@
+[package]
+name = "word_count"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[dependencies]
+clap = { version = "4.5.4", features = ["derive"] }
+unicode-segmentation = "1.11.0"
+
+[profile.release]
+lto = true
+strip = true
+opt-level = 3
+codegen-units = 1
+panic = 'abort'
