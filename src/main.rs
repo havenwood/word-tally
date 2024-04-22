@@ -11,8 +11,17 @@ fn main() {
     let word_count = WordCount::new(&cli.path, !cli.no_sort);
 
     if cli.verbose {
-        println!("word_count: {}", word_count.path);
-        println!("sorted: {}\n", word_count.sorted);
+        println!("path: {}", word_count.path);
+        println!("sorted: {}", word_count.sorted);
+    }
+
+    if cli.debug {
+        println!("verbose: {}", cli.verbose);
+        println!("debug: {}", cli.debug);
+    }
+
+    if cli.verbose || cli.debug {
+        println!();
     }
 
     for (word, count) in word_count.tally {
@@ -30,6 +39,8 @@ struct Cli {
     verbose: bool,
     #[arg(short, long, help = "Print unsorted word count")]
     no_sort: bool,
+    #[arg(short, long, help = "Print debugging details")]
+    debug: bool,
 }
 
 use core::cmp::Reverse;
