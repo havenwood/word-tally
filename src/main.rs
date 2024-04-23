@@ -8,11 +8,11 @@
 #[unix_sigpipe = "sig_dfl"]
 fn main() {
     let cli = Cli::parse();
-    let word_count = WordCount::new(&cli.path, !cli.no_sort);
+    let word_tally = WordTally::new(&cli.path, !cli.no_sort);
 
     if cli.verbose {
-        println!("path: {}", word_count.path);
-        println!("sorted: {}", word_count.sorted);
+        println!("path: {}", word_tally.path);
+        println!("sorted: {}", word_tally.sorted);
     }
 
     if cli.debug {
@@ -24,7 +24,7 @@ fn main() {
         println!();
     }
 
-    for (word, count) in word_count.tally {
+    for (word, count) in word_tally.tally {
         println!("{word}: {count}");
     }
 }
@@ -52,26 +52,26 @@ use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Clone, Debug)]
 #[non_exhaustive]
-pub struct WordCount {
+pub struct WordTally {
     pub path: String,
     pub sorted: bool,
     pub tally: Vec<(String, u64)>,
 }
 
-impl WordCount {
+impl WordTally {
     #[must_use]
     pub fn new(path: &str, sort: bool) -> Self {
-        let mut word_count = Self {
+        let mut word_tally = Self {
             path: Self::absolut_path(path),
             sorted: false,
             tally: Vec::from_iter(Self::tally(Self::lines(path))),
         };
 
         if sort {
-            word_count.sort();
+            word_tally.sort();
         }
 
-        word_count
+        word_tally
     }
 
     pub fn sort(&mut self) {
