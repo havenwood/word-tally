@@ -9,8 +9,9 @@ clap = { version = "4.5.4", features = ["derive"] }
 unicode-segmentation = "1.11.0"
 
 [profile.release]
-lto = true
-strip = true
-opt-level = 3
 codegen-units = 1
-panic = 'abort'
+incremental = true
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true
