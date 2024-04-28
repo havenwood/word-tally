@@ -1,4 +1,4 @@
-#![feature(absolute_path, unix_sigpipe)]
+#![feature(unix_sigpipe)]
 #![warn(clippy::nursery, clippy::pedantic)]
 #![warn(deprecated_in_future, future_incompatible)]
 #![warn(nonstandard_style, rust_2021_incompatible_or_patterns)]
