@@ -31,7 +31,7 @@ fn main() {
     for (word, count) in word_tally.tally {
         println!(
             "{word}{}{count}",
-            unescaper::unescape(&args.delimiter).unwrap()
+            unescaper::unescape(&args.delimiter).expect("Unable to unescape delimiter")
         );
     }
 }
