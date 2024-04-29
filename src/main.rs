@@ -36,13 +36,13 @@ fn main() {
     }
 }
 
-use clap::{Parser, ValueHint};
+use clap::Parser;
 use clap_stdin::FileOrStdin;
 
 #[derive(Debug, Parser)]
 #[command(about, version)]
 struct Args {
-    #[clap(default_value = "-", value_hint = ValueHint::FilePath)]
+    #[clap(default_value = "-")]
     input: FileOrStdin,
     #[clap(
         short = 'D',
