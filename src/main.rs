@@ -51,11 +51,11 @@ struct Args {
         help = "Delimiter between word and count"
     )]
     delimiter: String,
-    #[arg(short, long, help = "Unsorted word count")]
+    #[arg(short, long, help = "Unsorted word count order")]
     no_sort: bool,
-    #[arg(short, long, help = "Print additional debugging information")]
+    #[arg(short, long, help = "Additional debugging information")]
     debug: bool,
-    #[arg(short, long, help = "Print verbose command details")]
+    #[arg(short, long, help = "Verbose command details")]
     verbose: bool,
 }
 
