@@ -29,7 +29,10 @@ fn main() {
     }
 
     for (word, count) in word_tally.tally {
-        println!("{word}: {count}");
+        println!(
+            "{word}{}{count}",
+            unescaper::unescape(&args.delimiter).unwrap()
+        );
     }
 }
 
@@ -41,12 +44,19 @@ use clap_stdin::FileOrStdin;
 struct Args {
     #[clap(default_value = "-", value_hint = ValueHint::FilePath)]
     input: FileOrStdin,
-    #[arg(short, long, help = "Print additional details")]
-    verbose: bool,
-    #[arg(short, long, help = "Print unsorted word count")]
+    #[clap(
+        short = 'D',
+        long,
+        default_value = ": ",
+        help = "Delimiter between word and count"
+    )]
+    delimiter: String,
+    #[arg(short, long, help = "Unsorted word count")]
     no_sort: bool,
-    #[arg(short, long, help = "Print debugging details")]
+    #[arg(short, long, help = "Print additional debugging information")]
     debug: bool,
+    #[arg(short, long, help = "Print verbose command details")]
+    verbose: bool,
 }
 
 use core::cmp::Reverse;
