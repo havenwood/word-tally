@@ -17,11 +17,11 @@ fn main() {
 
     if args.verbose {
         println!("source{delimiter}{:#?}", args.input.source);
-        println!("sorted{delimiter}{}", word_tally.sorted);
-        println!("delimiter{delimiter}{delimiter:#?}");
     }
 
     if args.debug {
+        println!("delimiter{delimiter}{delimiter:#?}");
+        println!("sorted{delimiter}{}", word_tally.sorted);
         println!("verbose{delimiter}{}", args.verbose);
         println!("debug{delimiter}{}", args.debug);
     }
