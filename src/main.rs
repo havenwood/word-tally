@@ -13,16 +13,17 @@
 fn main() {
     let args = Args::parse();
     let word_tally = WordTally::new(&args.input, !args.no_sort);
+    let delimiter = unescaper::unescape(&args.delimiter).expect("Unable to unescape delimiter");
 
     if args.verbose {
-        println!("source: {:#?}", args.input.source);
-        println!("sorted: {}", word_tally.sorted);
-        println!("delimiter: {:#?}", args.delimiter);
+        println!("source{delimiter}{:#?}", args.input.source);
+        println!("sorted{delimiter}{}", word_tally.sorted);
+        println!("delimiter{delimiter}{delimiter:#?}");
     }
 
     if args.debug {
-        println!("verbose: {}", args.verbose);
-        println!("debug: {}", args.debug);
+        println!("verbose{delimiter}{}", args.verbose);
+        println!("debug{delimiter}{}", args.debug);
     }
 
     if args.verbose || args.debug {
@@ -30,10 +31,7 @@ fn main() {
     }
 
     for (word, count) in word_tally.tally {
-        println!(
-            "{word}{}{count}",
-            unescaper::unescape(&args.delimiter).expect("Unable to unescape delimiter")
-        );
+        println!("{word}{delimiter}{count}");
     }
 }
 
