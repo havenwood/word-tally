@@ -17,6 +17,7 @@ fn main() {
     if args.verbose {
         println!("source: {:#?}", args.input.source);
         println!("sorted: {}", word_tally.sorted);
+        println!("delimiter: {:#?}", args.delimiter);
     }
 
     if args.debug {
