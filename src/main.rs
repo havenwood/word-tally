@@ -39,7 +39,12 @@ fn main() -> Result<(), unescaper::Error> {
 
 use clap::Parser;
 use clap_stdin::FileOrStdin;
+use core::cmp::Reverse;
+use core::panic;
+use std::collections::HashMap;
+use std::io::{self, BufRead, BufReader, Lines, Read};
 use std::path::PathBuf;
+use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Parser)]
 #[command(about, version)]
@@ -60,11 +65,6 @@ struct Args {
     #[arg(short, long, help = "Verbose command details")]
     verbose: bool,
 }
-
-use core::cmp::Reverse;
-use std::collections::HashMap;
-use std::io::{self, BufRead, BufReader, Lines, Read};
-use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Clone, Debug)]
 #[non_exhaustive]
