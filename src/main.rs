@@ -99,14 +99,10 @@ impl WordTally {
     }
 
     fn lines(input: &FileOrStdin<PathBuf>) -> Lines<BufReader<impl Read>> {
-        let reader = input.into_reader();
-        assert!(
-            reader.is_ok(),
-            "Input source unreadable: {:#?}",
-            input.source
-        );
-
-        io::BufReader::new(reader.unwrap()).lines()
+        match input.into_reader() {
+            Ok(readable) => io::BufReader::new(readable).lines(),
+            Err(err) => panic!("{err} -- {:#?}", input.source),
+        }
     }
 
     fn tally(lines: io::Lines<BufReader<impl Read>>) -> HashMap<String, u64> {
