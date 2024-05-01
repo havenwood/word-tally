@@ -26,18 +26,18 @@ fn main() -> Result<(), unescaper::Error> {
     let delimiter = unescape(&args.delimiter)?;
 
     if args.verbose {
-        println!("source{delimiter}{:#?}", args.input.source);
+        eprintln!("source{delimiter}{:#?}", args.input.source);
     }
 
     if args.debug {
-        println!("delimiter{delimiter}{delimiter:#?}");
-        println!("sorted{delimiter}{}", word_tally.sorted);
-        println!("verbose{delimiter}{}", args.verbose);
-        println!("debug{delimiter}{}", args.debug);
+        eprintln!("delimiter{delimiter}{delimiter:#?}");
+        eprintln!("sorted{delimiter}{}", word_tally.sorted);
+        eprintln!("verbose{delimiter}{}", args.verbose);
+        eprintln!("debug{delimiter}{}", args.debug);
     }
 
     if args.verbose || args.debug {
-        println!();
+        eprintln!();
     }
 
     for (word, count) in word_tally.tally {
