@@ -9,11 +9,21 @@
 #![warn(rust_2024_compatibility)]
 #![warn(unused)]
 
+use clap::Parser;
+use clap_stdin::FileOrStdin;
+use core::cmp::Reverse;
+use core::panic;
+use std::collections::HashMap;
+use std::io::{self, BufRead, BufReader, Lines, Read};
+use std::path::PathBuf;
+use unescaper::unescape;
+use unicode_segmentation::UnicodeSegmentation;
+
 #[unix_sigpipe = "sig_dfl"]
 fn main() -> Result<(), unescaper::Error> {
     let args = Args::parse();
     let word_tally = WordTally::new(&args.input, !args.no_sort);
-    let delimiter = unescaper::unescape(&args.delimiter)?;
+    let delimiter = unescape(&args.delimiter)?;
 
     if args.verbose {
         println!("source{delimiter}{:#?}", args.input.source);
@@ -36,15 +46,6 @@ fn main() -> Result<(), unescaper::Error> {
 
     Ok(())
 }
-
-use clap::Parser;
-use clap_stdin::FileOrStdin;
-use core::cmp::Reverse;
-use core::panic;
-use std::collections::HashMap;
-use std::io::{self, BufRead, BufReader, Lines, Read};
-use std::path::PathBuf;
-use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Debug, Parser)]
 #[command(about, version)]
