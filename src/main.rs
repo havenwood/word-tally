@@ -10,10 +10,10 @@
 #![warn(unused)]
 
 #[unix_sigpipe = "sig_dfl"]
-fn main() {
+fn main() -> Result<(), unescaper::Error> {
     let args = Args::parse();
     let word_tally = WordTally::new(&args.input, !args.no_sort);
-    let delimiter = unescaper::unescape(&args.delimiter).expect("Unable to unescape delimiter");
+    let delimiter = unescaper::unescape(&args.delimiter)?;
 
     if args.verbose {
         println!("source{delimiter}{:#?}", args.input.source);
@@ -33,6 +33,8 @@ fn main() {
     for (word, count) in word_tally.tally {
         println!("{word}{delimiter}{count}");
     }
+
+    Ok(())
 }
 
 use clap::Parser;
