@@ -93,7 +93,7 @@ impl WordTally {
         }
 
         self.tally
-            .sort_unstable_by_key(|(_, count)| Reverse(*count));
+            .sort_unstable_by_key(|&(_, count)| Reverse(count));
         self.sorted = true;
     }
 
