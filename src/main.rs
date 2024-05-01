@@ -39,12 +39,13 @@ fn main() -> Result<(), unescaper::Error> {
 
 use clap::Parser;
 use clap_stdin::FileOrStdin;
+use std::path::PathBuf;
 
 #[derive(Debug, Parser)]
 #[command(about, version)]
 struct Args {
     #[clap(default_value = "-")]
-    input: FileOrStdin,
+    input: FileOrStdin<PathBuf>,
     #[clap(
         short = 'D',
         long,
@@ -74,7 +75,7 @@ pub struct WordTally {
 
 impl WordTally {
     #[must_use]
-    pub fn new(input: &FileOrStdin, sort: bool) -> Self {
+    pub fn new(input: &FileOrStdin<PathBuf>, sort: bool) -> Self {
         let mut word_tally = Self {
             sorted: false,
             tally: Vec::from_iter(Self::tally(Self::lines(input))),
@@ -97,7 +98,7 @@ impl WordTally {
         self.sorted = true;
     }
 
-    fn lines(input: &FileOrStdin) -> Lines<BufReader<impl Read>> {
+    fn lines(input: &FileOrStdin<PathBuf>) -> Lines<BufReader<impl Read>> {
         let reader = input.into_reader();
         assert!(
             reader.is_ok(),
