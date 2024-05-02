@@ -16,10 +16,10 @@ use crate::args::Args;
 use crate::word_tally::WordTally;
 
 use clap::Parser;
-use unescaper::unescape;
+use unescaper::{unescape, Error};
 
 #[unix_sigpipe = "sig_dfl"]
-fn main() -> Result<(), unescaper::Error> {
+fn main() -> Result<(), Error> {
     let args = Args::parse();
     let word_tally = WordTally::new(&args.input, !args.no_sort);
     let delimiter = unescape(&args.delimiter)?;
