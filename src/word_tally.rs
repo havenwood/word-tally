@@ -3,6 +3,7 @@ use core::cmp::Reverse;
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, Lines, Read};
 use std::path::PathBuf;
+use std::process::exit;
 use unicode_segmentation::UnicodeSegmentation;
 
 /// A `WordTally` represents an ordered tally of words paired with their count.
@@ -46,7 +47,10 @@ impl WordTally {
     fn lines(input: &FileOrStdin<PathBuf>) -> Lines<BufReader<impl Read>> {
         match input.into_reader() {
             Ok(readable) => io::BufReader::new(readable).lines(),
-            Err(err) => panic!("{err} -- {:#?}", input.source),
+            Err(err) => {
+                eprintln!("{err} -- {:#?}", input.source);
+                exit(0);
+            }
         }
     }
 
