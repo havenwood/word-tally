@@ -26,6 +26,7 @@ fn main() -> Result<(), Error> {
 
     if args.verbose {
         eprintln!("source{delimiter}{:#?}", args.input.source);
+        eprintln!("unique words{delimiter}{}", word_tally.tally.len());
     }
 
     if args.debug {
