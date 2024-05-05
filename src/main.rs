@@ -25,6 +25,14 @@ fn main() -> Result<(), Error> {
     if args.verbose {
         eprintln!("source{delimiter}{:#?}", args.input.source);
         eprintln!("unique words{delimiter}{}", word_tally.tally.len());
+        eprintln!(
+            "total words{delimiter}{}",
+            word_tally
+                .tally
+                .iter()
+                .map(|&(_, count)| count)
+                .sum::<u64>()
+        );
     }
 
     if args.debug {
