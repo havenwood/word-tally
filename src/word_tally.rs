@@ -13,7 +13,7 @@ pub struct WordTally {
     /// Whether the tally field has been sorted by the `sort` method.
     pub sorted: bool,
     /// Ordered pairs of words and the count of times they appear.
-    pub tally: Vec<(String, u64)>,
+    pub tally: Vec<(String, u32)>,
 }
 
 impl WordTally {
@@ -55,7 +55,7 @@ impl WordTally {
     }
 
     /// Creates a tally of words from a line buffer reader.
-    fn tally(lines: io::Lines<BufReader<impl Read>>) -> HashMap<String, u64> {
+    fn tally(lines: io::Lines<BufReader<impl Read>>) -> HashMap<String, u32> {
         let mut tally = HashMap::new();
 
         for line in lines.map_while(Result::ok) {

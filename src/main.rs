@@ -24,15 +24,18 @@ fn main() -> Result<(), Error> {
 
     if args.verbose {
         eprintln!("source{delimiter}{:#?}", args.input.source);
-        eprintln!("unique words{delimiter}{}", word_tally.tally.len());
-        eprintln!(
-            "total words{delimiter}{}",
-            word_tally
-                .tally
-                .iter()
-                .map(|&(_, count)| count)
-                .sum::<u64>()
-        );
+
+        let total = word_tally
+            .tally
+            .iter()
+            .map(|&(_, count)| count)
+            .sum::<u32>();
+        let uniq = u32::try_from(word_tally.tally.len()).unwrap();
+        let avg = f64::from(total) / f64::from(uniq);
+
+        eprintln!("unique words{delimiter}{uniq}");
+        eprintln!("total words{delimiter}{total}");
+        eprintln!("average word count{delimiter}{avg:.3}");
     }
 
     if args.debug {
