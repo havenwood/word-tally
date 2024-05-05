@@ -1,4 +1,3 @@
-#![feature(unix_sigpipe)]
 #![warn(clippy::nursery, clippy::pedantic)]
 #![warn(deprecated_in_future, future_incompatible)]
 #![warn(let_underscore)]
@@ -18,7 +17,6 @@ use crate::word_tally::WordTally;
 use clap::Parser;
 use unescaper::{unescape, Error};
 
-#[unix_sigpipe = "sig_dfl"]
 fn main() -> Result<(), Error> {
     let args = Args::parse();
     let word_tally = WordTally::new(&args.input, !args.no_sort);
