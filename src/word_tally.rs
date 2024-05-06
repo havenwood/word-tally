@@ -49,7 +49,7 @@ impl WordTally {
             Ok(readable) => io::BufReader::new(readable).lines(),
             Err(err) => {
                 eprintln!("{err} -- {:#?}", input.source);
-                exit(0);
+                exit(1);
             }
         }
     }
