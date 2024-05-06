@@ -31,12 +31,15 @@ fn main() -> Result<(), Error> {
             .iter()
             .map(|&(_, count)| count)
             .sum::<u32>();
-        let uniq = u32::try_from(word_tally.tally.len()).unwrap();
-        let avg = f64::from(total) / f64::from(uniq);
-
-        eprintln!("unique words{delimiter}{uniq}");
         eprintln!("total words{delimiter}{total}");
-        eprintln!("average word count{delimiter}{avg:.3}");
+
+        let uniq = u32::try_from(word_tally.tally.len()).unwrap();
+        eprintln!("unique words{delimiter}{uniq}");
+
+        if total > 0 {
+            let avg = f64::from(total) / f64::from(uniq);
+            eprintln!("average word count{delimiter}{avg:.3}");
+        }
     }
 
     if args.debug {
