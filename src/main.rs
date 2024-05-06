@@ -15,11 +15,12 @@ use crate::args::Args;
 use crate::word_tally::WordTally;
 
 use clap::Parser;
+use std::ops::Not;
 use unescaper::{unescape, Error};
 
 fn main() -> Result<(), Error> {
     let args = Args::parse();
-    let word_tally = WordTally::new(&args.input, !args.no_sort);
+    let word_tally = WordTally::new(&args.input, args.no_sort.not());
     let delimiter = unescape(&args.delimiter)?;
 
     if args.verbose {
@@ -45,7 +46,7 @@ fn main() -> Result<(), Error> {
         eprintln!("debug{delimiter}{}", args.debug);
     }
 
-    if args.verbose || args.debug {
+    if (args.verbose || args.debug) && word_tally.tally.is_empty().not() {
         eprintln!();
     }
 
