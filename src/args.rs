@@ -2,7 +2,6 @@ use clap::Parser;
 use clap_stdin::FileOrStdin;
 use std::path::PathBuf;
 
-/// Parses CLI arguments.
 #[derive(Debug, Parser)]
 #[command(about, version)]
 pub struct Args {
