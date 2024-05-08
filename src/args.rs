@@ -28,4 +28,7 @@ pub struct Args {
     /// Additional file or stdin source input information.
     #[arg(short, long, help = "Verbose command details")]
     pub verbose: bool,
+    /// Output file to write results to rather than stdout.
+    #[arg(short, long, help = "Output to file rather than stdout")]
+    pub output: Option<PathBuf>,
 }

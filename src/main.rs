@@ -14,6 +14,9 @@ pub(crate) mod word_tally;
 use crate::args::Args;
 use crate::word_tally::WordTally;
 
+use std::fs::File;
+use std::io::{LineWriter, Write};
+
 use clap::Parser;
 use core::ops::Not;
 use unescaper::{unescape, Error};
@@ -54,9 +57,26 @@ fn main() -> Result<(), Error> {
         eprintln!();
     }
 
-    for (word, count) in word_tally.tally {
-        println!("{word}{delimiter}{count}");
-    }
+    match args.output {
+        Some(path) => {
+            let file = File::create(path).expect("Expected <OUTPUT> file to be creatable");
+            let mut writer = LineWriter::new(file);
+            for (word, count) in word_tally.tally {
+                let line = format!("{word}{delimiter}{count}\n");
+                writer
+                    .write_all(line.as_bytes())
+                    .expect("Expected line to be writable to <OUTPUT> file");
+            }
+            writer
+                .flush()
+                .expect("Expected <OUTPUT> file to finish writing");
+        }
+        None => {
+            for (word, count) in word_tally.tally {
+                println!("{word}{delimiter}{count}");
+            }
+        }
+    };
 
     Ok(())
 }
