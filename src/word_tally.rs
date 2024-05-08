@@ -1,3 +1,4 @@
+use anyhow::Result;
 use clap_stdin::FileOrStdin;
 use core::cmp::Reverse;
 use std::collections::HashMap;
@@ -41,6 +42,30 @@ impl WordTally {
         self.tally
             .sort_unstable_by_key(|&(_, count)| Reverse(count));
         self.sorted = true;
+    }
+
+    /// Count the sum of all unique words in the tally.
+    pub fn uniq_count(&self) -> Result<u32> {
+        Ok(u32::try_from(self.tally.len())?)
+    }
+
+    /// Count the total sum of all words in the tally.
+    pub fn count(&self) -> u32 {
+        self.tally.iter().map(|&(_, count)| count).sum()
+    }
+
+    /// Find the mean average word count if there are words.
+    pub fn avg(&self) -> Option<f32> {
+        let total = self.count();
+
+        if total > 0 {
+            let uniq = self.uniq_count().ok()?;
+            let avg = f64::from(total) / f64::from(uniq);
+
+            Some(avg as f32)
+        } else {
+            None
+        }
     }
 
     /// Creates a line buffer reader from a file or stdin source.

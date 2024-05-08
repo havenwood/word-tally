@@ -27,20 +27,14 @@ fn main() -> Result<()> {
     let delimiter = unescape(&args.delimiter)?;
 
     if args.verbose {
+        let total = word_tally.count();
+        let uniq = word_tally.uniq_count()?;
+
         eprintln!("source{delimiter}{:#?}", args.input.source);
-
-        let total = word_tally
-            .tally
-            .iter()
-            .map(|&(_, count)| count)
-            .sum::<u32>();
         eprintln!("total words{delimiter}{total}");
-
-        let uniq = u32::try_from(word_tally.tally.len())?;
         eprintln!("unique words{delimiter}{uniq}");
 
-        if total > 0 {
-            let avg = f64::from(total) / f64::from(uniq);
+        if let Some(avg) = word_tally.avg() {
             eprintln!("average word count{delimiter}{avg:.3}");
         }
     }
@@ -61,10 +55,12 @@ fn main() -> Result<()> {
         Some(path) => {
             let file = File::create(path)?;
             let mut writer = LineWriter::new(file);
+
             for (word, count) in word_tally.tally {
                 let line = format!("{word}{delimiter}{count}\n");
                 writer.write_all(line.as_bytes())?;
             }
+
             writer.flush()?;
         }
         None => {
