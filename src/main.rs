@@ -1,5 +1,5 @@
-#![warn(clippy::nursery, clippy::pedantic)]
-#![warn(deprecated_in_future, future_incompatible)]
+#![warn(clippy::nursery)]
+#![warn(future_incompatible)]
 #![warn(let_underscore)]
 #![warn(nonstandard_style)]
 #![warn(rust_2018_compatibility)]
