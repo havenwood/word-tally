@@ -17,6 +17,9 @@ pub struct Args {
         help = "Delimiter between word and count"
     )]
     pub delimiter: String,
+    /// Use case sensitivity when tallying words. (Default is case insensitive.)
+    #[arg(short, long, help = "Tally with case sensitivity")]
+    pub case_sensitive: bool,
     /// Whether to start off unsorted. (Default is sorted descending.)
     #[arg(short, long, help = "Unsorted word count order")]
     pub no_sort: bool,

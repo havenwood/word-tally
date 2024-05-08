@@ -19,10 +19,10 @@ pub struct WordTally {
 impl WordTally {
     /// Constructs a new `WordTally` from a file or stdin source input.
     #[must_use]
-    pub fn new(input: &FileOrStdin<PathBuf>, sort: bool) -> Self {
+    pub fn new(input: &FileOrStdin<PathBuf>, case_sensitive: bool, sort: bool) -> Self {
         let mut word_tally = Self {
             sorted: false,
-            tally: Vec::from_iter(Self::tally(Self::lines(input))),
+            tally: Vec::from_iter(Self::tally(Self::lines(input), case_sensitive)),
         };
 
         if sort {
@@ -55,13 +55,19 @@ impl WordTally {
     }
 
     /// Creates a tally of words from a line buffer reader.
-    fn tally(lines: io::Lines<BufReader<impl Read>>) -> HashMap<String, u32> {
+    fn tally(lines: io::Lines<BufReader<impl Read>>, case_sensitive: bool) -> HashMap<String, u32> {
         let mut tally = HashMap::new();
 
         for line in lines.map_while(Result::ok) {
-            line.unicode_words().for_each(|word| {
+            line.unicode_words().for_each(|unicode_word| {
+                let word = if case_sensitive {
+                    unicode_word.to_owned()
+                } else {
+                    unicode_word.to_lowercase()
+                };
+
                 tally
-                    .entry(word.to_lowercase())
+                    .entry(word)
                     .and_modify(|count| *count += 1)
                     .or_insert(1);
             });

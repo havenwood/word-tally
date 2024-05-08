@@ -20,7 +20,7 @@ use unescaper::{unescape, Error};
 
 fn main() -> Result<(), Error> {
     let args = Args::parse();
-    let word_tally = WordTally::new(&args.input, args.no_sort.not());
+    let word_tally = WordTally::new(&args.input, args.case_sensitive, args.no_sort.not());
     let delimiter = unescape(&args.delimiter)?;
 
     if args.verbose {
@@ -44,6 +44,7 @@ fn main() -> Result<(), Error> {
 
     if args.debug {
         eprintln!("delimiter{delimiter}{delimiter:#?}");
+        eprintln!("case sensitive{delimiter}{}", args.case_sensitive);
         eprintln!("sorted{delimiter}{}", word_tally.sorted);
         eprintln!("verbose{delimiter}{}", args.verbose);
         eprintln!("debug{delimiter}{}", args.debug);
