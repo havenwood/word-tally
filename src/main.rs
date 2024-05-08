@@ -14,14 +14,14 @@ pub(crate) mod word_tally;
 use crate::args::Args;
 use crate::word_tally::WordTally;
 
-use std::fs::File;
-use std::io::{LineWriter, Write};
-
+use anyhow::Result;
 use clap::Parser;
 use core::ops::Not;
-use unescaper::{unescape, Error};
+use std::fs::File;
+use std::io::{LineWriter, Write};
+use unescaper::unescape;
 
-fn main() -> Result<(), Error> {
+fn main() -> Result<()> {
     let args = Args::parse();
     let word_tally = WordTally::new(&args.input, args.case_sensitive, args.no_sort.not());
     let delimiter = unescape(&args.delimiter)?;
@@ -36,7 +36,7 @@ fn main() -> Result<(), Error> {
             .sum::<u32>();
         eprintln!("total words{delimiter}{total}");
 
-        let uniq = u32::try_from(word_tally.tally.len()).unwrap();
+        let uniq = u32::try_from(word_tally.tally.len())?;
         eprintln!("unique words{delimiter}{uniq}");
 
         if total > 0 {
@@ -59,17 +59,13 @@ fn main() -> Result<(), Error> {
 
     match args.output {
         Some(path) => {
-            let file = File::create(path).expect("Expected <OUTPUT> file to be creatable");
+            let file = File::create(path)?;
             let mut writer = LineWriter::new(file);
             for (word, count) in word_tally.tally {
                 let line = format!("{word}{delimiter}{count}\n");
-                writer
-                    .write_all(line.as_bytes())
-                    .expect("Expected line to be writable to <OUTPUT> file");
+                writer.write_all(line.as_bytes())?;
             }
-            writer
-                .flush()
-                .expect("Expected <OUTPUT> file to finish writing");
+            writer.flush()?;
         }
         None => {
             for (word, count) in word_tally.tally {
