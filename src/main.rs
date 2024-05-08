@@ -15,7 +15,7 @@ use crate::args::Args;
 use crate::word_tally::WordTally;
 
 use clap::Parser;
-use std::ops::Not;
+use core::ops::Not;
 use unescaper::{unescape, Error};
 
 fn main() -> Result<(), Error> {
