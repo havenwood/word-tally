@@ -1,10 +1,15 @@
 cargo-features = ["edition2024"]
 
 [package]
-name = "word-tally"
-version = "0.1.0"
+authors = ["Shannon Skipper"]
+categories = ["command-line-utilities", "text-processing"]
+description = "Output the number of times each word appears in a file or stdin source."
 edition = "2024"
+keywords = ["cli", "tally", "words", "count"]
 license = "MIT"
+name = "word-tally"
+repository = "https://github.com/havenwood/word-tally"
+version = "0.1.0"
 
 [dependencies]
 anyhow = "1.0.83"
