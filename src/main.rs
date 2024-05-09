@@ -9,10 +9,8 @@
 #![warn(unused)]
 
 pub(crate) mod args;
-pub(crate) mod word_tally;
 
 use crate::args::Args;
-use crate::word_tally::WordTally;
 
 use anyhow::Result;
 use clap::Parser;
@@ -20,6 +18,7 @@ use core::ops::Not;
 use std::fs::File;
 use std::io::{LineWriter, Write};
 use unescaper::unescape;
+use word_tally::WordTally;
 
 fn main() -> Result<()> {
     let args = Args::parse();
