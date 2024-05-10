@@ -17,15 +17,28 @@ pub struct WordTally {
     sorted: bool,
     /// Ordered pairs of words and the count of times they appear.
     tally: Vec<(String, u64)>,
+    /// The sum of all words tallied.
+    count: u64,
+    /// The sum of uniq words tallied.
+    uniq_count: usize,
+    /// The mean average count per word, if there are words.
+    avg: Option<f64>,
 }
 
 impl WordTally {
     /// Constructs a new `WordTally` from a file or stdin source input.
     #[must_use]
     pub fn new(input: &FileOrStdin<PathBuf>, case_sensitive: bool, sort: bool) -> Self {
+        let tally = Vec::from_iter(Self::tally_words(Self::lines(input), case_sensitive));
+        let count = tally.iter().map(|&(_, count)| count).sum();
+        let uniq_count = tally.len();
+        let avg = Self::calculate_avg(count, uniq_count);
         let mut word_tally = Self {
             sorted: false,
-            tally: Vec::from_iter(Self::tally_words(Self::lines(input), case_sensitive)),
+            tally,
+            count,
+            uniq_count,
+            avg,
         };
 
         if sort {
@@ -56,21 +69,24 @@ impl WordTally {
         &self.tally
     }
 
-    /// Counts the sum of all unique words in the tally.
+    /// Gets the `uniq_count` field.
     pub fn uniq_count(&self) -> usize {
-        self.tally.len()
+        self.uniq_count
     }
 
-    /// Counts the total sum of all words in the tally.
+    /// Gets the `count` field.
     pub fn count(&self) -> u64 {
-        self.tally.iter().map(|&(_, count)| count).sum()
+        self.count
     }
 
-    /// Finds the mean average word count if there are words.
+    /// Gets the `avg` field.
     pub fn avg(&self) -> Option<f64> {
-        let count = self.count();
+        self.avg
+    }
 
-        (count > 0).then(|| (count as f128 / self.uniq_count() as f128) as f64)
+    /// Calculates the mean average word count if there are words.
+    pub fn calculate_avg(count: u64, uniq_count: usize) -> Option<f64> {
+        (count > 0).then(|| (count as f128 / uniq_count as f128) as f64)
     }
 
     /// Creates a line buffer reader from a file or stdin source.
