@@ -11,7 +11,7 @@ use unicode_segmentation::UnicodeSegmentation;
 #[derive(Clone, Debug)]
 #[non_exhaustive]
 pub struct WordTally {
-    /// Whether the tally field has been sorted by the `sort` method.
+    /// Whether the `tally` field has been sorted by the `sort` method.
     sorted: bool,
     /// Ordered pairs of words and the count of times they appear.
     tally: Vec<(String, u32)>,
@@ -33,7 +33,7 @@ impl WordTally {
         word_tally
     }
 
-    /// Sorts the tally field in place or does nothing if already sorted.
+    /// Sorts the `tally` field in place or does nothing if already sorted.
     pub fn sort(&mut self) {
         if self.sorted {
             return;
@@ -44,27 +44,27 @@ impl WordTally {
         self.sorted = true;
     }
 
-    /// Getter for `sorted` field
+    /// Gets the `sorted` field.
     pub fn sorted(&self) -> bool {
         self.sorted
     }
 
-    /// Getter for `tally` field
+    /// Gets the `tally` field.
     pub fn tally(&self) -> &Vec<(String, u32)> {
         &self.tally
     }
 
-    /// Count the sum of all unique words in the tally.
+    /// Counts the sum of all unique words in the tally.
     pub fn uniq_count(&self) -> Result<u32> {
         Ok(u32::try_from(self.tally.len())?)
     }
 
-    /// Count the total sum of all words in the tally.
+    /// Counts the total sum of all words in the tally.
     pub fn count(&self) -> u32 {
         self.tally.iter().map(|&(_, count)| count).sum()
     }
 
-    /// Find the mean average word count if there are words.
+    /// Finds the mean average word count if there are words.
     pub fn avg(&self) -> Option<f32> {
         let total = self.count();
 
