@@ -12,9 +12,9 @@ use unicode_segmentation::UnicodeSegmentation;
 #[non_exhaustive]
 pub struct WordTally {
     /// Whether the tally field has been sorted by the `sort` method.
-    pub sorted: bool,
+    sorted: bool,
     /// Ordered pairs of words and the count of times they appear.
-    pub tally: Vec<(String, u32)>,
+    tally: Vec<(String, u32)>,
 }
 
 impl WordTally {
@@ -23,7 +23,7 @@ impl WordTally {
     pub fn new(input: &FileOrStdin<PathBuf>, case_sensitive: bool, sort: bool) -> Self {
         let mut word_tally = Self {
             sorted: false,
-            tally: Vec::from_iter(Self::tally(Self::lines(input), case_sensitive)),
+            tally: Vec::from_iter(Self::tally_words(Self::lines(input), case_sensitive)),
         };
 
         if sort {
@@ -42,6 +42,16 @@ impl WordTally {
         self.tally
             .sort_unstable_by_key(|&(_, count)| Reverse(count));
         self.sorted = true;
+    }
+
+    /// Getter for `sorted` field
+    pub fn sorted(&self) -> bool {
+        self.sorted
+    }
+
+    /// Getter for `tally` field
+    pub fn tally(&self) -> &Vec<(String, u32)> {
+        &self.tally
     }
 
     /// Count the sum of all unique words in the tally.
@@ -80,7 +90,10 @@ impl WordTally {
     }
 
     /// Creates a tally of words from a line buffer reader.
-    fn tally(lines: io::Lines<BufReader<impl Read>>, case_sensitive: bool) -> HashMap<String, u32> {
+    fn tally_words(
+        lines: io::Lines<BufReader<impl Read>>,
+        case_sensitive: bool,
+    ) -> HashMap<String, u32> {
         let mut tally = HashMap::new();
 
         for line in lines.map_while(Result::ok) {

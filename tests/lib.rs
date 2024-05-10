@@ -11,8 +11,8 @@ fn sorted_case_insensitive() {
         assert_eq!(word_tally.uniq_count().unwrap(), 6);
         assert_eq!(word_tally.avg().unwrap(), 3.5);
         assert_eq!(
-            word_tally.tally,
-            vec![
+            word_tally.tally(),
+            &vec![
                 ("f".to_string(), 6),
                 ("e".to_string(), 5),
                 ("d".to_string(), 4),

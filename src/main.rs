@@ -41,12 +41,12 @@ fn main() -> Result<()> {
     if args.debug {
         eprintln!("delimiter{delimiter}{delimiter:#?}");
         eprintln!("case sensitive{delimiter}{}", args.case_sensitive);
-        eprintln!("sorted{delimiter}{}", word_tally.sorted);
+        eprintln!("sorted{delimiter}{}", word_tally.sorted());
         eprintln!("verbose{delimiter}{}", args.verbose);
         eprintln!("debug{delimiter}{}", args.debug);
     }
 
-    if (args.verbose || args.debug) && word_tally.tally.is_empty().not() {
+    if (args.verbose || args.debug) && word_tally.tally().is_empty().not() {
         eprintln!();
     }
 
@@ -55,7 +55,7 @@ fn main() -> Result<()> {
             let file = File::create(path)?;
             let mut writer = LineWriter::new(file);
 
-            for (word, count) in word_tally.tally {
+            for (word, count) in word_tally.tally() {
                 let line = format!("{word}{delimiter}{count}\n");
                 writer.write_all(line.as_bytes())?;
             }
@@ -63,7 +63,7 @@ fn main() -> Result<()> {
             writer.flush()?;
         }
         None => {
-            for (word, count) in word_tally.tally {
+            for (word, count) in word_tally.tally() {
                 println!("{word}{delimiter}{count}");
             }
         }
