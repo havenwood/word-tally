@@ -8,7 +8,7 @@ fn sorted_case_insensitive() {
         let word_tally = WordTally::new(&file_or_stdin, false, true);
 
         assert_eq!(word_tally.count(), 45);
-        assert_eq!(word_tally.uniq_count().unwrap(), 5);
+        assert_eq!(word_tally.uniq_count(), 5);
         assert_eq!(word_tally.avg().unwrap(), 9.0);
         assert_eq!(
             word_tally.tally(),
@@ -29,7 +29,7 @@ fn sorted_case_sensitive() {
         let word_tally = WordTally::new(&file_or_stdin, true, true);
 
         assert_eq!(word_tally.count(), 45);
-        assert_eq!(word_tally.uniq_count().unwrap(), 9);
+        assert_eq!(word_tally.uniq_count(), 9);
         assert_eq!(word_tally.avg().unwrap(), 5.0);
         assert_eq!(
             word_tally.tally(),

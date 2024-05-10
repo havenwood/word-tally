@@ -26,12 +26,9 @@ fn main() -> Result<()> {
     let delimiter = unescape(&args.delimiter)?;
 
     if args.verbose {
-        let total = word_tally.count();
-        let uniq = word_tally.uniq_count()?;
-
         eprintln!("source{delimiter}{:#?}", args.input.source);
-        eprintln!("total words{delimiter}{total}");
-        eprintln!("unique words{delimiter}{uniq}");
+        eprintln!("total words{delimiter}{}", word_tally.count());
+        eprintln!("unique words{delimiter}{}", word_tally.uniq_count());
 
         if let Some(avg) = word_tally.avg() {
             eprintln!("average word count{delimiter}{avg:.3}");

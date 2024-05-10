@@ -1,3 +1,5 @@
+#![feature(f128)]
+
 use anyhow::Result;
 use clap_stdin::FileOrStdin;
 use core::cmp::Reverse;
@@ -14,7 +16,7 @@ pub struct WordTally {
     /// Whether the `tally` field has been sorted by the `sort` method.
     sorted: bool,
     /// Ordered pairs of words and the count of times they appear.
-    tally: Vec<(String, u32)>,
+    tally: Vec<(String, u64)>,
 }
 
 impl WordTally {
@@ -50,32 +52,25 @@ impl WordTally {
     }
 
     /// Gets the `tally` field.
-    pub fn tally(&self) -> &Vec<(String, u32)> {
+    pub fn tally(&self) -> &Vec<(String, u64)> {
         &self.tally
     }
 
     /// Counts the sum of all unique words in the tally.
-    pub fn uniq_count(&self) -> Result<u32> {
-        Ok(u32::try_from(self.tally.len())?)
+    pub fn uniq_count(&self) -> usize {
+        self.tally.len()
     }
 
     /// Counts the total sum of all words in the tally.
-    pub fn count(&self) -> u32 {
+    pub fn count(&self) -> u64 {
         self.tally.iter().map(|&(_, count)| count).sum()
     }
 
     /// Finds the mean average word count if there are words.
-    pub fn avg(&self) -> Option<f32> {
-        let total = self.count();
+    pub fn avg(&self) -> Option<f64> {
+        let count = self.count();
 
-        if total > 0 {
-            let uniq = self.uniq_count().ok()?;
-            let avg = f64::from(total) / f64::from(uniq);
-
-            Some(avg as f32)
-        } else {
-            None
-        }
+        (count > 0).then(|| (count as f128 / self.uniq_count() as f128) as f64)
     }
 
     /// Creates a line buffer reader from a file or stdin source.
@@ -93,7 +88,7 @@ impl WordTally {
     fn tally_words(
         lines: io::Lines<BufReader<impl Read>>,
         case_sensitive: bool,
-    ) -> HashMap<String, u32> {
+    ) -> HashMap<String, u64> {
         let mut tally = HashMap::new();
 
         for line in lines.map_while(Result::ok) {
