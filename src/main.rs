@@ -22,7 +22,7 @@ use word_tally::WordTally;
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let word_tally = WordTally::new(&args.input, args.case_sensitive, args.no_sort.not());
+    let word_tally = WordTally::new(&args.input, args.case_sensitive, args.no_sort.not())?;
     let delimiter = unescape(&args.delimiter)?;
 
     if args.verbose {

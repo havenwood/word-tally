@@ -5,7 +5,7 @@ use word_tally::WordTally;
 #[test]
 fn sorted_case_insensitive() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let word_tally = WordTally::new(&file_or_stdin, false, true);
+        let word_tally = WordTally::new(&file_or_stdin, false, true).unwrap();
 
         assert_eq!(word_tally.count(), 45);
         assert_eq!(word_tally.uniq_count(), 5);
@@ -26,7 +26,7 @@ fn sorted_case_insensitive() {
 #[test]
 fn sorted_case_sensitive() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let word_tally = WordTally::new(&file_or_stdin, true, true);
+        let word_tally = WordTally::new(&file_or_stdin, true, true).unwrap();
 
         assert_eq!(word_tally.count(), 45);
         assert_eq!(word_tally.uniq_count(), 9);

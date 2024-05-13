@@ -1,12 +1,11 @@
 #![feature(f128)]
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap_stdin::FileOrStdin;
 use core::cmp::Reverse;
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, Lines, Read};
 use std::path::PathBuf;
-use std::process::exit;
 use unicode_segmentation::UnicodeSegmentation;
 
 /// A `WordTally` represents an ordered tally of words paired with their count.
@@ -27,9 +26,9 @@ pub struct WordTally {
 
 impl WordTally {
     /// Constructs a new `WordTally` from a file or stdin source input.
-    #[must_use]
-    pub fn new(input: &FileOrStdin<PathBuf>, case_sensitive: bool, sort: bool) -> Self {
-        let tally = Vec::from_iter(Self::tally_words(Self::lines(input), case_sensitive));
+    pub fn new(input: &FileOrStdin<PathBuf>, case_sensitive: bool, sort: bool) -> Result<Self> {
+        let lines = Self::lines(input)?;
+        let tally = Vec::from_iter(Self::tally_words(lines, case_sensitive));
         let count = tally.iter().map(|&(_, count)| count).sum();
         let uniq_count = tally.len();
         let avg = Self::calculate_avg(count, uniq_count);
@@ -45,7 +44,7 @@ impl WordTally {
             word_tally.sort();
         }
 
-        word_tally
+        Ok(word_tally)
     }
 
     /// Sorts the `tally` field in place or does nothing if already sorted.
@@ -90,14 +89,12 @@ impl WordTally {
     }
 
     /// Creates a line buffer reader from a file or stdin source.
-    fn lines(input: &FileOrStdin<PathBuf>) -> Lines<BufReader<impl Read>> {
-        match input.into_reader() {
-            Ok(readable) => io::BufReader::new(readable).lines(),
-            Err(err) => {
-                eprintln!("{err} -- {:#?}", input.source);
-                exit(1);
-            }
-        }
+    fn lines(input: &FileOrStdin<PathBuf>) -> Result<Lines<BufReader<impl Read>>> {
+        let reader = input
+            .into_reader()
+            .with_context(|| format!("Failed to read {:#?}", input.source))?;
+
+        Ok(io::BufReader::new(reader).lines())
     }
 
     /// Creates a tally of words from a line buffer reader.
