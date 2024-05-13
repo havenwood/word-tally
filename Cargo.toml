@@ -3,7 +3,7 @@ cargo-features = ["edition2024"]
 [package]
 authors = ["Shannon Skipper"]
 categories = ["command-line-utilities", "text-processing"]
-description = "Output the number of times each word appears in a file or stdin source."
+description = "Output a tally of the number of times unique words appear in source input."
 edition = "2024"
 exclude = ["/tests"]
 homepage = "https://github.com/havenwood/word-tally"

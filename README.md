@@ -1,20 +1,20 @@
 # word-tally
 
-Output the number of times each word that appears in a file or stdin source.
+Output a tally of the number of times unique words appear in source input.
 
 ```
 Usage: word-tally [OPTIONS] [INPUT]
 
 Arguments:
-  [INPUT]  Source input for tallying words [default: -]
+  [INPUT]  Path to file to use as input rather than stdin ("-") [default: -]
 
 Options:
-  -D, --delimiter <DELIMITER>  Delimiter between word and count [default: ": "]
-  -c, --case-sensitive         Tally with case sensitivity
-  -n, --no-sort                Unsorted word count order
-  -d, --debug                  Additional debugging information
-  -v, --verbose                Verbose command details
-  -o, --output <OUTPUT>        Output to file rather than stdout
+  -o, --output <OUTPUT>        Write output to specified file rather than stdout
+  -D, --delimiter <DELIMITER>  Delimiter between keys and values [default: ": "]
+  -c, --case-sensitive         Switch to tallying words with case sensitivity
+  -n, --no-sort                Skip sorting by descending word count order
+  -v, --verbose                Print verbose source details
+  -d, --debug                  Print debugging information
   -h, --help                   Print help
   -V, --version                Print version
 ```
