@@ -43,7 +43,7 @@ fn main() -> Result<()> {
         eprintln!("debug{delimiter}{}", args.debug);
     }
 
-    if (args.verbose || args.debug) && word_tally.tally().is_empty().not() {
+    if (args.verbose || args.debug) && word_tally.count() > 0 {
         eprintln!();
     }
 
