@@ -84,3 +84,21 @@ fn equality_and_hashing() {
         assert_ne!(a1_b1.finish(), b1_a1.finish());
     }
 }
+
+#[test]
+fn vec_from() {
+    if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
+        let tally = WordTally::new(&file_or_stdin, false, true).unwrap();
+
+        assert_eq!(
+            Vec::from(tally),
+            vec![
+                ("c".to_string(), 15),
+                ("d".to_string(), 11),
+                ("123".to_string(), 9),
+                ("b".to_string(), 7),
+                ("a".to_string(), 3)
+            ]
+        );
+    }
+}

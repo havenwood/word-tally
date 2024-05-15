@@ -33,6 +33,12 @@ impl Hash for WordTally {
     }
 }
 
+impl From<WordTally> for Vec<(String, u64)> {
+    fn from(word_tally: WordTally) -> Self {
+        word_tally.tally
+    }
+}
+
 impl WordTally {
     /// Constructs a new `WordTally` from a file or stdin source input.
     pub fn new(input: &FileOrStdin<PathBuf>, case_sensitive: bool, sort: bool) -> Result<Self> {
