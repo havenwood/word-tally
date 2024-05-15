@@ -47,3 +47,20 @@ fn sorted_case_sensitive() {
         );
     }
 }
+
+#[test]
+fn equality() {
+    if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
+        let a1 = WordTally::new(&file_or_stdin, true, true).unwrap();
+        let a2 = WordTally::new(&file_or_stdin, true, true).unwrap();
+        let b1 = WordTally::new(&file_or_stdin, false, true).unwrap();
+        let c1 = WordTally::new(&file_or_stdin, true, false).unwrap();
+
+        assert_eq!(a1, a2);
+        assert_eq!(a2, a1);
+        assert_ne!(a1, b1);
+        assert_ne!(b1, a1);
+        assert_ne!(a1, c1);
+        assert_ne!(c1, a1);
+    }
+}
