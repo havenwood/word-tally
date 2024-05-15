@@ -4,7 +4,7 @@ use std::str::FromStr;
 use word_tally::*;
 
 #[test]
-fn sorted_case_insensitive() {
+fn case_insensitive_desc_order() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
         let word_tally = WordTally::new(&file_or_stdin, Case::Insensitive, Sort::Desc).unwrap();
 
@@ -25,7 +25,28 @@ fn sorted_case_insensitive() {
 }
 
 #[test]
-fn sorted_case_sensitive() {
+fn case_insensitive_asc_order() {
+    if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
+        let word_tally = WordTally::new(&file_or_stdin, Case::Insensitive, Sort::Asc).unwrap();
+
+        assert_eq!(word_tally.count(), 45);
+        assert_eq!(word_tally.uniq_count(), 5);
+        assert_eq!(word_tally.avg().unwrap(), 9.0);
+        assert_eq!(
+            word_tally.tally(),
+            &vec![
+                ("a".to_string(), 3),
+                ("b".to_string(), 7),
+                ("123".to_string(), 9),
+                ("d".to_string(), 11),
+                ("c".to_string(), 15),
+            ]
+        );
+    }
+}
+
+#[test]
+fn case_sensitive_desc_order() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
         let word_tally = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Desc).unwrap();
 
@@ -50,12 +71,38 @@ fn sorted_case_sensitive() {
 }
 
 #[test]
+fn case_sensitive_asc_order() {
+    if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
+        let word_tally = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Asc).unwrap();
+
+        assert_eq!(word_tally.count(), 45);
+        assert_eq!(word_tally.uniq_count(), 9);
+        assert_eq!(word_tally.avg().unwrap(), 5.0);
+        assert_eq!(
+            word_tally.tally(),
+            &vec![
+                ("a".to_string(), 1),
+                ("A".to_string(), 2),
+                ("b".to_string(), 3),
+                ("B".to_string(), 4),
+                ("d".to_string(), 5),
+                ("D".to_string(), 6),
+                ("c".to_string(), 7),
+                ("C".to_string(), 8),
+                ("123".to_string(), 9),
+            ]
+        );
+    }
+}
+
+#[test]
 fn equality_and_hashing() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
         let a1 = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Desc).unwrap();
         let a2 = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Desc).unwrap();
         let b1 = WordTally::new(&file_or_stdin, Case::Insensitive, Sort::Desc).unwrap();
         let c1 = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Unsorted).unwrap();
+        let d1 = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Asc).unwrap();
 
         assert_eq!(a1, a2);
         assert_eq!(a2, a1);
@@ -63,6 +110,8 @@ fn equality_and_hashing() {
         assert_ne!(b1, a1);
         assert_ne!(a1, c1);
         assert_ne!(c1, a1);
+        assert_ne!(a1, d1);
+        assert_ne!(d1, a1);
 
         let mut a1_a2 = DefaultHasher::new();
         a1.hash(&mut a1_a2);
