@@ -10,7 +10,7 @@ use std::path::PathBuf;
 use unicode_segmentation::UnicodeSegmentation;
 
 /// A `WordTally` represents an ordered tally of words paired with their count.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq)]
 #[non_exhaustive]
 pub struct WordTally {
     /// Whether the `tally` field has been sorted by the `sort` method.
