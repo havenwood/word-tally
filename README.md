@@ -6,14 +6,14 @@ Output a tally of the number of times unique words appear in source input.
 Usage: word-tally [OPTIONS] [INPUT]
 
 Arguments:
-  [INPUT]  Path to file to use as input rather than stdin ("-") [default: -]
+  [INPUT]  File path to use as input rather than stdin ("-") [default: -]
 
 Options:
-  -o, --output <OUTPUT>        Write output to specified file rather than stdout
+  -O, --output <PATH>          Write output to file rather than stdout
   -D, --delimiter <DELIMITER>  Delimiter between keys and values [default: ": "]
-  -c, --case-sensitive         Switch to tallying words with case sensitivity
-  -n, --no-sort                Skip sorting by descending word count order
-  -v, --verbose                Print verbose source details
+  -c, --case <SENSITIVITY>     Case sensitivity [default: insensitive] [possible values: insensitive, sensitive]
+  -o, --order <SORT>           Sort order [default: desc] [possible values: desc, asc, unsorted]
+  -v, --verbose                Print verbose details
   -d, --debug                  Print debugging information
   -h, --help                   Print help
   -V, --version                Print version

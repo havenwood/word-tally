@@ -1,12 +1,12 @@
 use clap_stdin::FileOrStdin;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::str::FromStr;
-use word_tally::WordTally;
+use word_tally::*;
 
 #[test]
 fn sorted_case_insensitive() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let word_tally = WordTally::new(&file_or_stdin, false, true).unwrap();
+        let word_tally = WordTally::new(&file_or_stdin, Case::Insensitive, Sort::Desc).unwrap();
 
         assert_eq!(word_tally.count(), 45);
         assert_eq!(word_tally.uniq_count(), 5);
@@ -27,7 +27,7 @@ fn sorted_case_insensitive() {
 #[test]
 fn sorted_case_sensitive() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let word_tally = WordTally::new(&file_or_stdin, true, true).unwrap();
+        let word_tally = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Desc).unwrap();
 
         assert_eq!(word_tally.count(), 45);
         assert_eq!(word_tally.uniq_count(), 9);
@@ -52,10 +52,10 @@ fn sorted_case_sensitive() {
 #[test]
 fn equality_and_hashing() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let a1 = WordTally::new(&file_or_stdin, true, true).unwrap();
-        let a2 = WordTally::new(&file_or_stdin, true, true).unwrap();
-        let b1 = WordTally::new(&file_or_stdin, false, true).unwrap();
-        let c1 = WordTally::new(&file_or_stdin, true, false).unwrap();
+        let a1 = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Desc).unwrap();
+        let a2 = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Desc).unwrap();
+        let b1 = WordTally::new(&file_or_stdin, Case::Insensitive, Sort::Desc).unwrap();
+        let c1 = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Unsorted).unwrap();
 
         assert_eq!(a1, a2);
         assert_eq!(a2, a1);
@@ -88,7 +88,7 @@ fn equality_and_hashing() {
 #[test]
 fn vec_from() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let tally = WordTally::new(&file_or_stdin, false, true).unwrap();
+        let tally = WordTally::new(&file_or_stdin, Case::Insensitive, Sort::Desc).unwrap();
 
         assert_eq!(
             Vec::from(tally),

@@ -1,31 +1,32 @@
 use clap::Parser;
 use clap_stdin::FileOrStdin;
 use std::path::PathBuf;
+use word_tally::{Case, Sort};
 
 #[derive(Debug, Parser)]
 #[command(about, version)]
 pub struct Args {
-    /// Path to file to use as input rather than stdin ("-").
+    /// File path to use as input rather than stdin ("-").
     #[clap(default_value = "-")]
     pub input: FileOrStdin<PathBuf>,
 
-    /// Write output to specified file rather than stdout.
-    #[arg(short, long)]
-    pub output: Option<PathBuf>,
+    /// Sort order.
+    #[arg(short, long, default_value_t, value_enum, value_name = "ORDER")]
+    pub sort: Sort,
 
-    /// Delimiter between keys and values.
-    #[clap(short = 'D', long, default_value = ": ")]
+    /// Case sensitivity.
+    #[arg(short, long, default_value_t, value_enum, value_name = "SENSITIVITY")]
+    pub case: Case,
+
+    /// Delimiter characters between keys and values.
+    #[clap(short = 'D', long, default_value = ": ", value_name = "CHARACTERS")]
     pub delimiter: String,
 
-    /// Switch to tallying words with case sensitivity.
-    #[arg(short, long)]
-    pub case_sensitive: bool,
+    /// Write output to file rather than stdout.
+    #[arg(short, long, value_name = "PATH")]
+    pub output: Option<PathBuf>,
 
-    /// Skip sorting by descending word count order.
-    #[arg(short, long)]
-    pub no_sort: bool,
-
-    /// Print verbose source details.
+    /// Print verbose details.
     #[arg(short, long)]
     pub verbose: bool,
 

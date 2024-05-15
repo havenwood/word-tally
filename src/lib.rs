@@ -1,6 +1,7 @@
 #![feature(f128)]
 
 use anyhow::{Context, Result};
+use clap::ValueEnum;
 use clap_stdin::FileOrStdin;
 use core::cmp::Reverse;
 use std::collections::HashMap;
@@ -39,11 +40,26 @@ impl From<WordTally> for Vec<(String, u64)> {
     }
 }
 
+#[derive(Clone, Copy, Debug, Default, ValueEnum)]
+pub enum Case {
+    #[default]
+    Insensitive,
+    Sensitive,
+}
+
+#[derive(Clone, Copy, Debug, Default, ValueEnum)]
+pub enum Sort {
+    #[default]
+    Desc,
+    Asc,
+    Unsorted,
+}
+
 impl WordTally {
     /// Constructs a new `WordTally` from a file or stdin source input.
-    pub fn new(input: &FileOrStdin<PathBuf>, case_sensitive: bool, sort: bool) -> Result<Self> {
+    pub fn new(input: &FileOrStdin<PathBuf>, case: Case, order: Sort) -> Result<Self> {
         let lines = Self::lines(input)?;
-        let tally_map = Self::tally_map(lines, case_sensitive);
+        let tally_map = Self::tally_map(lines, case);
         let count = tally_map.values().sum();
         let tally = Vec::from_iter(tally_map);
         let uniq_count = tally.len();
@@ -56,21 +72,21 @@ impl WordTally {
             avg,
         };
 
-        if sort {
-            word_tally.sort();
-        }
+        word_tally.sort(order);
 
         Ok(word_tally)
     }
 
     /// Sorts the `tally` field in place or does nothing if already sorted.
-    pub fn sort(&mut self) {
-        if self.sorted {
-            return;
+    pub fn sort(&mut self, order: Sort) {
+        match order {
+            Sort::Desc => self
+                .tally
+                .sort_unstable_by_key(|&(_, count)| Reverse(count)),
+            Sort::Asc => self.tally.sort_unstable_by_key(|&(_, count)| count),
+            Sort::Unsorted => return,
         }
 
-        self.tally
-            .sort_unstable_by_key(|&(_, count)| Reverse(count));
         self.sorted = true;
     }
 
@@ -114,18 +130,14 @@ impl WordTally {
     }
 
     /// Creates a tally of words from a line buffer reader.
-    fn tally_map(
-        lines: io::Lines<BufReader<impl Read>>,
-        case_sensitive: bool,
-    ) -> HashMap<String, u64> {
+    fn tally_map(lines: io::Lines<BufReader<impl Read>>, case: Case) -> HashMap<String, u64> {
         let mut tally = HashMap::new();
 
         for line in lines.map_while(Result::ok) {
             line.unicode_words().for_each(|unicode_word| {
-                let word = if case_sensitive {
-                    unicode_word.to_owned()
-                } else {
-                    unicode_word.to_lowercase()
+                let word = match case {
+                    Case::Sensitive => unicode_word.to_owned(),
+                    Case::Insensitive => unicode_word.to_lowercase(),
                 };
 
                 tally

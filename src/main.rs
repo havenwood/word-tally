@@ -14,15 +14,14 @@ use crate::args::Args;
 
 use anyhow::Result;
 use clap::Parser;
-use core::ops::Not;
 use std::fs::File;
 use std::io::{LineWriter, Write};
 use unescaper::unescape;
-use word_tally::WordTally;
+use word_tally::*;
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let word_tally = WordTally::new(&args.input, args.case_sensitive, args.no_sort.not())?;
+    let word_tally = WordTally::new(&args.input, args.case, args.sort)?;
     let delimiter = unescape(&args.delimiter)?;
 
     if args.verbose {
@@ -37,8 +36,15 @@ fn main() -> Result<()> {
 
     if args.debug {
         eprintln!("delimiter{delimiter}{delimiter:#?}");
-        eprintln!("case sensitive{delimiter}{}", args.case_sensitive);
-        eprintln!("sorted{delimiter}{}", word_tally.sorted());
+        match args.case {
+            Case::Sensitive => eprintln!("case sensitive{delimiter}true"),
+            Case::Insensitive => eprintln!("case sensitive{delimiter}false"),
+        }
+        match args.sort {
+            Sort::Asc => eprintln!("order{delimiter}asc"),
+            Sort::Desc => eprintln!("order{delimiter}desc"),
+            Sort::Unsorted => eprintln!("order{delimiter}unsorted"),
+        }
         eprintln!("verbose{delimiter}{}", args.verbose);
         eprintln!("debug{delimiter}{}", args.debug);
     }
