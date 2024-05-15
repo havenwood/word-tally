@@ -4,6 +4,7 @@ use anyhow::{Context, Result};
 use clap_stdin::FileOrStdin;
 use core::cmp::Reverse;
 use std::collections::HashMap;
+use std::hash::{Hash, Hasher};
 use std::io::{self, BufRead, BufReader, Lines, Read};
 use std::path::PathBuf;
 use unicode_segmentation::UnicodeSegmentation;
@@ -25,6 +26,12 @@ pub struct WordTally {
 }
 
 impl Eq for WordTally {}
+
+impl Hash for WordTally {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.tally.hash(state);
+    }
+}
 
 impl WordTally {
     /// Constructs a new `WordTally` from a file or stdin source input.

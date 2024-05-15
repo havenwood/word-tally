@@ -1,4 +1,5 @@
 use clap_stdin::FileOrStdin;
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::str::FromStr;
 use word_tally::WordTally;
 
@@ -49,7 +50,7 @@ fn sorted_case_sensitive() {
 }
 
 #[test]
-fn equality() {
+fn equalityi_and_hashing() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
         let a1 = WordTally::new(&file_or_stdin, true, true).unwrap();
         let a2 = WordTally::new(&file_or_stdin, true, true).unwrap();
@@ -62,5 +63,24 @@ fn equality() {
         assert_ne!(b1, a1);
         assert_ne!(a1, c1);
         assert_ne!(c1, a1);
+
+        let mut a1_a2 = DefaultHasher::new();
+        a1.hash(&mut a1_a2);
+        a2.hash(&mut a1_a2);
+
+        let mut a2_a1 = DefaultHasher::new();
+        a2.hash(&mut a2_a1);
+        a1.hash(&mut a2_a1);
+
+        let mut a1_b1 = DefaultHasher::new();
+        a1.hash(&mut a1_b1);
+        b1.hash(&mut a1_b1);
+
+        let mut b1_a1 = DefaultHasher::new();
+        b1.hash(&mut b1_a1);
+        a1.hash(&mut b1_a1);
+
+        assert_eq!(a1_a2.finish(), a2_a1.finish());
+        assert_ne!(a1_b1.finish(), b1_a1.finish());
     }
 }
