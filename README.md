@@ -2,6 +2,8 @@
 
 Output a tally of the number of times unique words appear in source input.
 
+## Usage
+
 ```
 Usage: word-tally [OPTIONS] [INPUT]
 
@@ -19,16 +21,16 @@ Options:
   -V, --version                 Print version
 ```
 
-## Example
+## Examples
 
 ```sh
 > word-tally README.md | head -n6
-word: 10
-tally: 9
-output: 5
-count: 4
-delimiter: 4
-input: 4
+tally 9
+word 8
+input 5
+default 4
+print 4
+output 4
 ```
 
 ## Installation
