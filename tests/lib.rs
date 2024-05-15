@@ -50,7 +50,7 @@ fn sorted_case_sensitive() {
 }
 
 #[test]
-fn equalityi_and_hashing() {
+fn equality_and_hashing() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
         let a1 = WordTally::new(&file_or_stdin, true, true).unwrap();
         let a2 = WordTally::new(&file_or_stdin, true, true).unwrap();
