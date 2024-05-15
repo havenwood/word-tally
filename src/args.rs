@@ -19,7 +19,7 @@ pub struct Args {
     pub case: Case,
 
     /// Delimiter characters between keys and values.
-    #[clap(short = 'D', long, default_value = ": ", value_name = "CHARACTERS")]
+    #[clap(short = 'D', long, default_value = " ", value_name = "CHARACTERS")]
     pub delimiter: String,
 
     /// Write output to file rather than stdout.
