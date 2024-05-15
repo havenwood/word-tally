@@ -28,8 +28,9 @@ impl WordTally {
     /// Constructs a new `WordTally` from a file or stdin source input.
     pub fn new(input: &FileOrStdin<PathBuf>, case_sensitive: bool, sort: bool) -> Result<Self> {
         let lines = Self::lines(input)?;
-        let tally = Vec::from_iter(Self::tally_words(lines, case_sensitive));
-        let count = tally.iter().map(|&(_, count)| count).sum();
+        let tally_map = Self::tally_map(lines, case_sensitive);
+        let count = tally_map.values().sum();
+        let tally = Vec::from_iter(tally_map);
         let uniq_count = tally.len();
         let avg = Self::calculate_avg(count, uniq_count);
         let mut word_tally = Self {
@@ -98,7 +99,7 @@ impl WordTally {
     }
 
     /// Creates a tally of words from a line buffer reader.
-    fn tally_words(
+    fn tally_map(
         lines: io::Lines<BufReader<impl Read>>,
         case_sensitive: bool,
     ) -> HashMap<String, u64> {
