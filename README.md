@@ -35,9 +35,18 @@ output 4
 
 ## Installation
 
+Requires the `nightly` Rust toolchain until `f128` stabalizes.
+
+### Cargo
+
+```sh
+cargo +nightly install word-tally
+```
+
+## Tests
+
 ```sh
 git clone https://github.com/havenwood/word-tally
 cd word-tally
-cargo build --release
-sudo ln -s target/release/word-tally /usr/local/bin/word-tally
+cargo +nightly test
 ```
