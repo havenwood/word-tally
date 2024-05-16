@@ -118,40 +118,54 @@ fn case_sensitive_asc_order() {
 
 #[test]
 fn equality_and_hashing() {
-    if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let a1 = WordTally::new(&file_or_stdin, Case::Original, Sort::Desc).unwrap();
-        let a2 = WordTally::new(&file_or_stdin, Case::Original, Sort::Desc).unwrap();
-        let b1 = WordTally::new(&file_or_stdin, Case::Lower, Sort::Desc).unwrap();
-        let c1 = WordTally::new(&file_or_stdin, Case::Lower, Sort::Unsorted).unwrap();
-        let d1 = WordTally::new(&file_or_stdin, Case::Lower, Sort::Asc).unwrap();
+    fn word_tally(case: Case, sort: Sort) -> WordTally {
+        let file_or_stdin = FileOrStdin::from_str(WORDS_PATH).unwrap();
+        WordTally::new(&file_or_stdin, case, sort).unwrap()
+    }
 
-        assert_eq!(a1, a2);
-        assert_eq!(a2, a1);
-        assert_ne!(a1, b1);
-        assert_ne!(b1, a1);
-        assert_ne!(a1, c1);
-        assert_ne!(c1, a1);
-        assert_ne!(a1, d1);
-        assert_ne!(d1, a1);
+    fn hash_value(word_tally: &WordTally) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        word_tally.hash(&mut hasher);
+        hasher.finish()
+    }
 
-        let mut a1_a2 = DefaultHasher::new();
-        a1.hash(&mut a1_a2);
-        a2.hash(&mut a1_a2);
+    fn assert_hash_eq(tally_a: &WordTally, tally_b: &WordTally) {
+        assert_eq!(hash_value(tally_a), hash_value(tally_b));
+    }
 
-        let mut a2_a1 = DefaultHasher::new();
-        a2.hash(&mut a2_a1);
-        a1.hash(&mut a2_a1);
+    fn assert_hash_ne(tally_a: &WordTally, tally_b: &WordTally) {
+        assert_ne!(hash_value(tally_a), hash_value(tally_b));
+    }
 
-        let mut a1_b1 = DefaultHasher::new();
-        a1.hash(&mut a1_b1);
-        b1.hash(&mut a1_b1);
+    let cases_and_sorts = [
+        (Case::Original, Sort::Unsorted),
+        (Case::Original, Sort::Asc),
+        (Case::Original, Sort::Desc),
+        (Case::Upper, Sort::Unsorted),
+        (Case::Upper, Sort::Asc),
+        (Case::Upper, Sort::Desc),
+        (Case::Lower, Sort::Unsorted),
+        (Case::Lower, Sort::Asc),
+        (Case::Lower, Sort::Desc),
+    ];
 
-        let mut b1_a1 = DefaultHasher::new();
-        b1.hash(&mut b1_a1);
-        a1.hash(&mut b1_a1);
+    let tallies: Vec<WordTally> = cases_and_sorts
+        .iter()
+        .map(|&(case, sort)| word_tally(case, sort))
+        .collect();
 
-        assert_eq!(a1_a2.finish(), a2_a1.finish());
-        assert_ne!(a1_b1.finish(), b1_a1.finish());
+    for tally in &tallies {
+        assert_eq!(tally, tally);
+        assert_hash_eq(tally, tally);
+    }
+
+    for (i, tally_a) in tallies.iter().enumerate() {
+        for (j, tally_b) in tallies.iter().enumerate() {
+            if i != j {
+                assert_ne!(tally_a, tally_b);
+                assert_hash_ne(tally_a, tally_b);
+            }
+        }
     }
 }
 
