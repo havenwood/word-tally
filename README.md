@@ -33,14 +33,14 @@ print 4
 output 4
 ```
 
+```sh
+> word-tally --delimiter="," --output="tally.csv" README.md
+```
+
 ## Installation
 
-Requires the `nightly` Rust toolchain until `f128` and `-Z on-broken-pipe=kill` stabalize.
-
-### Cargo
-
 ```sh
-cargo +nightly install word-tally
+cargo install word-tally
 ```
 
 ## Tests
@@ -48,5 +48,5 @@ cargo +nightly install word-tally
 ```sh
 git clone https://github.com/havenwood/word-tally
 cd word-tally
-cargo +nightly test
+cargo test
 ```

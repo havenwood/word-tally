@@ -1,5 +1,3 @@
-#![feature(f128)]
-
 use anyhow::{Context, Result};
 use clap::ValueEnum;
 use clap_stdin::FileOrStdin;
@@ -111,9 +109,10 @@ impl WordTally {
         self.avg
     }
 
-    /// Calculates the mean average word count if there are words.
+    /// Calculates an approximate mean average word count if there are words.
+    /// Note: Casting `u64` to `f64` and floating point arithmatic cause a loss of precision.
     pub fn calculate_avg(count: u64, uniq_count: usize) -> Option<f64> {
-        (count > 0).then(|| (count as f128 / uniq_count as f128) as f64)
+        (count > 0).then(|| count as f64 / uniq_count as f64)
     }
 
     /// Creates a line buffer reader result from a file or stdin source.
