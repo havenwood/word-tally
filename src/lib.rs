@@ -1,7 +1,5 @@
 #![feature(f128)]
 
-//! The `word-tally` command tallies and outputs the count of words from a file or streamed input.
-
 use anyhow::{Context, Result};
 use clap::ValueEnum;
 use clap_stdin::FileOrStdin;
