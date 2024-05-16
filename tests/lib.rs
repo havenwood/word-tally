@@ -5,7 +5,7 @@ use word_tally::*;
 
 const WORDS_PATH: &str = "tests/files/words.txt";
 
-struct Fields<'a> {
+struct ExpectedFields<'a> {
     count: u64,
     uniq_count: usize,
     avg: f64,
@@ -17,7 +17,7 @@ fn word_tally(case: Case, sort: Sort) -> WordTally {
     WordTally::new(&file_or_stdin, case, sort).unwrap()
 }
 
-fn word_tally_test(case: Case, sort: Sort, fields: Fields) {
+fn word_tally_test(case: Case, sort: Sort, fields: ExpectedFields) {
     let word_tally = word_tally(case, sort);
     assert_eq!(word_tally.count(), fields.count);
     assert_eq!(word_tally.uniq_count(), fields.uniq_count);
@@ -36,7 +36,7 @@ fn lower_case_desc_order() {
     word_tally_test(
         Case::Lower,
         Sort::Desc,
-        Fields {
+        ExpectedFields {
             count: 45,
             uniq_count: 5,
             avg: 9.0,
@@ -50,7 +50,7 @@ fn upper_case_desc_order() {
     word_tally_test(
         Case::Upper,
         Sort::Desc,
-        Fields {
+        ExpectedFields {
             count: 45,
             uniq_count: 5,
             avg: 9.0,
@@ -64,7 +64,7 @@ fn lower_case_asc_order() {
     word_tally_test(
         Case::Lower,
         Sort::Asc,
-        Fields {
+        ExpectedFields {
             count: 45,
             uniq_count: 5,
             avg: 9.0,
@@ -78,7 +78,7 @@ fn original_case_desc_order() {
     word_tally_test(
         Case::Original,
         Sort::Desc,
-        Fields {
+        ExpectedFields {
             count: 45,
             uniq_count: 9,
             avg: 5.0,
@@ -102,7 +102,7 @@ fn original_case_asc_order() {
     word_tally_test(
         Case::Original,
         Sort::Asc,
-        Fields {
+        ExpectedFields {
             count: 45,
             uniq_count: 9,
             avg: 5.0,
