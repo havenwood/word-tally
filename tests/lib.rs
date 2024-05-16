@@ -74,6 +74,20 @@ fn lower_case_asc_order() {
 }
 
 #[test]
+fn upper_case_asc_order() {
+    word_tally_test(
+        Case::Upper,
+        Sort::Asc,
+        ExpectedFields {
+            count: 45,
+            uniq_count: 5,
+            avg: 9.0,
+            tally: vec![("A", 3), ("B", 7), ("123", 9), ("D", 11), ("C", 15)],
+        },
+    );
+}
+
+#[test]
 fn original_case_desc_order() {
     word_tally_test(
         Case::Original,
