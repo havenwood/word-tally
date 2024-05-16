@@ -14,8 +14,6 @@ use unicode_segmentation::UnicodeSegmentation;
 #[derive(Clone, Debug, Default, PartialEq)]
 #[non_exhaustive]
 pub struct WordTally {
-    /// Whether the `tally` field has been sorted by the `sort` method.
-    sorted: bool,
     /// Ordered pairs of words and the count of times they appear.
     tally: Vec<(String, u64)>,
     /// The sum of all words tallied.
@@ -66,7 +64,6 @@ impl WordTally {
         let uniq_count = tally.len();
         let avg = Self::calculate_avg(count, uniq_count);
         let mut word_tally = Self {
-            sorted: false,
             tally,
             count,
             uniq_count,
@@ -85,15 +82,8 @@ impl WordTally {
                 .tally
                 .sort_unstable_by_key(|&(_, count)| Reverse(count)),
             Sort::Asc => self.tally.sort_unstable_by_key(|&(_, count)| count),
-            Sort::Unsorted => return,
+            Sort::Unsorted => (),
         }
-
-        self.sorted = true;
-    }
-
-    /// Gets the `sorted` field.
-    pub fn sorted(&self) -> bool {
-        self.sorted
     }
 
     /// Gets the `tally` field.
