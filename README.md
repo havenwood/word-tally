@@ -35,7 +35,7 @@ output 4
 
 ## Installation
 
-Requires the `nightly` Rust toolchain until `f128` stabalizes.
+Requires the `nightly` Rust toolchain until `f128` and `-Z on-broken-pipe=kill` stabalize.
 
 ### Cargo
 
