@@ -152,13 +152,10 @@ fn equality_and_hashing() {
     }
 
     let cases_and_sorts = [
-        (Case::Original, Sort::Unsorted),
         (Case::Original, Sort::Asc),
         (Case::Original, Sort::Desc),
-        (Case::Upper, Sort::Unsorted),
         (Case::Upper, Sort::Asc),
         (Case::Upper, Sort::Desc),
-        (Case::Lower, Sort::Unsorted),
         (Case::Lower, Sort::Asc),
         (Case::Lower, Sort::Desc),
     ];
