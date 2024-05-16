@@ -6,7 +6,7 @@ use word_tally::*;
 #[test]
 fn case_insensitive_desc_order() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let word_tally = WordTally::new(&file_or_stdin, Case::Insensitive, Sort::Desc).unwrap();
+        let word_tally = WordTally::new(&file_or_stdin, Case::Lower, Sort::Desc).unwrap();
 
         assert_eq!(word_tally.count(), 45);
         assert_eq!(word_tally.uniq_count(), 5);
@@ -21,13 +21,25 @@ fn case_insensitive_desc_order() {
                 ("a".to_string(), 3)
             ]
         );
+
+        let upper = WordTally::new(&file_or_stdin, Case::Upper, Sort::Desc).unwrap();
+        assert_eq!(
+            upper.tally(),
+            &vec![
+                ("C".to_string(), 15),
+                ("D".to_string(), 11),
+                ("123".to_string(), 9),
+                ("B".to_string(), 7),
+                ("A".to_string(), 3)
+            ]
+        )
     }
 }
 
 #[test]
 fn case_insensitive_asc_order() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let word_tally = WordTally::new(&file_or_stdin, Case::Insensitive, Sort::Asc).unwrap();
+        let word_tally = WordTally::new(&file_or_stdin, Case::Lower, Sort::Asc).unwrap();
 
         assert_eq!(word_tally.count(), 45);
         assert_eq!(word_tally.uniq_count(), 5);
@@ -48,7 +60,7 @@ fn case_insensitive_asc_order() {
 #[test]
 fn case_sensitive_desc_order() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let word_tally = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Desc).unwrap();
+        let word_tally = WordTally::new(&file_or_stdin, Case::Original, Sort::Desc).unwrap();
 
         assert_eq!(word_tally.count(), 45);
         assert_eq!(word_tally.uniq_count(), 9);
@@ -73,7 +85,7 @@ fn case_sensitive_desc_order() {
 #[test]
 fn case_sensitive_asc_order() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let word_tally = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Asc).unwrap();
+        let word_tally = WordTally::new(&file_or_stdin, Case::Original, Sort::Asc).unwrap();
 
         assert_eq!(word_tally.count(), 45);
         assert_eq!(word_tally.uniq_count(), 9);
@@ -98,11 +110,11 @@ fn case_sensitive_asc_order() {
 #[test]
 fn equality_and_hashing() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let a1 = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Desc).unwrap();
-        let a2 = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Desc).unwrap();
-        let b1 = WordTally::new(&file_or_stdin, Case::Insensitive, Sort::Desc).unwrap();
-        let c1 = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Unsorted).unwrap();
-        let d1 = WordTally::new(&file_or_stdin, Case::Sensitive, Sort::Asc).unwrap();
+        let a1 = WordTally::new(&file_or_stdin, Case::Original, Sort::Desc).unwrap();
+        let a2 = WordTally::new(&file_or_stdin, Case::Original, Sort::Desc).unwrap();
+        let b1 = WordTally::new(&file_or_stdin, Case::Lower, Sort::Desc).unwrap();
+        let c1 = WordTally::new(&file_or_stdin, Case::Lower, Sort::Unsorted).unwrap();
+        let d1 = WordTally::new(&file_or_stdin, Case::Lower, Sort::Asc).unwrap();
 
         assert_eq!(a1, a2);
         assert_eq!(a2, a1);
@@ -137,7 +149,7 @@ fn equality_and_hashing() {
 #[test]
 fn vec_from() {
     if let Ok(file_or_stdin) = FileOrStdin::from_str("tests/files/words.txt") {
-        let tally = WordTally::new(&file_or_stdin, Case::Insensitive, Sort::Desc).unwrap();
+        let tally = WordTally::new(&file_or_stdin, Case::Lower, Sort::Desc).unwrap();
 
         assert_eq!(
             Vec::from(tally),

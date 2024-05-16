@@ -42,9 +42,10 @@ impl From<WordTally> for Vec<(String, u64)> {
 
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]
 pub enum Case {
+    Original,
+    Upper,
     #[default]
-    Insensitive,
-    Sensitive,
+    Lower,
 }
 
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]
@@ -136,8 +137,9 @@ impl WordTally {
         for line in lines.map_while(Result::ok) {
             line.unicode_words().for_each(|unicode_word| {
                 let word = match case {
-                    Case::Sensitive => unicode_word.to_owned(),
-                    Case::Insensitive => unicode_word.to_lowercase(),
+                    Case::Lower => unicode_word.to_lowercase(),
+                    Case::Upper => unicode_word.to_uppercase(),
+                    Case::Original => unicode_word.to_owned(),
                 };
 
                 tally

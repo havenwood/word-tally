@@ -10,16 +10,16 @@ pub struct Args {
     #[clap(default_value = "-")]
     pub input: FileOrStdin<PathBuf>,
 
-    /// Sort order.
+    /// Order.
     #[arg(short, long, default_value_t, value_enum, value_name = "ORDER")]
     pub sort: Sort,
 
-    /// Case sensitivity.
-    #[arg(short, long, default_value_t, value_enum, value_name = "SENSITIVITY")]
+    /// Normalization.
+    #[arg(short, long, default_value_t, value_enum, value_name = "FORMAT")]
     pub case: Case,
 
-    /// Delimiter characters between keys and values.
-    #[clap(short = 'D', long, default_value = " ", value_name = "CHARACTERS")]
+    /// Delimiter between keys and values.
+    #[clap(short = 'D', long, default_value = " ", value_name = "VALUE")]
     pub delimiter: String,
 
     /// Write output to file rather than stdout.

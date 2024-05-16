@@ -11,14 +11,14 @@ Arguments:
   [INPUT]  File path to use as input rather than stdin ("-") [default: -]
 
 Options:
-  -s, --sort <ORDER>            Sort order [default: desc] [possible values: desc, asc, unsorted]
-  -c, --case <SENSITIVITY>      Case sensitivity [default: insensitive] [possible values: insensitive, sensitive]
-  -D, --delimiter <CHARACTERS>  Delimiter characters between keys and values [default: ": "]
-  -o, --output <PATH>           Write output to file rather than stdout
-  -v, --verbose                 Print verbose details
-  -d, --debug                   Print debugging information
-  -h, --help                    Print help
-  -V, --version                 Print version
+  -s, --sort <ORDER>       Order [default: desc] [possible values: desc, asc, unsorted]
+  -c, --case <FORMAT>      Normalization [default: lower] [possible values: original, upper, lower]
+  -D, --delimiter <VALUE>  Delimiter between keys and values [default: " "]
+  -o, --output <PATH>      Write output to file rather than stdout
+  -v, --verbose            Print verbose details
+  -d, --debug              Print debugging information
+  -h, --help               Print help
+  -V, --version            Print version
 ```
 
 ## Examples

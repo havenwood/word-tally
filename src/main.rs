@@ -37,8 +37,9 @@ fn main() -> Result<()> {
     if args.debug {
         eprintln!("delimiter{delimiter}{delimiter:#?}");
         match args.case {
-            Case::Sensitive => eprintln!("case sensitive{delimiter}true"),
-            Case::Insensitive => eprintln!("case sensitive{delimiter}false"),
+            Case::Lower => eprintln!("case{delimiter}lower"),
+            Case::Upper => eprintln!("case{delimiter}upper"),
+            Case::Original => eprintln!("case{delimiter}original"),
         }
         match args.sort {
             Sort::Asc => eprintln!("order{delimiter}asc"),
