@@ -1,5 +1,7 @@
 #![feature(f128)]
 
+//! The `word-tally` command tallies and outputs the count of words from a file or streamed input.
+
 use anyhow::{Context, Result};
 use clap::ValueEnum;
 use clap_stdin::FileOrStdin;
@@ -26,18 +28,21 @@ pub struct WordTally {
 
 impl Eq for WordTally {}
 
+/// Since the other fields are derived from it, hash by just the `tally`.
 impl Hash for WordTally {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.tally.hash(state);
     }
 }
 
+/// The `tally` field `Vec` is the best way to get at the ordered tally.
 impl From<WordTally> for Vec<(String, u64)> {
     fn from(word_tally: WordTally) -> Self {
         word_tally.tally
     }
 }
 
+/// Word case normalization.
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]
 pub enum Case {
     Original,
@@ -46,6 +51,7 @@ pub enum Case {
     Lower,
 }
 
+/// Sort order by count.
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]
 pub enum Sort {
     #[default]
@@ -54,6 +60,7 @@ pub enum Sort {
     Unsorted,
 }
 
+/// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
 impl WordTally {
     /// Constructs a new `WordTally` from a file or stdin source input.
     pub fn new(input: &FileOrStdin<PathBuf>, case: Case, order: Sort) -> Result<Self> {
@@ -75,7 +82,7 @@ impl WordTally {
         Ok(word_tally)
     }
 
-    /// Sorts the `tally` field in place or does nothing if already sorted.
+    /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
     pub fn sort(&mut self, order: Sort) {
         match order {
             Sort::Desc => self
@@ -111,7 +118,7 @@ impl WordTally {
         (count > 0).then(|| (count as f128 / uniq_count as f128) as f64)
     }
 
-    /// Creates a line buffer reader from a file or stdin source.
+    /// Creates a line buffer reader result from a file or stdin source.
     fn lines(input: &FileOrStdin<PathBuf>) -> Result<Lines<BufReader<impl Read>>> {
         let reader = input
             .into_reader()
@@ -120,7 +127,7 @@ impl WordTally {
         Ok(io::BufReader::new(reader).lines())
     }
 
-    /// Creates a tally of words from a line buffer reader.
+    /// Creates a tally of optionally normalized words from a line buffer reader.
     fn tally_map(lines: io::Lines<BufReader<impl Read>>, case: Case) -> HashMap<String, u64> {
         let mut tally = HashMap::new();
 
