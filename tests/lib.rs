@@ -12,21 +12,23 @@ struct Fields<'a> {
     tally: Vec<(&'a str, u64)>,
 }
 
+fn word_tally(case: Case, sort: Sort) -> WordTally {
+    let file_or_stdin = FileOrStdin::from_str(WORDS_PATH).unwrap();
+    WordTally::new(&file_or_stdin, case, sort).unwrap()
+}
+
 fn word_tally_test(case: Case, sort: Sort, fields: Fields) {
-    if let Ok(file_or_stdin) = FileOrStdin::from_str(WORDS_PATH) {
-        let word_tally = WordTally::new(&file_or_stdin, case, sort).unwrap();
+    let word_tally = word_tally(case, sort);
+    assert_eq!(word_tally.count(), fields.count);
+    assert_eq!(word_tally.uniq_count(), fields.uniq_count);
+    assert_eq!(word_tally.avg().unwrap(), fields.avg);
 
-        assert_eq!(word_tally.count(), fields.count);
-        assert_eq!(word_tally.uniq_count(), fields.uniq_count);
-        assert_eq!(word_tally.avg().unwrap(), fields.avg);
-
-        let expected_tally: Vec<(String, u64)> = fields
-            .tally
-            .iter()
-            .map(|(word, count)| ((*word).to_string(), *count))
-            .collect();
-        assert_eq!(word_tally.tally(), &expected_tally);
-    }
+    let expected_tally: Vec<(String, u64)> = fields
+        .tally
+        .iter()
+        .map(|(word, count)| ((*word).to_string(), *count))
+        .collect();
+    assert_eq!(word_tally.tally(), &expected_tally);
 }
 
 #[test]
@@ -121,11 +123,6 @@ fn original_case_asc_order() {
 
 #[test]
 fn equality_and_hashing() {
-    fn word_tally(case: Case, sort: Sort) -> WordTally {
-        let file_or_stdin = FileOrStdin::from_str(WORDS_PATH).unwrap();
-        WordTally::new(&file_or_stdin, case, sort).unwrap()
-    }
-
     fn hash_value(word_tally: &WordTally) -> u64 {
         let mut hasher = DefaultHasher::new();
         word_tally.hash(&mut hasher);
@@ -174,18 +171,16 @@ fn equality_and_hashing() {
 
 #[test]
 fn vec_from() {
-    if let Ok(file_or_stdin) = FileOrStdin::from_str(WORDS_PATH) {
-        let tally = WordTally::new(&file_or_stdin, Case::Lower, Sort::Desc).unwrap();
+    let tally = word_tally(Case::Lower, Sort::Desc);
 
-        assert_eq!(
-            Vec::from(tally),
-            vec![
-                ("c".to_string(), 15),
-                ("d".to_string(), 11),
-                ("123".to_string(), 9),
-                ("b".to_string(), 7),
-                ("a".to_string(), 3)
-            ]
-        );
-    }
+    assert_eq!(
+        Vec::from(tally),
+        vec![
+            ("c".to_string(), 15),
+            ("d".to_string(), 11),
+            ("123".to_string(), 9),
+            ("b".to_string(), 7),
+            ("a".to_string(), 3)
+        ]
+    );
 }
