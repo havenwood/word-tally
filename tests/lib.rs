@@ -30,7 +30,7 @@ fn word_tally_test(case: Case, sort: Sort, fields: Fields) {
 }
 
 #[test]
-fn case_insensitive_desc_order() {
+fn lower_case_desc_order() {
     word_tally_test(
         Case::Lower,
         Sort::Desc,
@@ -41,7 +41,10 @@ fn case_insensitive_desc_order() {
             tally: vec![("c", 15), ("d", 11), ("123", 9), ("b", 7), ("a", 3)],
         },
     );
+}
 
+#[test]
+fn upper_case_desc_order() {
     word_tally_test(
         Case::Upper,
         Sort::Desc,
@@ -55,7 +58,7 @@ fn case_insensitive_desc_order() {
 }
 
 #[test]
-fn case_insensitive_asc_order() {
+fn lower_case_asc_order() {
     word_tally_test(
         Case::Lower,
         Sort::Asc,
@@ -69,7 +72,7 @@ fn case_insensitive_asc_order() {
 }
 
 #[test]
-fn case_sensitive_desc_order() {
+fn original_case_desc_order() {
     word_tally_test(
         Case::Original,
         Sort::Desc,
@@ -93,7 +96,7 @@ fn case_sensitive_desc_order() {
 }
 
 #[test]
-fn case_sensitive_asc_order() {
+fn original_case_asc_order() {
     word_tally_test(
         Case::Original,
         Sort::Asc,
