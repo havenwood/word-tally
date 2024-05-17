@@ -16,7 +16,7 @@ use crate::args::Args;
 use anyhow::Result;
 use clap::Parser;
 use std::fs::File;
-use std::io::{LineWriter, Write};
+use std::io::{self, LineWriter, Write};
 use unescaper::unescape;
 use word_tally::*;
 
@@ -55,24 +55,22 @@ fn main() -> Result<()> {
         eprintln!();
     }
 
-    match args.output {
+    let mut writer: Box<dyn Write> = match args.output {
         Some(path) => {
             let file = File::create(path)?;
-            let mut writer = LineWriter::new(file);
 
-            for (word, count) in word_tally.tally() {
-                let line = format!("{word}{delimiter}{count}\n");
-                writer.write_all(line.as_bytes())?;
-            }
-
-            writer.flush()?;
+            Box::new(LineWriter::new(file))
         }
-        None => {
-            for (word, count) in word_tally.tally() {
-                println!("{word}{delimiter}{count}");
-            }
-        }
+        None => Box::new(io::stdout()),
     };
+
+    for (word, count) in word_tally.tally() {
+        let line = format!("{word}{delimiter}{count}\n");
+
+        writer.write_all(line.as_bytes())?;
+    }
+
+    writer.flush()?;
 
     Ok(())
 }
