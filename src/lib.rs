@@ -111,7 +111,7 @@ impl WordTally {
 
     /// Calculates an approximate mean average word count if there are words.
     /// Note: Casting `u64` to `f64` and floating point arithmatic cause a loss of precision.
-    pub fn calculate_avg(count: u64, uniq_count: usize) -> Option<f64> {
+    fn calculate_avg(count: u64, uniq_count: usize) -> Option<f64> {
         (count > 0).then(|| count as f64 / uniq_count as f64)
     }
 
