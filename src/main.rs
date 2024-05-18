@@ -31,11 +31,11 @@ fn main() -> Result<()> {
 
     if args.verbose {
         eprintln!("source{delimiter}{:#?}", args.input.source);
-        eprintln!("total words{delimiter}{}", word_tally.count());
-        eprintln!("unique words{delimiter}{}", word_tally.uniq_count());
+        eprintln!("total-words{delimiter}{}", word_tally.count());
+        eprintln!("unique-words{delimiter}{}", word_tally.uniq_count());
 
         if let Some(avg) = word_tally.avg() {
-            eprintln!("average word count{delimiter}{avg:.3}");
+            eprintln!("average-word-count{delimiter}{avg:.3}");
         }
     }
 
