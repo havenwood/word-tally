@@ -1,11 +1,37 @@
-use anyhow::{Context, Result};
+//! A tally of words with a count of times each appears
+//!
+//! A `WordTally` represents a tally of the total number of times each word
+//! appears in an input source that implements `Read`. When a `WordTally` is
+//! constructed, the provided input is iterated over line by line to count words.
+//! Ordered pairs of words and their count are stored in the `tally` field.
+//!
+//! # `Case` and `Sort` enum options
+//!
+//! In addition to source input, a `WordTally` is contstructed with options for
+//! `Case` normalization and `Sort` order. `Case` options include `Original`
+//! (case sensitive) and `Lower` or `Upper` case normalization. `Sort` order can
+//! be `Unsorted` or sorted `Desc` (descending) or `Asc` (ascending). A `tally`
+//! can be sorted upon contruction or sorted later with the `sort` method.
+//! Sorting doesn't impact the other `count`, `uniq_count` or `avg` fields.
+//!
+//! # Examples
+//!
+//! ```
+//! use std::fs::File;
+//! use word_tally::{Case, Sort, WordTally};
+//!
+//! let input = "Cinquedea".as_bytes();
+//! let words = WordTally::new(input, Case::Lower, Sort::Desc);
+//! let expected_tally = vec![("cinquedea".to_string(), 1)];
+//!
+//! assert_eq!(words.tally(), expected_tally);
+//! ```
+
 use clap::ValueEnum;
-use clap_stdin::FileOrStdin;
 use core::cmp::Reverse;
 use core::hash::{Hash, Hasher};
 use std::collections::HashMap;
 use std::io::{self, BufRead, BufReader, Lines, Read};
-use std::path::PathBuf;
 use unicode_segmentation::UnicodeSegmentation;
 
 /// A `WordTally` represents an ordered tally of words paired with their count.
@@ -58,9 +84,9 @@ pub enum Sort {
 
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
 impl WordTally {
-    /// Constructs a new `WordTally` from a file or stdin source input.
-    pub fn new(input: &FileOrStdin<PathBuf>, case: Case, order: Sort) -> Result<Self> {
-        let lines = Self::lines(input)?;
+    /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
+    pub fn new<T: Read>(input: T, case: Case, order: Sort) -> Self {
+        let lines = Self::lines(input);
         let tally_map = Self::tally_map(lines, case);
         let count = tally_map.values().sum();
         let tally = Vec::from_iter(tally_map);
@@ -75,7 +101,7 @@ impl WordTally {
 
         word_tally.sort(order);
 
-        Ok(word_tally)
+        word_tally
     }
 
     /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
@@ -90,8 +116,8 @@ impl WordTally {
     }
 
     /// Gets the `tally` field.
-    pub fn tally(&self) -> &Vec<(String, u64)> {
-        &self.tally
+    pub fn tally(self) -> Vec<(String, u64)> {
+        self.tally
     }
 
     /// Gets the `uniq_count` field.
@@ -115,13 +141,9 @@ impl WordTally {
         (count > 0).then(|| count as f64 / uniq_count as f64)
     }
 
-    /// Creates a line buffer reader result from a file or stdin source.
-    fn lines(input: &FileOrStdin<PathBuf>) -> Result<Lines<BufReader<impl Read>>> {
-        let reader = input
-            .into_reader()
-            .with_context(|| format!("Failed to read {:#?}", input.source))?;
-
-        Ok(io::BufReader::new(reader).lines())
+    /// Creates a line buffer reader result from the input source.
+    fn lines(input: impl Read) -> Lines<BufReader<impl Read>> {
+        io::BufReader::new(input).lines()
     }
 
     /// Creates a tally of optionally normalized words from a line buffer reader.

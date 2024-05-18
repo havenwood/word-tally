@@ -1,9 +1,8 @@
-use clap_stdin::FileOrStdin;
+use std::fs::File;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use std::str::FromStr;
 use word_tally::*;
 
-const WORDS_PATH: &str = "tests/files/words.txt";
+const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 
 struct ExpectedFields<'a> {
     count: u64,
@@ -13,8 +12,10 @@ struct ExpectedFields<'a> {
 }
 
 fn word_tally(case: Case, sort: Sort) -> WordTally {
-    let file_or_stdin = FileOrStdin::from_str(WORDS_PATH).unwrap();
-    WordTally::new(&file_or_stdin, case, sort).unwrap()
+    let input = File::open(TEST_WORDS_PATH)
+        .expect("Expected test words file (`files/words.txt`) to be readable.");
+
+    WordTally::new(input, case, sort)
 }
 
 fn word_tally_test(case: Case, sort: Sort, fields: ExpectedFields) {
@@ -28,7 +29,7 @@ fn word_tally_test(case: Case, sort: Sort, fields: ExpectedFields) {
         .iter()
         .map(|(word, count)| ((*word).to_string(), *count))
         .collect();
-    assert_eq!(word_tally.tally(), &expected_tally);
+    assert_eq!(word_tally.tally(), expected_tally);
 }
 
 #[test]

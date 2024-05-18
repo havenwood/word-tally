@@ -13,7 +13,7 @@ pub(crate) mod args;
 
 use crate::args::Args;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use std::fs::File;
 use std::io::{self, LineWriter, Write};
@@ -22,7 +22,11 @@ use word_tally::*;
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    let word_tally = WordTally::new(&args.input, args.case, args.sort)?;
+    let reader = args
+        .input
+        .into_reader()
+        .with_context(|| format!("Failed to read {:#?}", args.input.source))?;
+    let word_tally = WordTally::new(reader, args.case, args.sort);
     let delimiter = unescape(&args.delimiter)?;
 
     if args.verbose {
