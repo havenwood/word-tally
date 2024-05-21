@@ -9,7 +9,7 @@ use clap::Parser;
 use std::fs::File;
 use std::io::{self, LineWriter, Write};
 use unescaper::unescape;
-use word_tally::*;
+use word_tally::{Case, Sort, WordTally};
 
 fn main() -> Result<()> {
     let args = Args::parse();

@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use word_tally::*;
+use word_tally::{Case, Sort, WordTally};
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 
@@ -133,7 +133,7 @@ fn original_case_asc_order() {
                 ("123", 9),
             ],
         },
-    )
+    );
 }
 
 #[test]
