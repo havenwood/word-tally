@@ -18,6 +18,10 @@ clap-stdin = "0.4.0"
 unescaper = "0.1.4"
 unicode-segmentation = "1.11.0"
 
+[dev-dependencies]
+assert_cmd = "2.0.14"
+predicates = "3.1.0"
+
 [profile.release]
 codegen-units = 1
 incremental = true
