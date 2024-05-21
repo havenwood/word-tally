@@ -17,7 +17,6 @@
 //! # Examples
 //!
 //! ```
-//! use std::fs::File;
 //! use word_tally::{Case, Sort, WordTally};
 //!
 //! let input = "Cinquedea".as_bytes();
