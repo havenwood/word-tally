@@ -18,7 +18,7 @@ fn word_tally(case: Case, sort: Sort) -> WordTally {
     WordTally::new(input, case, sort)
 }
 
-fn word_tally_test(case: Case, sort: Sort, fields: ExpectedFields) {
+fn word_tally_test(case: Case, sort: Sort, fields: &ExpectedFields<'_>) {
     let word_tally = word_tally(case, sort);
     assert_eq!(word_tally.count(), fields.count);
     assert_eq!(word_tally.uniq_count(), fields.uniq_count);
@@ -37,7 +37,7 @@ fn lower_case_desc_order() {
     word_tally_test(
         Case::Lower,
         Sort::Desc,
-        ExpectedFields {
+        &ExpectedFields {
             count: 45,
             uniq_count: 5,
             avg: 9.0,
@@ -51,7 +51,7 @@ fn upper_case_desc_order() {
     word_tally_test(
         Case::Upper,
         Sort::Desc,
-        ExpectedFields {
+        &ExpectedFields {
             count: 45,
             uniq_count: 5,
             avg: 9.0,
@@ -65,7 +65,7 @@ fn lower_case_asc_order() {
     word_tally_test(
         Case::Lower,
         Sort::Asc,
-        ExpectedFields {
+        &ExpectedFields {
             count: 45,
             uniq_count: 5,
             avg: 9.0,
@@ -79,7 +79,7 @@ fn upper_case_asc_order() {
     word_tally_test(
         Case::Upper,
         Sort::Asc,
-        ExpectedFields {
+        &ExpectedFields {
             count: 45,
             uniq_count: 5,
             avg: 9.0,
@@ -93,7 +93,7 @@ fn original_case_desc_order() {
     word_tally_test(
         Case::Original,
         Sort::Desc,
-        ExpectedFields {
+        &ExpectedFields {
             count: 45,
             uniq_count: 9,
             avg: 5.0,
@@ -117,7 +117,7 @@ fn original_case_asc_order() {
     word_tally_test(
         Case::Original,
         Sort::Asc,
-        ExpectedFields {
+        &ExpectedFields {
             count: 45,
             uniq_count: 9,
             avg: 5.0,
