@@ -1,6 +1,7 @@
 # word-tally
 
 [![Crates.io](https://img.shields.io/crates/v/word-tally?style=for-the-badge&label=word-tally)](https://crates.io/crates/word-tally)
+[![docs.rs](https://img.shields.io/docsrs/word-tally?style=for-the-badge&link=https%3A%2F%2Fdocs.rs%2Fword-tally%2Flatest%2Fword_tally%2F)](https://docs.rs/word-tally/latest/word_tally/)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/havenwood/word-tally/rust.yml?style=for-the-badge)](https://github.com/havenwood/word-tally/actions/workflows/rust.yml)
 
 Output a tally of the number of times unique words appear in source input.
@@ -45,6 +46,10 @@ output 4
 ```sh
 cargo install word-tally
 ```
+
+## Documentation
+
+[https://docs.rs/word-tally](https://docs.rs/word-tally/latest/word_tally/)
 
 ## Tests
 
