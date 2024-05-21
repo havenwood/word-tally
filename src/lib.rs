@@ -121,17 +121,17 @@ impl WordTally {
     }
 
     /// Gets the `uniq_count` field.
-    pub fn uniq_count(&self) -> usize {
+    pub const fn uniq_count(&self) -> usize {
         self.uniq_count
     }
 
     /// Gets the `count` field.
-    pub fn count(&self) -> u64 {
+    pub const fn count(&self) -> u64 {
         self.count
     }
 
     /// Gets the `avg` field.
-    pub fn avg(&self) -> Option<f64> {
+    pub const fn avg(&self) -> Option<f64> {
         self.avg
     }
 
