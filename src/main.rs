@@ -1,14 +1,5 @@
 //! The `word-tally` command tallies and outputs the count of words from a file or streamed input.
 
-#![warn(clippy::nursery)]
-#![warn(future_incompatible)]
-#![warn(let_underscore)]
-#![warn(nonstandard_style)]
-#![warn(rust_2018_compatibility)]
-#![warn(rust_2018_idioms)]
-#![warn(rust_2021_compatibility)]
-#![warn(unused)]
-
 pub(crate) mod args;
 
 use crate::args::Args;

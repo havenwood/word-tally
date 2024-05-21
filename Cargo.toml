@@ -29,3 +29,15 @@ lto = true
 opt-level = "s"
 panic = "abort"
 strip = true
+
+[lints.clippy]
+nursery = "warn"
+
+[lints.rust]
+future_incompatible = "warn"
+let_underscore = "warn"
+nonstandard_style = "warn"
+rust_2018_compatibility = "warn"
+rust_2018_idioms = "warn"
+rust_2021_compatibility = "warn"
+unused = "warn"
