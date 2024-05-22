@@ -30,7 +30,7 @@ use clap::ValueEnum;
 use core::cmp::Reverse;
 use core::hash::{Hash, Hasher};
 use std::collections::HashMap;
-use std::io::{self, BufRead, BufReader, Lines, Read};
+use std::io::{BufRead, BufReader, Read};
 use unicode_segmentation::UnicodeSegmentation;
 
 /// A `WordTally` represents an ordered tally of words paired with their count.
@@ -85,8 +85,7 @@ pub enum Sort {
 impl WordTally {
     /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
     pub fn new<T: Read>(input: T, case: Case, order: Sort) -> Self {
-        let lines = Self::lines(input);
-        let tally_map = Self::tally_map(lines, case);
+        let tally_map = Self::tally_map(input, case);
         let count = tally_map.values().sum();
         let tally = Vec::from_iter(tally_map);
         let uniq_count = tally.len();
@@ -140,14 +139,10 @@ impl WordTally {
         (count > 0).then(|| count as f64 / uniq_count as f64)
     }
 
-    /// Creates a line buffer reader result from the input source.
-    fn lines(input: impl Read) -> Lines<BufReader<impl Read>> {
-        io::BufReader::new(input).lines()
-    }
-
-    /// Creates a tally of optionally normalized words from a line buffer reader.
-    fn tally_map(lines: io::Lines<BufReader<impl Read>>, case: Case) -> HashMap<String, u64> {
+    /// Creates a tally of optionally normalized words from input that implements `Read`.
+    fn tally_map<T: Read>(input: T, case: Case) -> HashMap<String, u64> {
         let mut tally = HashMap::new();
+        let lines = BufReader::new(input).lines();
 
         for line in lines.map_while(Result::ok) {
             line.unicode_words().for_each(|unicode_word| {
@@ -157,10 +152,7 @@ impl WordTally {
                     Case::Original => unicode_word.to_owned(),
                 };
 
-                tally
-                    .entry(word)
-                    .and_modify(|count| *count += 1)
-                    .or_insert(1);
+                *tally.entry(word).or_insert(0) += 1;
             });
         }
 
