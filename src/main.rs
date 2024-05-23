@@ -7,7 +7,7 @@ use crate::args::Args;
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::fs::File;
-use std::io::{self, LineWriter, Write};
+use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Write};
 use unescaper::unescape;
 use word_tally::{Case, Sort, WordTally};
 
@@ -62,7 +62,14 @@ fn main() -> Result<()> {
     for (word, count) in word_tally.tally() {
         let line = format!("{word}{delimiter}{count}\n");
 
-        writer.write_all(line.as_bytes())?;
+        // This can be simplified once `-Zon-broken-pipe=kill` stabilizes.
+        // See: https://doc.rust-lang.org/nightly/unstable-book/compiler-flags/on-broken-pipe.html
+        if let Err(err) = writer.write_all(line.as_bytes()) {
+            return match err.kind() {
+                BrokenPipe => Ok(()),
+                _ => Err(err.into()),
+            }
+        };
     }
 
     writer.flush()?;
