@@ -17,10 +17,10 @@
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Case, Sort, WordTally};
+//! use word_tally::{Case, Minimums, Sort, WordTally};
 //!
 //! let input = "Cinquedea".as_bytes();
-//! let words = WordTally::new(input, Case::Lower, Sort::Desc);
+//! let words = WordTally::new(input, Case::Lower, Sort::Desc, Minimums::default());
 //! let expected_tally = vec![("cinquedea".to_string(), 1)];
 //!
 //! assert_eq!(words.tally(), expected_tally);
@@ -81,11 +81,23 @@ pub enum Sort {
     Unsorted,
 }
 
+/// Minimum requirements for a word to be included in the tally.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Minimums {
+    /// Min number of chars for words to be included.
+    pub chars: usize,
+    /// Min count of a word for it to be included.
+    pub count: u64,
+}
+
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
 impl WordTally {
     /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
-    pub fn new<T: Read>(input: T, case: Case, order: Sort) -> Self {
-        let tally_map = Self::tally_map(input, case);
+    pub fn new<T: Read>(input: T, case: Case, order: Sort, min: Minimums) -> Self {
+        let mut tally_map = Self::tally_map(input, case, min.chars);
+        if min.count > 1 {
+            tally_map.retain(|_, &mut count| count >= min.count);
+        }
         let count = tally_map.values().sum();
         let tally = Vec::from_iter(tally_map);
         let uniq_count = tally.len();
@@ -140,20 +152,22 @@ impl WordTally {
     }
 
     /// Creates a tally of optionally normalized words from input that implements `Read`.
-    fn tally_map<T: Read>(input: T, case: Case) -> HashMap<String, u64> {
+    fn tally_map<T: Read>(input: T, case: Case, min_chars: usize) -> HashMap<String, u64> {
         let mut tally = HashMap::new();
         let lines = BufReader::new(input).lines();
 
         for line in lines.map_while(Result::ok) {
-            line.unicode_words().for_each(|unicode_word| {
-                let word = match case {
-                    Case::Lower => unicode_word.to_lowercase(),
-                    Case::Upper => unicode_word.to_uppercase(),
-                    Case::Original => unicode_word.to_owned(),
-                };
+            line.unicode_words()
+                .filter(|unicode_word| min_chars <= 1 || unicode_word.len() >= min_chars)
+                .for_each(|unicode_word| {
+                    let word = match case {
+                        Case::Lower => unicode_word.to_lowercase(),
+                        Case::Upper => unicode_word.to_uppercase(),
+                        Case::Original => unicode_word.to_owned(),
+                    };
 
-                *tally.entry(word).or_insert(0) += 1;
-            });
+                    *tally.entry(word).or_insert(0) += 1;
+                });
         }
 
         tally

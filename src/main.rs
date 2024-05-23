@@ -9,7 +9,7 @@ use clap_stdin::Source;
 use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, StderrLock, Write};
 use unescaper::unescape;
-use word_tally::{Case, Sort, WordTally};
+use word_tally::{Case, Minimums, Sort, WordTally};
 
 /// `Writer` is a boxed type for dynamic dispatch of the `Write` trait.
 type Writer = Box<dyn Write>;
@@ -20,7 +20,11 @@ fn main() -> Result<()> {
         .input
         .into_reader()
         .with_context(|| format!("Failed to read {:#?}.", args.input.source))?;
-    let word_tally = WordTally::new(reader, args.case, args.sort);
+    let minimums = Minimums {
+        chars: args.min_chars,
+        count: args.min_count,
+    };
+    let word_tally = WordTally::new(reader, args.case, args.sort, minimums);
     let delimiter = unescape(&args.delimiter)?;
 
     if args.verbose || args.debug {
@@ -53,14 +57,7 @@ fn log_details(
     }
 
     if args.debug {
-        log_debug(
-            &mut stderr_lock,
-            args.case,
-            args.sort,
-            args.verbose,
-            args.debug,
-            delimiter,
-        )?;
+        log_debug(&mut stderr_lock, args, delimiter)?;
     }
 
     if word_tally.count() > 0 {
@@ -99,21 +96,14 @@ fn log_verbose(
 }
 
 /// Log debug details to stderr.
-fn log_debug(
-    stderr: &mut StderrLock<'_>,
-    case: Case,
-    sort: Sort,
-    verbose: bool,
-    debug: bool,
-    delimiter: &str,
-) -> Result<()> {
-    let case_name = match case {
+fn log_debug(stderr: &mut StderrLock<'_>, args: &Args, delimiter: &str) -> Result<()> {
+    let case_name = match args.case {
         Case::Lower => "lower",
         Case::Upper => "upper",
         Case::Original => "original",
     };
 
-    let sort_name = match sort {
+    let sort_name = match args.sort {
         Sort::Asc => "asc",
         Sort::Desc => "desc",
         Sort::Unsorted => "unsorted",
@@ -123,8 +113,10 @@ fn log_debug(
         format!("delimiter{delimiter}{delimiter:#?}\n"),
         format!("case{delimiter}{case_name}\n"),
         format!("order{delimiter}{sort_name}\n"),
-        format!("verbose{delimiter}{verbose}\n"),
-        format!("debug{delimiter}{debug}\n"),
+        format!("min-chars{delimiter}{}\n", args.min_chars),
+        format!("min-count{delimiter}{}\n", args.min_count),
+        format!("verbose{delimiter}{}\n", args.verbose),
+        format!("debug{delimiter}{}\n", args.debug),
     ];
 
     for detail in &details {
@@ -162,7 +154,7 @@ fn write_tally(
 // used to kill the program if it tries to write to a closed pipe.
 fn piping(result: std::io::Result<()>) -> Result<()> {
     match result {
-        Ok(_) => Ok(()),
+        Ok(()) => Ok(()),
         Err(err) => match err.kind() {
             BrokenPipe => Ok(()),
             _ => Err(err.into()),

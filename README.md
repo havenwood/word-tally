@@ -15,8 +15,10 @@ Arguments:
   [INPUT]  File path to use as input rather than stdin ("-") [default: -]
 
 Options:
-  -s, --sort <ORDER>       Order [default: desc] [possible values: desc, asc, unsorted]
-  -c, --case <FORMAT>      Normalization [default: lower] [possible values: original, upper, lower]
+  -s, --sort <ORDER>       Sort order [default: desc] [possible values: desc, asc, unsorted]
+  -c, --case <FORMAT>      Case normalization [default: lower] [possible values: original, upper, lower]
+  -m, --min-chars <COUNT>  Exclude words that contain fewer than min chars [default: 1]
+  -M, --min-count <COUNT>  Exclude words that appear fewer than min times [default: 1]
   -D, --delimiter <VALUE>  Delimiter between keys and values [default: " "]
   -o, --output <PATH>      Write output to file rather than stdout
   -v, --verbose            Print verbose details

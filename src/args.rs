@@ -7,19 +7,27 @@ use word_tally::{Case, Sort};
 #[command(about, version)]
 pub struct Args {
     /// File path to use as input rather than stdin ("-").
-    #[clap(default_value = "-")]
+    #[arg(default_value = "-")]
     pub input: FileOrStdin<PathBuf>,
 
-    /// Order.
+    /// Sort order.
     #[arg(short, long, default_value_t, value_enum, value_name = "ORDER")]
     pub sort: Sort,
 
-    /// Normalization.
+    /// Case normalization.
     #[arg(short, long, default_value_t, value_enum, value_name = "FORMAT")]
     pub case: Case,
 
+    /// Exclude words that contain fewer than min chars.
+    #[arg(short, long, default_value_t = 1, value_name = "COUNT")]
+    pub min_chars: usize,
+
+    /// Exclude words that appear fewer than min times.
+    #[arg(short = 'M', long, default_value_t = 1, value_name = "COUNT")]
+    pub min_count: u64,
+
     /// Delimiter between keys and values.
-    #[clap(short = 'D', long, default_value = " ", value_name = "VALUE")]
+    #[arg(short = 'D', long, default_value = " ", value_name = "VALUE")]
     pub delimiter: String,
 
     /// Write output to file rather than stdout.
