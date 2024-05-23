@@ -9,7 +9,7 @@ keywords = ["cli", "tally", "words", "count"]
 license = "MIT"
 name = "word-tally"
 repository = "https://github.com/havenwood/word-tally"
-version = "0.3.2"
+version = "0.4.0"
 
 [dependencies]
 anyhow = "1.0.83"
