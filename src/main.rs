@@ -1,15 +1,17 @@
-//! The `word-tally` command tallies and outputs the count of words from a file or streamed input.
+//! `word-tally` tallies and outputs the count of words from a file or streamed input.
 
 pub(crate) mod args;
 
-use crate::args::Args;
-
 use anyhow::{Context, Result};
+use args::Args;
 use clap::Parser;
 use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Write};
 use unescaper::unescape;
 use word_tally::{Case, Sort, WordTally};
+
+/// `Writer` is a boxed type for dynamic dispatch of the `Write` trait.
+type Writer = Box<dyn Write>;
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -50,13 +52,9 @@ fn main() -> Result<()> {
         eprintln!();
     }
 
-    let mut writer: Box<dyn Write> = match args.output {
-        Some(path) => {
-            let file = File::create(path)?;
-
-            Box::new(LineWriter::new(file))
-        }
-        None => Box::new(io::stdout()),
+    let mut writer: Writer = match args.output {
+        Some(path) => Box::new(LineWriter::new(File::create(path)?)) as Writer,
+        None => Box::new(io::stdout()) as Writer,
     };
 
     for (word, count) in word_tally.tally() {
@@ -68,8 +66,8 @@ fn main() -> Result<()> {
             return match err.kind() {
                 BrokenPipe => Ok(()),
                 _ => Err(err.into()),
-            }
-        };
+            };
+        }
     }
 
     writer.flush()?;
