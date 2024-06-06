@@ -28,6 +28,7 @@
 
 use clap::ValueEnum;
 use core::cmp::Reverse;
+use core::fmt;
 use core::hash::{Hash, Hasher};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read};
@@ -72,6 +73,18 @@ pub enum Case {
     Lower,
 }
 
+impl fmt::Display for Case {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let case = match self {
+            Self::Lower => "lower",
+            Self::Upper => "upper",
+            Self::Original => "original",
+        };
+
+        f.write_str(case)
+    }
+}
+
 /// Sort order by count.
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]
 pub enum Sort {
@@ -79,6 +92,18 @@ pub enum Sort {
     Desc,
     Asc,
     Unsorted,
+}
+
+impl fmt::Display for Sort {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let order = match self {
+            Self::Desc => "desc",
+            Self::Asc => "asc",
+            Self::Unsorted => "unsorted",
+        };
+
+        f.write_str(order)
+    }
 }
 
 /// Minimum requirements for a word to be included in the tally.

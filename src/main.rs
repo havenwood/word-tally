@@ -9,7 +9,7 @@ use clap_stdin::Source;
 use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, StderrLock, Write};
 use unescaper::unescape;
-use word_tally::{Case, Minimums, Sort, WordTally};
+use word_tally::{Minimums, WordTally};
 
 /// `Writer` is a boxed type for dynamic dispatch of the `Write` trait.
 type Writer = Box<dyn Write>;
@@ -97,22 +97,10 @@ fn log_verbose(
 
 /// Log debug details to stderr.
 fn log_debug(stderr: &mut StderrLock<'_>, args: &Args, delimiter: &str) -> Result<()> {
-    let case_name = match args.case {
-        Case::Lower => "lower",
-        Case::Upper => "upper",
-        Case::Original => "original",
-    };
-
-    let sort_name = match args.sort {
-        Sort::Asc => "asc",
-        Sort::Desc => "desc",
-        Sort::Unsorted => "unsorted",
-    };
-
     let details = [
         format!("delimiter{delimiter}{delimiter:#?}\n"),
-        format!("case{delimiter}{case_name}\n"),
-        format!("order{delimiter}{sort_name}\n"),
+        format!("case{delimiter}{}\n", args.case),
+        format!("order{delimiter}{}\n", args.sort),
         format!("min-chars{delimiter}{}\n", args.min_chars),
         format!("min-count{delimiter}{}\n", args.min_count),
         format!("verbose{delimiter}{}\n", args.verbose),
