@@ -25,25 +25,29 @@
 //!
 //! assert_eq!(words.tally(), expected_tally);
 //! ```
-
 use clap::ValueEnum;
 use core::cmp::Reverse;
 use core::fmt;
 use core::hash::{Hash, Hasher};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read};
 use unicode_segmentation::UnicodeSegmentation;
 
-/// A `WordTally` represents an ordered tally of words paired with their count.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug, Default, PartialEq)]
 #[non_exhaustive]
 pub struct WordTally {
     /// Ordered pairs of words and the count of times they appear.
     tally: Vec<(String, u64)>,
+
     /// The sum of all words tallied.
     count: u64,
+
     /// The sum of uniq words tallied.
     uniq_count: usize,
+
     /// The mean average count per word, if there are words.
     avg: Option<f64>,
 }

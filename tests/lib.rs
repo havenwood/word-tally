@@ -306,3 +306,40 @@ fn test_only_words() {
 
     assert_eq!(result, expected);
 }
+
+#[cfg(feature = "serde")]
+#[test]
+fn test_to_json() {
+    let expected = WordTally::new(
+        "wombat wombat bat".as_bytes(),
+        Case::Lower,
+        Sort::Desc,
+        Filters::default(),
+    );
+    let serialized = serde_json::to_string(&expected).unwrap();
+
+    let expected_json = r#"{"tally":[["wombat",2],["bat",1]],"count":3,"uniq_count":2,"avg":1.5}"#;
+    assert_eq!(serialized, expected_json);
+}
+
+#[cfg(feature = "serde")]
+#[test]
+fn test_from_json() {
+    let expected = WordTally::new(
+        "wombat wombat bat".as_bytes(),
+        Case::Lower,
+        Sort::Desc,
+        Filters::default(),
+    );
+    let json = r#"
+    {
+        "tally": [["wombat", 2], ["bat", 1]],
+        "count": 3,
+        "uniq_count": 2,
+        "avg": 1.5
+    }
+    "#;
+
+    let deserialized: WordTally = serde_json::from_str(json).unwrap();
+    assert_eq!(deserialized, expected);
+}

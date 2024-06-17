@@ -833,6 +833,8 @@ dependencies = [
  "criterion",
  "once_cell",
  "predicates",
+ "serde",
+ "serde_json",
  "unescaper",
  "unicode-segmentation",
 ]

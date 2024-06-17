@@ -48,14 +48,49 @@ https 11
 cargo install word-tally
 ```
 
+## Cargo.toml
+
+Add `word-tally` as a dependency.
+
+```toml
+[dependencies]
+word-tally = "0.7.0"
+```
+
+Or optionally enable JSON serialization and deserialization with Serde.
+
+```toml
+[dependencies]
+word-tally = { version = "0.7.0", features = ["serde"] }
+```
+
 ## Documentation
 
 [https://docs.rs/word-tally](https://docs.rs/word-tally/latest/word_tally/)
 
-## Tests
+## Tests & benchmarks
+
+Clone the repository.
 
 ```sh
 git clone https://github.com/havenwood/word-tally
 cd word-tally
+```
+
+Run the tests.
+
+```sh
 cargo test
+```
+
+Or run the tests with the Serde feature included.
+
+```sh
+cargo test --features serde
+```
+
+And run the benchmarks.
+
+```sh
+cargo bench
 ```
