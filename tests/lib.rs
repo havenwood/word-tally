@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use word_tally::{Case, Minimums, Sort, WordTally};
+use word_tally::{Case, Chars, Count, Requirements, Sort, WordTally};
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 
@@ -11,15 +11,20 @@ struct ExpectedFields<'a> {
     tally: Vec<(&'a str, u64)>,
 }
 
-fn word_tally(case: Case, sort: Sort, minimums: Minimums) -> WordTally {
+fn word_tally(case: Case, sort: Sort, requirements: Requirements) -> WordTally {
     let input = File::open(TEST_WORDS_PATH)
         .expect("Expected test words file (`files/words.txt`) to be readable.");
 
-    WordTally::new(input, case, sort, minimums)
+    WordTally::new(input, case, sort, requirements)
 }
 
-fn word_tally_test(case: Case, sort: Sort, minimums: Minimums, fields: &ExpectedFields<'_>) {
-    let word_tally = word_tally(case, sort, minimums);
+fn word_tally_test(
+    case: Case,
+    sort: Sort,
+    requirements: Requirements,
+    fields: &ExpectedFields<'_>,
+) {
+    let word_tally = word_tally(case, sort, requirements);
     assert_eq!(word_tally.count(), fields.count);
     assert_eq!(word_tally.uniq_count(), fields.uniq_count);
     assert_eq!(word_tally.avg(), fields.avg);
@@ -37,7 +42,7 @@ fn lower_case_desc_order() {
     word_tally_test(
         Case::Lower,
         Sort::Desc,
-        Minimums::default(),
+        Requirements::default(),
         &ExpectedFields {
             count: 45,
             uniq_count: 5,
@@ -52,7 +57,10 @@ fn min_char_count_at_max() {
     word_tally_test(
         Case::Lower,
         Sort::Desc,
-        Minimums { chars: 3, count: 1 },
+        Requirements {
+            chars: Chars::min(3),
+            count: Count::default(),
+        },
         &ExpectedFields {
             count: 9,
             uniq_count: 1,
@@ -67,7 +75,10 @@ fn min_char_count_above_max() {
     word_tally_test(
         Case::Lower,
         Sort::Desc,
-        Minimums { chars: 4, count: 1 },
+        Requirements {
+            chars: Chars::min(4),
+            count: Count::default(),
+        },
         &ExpectedFields {
             count: 0,
             uniq_count: 0,
@@ -82,7 +93,7 @@ fn min_char_count_at_min() {
     word_tally_test(
         Case::Lower,
         Sort::Desc,
-        Minimums::default(),
+        Requirements::default(),
         &ExpectedFields {
             count: 45,
             uniq_count: 5,
@@ -97,9 +108,9 @@ fn min_word_count_at_max() {
     word_tally_test(
         Case::Lower,
         Sort::Desc,
-        Minimums {
-            chars: 1,
-            count: 15,
+        Requirements {
+            chars: Chars::default(),
+            count: Count::min(15),
         },
         &ExpectedFields {
             count: 15,
@@ -115,7 +126,7 @@ fn upper_case_desc_order() {
     word_tally_test(
         Case::Upper,
         Sort::Desc,
-        Minimums::default(),
+        Requirements::default(),
         &ExpectedFields {
             count: 45,
             uniq_count: 5,
@@ -130,7 +141,7 @@ fn lower_case_asc_order() {
     word_tally_test(
         Case::Lower,
         Sort::Asc,
-        Minimums::default(),
+        Requirements::default(),
         &ExpectedFields {
             count: 45,
             uniq_count: 5,
@@ -145,7 +156,7 @@ fn upper_case_asc_order() {
     word_tally_test(
         Case::Upper,
         Sort::Asc,
-        Minimums::default(),
+        Requirements::default(),
         &ExpectedFields {
             count: 45,
             uniq_count: 5,
@@ -160,7 +171,7 @@ fn original_case_desc_order() {
     word_tally_test(
         Case::Original,
         Sort::Desc,
-        Minimums::default(),
+        Requirements::default(),
         &ExpectedFields {
             count: 45,
             uniq_count: 9,
@@ -185,7 +196,7 @@ fn original_case_asc_order() {
     word_tally_test(
         Case::Original,
         Sort::Asc,
-        Minimums::default(),
+        Requirements::default(),
         &ExpectedFields {
             count: 45,
             uniq_count: 9,
@@ -232,7 +243,7 @@ fn equality_and_hashing() {
 
     let tallies: Vec<WordTally> = cases_and_sorts
         .iter()
-        .map(|&(case, sort)| word_tally(case, sort, Minimums::default()))
+        .map(|&(case, sort)| word_tally(case, sort, Requirements::default()))
         .collect();
 
     for tally in &tallies {
@@ -252,7 +263,7 @@ fn equality_and_hashing() {
 
 #[test]
 fn vec_from() {
-    let tally = word_tally(Case::Lower, Sort::Desc, Minimums::default());
+    let tally = word_tally(Case::Lower, Sort::Desc, Requirements::default());
 
     assert_eq!(
         Vec::from(tally),

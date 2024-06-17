@@ -18,11 +18,11 @@ pub struct Args {
     #[arg(short, long, default_value_t, value_enum, value_name = "FORMAT")]
     pub case: Case,
 
-    /// Exclude words that contain fewer than min chars.
+    /// Exclude words containing fewer than min chars.
     #[arg(short, long, default_value_t = 1, value_name = "COUNT")]
     pub min_chars: usize,
 
-    /// Exclude words that appear fewer than min times.
+    /// Exclude words appearing fewer than min times.
     #[arg(short = 'M', long, default_value_t = 1, value_name = "COUNT")]
     pub min_count: u64,
 
