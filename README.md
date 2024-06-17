@@ -17,8 +17,9 @@ Arguments:
 Options:
   -s, --sort <ORDER>       Sort order [default: desc] [possible values: desc, asc, unsorted]
   -c, --case <FORMAT>      Case normalization [default: lower] [possible values: original, upper, lower]
-  -m, --min-chars <COUNT>  Exclude words that contain fewer than min chars [default: 1]
-  -M, --min-count <COUNT>  Exclude words that appear fewer than min times [default: 1]
+  -m, --min-chars <COUNT>  Exclude words containing fewer than min chars [default: 1]
+  -M, --min-count <COUNT>  Exclude words appearing fewer than min times [default: 1]
+  -e, --exclude <WORDS>    Exclude words from a comma-delimited list
   -D, --delimiter <VALUE>  Delimiter between keys and values [default: " "]
   -o, --output <PATH>      Write output to file rather than stdout
   -v, --verbose            Print verbose details
@@ -31,12 +32,12 @@ Options:
 
 ```sh
 > word-tally README.md | head -n6
-tally 9
-word 8
-input 5
-default 4
-print 4
-output 4
+tally 19
+word 17
+https 10
+default 7
+output 5
+print 5
 ```
 
 ```sh

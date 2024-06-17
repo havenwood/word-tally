@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use word_tally::{Case, Chars, Count, Filters, Sort, WordTally};
+use word_tally::{Case, Chars, Count, Filters, Sort, WordTally, Words};
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 
@@ -54,7 +54,7 @@ fn min_char_count_at_max() {
         Sort::Desc,
         Filters {
             chars: Chars::min(3),
-            count: Count::default(),
+            ..Filters::default()
         },
         &ExpectedFields {
             count: 9,
@@ -72,7 +72,7 @@ fn min_char_count_above_max() {
         Sort::Desc,
         Filters {
             chars: Chars::min(4),
-            count: Count::default(),
+            ..Filters::default()
         },
         &ExpectedFields {
             count: 0,
@@ -104,8 +104,8 @@ fn min_word_count_at_max() {
         Case::Lower,
         Sort::Desc,
         Filters {
-            chars: Chars::default(),
             count: Count::min(15),
+            ..Filters::default()
         },
         &ExpectedFields {
             count: 15,
@@ -270,4 +270,20 @@ fn vec_from() {
             ("a".to_string(), 3)
         ]
     );
+}
+
+#[test]
+fn test_excluding_words() {
+    let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
+    let excluded_words = vec!["Heaven".to_string(), "Hell".to_string()];
+    let filters = Filters {
+        words: Words::exclude(Some(excluded_words)),
+        ..Filters::default()
+    };
+    let tally = WordTally::new(input, Case::Lower, Sort::Unsorted, filters);
+    let result = tally.tally();
+
+    assert!(result.iter().any(|(word, _)| word == "tree"));
+    assert!(!result.iter().any(|(word, _)| word == "heaven"));
+    assert!(!result.iter().any(|(word, _)| word == "hell"));
 }

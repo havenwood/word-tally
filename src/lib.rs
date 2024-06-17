@@ -114,6 +114,9 @@ pub struct Filters {
 
     /// Word count filters for tallying.
     pub count: Count,
+
+    /// List of specific words to filter for tallying.
+    pub words: Words,
 }
 
 /// Word chars filters for tallying.
@@ -142,6 +145,19 @@ impl Count {
     }
 }
 
+/// List of specific words to filter for tallying.
+#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
+pub struct Words {
+    /// A list of words that should not be tallied.
+    pub exclude: Option<Vec<String>>,
+}
+
+impl Words {
+    pub const fn exclude(words: Option<Vec<String>>) -> Self {
+        Self { exclude: words }
+    }
+}
+
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
 impl WordTally {
     /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
@@ -149,6 +165,13 @@ impl WordTally {
         let mut tally_map = Self::tally_map(input, case, filters.chars);
         if filters.count.min > 1 {
             tally_map.retain(|_, &mut count| count >= filters.count.min);
+        }
+        if let Some(excludes) = filters.words.exclude {
+            let normalized_excludes: Vec<_> = excludes
+                .iter()
+                .map(|exclude| Self::normalize_case(exclude, case))
+                .collect();
+            tally_map.retain(|word, _| !normalized_excludes.contains(word));
         }
         let count = tally_map.values().sum();
         let tally = Vec::from_iter(tally_map);
@@ -212,16 +235,21 @@ impl WordTally {
             line.unicode_words()
                 .filter(|unicode_word| chars.min <= 1 || unicode_word.len() >= chars.min)
                 .for_each(|unicode_word| {
-                    let word = match case {
-                        Case::Lower => unicode_word.to_lowercase(),
-                        Case::Upper => unicode_word.to_uppercase(),
-                        Case::Original => unicode_word.to_owned(),
-                    };
+                    let word = Self::normalize_case(unicode_word, case);
 
                     *tally.entry(word).or_insert(0) += 1;
                 });
         }
 
         tally
+    }
+
+    /// Normalize case or use the original.
+    fn normalize_case(word: &str, case: Case) -> String {
+        match case {
+            Case::Lower => word.to_lowercase(),
+            Case::Upper => word.to_uppercase(),
+            Case::Original => word.to_owned(),
+        }
     }
 }

@@ -26,6 +26,10 @@ pub struct Args {
     #[arg(short = 'M', long, default_value_t = 1, value_name = "COUNT")]
     pub min_count: u64,
 
+    /// Exclude words from a comma-delimited list.
+    #[arg(short, long, use_value_delimiter = true, value_name = "WORDS")]
+    pub exclude: Option<Vec<String>>,
+
     /// Delimiter between keys and values.
     #[arg(short = 'D', long, default_value = " ", value_name = "VALUE")]
     pub delimiter: String,

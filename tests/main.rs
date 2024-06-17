@@ -1,5 +1,6 @@
 use assert_cmd::Command;
-use predicates::str;
+use predicates::prelude::PredicateBooleanExt;
+use predicates::str::{self, contains};
 use std::fs;
 
 fn word_tally() -> Command {
@@ -138,4 +139,15 @@ fn sort_asc() {
 fn no_words() {
     let assert = word_tally().write_stdin("").assert();
     assert.success().stdout("");
+}
+
+#[test]
+fn test_exclude_words() {
+    let input = "The tree that would grow to heaven must send its roots to hell.";
+    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    cmd.write_stdin(input)
+        .arg("--exclude=heaven,hell")
+        .assert()
+        .success()
+        .stdout(contains("tree").and(contains("heaven").not().and(contains("hell").not())));
 }
