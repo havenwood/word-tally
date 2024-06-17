@@ -151,3 +151,14 @@ fn test_exclude_words() {
         .success()
         .stdout(contains("tree").and(contains("heaven").not().and(contains("hell").not())));
 }
+
+#[test]
+fn test_only_words() {
+    let input = "One must still have chaos in oneself to be able to give birth to a dancing star. I tell you: you have chaos in yourselves.";
+    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    cmd.write_stdin(input)
+        .arg("--only=chaos,star")
+        .assert()
+        .success()
+        .stdout("chaos 2\nstar 1\n");
+}

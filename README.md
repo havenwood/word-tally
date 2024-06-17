@@ -19,7 +19,8 @@ Options:
   -c, --case <FORMAT>      Case normalization [default: lower] [possible values: original, upper, lower]
   -m, --min-chars <COUNT>  Exclude words containing fewer than min chars [default: 1]
   -M, --min-count <COUNT>  Exclude words appearing fewer than min times [default: 1]
-  -e, --exclude <WORDS>    Exclude words from a comma-delimited list
+  -e, --exclude <WORDS>    Exclude any words from a comma-delimited list
+  -O, --only <WORDS>       Only include words from a comma-delimited list
   -D, --delimiter <VALUE>  Delimiter between keys and values [default: " "]
   -o, --output <PATH>      Write output to file rather than stdout
   -v, --verbose            Print verbose details
@@ -31,13 +32,10 @@ Options:
 ## Examples
 
 ```sh
-> word-tally README.md | head -n6
-tally 19
+> word-tally README.md | head -n3
+tally 20
 word 17
-https 10
-default 7
-output 5
-print 5
+https 11
 ```
 
 ```sh

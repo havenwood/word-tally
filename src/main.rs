@@ -22,7 +22,10 @@ fn main() -> Result<()> {
     let filters = Filters {
         chars: Chars::min(args.min_chars),
         count: Count::min(args.min_count),
-        words: Words::exclude(args.exclude.clone()),
+        words: Words {
+            exclude: args.exclude.clone(),
+            only: args.only.clone(),
+        },
     };
     let word_tally = WordTally::new(reader, args.case, args.sort, filters);
     let delimiter = unescape(&args.delimiter)?;

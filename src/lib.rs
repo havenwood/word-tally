@@ -150,11 +150,24 @@ impl Count {
 pub struct Words {
     /// A list of words that should not be tallied.
     pub exclude: Option<Vec<String>>,
+
+    /// A list of words to only tally.
+    pub only: Option<Vec<String>>,
 }
 
 impl Words {
     pub const fn exclude(words: Option<Vec<String>>) -> Self {
-        Self { exclude: words }
+        Self {
+            exclude: words,
+            only: None,
+        }
+    }
+
+    pub const fn only(words: Option<Vec<String>>) -> Self {
+        Self {
+            only: words,
+            exclude: None,
+        }
     }
 }
 
@@ -172,6 +185,13 @@ impl WordTally {
                 .map(|exclude| Self::normalize_case(exclude, case))
                 .collect();
             tally_map.retain(|word, _| !normalized_excludes.contains(word));
+        }
+        if let Some(exclusives) = filters.words.only {
+            let normalized_exclusives: Vec<_> = exclusives
+                .iter()
+                .map(|exclusive| Self::normalize_case(exclusive, case))
+                .collect();
+            tally_map.retain(|word, _| normalized_exclusives.contains(word));
         }
         let count = tally_map.values().sum();
         let tally = Vec::from_iter(tally_map);

@@ -287,3 +287,22 @@ fn test_excluding_words() {
     assert!(!result.iter().any(|(word, _)| word == "heaven"));
     assert!(!result.iter().any(|(word, _)| word == "hell"));
 }
+
+#[test]
+fn test_only_words() {
+    let input = "One must still have chaos in oneself to be able to give birth to a dancing star. I tell you: you have chaos in yourselves.".as_bytes();
+    let only = vec!["chaos".to_string(), "star".to_string()];
+    let filters = Filters {
+        words: Words {
+            only: Some(only),
+            ..Words::default()
+        },
+        ..Filters::default()
+    };
+    let tally = WordTally::new(input, Case::Lower, Sort::Desc, filters);
+    let result = tally.tally();
+
+    let expected = vec![("chaos".to_string(), 2), ("star".to_string(), 1)];
+
+    assert_eq!(result, expected);
+}
