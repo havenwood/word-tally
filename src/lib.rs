@@ -17,10 +17,10 @@
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Case, Requirements, Sort, WordTally};
+//! use word_tally::{Case, Filters, Sort, WordTally};
 //!
 //! let input = "Cinquedea".as_bytes();
-//! let words = WordTally::new(input, Case::Lower, Sort::Desc, Requirements::default());
+//! let words = WordTally::new(input, Case::Lower, Sort::Desc, Filters::default());
 //! let expected_tally = vec![("cinquedea".to_string(), 1)];
 //!
 //! assert_eq!(words.tally(), expected_tally);
@@ -106,16 +106,17 @@ impl fmt::Display for Sort {
     }
 }
 
-/// Requirements for words to be included in the tally.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
-pub struct Requirements {
-    /// Word chars requirements for tallying.
+/// Filters for words to be included in the tally.
+#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
+pub struct Filters {
+    /// Word chars filters for tallying.
     pub chars: Chars,
-    /// Word count requirements for tallying.
+
+    /// Word count filters for tallying.
     pub count: Count,
 }
 
-/// Word chars requirements for tallying.
+/// Word chars filters for tallying.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Chars {
     /// Min number of chars in a word for it to be tallied.
@@ -128,7 +129,7 @@ impl Chars {
     }
 }
 
-/// Word count requirements for tallying.
+/// Word count filters for tallying.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
 pub struct Count {
     /// Min number of a word must occur to be tallied.
@@ -144,10 +145,10 @@ impl Count {
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
 impl WordTally {
     /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
-    pub fn new<T: Read>(input: T, case: Case, order: Sort, requirements: Requirements) -> Self {
-        let mut tally_map = Self::tally_map(input, case, requirements.chars);
-        if requirements.count.min > 1 {
-            tally_map.retain(|_, &mut count| count >= requirements.count.min);
+    pub fn new<T: Read>(input: T, case: Case, order: Sort, filters: Filters) -> Self {
+        let mut tally_map = Self::tally_map(input, case, filters.chars);
+        if filters.count.min > 1 {
+            tally_map.retain(|_, &mut count| count >= filters.count.min);
         }
         let count = tally_map.values().sum();
         let tally = Vec::from_iter(tally_map);

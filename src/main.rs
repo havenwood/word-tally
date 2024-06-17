@@ -8,7 +8,7 @@ use clap::Parser;
 use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Write};
 use unescaper::unescape;
-use word_tally::{Chars, Count, Requirements, WordTally};
+use word_tally::{Chars, Count, Filters, WordTally};
 
 /// `Writer` is a boxed type for dynamic dispatch of the `Write` trait.
 type Writer = Box<dyn Write>;
@@ -19,11 +19,11 @@ fn main() -> Result<()> {
         .input
         .into_reader()
         .with_context(|| format!("Failed to read {:#?}.", args.input.source))?;
-    let requirements = Requirements {
+    let filters = Filters {
         chars: Chars::min(args.min_chars),
         count: Count::min(args.min_count),
     };
-    let word_tally = WordTally::new(reader, args.case, args.sort, requirements);
+    let word_tally = WordTally::new(reader, args.case, args.sort, filters);
     let delimiter = unescape(&args.delimiter)?;
 
     if args.verbose || args.debug {

@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use once_cell::sync::Lazy;
 use std::io::Cursor;
-use word_tally::{Case, Chars, Count, Requirements, Sort, WordTally};
+use word_tally::{Case, Chars, Count, Filters, Sort, WordTally};
 
 const BASE_INPUT: &str = "Orchids bloom silently\nMicrocontrollers hum\nPhalaenopsis thrives\n\
     Data packets route\nPhalaenopsis BLOOM\nDendrobium anchors\nPhotosynthesis proceeds\n\
@@ -20,7 +20,7 @@ fn bench_new_unsorted(c: &mut Criterion) {
     c.bench_function("new_unsorted", |b| {
         b.iter_batched(
             prepare_input,
-            |input| WordTally::new(input, Case::Lower, Sort::Unsorted, Requirements::default()),
+            |input| WordTally::new(input, Case::Lower, Sort::Unsorted, Filters::default()),
             BatchSize::SmallInput,
         );
     });
@@ -30,7 +30,7 @@ fn bench_new_sorted(c: &mut Criterion) {
     c.bench_function("new_sorted", |b| {
         b.iter_batched(
             prepare_input,
-            |input| WordTally::new(input, Case::Lower, Sort::Asc, Requirements::default()),
+            |input| WordTally::new(input, Case::Lower, Sort::Asc, Filters::default()),
             BatchSize::SmallInput,
         );
     });
@@ -45,7 +45,7 @@ fn bench_new_min_chars(c: &mut Criterion) {
                     input,
                     Case::Lower,
                     Sort::Unsorted,
-                    Requirements {
+                    Filters {
                         chars: Chars::min(5),
                         count: Count::default(),
                     },
@@ -60,7 +60,7 @@ fn bench_new_min_count(c: &mut Criterion) {
     c.bench_function("new_min_count", |b| {
         b.iter_batched(
             prepare_input,
-            |input| WordTally::new(input, Case::Lower, Sort::Unsorted, Requirements::default()),
+            |input| WordTally::new(input, Case::Lower, Sort::Unsorted, Filters::default()),
             BatchSize::SmallInput,
         );
     });
@@ -74,7 +74,7 @@ fn bench_sort(c: &mut Criterion) {
                     prepare_input(),
                     Case::Lower,
                     Sort::Unsorted,
-                    Requirements::default(),
+                    Filters::default(),
                 )
             },
             |mut tally| tally.sort(Sort::Asc),
