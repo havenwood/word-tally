@@ -33,9 +33,9 @@ use clap::ValueEnum;
 use core::cmp::Reverse;
 use core::fmt;
 use core::hash::{Hash, Hasher};
+use indexmap::IndexMap;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
 use std::io::{BufRead, BufReader, Read};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -243,8 +243,8 @@ impl WordTally {
     }
 
     /// Creates a tally of normalized words from an input that implements `Read`.
-    fn tally_map<T: Read>(input: T, case: Case, chars: Chars) -> HashMap<String, u64> {
-        let mut tally = HashMap::new();
+    fn tally_map<T: Read>(input: T, case: Case, chars: Chars) -> IndexMap<String, u64> {
+        let mut tally = IndexMap::new();
         let lines = BufReader::new(input).lines();
 
         for line in lines.map_while(Result::ok) {
@@ -261,7 +261,7 @@ impl WordTally {
     }
 
     /// Removes words from the `tally_map` based on any word `Filters`.
-    fn filter(tally_map: &mut HashMap<String, u64>, filters: Filters, case: Case) {
+    fn filter(tally_map: &mut IndexMap<String, u64>, filters: Filters, case: Case) {
         // Remove any words that lack the minimum number of characters.
         if filters.count.min > 1 {
             tally_map.retain(|_, &mut count| count >= filters.count.min);
