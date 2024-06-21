@@ -8,7 +8,7 @@
 //! The `unicode-segmentation` Crate segments along "Word Bounaries" according
 //! to the [Unicode Standard Annex #29](http://www.unicode.org/reports/tr29/).
 //!
-//! # `Case`, `Sort`, and `Filters`
+//! # `Case`, `Sort` and `Filters`
 //!
 //! In addition to source input, a `WordTally` is contstructed with options for
 //! `Case` normalization, `Sort` order and word `Filters`. `Case` options include
