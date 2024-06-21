@@ -1,18 +1,22 @@
-//! A tally of words with a count of times each appears
+//! A tally of words with a count of the number of times each appears.
 //!
 //! A `WordTally` represents a tally of the total number of times each word
 //! appears in an input source that implements `Read`. When a `WordTally` is
 //! constructed, the provided input is iterated over line by line to count words.
 //! Ordered pairs of words and their count are stored in the `tally` field.
 //!
-//! # `Case` and `Sort` enum options
+//! The `unicode-segmentation` Crate segments along "Word Bounaries" according
+//! to the [Unicode Standard Annex #29](http://www.unicode.org/reports/tr29/).
+//!
+//! # `Case`, `Sort`, and `Filters`
 //!
 //! In addition to source input, a `WordTally` is contstructed with options for
-//! `Case` normalization and `Sort` order. `Case` options include `Original`
-//! (case sensitive) and `Lower` or `Upper` case normalization. `Sort` order can
-//! be `Unsorted` or sorted `Desc` (descending) or `Asc` (ascending). A `tally`
-//! can be sorted upon contruction or sorted later with the `sort` method.
-//! Sorting doesn't impact the other `count`, `uniq_count` or `avg` fields.
+//! `Case` normalization, `Sort` order and word `Filters`. `Case` options include
+//! `Original` (case sensitive) and `Lower` or `Upper` case normalization. `Sort`
+//! order can be `Unsorted` or sorted `Desc` (descending) or `Asc` (ascending).
+//! A `tally` can be sorted upon contruction or sorted later with the `sort` method.
+//! Sorting doesn't impact the `count`, `uniq_count` or `avg` fields. `Filter`s can
+//! be used to provide list of words that should or shouldn't be tallied.
 //!
 //! # Examples
 //!
@@ -131,6 +135,7 @@ pub struct Chars {
 }
 
 impl Chars {
+    /// Create a minimum word size filter.
     pub const fn min(size: usize) -> Self {
         Self { min: size }
     }
@@ -144,6 +149,7 @@ pub struct Count {
 }
 
 impl Count {
+    /// Construct a minimum word count filter.
     pub const fn min(size: u64) -> Self {
         Self { min: size }
     }
@@ -160,6 +166,7 @@ pub struct Words {
 }
 
 impl Words {
+    /// Construct a word exclusion filter list.
     pub const fn exclude(words: Option<Vec<String>>) -> Self {
         Self {
             exclude: words,
@@ -167,6 +174,7 @@ impl Words {
         }
     }
 
+    /// Construct a exclusive word filter list.
     pub const fn only(words: Option<Vec<String>>) -> Self {
         Self {
             only: words,
@@ -180,23 +188,8 @@ impl WordTally {
     /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
     pub fn new<T: Read>(input: T, case: Case, order: Sort, filters: Filters) -> Self {
         let mut tally_map = Self::tally_map(input, case, filters.chars);
-        if filters.count.min > 1 {
-            tally_map.retain(|_, &mut count| count >= filters.count.min);
-        }
-        if let Some(excludes) = filters.words.exclude {
-            let normalized_excludes: Vec<_> = excludes
-                .iter()
-                .map(|exclude| Self::normalize_case(exclude, case))
-                .collect();
-            tally_map.retain(|word, _| !normalized_excludes.contains(word));
-        }
-        if let Some(exclusives) = filters.words.only {
-            let normalized_exclusives: Vec<_> = exclusives
-                .iter()
-                .map(|exclusive| Self::normalize_case(exclusive, case))
-                .collect();
-            tally_map.retain(|word, _| normalized_exclusives.contains(word));
-        }
+        Self::filter(&mut tally_map, filters, case);
+
         let count = tally_map.values().sum();
         let tally = Vec::from_iter(tally_map);
         let uniq_count = tally.len();
@@ -207,7 +200,6 @@ impl WordTally {
             uniq_count,
             avg,
         };
-
         word_tally.sort(order);
 
         word_tally
@@ -250,7 +242,7 @@ impl WordTally {
         (count > 0).then(|| count as f64 / uniq_count as f64)
     }
 
-    /// Creates a tally of optionally normalized words from input that implements `Read`.
+    /// Creates a tally of normalized words from an input that implements `Read`.
     fn tally_map<T: Read>(input: T, case: Case, chars: Chars) -> HashMap<String, u64> {
         let mut tally = HashMap::new();
         let lines = BufReader::new(input).lines();
@@ -268,7 +260,33 @@ impl WordTally {
         tally
     }
 
-    /// Normalize case or use the original.
+    /// Removes words from the `tally_map` based on any word `Filters`.
+    fn filter(tally_map: &mut HashMap<String, u64>, filters: Filters, case: Case) {
+        // Remove any words that lack the minimum number of characters.
+        if filters.count.min > 1 {
+            tally_map.retain(|_, &mut count| count >= filters.count.min);
+        }
+
+        // Remove any words on the `exclude` word list.
+        if let Some(excludes) = filters.words.exclude {
+            let normalized_excludes: Vec<_> = excludes
+                .iter()
+                .map(|exclude| Self::normalize_case(exclude, case))
+                .collect();
+            tally_map.retain(|word, _| !normalized_excludes.contains(word));
+        }
+
+        // Remove any words absent from the `only` word list.
+        if let Some(exclusives) = filters.words.only {
+            let normalized_exclusives: Vec<_> = exclusives
+                .iter()
+                .map(|exclusive| Self::normalize_case(exclusive, case))
+                .collect();
+            tally_map.retain(|word, _| normalized_exclusives.contains(word));
+        }
+    }
+
+    /// Normalizes word case if a `Case` other than `Case::Original` is provided.
     fn normalize_case(word: &str, case: Case) -> String {
         match case {
             Case::Lower => word.to_lowercase(),
