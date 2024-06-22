@@ -117,6 +117,21 @@ fn min_word_count_at_max() {
 }
 
 #[test]
+fn default_case_unsorted_order() {
+    word_tally_test(
+        Case::default(),
+        Sort::Unsorted,
+        Filters::default(),
+        &ExpectedFields {
+            count: 45,
+            uniq_count: 5,
+            avg: Some(9.0),
+            tally: vec![("d", 11), ("123", 9), ("a", 3), ("c", 15), ("b", 7)],
+        },
+    );
+}
+
+#[test]
 fn upper_case_desc_order() {
     word_tally_test(
         Case::Upper,
