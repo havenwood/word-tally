@@ -25,7 +25,7 @@
 //!
 //! let input = "Cinquedea".as_bytes();
 //! let words = WordTally::new(input, Case::Lower, Sort::Desc, Filters::default());
-//! let expected_tally = vec![("cinquedea".to_string(), 1)];
+//! let expected_tally = vec![("cinquedea".to_string(), 1)].into_boxed_slice();
 //!
 //! assert_eq!(words.tally(), expected_tally);
 //! ```
@@ -44,7 +44,7 @@ use unicode_segmentation::UnicodeSegmentation;
 #[non_exhaustive]
 pub struct WordTally {
     /// Ordered pairs of words and the count of times they appear.
-    tally: Vec<(String, u64)>,
+    tally: Box<[(String, u64)]>,
 
     /// The sum of all words tallied.
     count: u64,
@@ -65,10 +65,10 @@ impl Hash for WordTally {
     }
 }
 
-/// The `tally` field `Vec` is the best way to get at the ordered tally.
+/// A `tally` supports `iter` and can also be represented as a `Vec`.
 impl From<WordTally> for Vec<(String, u64)> {
     fn from(word_tally: WordTally) -> Self {
-        word_tally.tally
+        word_tally.tally.into_vec()
     }
 }
 
@@ -191,7 +191,7 @@ impl WordTally {
         Self::filter(&mut tally_map, filters, case);
 
         let count = tally_map.values().sum();
-        let tally = Vec::from_iter(tally_map);
+        let tally = Vec::from_iter(tally_map).into_boxed_slice();
         let uniq_count = tally.len();
         let avg = Self::calculate_avg(count, uniq_count);
         let mut word_tally = Self {
@@ -217,7 +217,7 @@ impl WordTally {
     }
 
     /// Gets the `tally` field.
-    pub fn tally(self) -> Vec<(String, u64)> {
+    pub fn tally(self) -> Box<[(String, u64)]> {
         self.tally
     }
 

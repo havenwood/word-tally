@@ -24,11 +24,12 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
     assert_eq!(word_tally.uniq_count(), fields.uniq_count);
     assert_eq!(word_tally.avg(), fields.avg);
 
-    let expected_tally: Vec<(String, u64)> = fields
+    let expected_tally = fields
         .tally
         .iter()
         .map(|(word, count)| ((*word).to_string(), *count))
-        .collect();
+        .collect::<Vec<_>>()
+        .into_boxed_slice();
     assert_eq!(word_tally.tally(), expected_tally);
 }
 
@@ -317,7 +318,7 @@ fn test_only_words() {
     let tally = WordTally::new(input, Case::Lower, Sort::Desc, filters);
     let result = tally.tally();
 
-    let expected = vec![("chaos".to_string(), 2), ("star".to_string(), 1)];
+    let expected = vec![("chaos".to_string(), 2), ("star".to_string(), 1)].into_boxed_slice();
 
     assert_eq!(result, expected);
 }
