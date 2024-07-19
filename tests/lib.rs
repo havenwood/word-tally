@@ -326,7 +326,7 @@ fn test_only_words() {
 #[test]
 fn test_to_json() {
     let expected = WordTally::new(
-        "wombat wombat bat".as_bytes(),
+        &b"wombat wombat bat"[..],
         Case::Lower,
         Sort::Desc,
         Filters::default(),
@@ -341,7 +341,7 @@ fn test_to_json() {
 #[test]
 fn test_from_json() {
     let expected = WordTally::new(
-        "wombat wombat bat".as_bytes(),
+        &b"wombat wombat bat"[..],
         Case::Lower,
         Sort::Desc,
         Filters::default(),
