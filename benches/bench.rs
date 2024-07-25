@@ -1,19 +1,24 @@
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
-use once_cell::sync::Lazy;
 use std::io::Cursor;
+use std::sync::OnceLock;
 use word_tally::{Case, Chars, Filters, Sort, WordTally};
 
-const BASE_INPUT: &str = "Orchids bloom silently\nMicrocontrollers hum\nPhalaenopsis thrives\n\
+const INPUT: &str = "Orchids bloom silently\nMicrocontrollers hum\nPhalaenopsis thrives\n\
     Data packets route\nPhalaenopsis BLOOM\nDendrobium anchors\nPhotosynthesis proceeds\n\
     Circuit boards and roots\nTranspiration observed\nDendrobium grows\n\
     Algorithms compute\nOrchids in data streams\nPhalaenopsis\nDENDROBIUM\n\
     microcontrollers HUM\nCircuit Boards and ROOTS\ntranspiration OBSERVED\n\
     DATA packets route\nPhalaenopsis BLOOM\nOrchids in DATA streams";
 
-static BENCHMARK_INPUT: Lazy<String> = Lazy::new(|| BASE_INPUT.repeat(42));
+static INPUT_LOCK: OnceLock<String> = OnceLock::new();
+
+fn repeated_input() -> &'static String {
+    INPUT_LOCK.get_or_init(|| INPUT.repeat(42))
+}
 
 fn prepare_input() -> Cursor<&'static str> {
-    Cursor::new(&BENCHMARK_INPUT)
+    let input = repeated_input();
+    Cursor::new(&input)
 }
 
 fn bench_new_unsorted(c: &mut Criterion) {

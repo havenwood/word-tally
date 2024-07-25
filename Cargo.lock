@@ -854,7 +854,6 @@ dependencies = [
  "clap-stdin",
  "criterion",
  "indexmap",
- "once_cell",
  "predicates",
  "serde",
  "serde_json",
