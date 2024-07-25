@@ -18,7 +18,7 @@ fn repeated_input() -> &'static String {
 
 fn prepare_input() -> Cursor<&'static str> {
     let input = repeated_input();
-    Cursor::new(&input)
+    Cursor::new(input)
 }
 
 fn bench_new_unsorted(c: &mut Criterion) {
