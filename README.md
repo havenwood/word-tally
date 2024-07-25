@@ -54,14 +54,14 @@ Add `word-tally` as a dependency.
 
 ```toml
 [dependencies]
-word-tally = "0.8.0"
+word-tally = "0.8.1"
 ```
 
 Or optionally enable JSON serialization and deserialization with Serde.
 
 ```toml
 [dependencies]
-word-tally = { version = "0.8.0", features = ["serde"] }
+word-tally = { version = "0.8.1", features = ["serde"] }
 ```
 
 ## Documentation
