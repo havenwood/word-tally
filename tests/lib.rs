@@ -323,6 +323,29 @@ fn test_only_words() {
     assert_eq!(result, expected);
 }
 
+#[test]
+fn test_min_chars_display() {
+    let min_chars = MinChars(42);
+    assert_eq!(min_chars.to_string(), "42".to_string());
+}
+
+#[test]
+fn test_min_chars_from() {
+    assert_eq!(MinChars::from(42), MinChars(42));
+}
+
+#[test]
+fn test_min_count_display() {
+    let min_count = MinCount(43);
+    assert_eq!(min_count.to_string(), "43".to_string());
+}
+
+#[test]
+fn test_min_count_from() {
+    let raw = 43_u64;
+    assert_eq!(MinCount::from(raw), MinCount(43));
+}
+
 #[cfg(feature = "serde")]
 #[test]
 fn test_to_json() {

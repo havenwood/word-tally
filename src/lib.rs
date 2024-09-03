@@ -127,15 +127,37 @@ pub struct Filters {
     pub words: Words,
 }
 
-/// Word chars filters for tallying.
+/// Min number of chars a word needs to be tallied.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-/// Min number of chars in a word for it to be tallied.
 pub struct MinChars(pub usize);
 
-/// Word count filters for tallying.
+impl Display for MinChars {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<usize> for MinChars {
+    fn from(raw: usize) -> Self {
+        Self(raw)
+    }
+}
+
+/// Min count a word needs to be tallied.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-/// Min number of a word must occur to be tallied.
 pub struct MinCount(pub u64);
+
+impl Display for MinCount {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+impl From<u64> for MinCount {
+    fn from(raw: u64) -> Self {
+        Self(raw)
+    }
+}
 
 /// List of specific words to filter for tallying.
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
