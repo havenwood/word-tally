@@ -31,7 +31,7 @@
 //! ```
 use clap::ValueEnum;
 use core::cmp::Reverse;
-use core::fmt;
+use core::fmt::{self, Display, Formatter};
 use core::hash::{Hash, Hasher};
 use indexmap::IndexMap;
 #[cfg(feature = "serde")]
@@ -81,8 +81,8 @@ pub enum Case {
     Lower,
 }
 
-impl fmt::Display for Case {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Case {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let case = match self {
             Self::Lower => "lower",
             Self::Upper => "upper",
@@ -102,8 +102,8 @@ pub enum Sort {
     Unsorted,
 }
 
-impl fmt::Display for Sort {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Sort {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let order = match self {
             Self::Desc => "desc",
             Self::Asc => "asc",
