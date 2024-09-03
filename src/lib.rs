@@ -115,7 +115,7 @@ impl fmt::Display for Sort {
 }
 
 /// Filters for words to be included in the tally.
-#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Filters {
     /// Word chars filters for tallying.
     pub chars: Chars,
@@ -128,7 +128,7 @@ pub struct Filters {
 }
 
 /// Word chars filters for tallying.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Chars {
     /// Min number of chars in a word for it to be tallied.
     pub min: usize,
@@ -142,7 +142,7 @@ impl Chars {
 }
 
 /// Word count filters for tallying.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Count {
     /// Min number of a word must occur to be tallied.
     pub min: u64,
@@ -156,7 +156,7 @@ impl Count {
 }
 
 /// List of specific words to filter for tallying.
-#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Words {
     /// A list of words that should not be tallied.
     pub exclude: Option<Vec<String>>,
