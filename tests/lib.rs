@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use word_tally::{Case, Filters, MinChars, MinCount, Sort, WordTally, Words};
+use word_tally::{Case, Filters, MinChars, MinCount, Sort, WordTally, WordsExclude, WordsOnly};
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 
@@ -293,7 +293,7 @@ fn test_excluding_words() {
     let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let excluded_words = vec!["Heaven".to_string(), "Hell".to_string()];
     let filters = Filters {
-        words: Words::exclude(Some(excluded_words)),
+        words_exclude: WordsExclude(excluded_words),
         ..Filters::default()
     };
     let tally = WordTally::new(input, Case::Lower, Sort::Unsorted, filters);
@@ -309,10 +309,7 @@ fn test_only_words() {
     let input = "One must still have chaos in oneself to be able to give birth to a dancing star. I tell you: you have chaos in yourselves.".as_bytes();
     let only = vec!["chaos".to_string(), "star".to_string()];
     let filters = Filters {
-        words: Words {
-            only: Some(only),
-            ..Words::default()
-        },
+        words_only: WordsOnly(Some(only)),
         ..Filters::default()
     };
     let tally = WordTally::new(input, Case::Lower, Sort::Desc, filters);
@@ -344,6 +341,18 @@ fn test_min_count_display() {
 fn test_min_count_from() {
     let raw = 43_u64;
     assert_eq!(MinCount::from(raw), MinCount(43));
+}
+
+#[test]
+fn test_words_exclude_from() {
+    let excluded = vec!["beep".to_string(), "boop".to_string()];
+    assert_eq!(WordsExclude::from(excluded.clone()), WordsExclude(excluded));
+}
+
+#[test]
+fn test_words_only_from() {
+    let only = vec!["bep".to_string(), "bop".to_string()];
+    assert_eq!(WordsOnly::from(only.clone()), WordsOnly(Some(only)));
 }
 
 #[cfg(feature = "serde")]

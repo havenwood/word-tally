@@ -123,8 +123,11 @@ pub struct Filters {
     /// Word count filters for tallying.
     pub min_count: MinCount,
 
-    /// List of specific words to filter for tallying.
-    pub words: Words,
+    /// List of specific words to exclude for tallying.
+    pub words_exclude: WordsExclude,
+
+    /// List of specific words to only include for tallying.
+    pub words_only: WordsOnly,
 }
 
 /// Min number of chars a word needs to be tallied.
@@ -159,31 +162,23 @@ impl From<u64> for MinCount {
     }
 }
 
-/// List of specific words to filter for tallying.
+/// A list of words that should not be tallied.
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct Words {
-    /// A list of words that should not be tallied.
-    pub exclude: Option<Vec<String>>,
+pub struct WordsExclude(pub Vec<String>);
 
-    /// A list of words to only tally.
-    pub only: Option<Vec<String>>,
+impl From<Vec<String>> for WordsExclude {
+    fn from(raw: Vec<String>) -> Self {
+        Self(raw)
+    }
 }
 
-impl Words {
-    /// Construct a word exclusion filter list.
-    pub const fn exclude(words: Option<Vec<String>>) -> Self {
-        Self {
-            exclude: words,
-            only: None,
-        }
-    }
+/// A list of words that should only be tallied.
+#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
+pub struct WordsOnly(pub Option<Vec<String>>);
 
-    /// Construct a exclusive word filter list.
-    pub const fn only(words: Option<Vec<String>>) -> Self {
-        Self {
-            only: words,
-            exclude: None,
-        }
+impl From<Vec<String>> for WordsOnly {
+    fn from(raw: Vec<String>) -> Self {
+        Self(Some(raw))
     }
 }
 
@@ -272,16 +267,16 @@ impl WordTally {
         }
 
         // Remove any words on the `exclude` word list.
-        if let Some(excludes) = filters.words.exclude {
-            let normalized_excludes: Vec<_> = excludes
-                .iter()
-                .map(|exclude| Self::normalize_case(exclude, case))
-                .collect();
-            tally_map.retain(|word, _| !normalized_excludes.contains(word));
-        }
+        let normalized_excludes: Vec<_> = filters
+            .words_exclude
+            .0
+            .iter()
+            .map(|exclude| Self::normalize_case(exclude, case))
+            .collect();
+        tally_map.retain(|word, _| !normalized_excludes.contains(word));
 
         // Remove any words absent from the `only` word list.
-        if let Some(exclusives) = filters.words.only {
+        if let Some(exclusives) = filters.words_only.0 {
             let normalized_exclusives: Vec<_> = exclusives
                 .iter()
                 .map(|exclusive| Self::normalize_case(exclusive, case))

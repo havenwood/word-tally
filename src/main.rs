@@ -8,7 +8,7 @@ use clap::Parser;
 use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Write};
 use unescaper::unescape;
-use word_tally::{Filters, MinChars, MinCount, WordTally, Words};
+use word_tally::{Filters, MinChars, MinCount, WordTally, WordsExclude, WordsOnly};
 
 /// `Writer` is a boxed type for dynamic dispatch of the `Write` trait.
 type Writer = Box<dyn Write>;
@@ -22,10 +22,8 @@ fn main() -> Result<()> {
     let filters = Filters {
         min_chars: MinChars(args.min_chars),
         min_count: MinCount(args.min_count),
-        words: Words {
-            exclude: args.exclude.clone(),
-            only: args.only.clone(),
-        },
+        words_exclude: WordsExclude(args.exclude.clone()),
+        words_only: WordsOnly(args.only.clone()),
     };
     let word_tally = WordTally::new(reader, args.case, args.sort, filters);
     let delimiter = unescape(&args.delimiter)?;
