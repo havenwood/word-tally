@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use std::io::Cursor;
 use std::sync::OnceLock;
-use word_tally::{Case, Chars, Filters, Sort, WordTally};
+use word_tally::{Case, Filters, MinChars, Sort, WordTally};
 
 const INPUT: &str = "Orchids bloom silently\nMicrocontrollers hum\nPhalaenopsis thrives\n\
     Data packets route\nPhalaenopsis BLOOM\nDendrobium anchors\nPhotosynthesis proceeds\n\
@@ -51,7 +51,7 @@ fn bench_new_min_chars(c: &mut Criterion) {
                     Case::Lower,
                     Sort::Unsorted,
                     Filters {
-                        chars: Chars::min(5),
+                        min_chars: MinChars(5),
                         ..Filters::default()
                     },
                 )

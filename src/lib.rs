@@ -118,10 +118,10 @@ impl fmt::Display for Sort {
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct Filters {
     /// Word chars filters for tallying.
-    pub chars: Chars,
+    pub min_chars: MinChars,
 
     /// Word count filters for tallying.
-    pub count: Count,
+    pub min_count: MinCount,
 
     /// List of specific words to filter for tallying.
     pub words: Words,
@@ -129,31 +129,13 @@ pub struct Filters {
 
 /// Word chars filters for tallying.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct Chars {
-    /// Min number of chars in a word for it to be tallied.
-    pub min: usize,
-}
-
-impl Chars {
-    /// Create a minimum word size filter.
-    pub const fn min(size: usize) -> Self {
-        Self { min: size }
-    }
-}
+/// Min number of chars in a word for it to be tallied.
+pub struct MinChars(pub usize);
 
 /// Word count filters for tallying.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct Count {
-    /// Min number of a word must occur to be tallied.
-    pub min: u64,
-}
-
-impl Count {
-    /// Construct a minimum word count filter.
-    pub const fn min(size: u64) -> Self {
-        Self { min: size }
-    }
-}
+/// Min number of a word must occur to be tallied.
+pub struct MinCount(pub u64);
 
 /// List of specific words to filter for tallying.
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
@@ -187,7 +169,7 @@ impl Words {
 impl WordTally {
     /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
     pub fn new<T: Read>(input: T, case: Case, order: Sort, filters: Filters) -> Self {
-        let mut tally_map = Self::tally_map(input, case, filters.chars);
+        let mut tally_map = Self::tally_map(input, case, filters.min_chars);
         Self::filter(&mut tally_map, filters, case);
 
         let count = tally_map.values().sum();
@@ -243,13 +225,13 @@ impl WordTally {
     }
 
     /// Creates a tally of normalized words from an input that implements `Read`.
-    fn tally_map<T: Read>(input: T, case: Case, chars: Chars) -> IndexMap<String, u64> {
+    fn tally_map<T: Read>(input: T, case: Case, min_chars: MinChars) -> IndexMap<String, u64> {
         let mut tally = IndexMap::new();
         let lines = BufReader::new(input).lines();
 
         for line in lines.map_while(Result::ok) {
             line.unicode_words()
-                .filter(|unicode_word| chars.min <= 1 || unicode_word.len() >= chars.min)
+                .filter(|unicode_word| min_chars.0 <= 1 || unicode_word.len() >= min_chars.0)
                 .for_each(|unicode_word| {
                     let word = Self::normalize_case(unicode_word, case);
 
@@ -263,8 +245,8 @@ impl WordTally {
     /// Removes words from the `tally_map` based on any word `Filters`.
     fn filter(tally_map: &mut IndexMap<String, u64>, filters: Filters, case: Case) {
         // Remove any words that lack the minimum number of characters.
-        if filters.count.min > 1 {
-            tally_map.retain(|_, &mut count| count >= filters.count.min);
+        if filters.min_count.0 > 1 {
+            tally_map.retain(|_, &mut count| count >= filters.min_count.0);
         }
 
         // Remove any words on the `exclude` word list.

@@ -1,6 +1,6 @@
 use std::fs::File;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use word_tally::{Case, Chars, Count, Filters, Sort, WordTally, Words};
+use word_tally::{Case, Filters, MinChars, MinCount, Sort, WordTally, Words};
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 
@@ -54,7 +54,7 @@ fn min_char_count_at_max() {
         Case::Lower,
         Sort::Desc,
         Filters {
-            chars: Chars::min(3),
+            min_chars: MinChars(3),
             ..Filters::default()
         },
         &ExpectedFields {
@@ -72,7 +72,7 @@ fn min_char_count_above_max() {
         Case::Lower,
         Sort::Desc,
         Filters {
-            chars: Chars::min(4),
+            min_chars: MinChars(4),
             ..Filters::default()
         },
         &ExpectedFields {
@@ -105,7 +105,7 @@ fn min_word_count_at_max() {
         Case::Lower,
         Sort::Desc,
         Filters {
-            count: Count::min(15),
+            min_count: MinCount(15),
             ..Filters::default()
         },
         &ExpectedFields {
