@@ -7,32 +7,68 @@ use args::Args;
 use clap::Parser;
 use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Write};
+use std::path::PathBuf;
 use unescaper::unescape;
-use word_tally::{Filters, MinChars, MinCount, WordTally, WordsExclude, WordsOnly};
+use word_tally::{Case, Filters, MinChars, MinCount, Sort, WordTally, WordsExclude, WordsOnly};
 
 /// `Writer` is a boxed type for dynamic dispatch of the `Write` trait.
 type Writer = Box<dyn Write>;
 
-fn main() -> Result<()> {
-    let args = Args::parse();
-    let reader = args
-        .input
-        .into_reader()
-        .with_context(|| format!("Failed to read {:#?}.", args.input.source))?;
-    let filters = Filters {
-        min_chars: MinChars(args.min_chars),
-        min_count: MinCount(args.min_count),
-        words_exclude: WordsExclude(args.exclude.clone()),
-        words_only: WordsOnly(args.only.clone()),
-    };
-    let word_tally = WordTally::new(reader, args.case, args.sort, filters);
-    let delimiter = unescape(&args.delimiter)?;
+/// `LogConfig` contains `Args` flags that may be used for logging.
+struct LogConfig {
+    verbose: bool,
+    debug: bool,
+    case: Case,
+    sort: Sort,
+    min_chars: usize,
+    min_count: u64,
+}
 
-    if args.verbose || args.debug {
-        log_details(&io::stderr(), &word_tally, &args, &delimiter)?;
+fn main() -> Result<()> {
+    let Args {
+        input,
+        min_chars,
+        min_count,
+        exclude,
+        only,
+        case,
+        sort,
+        delimiter,
+        verbose,
+        debug,
+        output,
+    } = Args::parse();
+
+    let source = input.filename().to_owned();
+
+    let reader = input
+        .into_reader()
+        .with_context(|| format!("Failed to read {:?}.", source))?;
+
+    let filters = Filters {
+        min_chars: MinChars(min_chars),
+        min_count: MinCount(min_count),
+        words_exclude: WordsExclude(exclude),
+        words_only: WordsOnly(only),
+    };
+
+    let word_tally = WordTally::new(reader, case, sort, filters);
+    let delimiter = unescape(&delimiter)?;
+
+    if verbose || debug {
+        let log_config = LogConfig {
+            verbose,
+            debug,
+            case,
+            sort,
+            min_chars,
+            min_count,
+        };
+
+        log_details(&io::stderr(), &word_tally, &delimiter, &source, log_config)?;
     }
 
-    write_tally(&io::stdout(), word_tally, &args, &delimiter)?;
+    write_tally(&io::stdout(), word_tally, output, &delimiter)?;
 
     Ok(())
 }
@@ -41,18 +77,14 @@ fn main() -> Result<()> {
 fn log_details(
     stderr: &io::Stderr,
     word_tally: &WordTally,
-    args: &Args,
     delimiter: &str,
+    source: &str,
+    log_config: LogConfig,
 ) -> Result<()> {
     let mut w = Box::new(stderr.lock()) as Writer;
 
-    if args.verbose {
-        log_detail(
-            &mut w,
-            "source",
-            delimiter,
-            format!("{:?}", args.input.source),
-        )?;
+    if log_config.verbose {
+        log_detail(&mut w, "source", delimiter, source)?;
         log_detail(&mut w, "total-words", delimiter, word_tally.count())?;
         log_detail(&mut w, "unique-words", delimiter, word_tally.uniq_count())?;
 
@@ -61,14 +93,14 @@ fn log_details(
         }
     }
 
-    if args.debug {
+    if log_config.debug {
         log_detail(&mut w, "delimiter", delimiter, format!("{delimiter:?}"))?;
-        log_detail(&mut w, "case", delimiter, args.case)?;
-        log_detail(&mut w, "order", delimiter, args.sort)?;
-        log_detail(&mut w, "min-chars", delimiter, args.min_chars)?;
-        log_detail(&mut w, "min-count", delimiter, args.min_count)?;
-        log_detail(&mut w, "verbose", delimiter, args.verbose)?;
-        log_detail(&mut w, "debug", delimiter, args.debug)?;
+        log_detail(&mut w, "case", delimiter, log_config.case)?;
+        log_detail(&mut w, "order", delimiter, log_config.sort)?;
+        log_detail(&mut w, "min-chars", delimiter, log_config.min_chars)?;
+        log_detail(&mut w, "min-count", delimiter, log_config.min_count)?;
+        log_detail(&mut w, "verbose", delimiter, log_config.verbose)?;
+        log_detail(&mut w, "debug", delimiter, log_config.debug)?;
     }
 
     if word_tally.count() > 0 {
@@ -84,10 +116,10 @@ fn log_details(
 fn write_tally(
     stdout: &io::Stdout,
     word_tally: WordTally,
-    args: &Args,
+    output: Option<PathBuf>,
     delimiter: &str,
 ) -> Result<()> {
-    let mut w: Writer = match &args.output {
+    let mut w: Writer = match output {
         Some(path) => Box::new(LineWriter::new(File::create(path)?)),
         None => Box::new(stdout.lock()),
     };
