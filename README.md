@@ -33,8 +33,8 @@ Options:
 
 ```sh
 > word-tally README.md | head -n3
-tally 20
-word 17
+tally 22
+word 20
 https 11
 ```
 
@@ -54,14 +54,14 @@ Add `word-tally` as a dependency.
 
 ```toml
 [dependencies]
-word-tally = "0.8.2"
+word-tally = "0.9.0"
 ```
 
 Or optionally enable JSON serialization and deserialization with Serde.
 
 ```toml
 [dependencies]
-word-tally = { version = "0.8.2", features = ["serde"] }
+word-tally = { version = "0.9.0", features = ["serde"] }
 ```
 
 ## Documentation
