@@ -355,6 +355,22 @@ fn test_words_only_from() {
     assert_eq!(WordsOnly::from(only.clone()), WordsOnly(Some(only)));
 }
 
+#[test]
+fn test_min_count_graphemes() {
+    let tally = WordTally::new(
+        // An `"é"` is only one char.
+        &b"e\xCC\x81"[..],
+        Case::default(),
+        Sort::default(),
+        Filters {
+            min_chars: MinChars(2),
+            ..Filters::default()
+        },
+    );
+
+    assert_eq!(tally.count(), 0);
+}
+
 #[cfg(feature = "serde")]
 #[test]
 fn test_to_json() {

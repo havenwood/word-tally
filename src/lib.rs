@@ -260,7 +260,9 @@ impl WordTally {
 
         for line in lines.map_while(Result::ok) {
             line.unicode_words()
-                .filter(|word| min_chars.inapplicable() || word.len() >= min_chars.0)
+                .filter(|word| {
+                    min_chars.inapplicable() || word.graphemes(true).count() >= min_chars.0
+                })
                 .for_each(|word| {
                     *tally.entry(Self::normalize_case(word, case)).or_insert(0) += 1;
                 });
