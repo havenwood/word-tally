@@ -134,6 +134,12 @@ pub struct Filters {
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct MinChars(pub usize);
 
+impl MinChars {
+    const fn inapplicable(&self) -> bool {
+        self.0 < 2
+    }
+}
+
 impl Display for MinChars {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
@@ -149,6 +155,12 @@ impl From<usize> for MinChars {
 /// Min count a word needs to be tallied.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct MinCount(pub u64);
+
+impl MinCount {
+    const fn applicable(&self) -> bool {
+        self.0 > 1
+    }
+}
 
 impl Display for MinCount {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -248,11 +260,9 @@ impl WordTally {
 
         for line in lines.map_while(Result::ok) {
             line.unicode_words()
-                .filter(|unicode_word| min_chars.0 <= 1 || unicode_word.len() >= min_chars.0)
-                .for_each(|unicode_word| {
-                    let word = Self::normalize_case(unicode_word, case);
-
-                    *tally.entry(word).or_insert(0) += 1;
+                .filter(|word| min_chars.inapplicable() || word.len() >= min_chars.0)
+                .for_each(|word| {
+                    *tally.entry(Self::normalize_case(word, case)).or_insert(0) += 1;
                 });
         }
 
@@ -262,7 +272,7 @@ impl WordTally {
     /// Removes words from the `tally_map` based on any word `Filters`.
     fn filter(tally_map: &mut IndexMap<String, u64>, filters: Filters, case: Case) {
         // Remove any words that lack the minimum number of characters.
-        if filters.min_count.0 > 1 {
+        if filters.min_count.applicable() {
             tally_map.retain(|_, &mut count| count >= filters.min_count.0);
         }
 
