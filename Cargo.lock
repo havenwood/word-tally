@@ -161,15 +161,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "clap-stdin"
-version = "0.5.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "471df7896633bfc1e7d3da5b598422891e4cb8931210168ec63ea586e285803f"
-dependencies = [
- "thiserror",
-]
-
-[[package]]
 name = "clap_builder"
 version = "4.5.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -863,7 +854,6 @@ dependencies = [
  "anyhow",
  "assert_cmd",
  "clap",
- "clap-stdin",
  "criterion",
  "indexmap",
  "predicates",

@@ -2,11 +2,11 @@
 
 pub(crate) mod args;
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use args::Args;
 use clap::Parser;
 use std::fs::File;
-use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Write};
+use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Read, Write};
 use std::path::PathBuf;
 use unescaper::unescape;
 use word_tally::{Case, Filters, MinChars, MinCount, Sort, WordTally, WordsExclude, WordsOnly};
@@ -24,6 +24,45 @@ struct LogConfig {
     min_count: u64,
 }
 
+/// `Source` input is either a file path or stdin.
+enum Source {
+    File(PathBuf),
+    Stdin,
+}
+
+impl Source {
+    /// A `Source` can be stdin or a valid file path.
+    fn new(path: PathBuf) -> Result<Self> {
+        match path.to_str() {
+            Some("-") => Ok(Self::Stdin),
+            Some(_) => Ok(Self::File(path)),
+            None => Err(anyhow!(
+                "Invalid UTF-8 in file path: {}",
+                path.to_string_lossy()
+            )),
+        }
+    }
+
+    /// The reader will be a file from a path or stdin.
+    fn reader(&self) -> io::Result<Box<dyn Read>> {
+        match self {
+            Self::File(path) => Ok(Box::new(File::open(path)?)),
+            Self::Stdin => Ok(Box::new(io::stdin())),
+        }
+    }
+
+    /// `Source` file name or "-" for stdin.
+    fn file_name(&self) -> &str {
+        match self {
+            Self::Stdin => "-",
+            Self::File(path) => path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .expect("Path is valid UTF-8"),
+        }
+    }
+}
+
 fn main() -> Result<()> {
     let Args {
         input,
@@ -39,11 +78,10 @@ fn main() -> Result<()> {
         output,
     } = Args::parse();
 
-    let source = input.filename().to_owned();
-
-    let reader = input
-        .into_reader()
-        .with_context(|| format!("Failed to read {:?}.", source))?;
+    let source = Source::new(input)?;
+    let reader = source
+        .reader()
+        .with_context(|| format!("Failed to read from {}.", source.file_name()))?;
 
     let filters = Filters {
         min_chars: MinChars(min_chars),
@@ -65,7 +103,13 @@ fn main() -> Result<()> {
             min_count,
         };
 
-        log_details(&io::stderr(), &word_tally, &delimiter, &source, log_config)?;
+        log_details(
+            &io::stderr(),
+            &word_tally,
+            &delimiter,
+            source.file_name(),
+            log_config,
+        )?;
     }
 
     write_tally(&io::stdout(), word_tally, output, &delimiter)?;

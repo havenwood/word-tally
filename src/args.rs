@@ -1,5 +1,4 @@
 use clap::Parser;
-use clap_stdin::FileOrStdin;
 use std::path::PathBuf;
 use word_tally::{Case, Sort};
 
@@ -7,8 +6,8 @@ use word_tally::{Case, Sort};
 #[command(about, version)]
 pub struct Args {
     /// File path to use as input rather than stdin ("-").
-    #[arg(default_value = "-")]
-    pub input: FileOrStdin<PathBuf>,
+    #[arg(value_name = "PATH", default_value = "-", value_parser = clap::value_parser!(PathBuf))]
+    pub input: PathBuf,
 
     /// Sort order.
     #[arg(short, long, default_value_t, value_enum, value_name = "ORDER")]
