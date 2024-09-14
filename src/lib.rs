@@ -25,7 +25,7 @@
 //!
 //! let input = "Cinquedea".as_bytes();
 //! let words = WordTally::new(input, Case::Lower, Sort::Desc, Filters::default());
-//! let expected_tally = vec![(Box::from("cinquedea"), 1)].into_boxed_slice();
+//! let expected_tally: Box<[(Box<str>, u64)]> = [("cinquedea".into(), 1)].into();
 //!
 //! assert_eq!(words.tally(), expected_tally);
 //! ```
@@ -202,7 +202,7 @@ impl WordTally {
         Self::filter(&mut tally_map, filters, case);
 
         let count = tally_map.values().sum();
-        let tally = Vec::from_iter(tally_map).into_boxed_slice();
+        let tally: Box<[_]> = tally_map.into_iter().collect();
         let uniq_count = tally.len();
         let avg = Self::calculate_avg(count, uniq_count);
         let mut word_tally = Self {
