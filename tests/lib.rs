@@ -27,7 +27,7 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
     let expected_tally = fields
         .tally
         .iter()
-        .map(|(word, count)| ((*word).to_string(), *count))
+        .map(|(word, count)| (Box::from(*word), *count))
         .collect::<Vec<_>>()
         .into_boxed_slice();
     assert_eq!(word_tally.tally(), expected_tally);
@@ -279,11 +279,11 @@ fn vec_from() {
     assert_eq!(
         Vec::from(tally),
         vec![
-            ("c".to_string(), 15),
-            ("d".to_string(), 11),
-            ("123".to_string(), 9),
-            ("b".to_string(), 7),
-            ("a".to_string(), 3)
+            (Box::from("c"), 15),
+            (Box::from("d"), 11),
+            (Box::from("123"), 9),
+            (Box::from("b"), 7),
+            (Box::from("a"), 3)
         ]
     );
 }
@@ -299,9 +299,9 @@ fn test_excluding_words() {
     let tally = WordTally::new(input, Case::Lower, Sort::Unsorted, filters);
     let result = tally.tally();
 
-    assert!(result.iter().any(|(word, _)| word == "tree"));
-    assert!(!result.iter().any(|(word, _)| word == "heaven"));
-    assert!(!result.iter().any(|(word, _)| word == "hell"));
+    assert!(result.iter().any(|(word, _)| word.as_ref() == "tree"));
+    assert!(!result.iter().any(|(word, _)| word.as_ref() == "heaven"));
+    assert!(!result.iter().any(|(word, _)| word.as_ref() == "hell"));
 }
 
 #[test]
@@ -315,7 +315,7 @@ fn test_only_words() {
     let tally = WordTally::new(input, Case::Lower, Sort::Desc, filters);
     let result = tally.tally();
 
-    let expected = vec![("chaos".to_string(), 2), ("star".to_string(), 1)].into_boxed_slice();
+    let expected = vec![(Box::from("chaos"), 2), (Box::from("star"), 1)].into_boxed_slice();
 
     assert_eq!(result, expected);
 }

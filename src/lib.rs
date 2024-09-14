@@ -25,7 +25,7 @@
 //!
 //! let input = "Cinquedea".as_bytes();
 //! let words = WordTally::new(input, Case::Lower, Sort::Desc, Filters::default());
-//! let expected_tally = vec![("cinquedea".to_string(), 1)].into_boxed_slice();
+//! let expected_tally = vec![(Box::from("cinquedea"), 1)].into_boxed_slice();
 //!
 //! assert_eq!(words.tally(), expected_tally);
 //! ```
@@ -44,7 +44,7 @@ use unicode_segmentation::UnicodeSegmentation;
 #[non_exhaustive]
 pub struct WordTally {
     /// Ordered pairs of words and the count of times they appear.
-    tally: Box<[(String, u64)]>,
+    tally: Box<[(Box<str>, u64)]>,
 
     /// The sum of all words tallied.
     count: u64,
@@ -66,7 +66,7 @@ impl Hash for WordTally {
 }
 
 /// A `tally` supports `iter` and can also be represented as a `Vec`.
-impl From<WordTally> for Vec<(String, u64)> {
+impl From<WordTally> for Vec<(Box<str>, u64)> {
     fn from(word_tally: WordTally) -> Self {
         word_tally.tally.into_vec()
     }
@@ -228,7 +228,7 @@ impl WordTally {
     }
 
     /// Gets the `tally` field.
-    pub fn tally(self) -> Box<[(String, u64)]> {
+    pub fn tally(self) -> Box<[(Box<str>, u64)]> {
         self.tally
     }
 
@@ -254,7 +254,7 @@ impl WordTally {
     }
 
     /// Creates a tally of normalized words from an input that implements `Read`.
-    fn tally_map<T: Read>(input: T, case: Case, min_chars: MinChars) -> IndexMap<String, u64> {
+    fn tally_map<T: Read>(input: T, case: Case, min_chars: MinChars) -> IndexMap<Box<str>, u64> {
         let mut tally = IndexMap::new();
         let lines = BufReader::new(input).lines();
 
@@ -272,7 +272,7 @@ impl WordTally {
     }
 
     /// Removes words from the `tally_map` based on any word `Filters`.
-    fn filter(tally_map: &mut IndexMap<String, u64>, filters: Filters, case: Case) {
+    fn filter(tally_map: &mut IndexMap<Box<str>, u64>, filters: Filters, case: Case) {
         // Remove any words that lack the minimum number of characters.
         if filters.min_count.applicable() {
             tally_map.retain(|_, &mut count| count >= filters.min_count.0);
@@ -298,11 +298,11 @@ impl WordTally {
     }
 
     /// Normalizes word case if a `Case` other than `Case::Original` is provided.
-    fn normalize_case(word: &str, case: Case) -> String {
+    fn normalize_case(word: &str, case: Case) -> Box<str> {
         match case {
-            Case::Lower => word.to_lowercase(),
-            Case::Upper => word.to_uppercase(),
-            Case::Original => word.to_owned(),
+            Case::Lower => word.to_lowercase().into_boxed_str(),
+            Case::Upper => word.to_uppercase().into_boxed_str(),
+            Case::Original => Box::from(word),
         }
     }
 }
