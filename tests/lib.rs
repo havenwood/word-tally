@@ -293,7 +293,7 @@ fn test_excluding_words() {
     let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let excluded_words = vec!["Heaven".to_string(), "Hell".to_string()];
     let filters = Filters {
-        words_exclude: WordsExclude(excluded_words),
+        words_exclude: WordsExclude(Some(excluded_words)),
         ..Filters::default()
     };
     let tally = WordTally::new(input, Case::Lower, Sort::Unsorted, filters);
@@ -346,7 +346,10 @@ fn test_min_count_from() {
 #[test]
 fn test_words_exclude_from() {
     let excluded = vec!["beep".to_string(), "boop".to_string()];
-    assert_eq!(WordsExclude::from(excluded.clone()), WordsExclude(excluded));
+    assert_eq!(
+        WordsExclude::from(excluded.clone()),
+        WordsExclude(Some(excluded))
+    );
 }
 
 #[test]

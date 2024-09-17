@@ -176,11 +176,11 @@ impl From<u64> for MinCount {
 
 /// A list of words that should not be tallied.
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct WordsExclude(pub Vec<String>);
+pub struct WordsExclude(pub Option<Vec<String>>);
 
 impl From<Vec<String>> for WordsExclude {
     fn from(raw: Vec<String>) -> Self {
-        Self(raw)
+        Self(Some(raw))
     }
 }
 
@@ -279,13 +279,13 @@ impl WordTally {
         }
 
         // Remove any words on the `exclude` word list.
-        let normalized_excludes: Vec<_> = filters
-            .words_exclude
-            .0
-            .iter()
-            .map(|exclude| Self::normalize_case(exclude, case))
-            .collect();
-        tally_map.retain(|word, _| !normalized_excludes.contains(word));
+        if let Some(excludes) = filters.words_exclude.0 {
+            let normalized_excludes: Vec<_> = excludes
+                .iter()
+                .map(|exclude| Self::normalize_case(exclude, case))
+                .collect();
+            tally_map.retain(|word, _| !normalized_excludes.contains(word));
+        }
 
         // Remove any words absent from the `only` word list.
         if let Some(exclusives) = filters.words_only.0 {

@@ -26,14 +26,8 @@ pub struct Args {
     pub min_count: u64,
 
     /// Exclude any words from a comma-delimited list.
-    #[arg(
-        short,
-        long,
-        default_value = "",
-        use_value_delimiter = true,
-        value_name = "WORDS"
-    )]
-    pub exclude: Vec<String>,
+    #[arg(short, long, use_value_delimiter = true, value_name = "WORDS")]
+    pub exclude: Option<Vec<String>>,
 
     /// Only include words from a comma-delimited list.
     #[arg(short = 'O', long, use_value_delimiter = true, value_name = "WORDS")]
