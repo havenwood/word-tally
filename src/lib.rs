@@ -279,7 +279,7 @@ impl WordTally {
         }
 
         // Remove any words on the `exclude` word list.
-        if let Some(excludes) = filters.words_exclude.0 {
+        if let WordsExclude(Some(excludes)) = filters.words_exclude {
             let normalized_excludes: Vec<_> = excludes
                 .iter()
                 .map(|exclude| Self::normalize_case(exclude, case))
@@ -288,7 +288,7 @@ impl WordTally {
         }
 
         // Remove any words absent from the `only` word list.
-        if let Some(exclusives) = filters.words_only.0 {
+        if let WordsOnly(Some(exclusives)) = filters.words_only {
             let normalized_exclusives: Vec<_> = exclusives
                 .iter()
                 .map(|exclusive| Self::normalize_case(exclusive, case))
