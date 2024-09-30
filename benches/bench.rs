@@ -1,7 +1,7 @@
 use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
 use std::io::Cursor;
 use std::sync::OnceLock;
-use word_tally::{Case, Filters, MinChars, Sort, WordTally};
+use word_tally::{Filters, MinChars, Options, Sort, WordTally};
 
 const INPUT: &str = "Orchids bloom silently\nMicrocontrollers hum\nPhalaenopsis thrives\n\
     Data packets route\nPhalaenopsis BLOOM\nDendrobium anchors\nPhotosynthesis proceeds\n\
@@ -25,7 +25,16 @@ fn bench_new_unsorted(c: &mut Criterion) {
     c.bench_function("new_unsorted", |b| {
         b.iter_batched(
             prepare_input,
-            |input| WordTally::new(input, Case::Lower, Sort::Unsorted, Filters::default()),
+            |input| {
+                WordTally::new(
+                    input,
+                    Options {
+                        sort: Sort::Unsorted,
+                        ..Options::default()
+                    },
+                    Filters::default(),
+                )
+            },
             BatchSize::SmallInput,
         );
     });
@@ -35,7 +44,16 @@ fn bench_new_sorted(c: &mut Criterion) {
     c.bench_function("new_sorted", |b| {
         b.iter_batched(
             prepare_input,
-            |input| WordTally::new(input, Case::Lower, Sort::Asc, Filters::default()),
+            |input| {
+                WordTally::new(
+                    input,
+                    Options {
+                        sort: Sort::Asc,
+                        ..Options::default()
+                    },
+                    Filters::default(),
+                )
+            },
             BatchSize::SmallInput,
         );
     });
@@ -48,8 +66,10 @@ fn bench_new_min_chars(c: &mut Criterion) {
             |input| {
                 WordTally::new(
                     input,
-                    Case::Lower,
-                    Sort::Unsorted,
+                    Options {
+                        sort: Sort::Unsorted,
+                        ..Options::default()
+                    },
                     Filters {
                         min_chars: Some(MinChars(5)),
                         ..Filters::default()
@@ -65,7 +85,16 @@ fn bench_new_min_count(c: &mut Criterion) {
     c.bench_function("new_min_count", |b| {
         b.iter_batched(
             prepare_input,
-            |input| WordTally::new(input, Case::Lower, Sort::Unsorted, Filters::default()),
+            |input| {
+                WordTally::new(
+                    input,
+                    Options {
+                        sort: Sort::Unsorted,
+                        ..Options::default()
+                    },
+                    Filters::default(),
+                )
+            },
             BatchSize::SmallInput,
         );
     });
@@ -77,8 +106,10 @@ fn bench_sort(c: &mut Criterion) {
             || {
                 WordTally::new(
                     prepare_input(),
-                    Case::Lower,
-                    Sort::Unsorted,
+                    Options {
+                        sort: Sort::Unsorted,
+                        ..Options::default()
+                    },
                     Filters::default(),
                 )
             },

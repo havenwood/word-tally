@@ -9,7 +9,9 @@ use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Read, Write};
 use std::path::PathBuf;
 use unescaper::unescape;
-use word_tally::{Case, Filters, MinChars, MinCount, Sort, WordTally, WordsExclude, WordsOnly};
+use word_tally::{
+    Case, Filters, MinChars, MinCount, Options, Sort, WordTally, WordsExclude, WordsOnly,
+};
 
 /// `Writer` is a boxed type for dynamic dispatch of the `Write` trait.
 type Writer = Box<dyn Write>;
@@ -78,10 +80,14 @@ fn main() -> Result<()> {
         output,
     } = Args::parse();
 
+    let delimiter = unescape(&delimiter)?;
+
     let source = Source::new(input)?;
     let reader = source
         .reader()
         .with_context(|| format!("Failed to read from {}.", source.file_name()))?;
+
+    let options = Options { case, sort };
 
     let filters = Filters {
         min_chars: min_chars.map(MinChars),
@@ -90,8 +96,7 @@ fn main() -> Result<()> {
         words_only: only.map(WordsOnly),
     };
 
-    let word_tally = WordTally::new(reader, case, sort, filters);
-    let delimiter = unescape(&delimiter)?;
+    let word_tally = WordTally::new(reader, options, filters);
 
     if verbose || debug {
         let log_config = LogConfig {

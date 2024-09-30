@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use word_tally::{Case, Filters, MinChars, MinCount, Sort, WordTally, WordsExclude, WordsOnly};
+use word_tally::{
+    Case, Filters, MinChars, MinCount, Options, Sort, WordTally, WordsExclude, WordsOnly,
+};
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 
@@ -11,15 +13,15 @@ struct ExpectedFields<'a> {
     tally: Vec<(&'a str, u64)>,
 }
 
-fn word_tally(case: Case, sort: Sort, filters: Filters) -> WordTally {
+fn word_tally(options: Options, filters: Filters) -> WordTally {
     let input = File::open(TEST_WORDS_PATH)
         .expect("Expected test words file (`files/words.txt`) to be readable.");
 
-    WordTally::new(input, case, sort, filters)
+    WordTally::new(input, options, filters)
 }
 
 fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFields<'_>) {
-    let word_tally = word_tally(case, sort, filters);
+    let word_tally = word_tally(Options { case, sort }, filters);
     assert_eq!(word_tally.count(), fields.count);
     assert_eq!(word_tally.uniq_count(), fields.uniq_count);
     assert_eq!(word_tally.avg(), fields.avg);
@@ -254,7 +256,7 @@ fn equality_and_hashing() {
 
     let tallies: Vec<WordTally> = cases_and_sorts
         .iter()
-        .map(|&(case, sort)| word_tally(case, sort, Filters::default()))
+        .map(|&(case, sort)| word_tally(Options { case, sort }, Filters::default()))
         .collect();
 
     for tally in &tallies {
@@ -274,7 +276,7 @@ fn equality_and_hashing() {
 
 #[test]
 fn vec_from() {
-    let tally = word_tally(Case::Lower, Sort::Desc, Filters::default());
+    let tally = word_tally(Options::default(), Filters::default());
 
     assert_eq!(
         Vec::from(tally),
@@ -292,11 +294,15 @@ fn vec_from() {
 fn test_excluding_words() {
     let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let excluded_words = vec!["Heaven".to_string(), "Hell".to_string()];
+    let options = Options {
+        sort: Sort::Unsorted,
+        ..Options::default()
+    };
     let filters = Filters {
         words_exclude: Some(WordsExclude(excluded_words)),
         ..Filters::default()
     };
-    let tally = WordTally::new(input, Case::Lower, Sort::Unsorted, filters);
+    let tally = WordTally::new(input, options, filters);
     let result = tally.tally();
 
     assert!(result.iter().any(|(word, _)| word.as_ref() == "tree"));
@@ -308,11 +314,16 @@ fn test_excluding_words() {
 fn test_only_words() {
     let input = "One must still have chaos in oneself to be able to give birth to a dancing star. I tell you: you have chaos in yourselves.".as_bytes();
     let only = vec!["chaos".to_string(), "star".to_string()];
+    let options = Options {
+        case: Case::Lower,
+        sort: Sort::Desc,
+    };
     let filters = Filters {
         words_only: Some(WordsOnly(only)),
         ..Filters::default()
     };
-    let tally = WordTally::new(input, Case::Lower, Sort::Desc, filters);
+
+    let tally = WordTally::new(input, options, filters);
     let result = tally.tally();
 
     let expected = vec![(Box::from("chaos"), 2), (Box::from("star"), 1)].into_boxed_slice();
@@ -360,8 +371,7 @@ fn test_min_count_graphemes() {
     let tally = WordTally::new(
         // An `"é"` is only one char.
         &b"e\xCC\x81"[..],
-        Case::default(),
-        Sort::default(),
+        Options::default(),
         Filters {
             min_chars: Some(MinChars(2)),
             ..Filters::default()
@@ -376,8 +386,7 @@ fn test_min_count_graphemes() {
 fn test_to_json() {
     let expected = WordTally::new(
         &b"wombat wombat bat"[..],
-        Case::Lower,
-        Sort::Desc,
+        Options::default(),
         Filters::default(),
     );
     let serialized = serde_json::to_string(&expected).unwrap();
@@ -391,8 +400,7 @@ fn test_to_json() {
 fn test_from_json() {
     let expected = WordTally::new(
         &b"wombat wombat bat"[..],
-        Case::Lower,
-        Sort::Desc,
+        Options::default(),
         Filters::default(),
     );
     let json = r#"

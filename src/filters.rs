@@ -34,8 +34,10 @@ impl Filters {
 
         // Remove any words on the `exclude` word list.
         if let Some(WordsExclude(excludes)) = &self.words_exclude {
-            let normalized_excludes: Vec<_> =
-                excludes.iter().map(|exclude| case.apply(exclude)).collect();
+            let normalized_excludes: Vec<_> = excludes
+                .iter()
+                .map(|exclude| case.apply_and_box(exclude))
+                .collect();
             tally_map.retain(|word, _| !normalized_excludes.contains(word));
         }
 
@@ -43,7 +45,7 @@ impl Filters {
         if let Some(WordsOnly(exclusives)) = &self.words_only {
             let normalized_exclusives: Vec<_> = exclusives
                 .iter()
-                .map(|exclusive| case.apply(exclusive))
+                .map(|exclusive| case.apply_and_box(exclusive))
                 .collect();
             tally_map.retain(|word, _| normalized_exclusives.contains(word));
         }

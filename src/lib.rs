@@ -21,10 +21,10 @@
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Case, Filters, Sort, WordTally};
+//! use word_tally::{Filters, Options, WordTally};
 //!
 //! let input = "Cinquedea".as_bytes();
-//! let words = WordTally::new(input, Case::Lower, Sort::Desc, Filters::default());
+//! let words = WordTally::new(input, Options::default(), Filters::default());
 //! let expected_tally: Box<[(Box<str>, u64)]> = [("cinquedea".into(), 1)].into();
 //!
 //! assert_eq!(words.tally(), expected_tally);
@@ -40,7 +40,7 @@ pub mod filters;
 pub mod options;
 
 pub use filters::{Filters, MinChars, MinCount, WordsExclude, WordsOnly};
-pub use options::{Case, Sort};
+pub use options::{Case, Options, Sort};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -78,9 +78,9 @@ impl From<WordTally> for Vec<(Box<str>, u64)> {
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
 impl WordTally {
     /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
-    pub fn new<T: Read>(input: T, case: Case, order: Sort, filters: Filters) -> Self {
-        let mut tally_map = Self::tally_map(input, case);
-        filters.apply(&mut tally_map, case);
+    pub fn new<T: Read>(input: T, options: Options, filters: Filters) -> Self {
+        let mut tally_map = Self::tally_map(input, options.case);
+        filters.apply(&mut tally_map, options.case);
 
         let count = tally_map.values().sum();
         let tally: Box<[_]> = tally_map.into_iter().collect();
@@ -92,7 +92,7 @@ impl WordTally {
             uniq_count,
             avg,
         };
-        word_tally.sort(order);
+        word_tally.sort(options.sort);
 
         word_tally
     }
@@ -135,7 +135,7 @@ impl WordTally {
 
         for line in lines.map_while(Result::ok) {
             line.unicode_words().for_each(|word| {
-                *tally.entry(case.apply(word)).or_insert(0) += 1;
+                *tally.entry(case.apply_and_box(word)).or_insert(0) += 1;
             });
         }
 

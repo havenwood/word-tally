@@ -3,6 +3,13 @@ use clap::ValueEnum;
 use core::cmp::Reverse;
 use core::fmt::{self, Display, Formatter};
 
+// Tallying options.
+#[derive(Clone, Copy, Debug, Default)]
+pub struct Options {
+    pub case: Case,
+    pub sort: Sort,
+}
+
 /// Word case normalization.
 #[derive(Clone, Copy, Debug, Default, ValueEnum)]
 pub enum Case {
@@ -14,7 +21,7 @@ pub enum Case {
 
 impl Case {
     /// Normalizes word case if a `Case` other than `Case::Original` is provided.
-    pub fn apply(&self, word: &str) -> Box<str> {
+    pub fn apply_and_box(&self, word: &str) -> Box<str> {
         match self {
             Self::Lower => word.to_lowercase().into_boxed_str(),
             Self::Upper => word.to_uppercase().into_boxed_str(),
