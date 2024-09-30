@@ -29,15 +29,18 @@
 //!
 //! assert_eq!(words.tally(), expected_tally);
 //! ```
-use clap::ValueEnum;
-use core::cmp::Reverse;
-use core::fmt::{self, Display, Formatter};
 use core::hash::{Hash, Hasher};
 use indexmap::IndexMap;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Read};
 use unicode_segmentation::UnicodeSegmentation;
+
+pub mod filters;
+pub mod options;
+
+pub use filters::{Filters, MinChars, MinCount, WordsExclude, WordsOnly};
+pub use options::{Case, Sort};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -72,122 +75,12 @@ impl From<WordTally> for Vec<(Box<str>, u64)> {
     }
 }
 
-/// Word case normalization.
-#[derive(Clone, Copy, Debug, Default, ValueEnum)]
-pub enum Case {
-    Original,
-    Upper,
-    #[default]
-    Lower,
-}
-
-impl Display for Case {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let case = match self {
-            Self::Lower => "lower",
-            Self::Upper => "upper",
-            Self::Original => "original",
-        };
-
-        f.write_str(case)
-    }
-}
-
-/// Sort order by count.
-#[derive(Clone, Copy, Debug, Default, ValueEnum)]
-pub enum Sort {
-    #[default]
-    Desc,
-    Asc,
-    Unsorted,
-}
-
-impl Display for Sort {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let order = match self {
-            Self::Desc => "desc",
-            Self::Asc => "asc",
-            Self::Unsorted => "unsorted",
-        };
-
-        f.write_str(order)
-    }
-}
-
-/// Filters for words to be included in the tally.
-#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct Filters {
-    /// Word chars filters for tallying.
-    pub min_chars: Option<MinChars>,
-
-    /// Word count filters for tallying.
-    pub min_count: Option<MinCount>,
-
-    /// List of specific words to exclude for tallying.
-    pub words_exclude: Option<WordsExclude>,
-
-    /// List of specific words to only include for tallying.
-    pub words_only: Option<WordsOnly>,
-}
-
-/// Min number of chars a word needs to be tallied.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct MinChars(pub usize);
-
-impl Display for MinChars {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<usize> for MinChars {
-    fn from(raw: usize) -> Self {
-        Self(raw)
-    }
-}
-
-/// Min count a word needs to be tallied.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct MinCount(pub u64);
-
-impl Display for MinCount {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<u64> for MinCount {
-    fn from(raw: u64) -> Self {
-        Self(raw)
-    }
-}
-
-/// A list of words that should not be tallied.
-#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct WordsExclude(pub Vec<String>);
-
-impl From<Vec<String>> for WordsExclude {
-    fn from(raw: Vec<String>) -> Self {
-        Self(raw)
-    }
-}
-
-/// A list of words that should only be tallied.
-#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct WordsOnly(pub Vec<String>);
-
-impl From<Vec<String>> for WordsOnly {
-    fn from(raw: Vec<String>) -> Self {
-        Self(raw)
-    }
-}
-
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
 impl WordTally {
     /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
     pub fn new<T: Read>(input: T, case: Case, order: Sort, filters: Filters) -> Self {
         let mut tally_map = Self::tally_map(input, case);
-        Self::filter(&mut tally_map, filters, case);
+        filters.apply(&mut tally_map, case);
 
         let count = tally_map.values().sum();
         let tally: Box<[_]> = tally_map.into_iter().collect();
@@ -205,14 +98,8 @@ impl WordTally {
     }
 
     /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
-    pub fn sort(&mut self, order: Sort) {
-        match order {
-            Sort::Desc => self
-                .tally
-                .sort_unstable_by_key(|&(_, count)| Reverse(count)),
-            Sort::Asc => self.tally.sort_unstable_by_key(|&(_, count)| count),
-            Sort::Unsorted => (),
-        }
+    pub fn sort(&mut self, sort: Sort) {
+        sort.apply(self);
     }
 
     /// Gets the `tally` field.
@@ -248,50 +135,10 @@ impl WordTally {
 
         for line in lines.map_while(Result::ok) {
             line.unicode_words().for_each(|word| {
-                *tally.entry(Self::normalize_case(word, case)).or_insert(0) += 1;
+                *tally.entry(case.apply(word)).or_insert(0) += 1;
             });
         }
 
         tally
-    }
-
-    /// Removes words from the `tally_map` based on any word `Filters`.
-    fn filter(tally_map: &mut IndexMap<Box<str>, u64>, filters: Filters, case: Case) {
-        // Remove any words that lack the minimum count.
-        if let Some(MinCount(min_count)) = filters.min_count {
-            tally_map.retain(|_, &mut count| count >= min_count);
-        }
-
-        // Remove any words that lack the minimum numbner of characters.
-        if let Some(MinChars(min_chars)) = filters.min_chars {
-            tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars);
-        }
-
-        // Remove any words on the `exclude` word list.
-        if let Some(WordsExclude(excludes)) = filters.words_exclude {
-            let normalized_excludes: Vec<_> = excludes
-                .iter()
-                .map(|exclude| Self::normalize_case(exclude, case))
-                .collect();
-            tally_map.retain(|word, _| !normalized_excludes.contains(word));
-        }
-
-        // Remove any words absent from the `only` word list.
-        if let Some(WordsOnly(exclusives)) = filters.words_only {
-            let normalized_exclusives: Vec<_> = exclusives
-                .iter()
-                .map(|exclusive| Self::normalize_case(exclusive, case))
-                .collect();
-            tally_map.retain(|word, _| normalized_exclusives.contains(word));
-        }
-    }
-
-    /// Normalizes word case if a `Case` other than `Case::Original` is provided.
-    fn normalize_case(word: &str, case: Case) -> Box<str> {
-        match case {
-            Case::Lower => word.to_lowercase().into_boxed_str(),
-            Case::Upper => word.to_uppercase().into_boxed_str(),
-            Case::Original => Box::from(word),
-        }
     }
 }
