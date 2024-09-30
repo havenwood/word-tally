@@ -186,7 +186,7 @@ impl From<Vec<String>> for WordsOnly {
 impl WordTally {
     /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
     pub fn new<T: Read>(input: T, case: Case, order: Sort, filters: Filters) -> Self {
-        let mut tally_map = Self::tally_map(input, case, filters.min_chars);
+        let mut tally_map = Self::tally_map(input, case);
         Self::filter(&mut tally_map, filters, case);
 
         let count = tally_map.values().sum();
@@ -242,31 +242,14 @@ impl WordTally {
     }
 
     /// Creates a tally of normalized words from an input that implements `Read`.
-    fn tally_map<T: Read>(
-        input: T,
-        case: Case,
-        min_chars: Option<MinChars>,
-    ) -> IndexMap<Box<str>, u64> {
+    fn tally_map<T: Read>(input: T, case: Case) -> IndexMap<Box<str>, u64> {
         let mut tally = IndexMap::new();
         let lines = BufReader::new(input).lines();
 
-        match min_chars {
-            Some(MinChars(count)) => {
-                for line in lines.map_while(Result::ok) {
-                    line.unicode_words()
-                        .filter(|word| word.graphemes(true).count() >= count)
-                        .for_each(|word| {
-                            *tally.entry(Self::normalize_case(word, case)).or_insert(0) += 1;
-                        });
-                }
-            }
-            None => {
-                for line in lines.map_while(Result::ok) {
-                    line.unicode_words().for_each(|word| {
-                        *tally.entry(Self::normalize_case(word, case)).or_insert(0) += 1;
-                    });
-                }
-            }
+        for line in lines.map_while(Result::ok) {
+            line.unicode_words().for_each(|word| {
+                *tally.entry(Self::normalize_case(word, case)).or_insert(0) += 1;
+            });
         }
 
         tally
@@ -274,9 +257,14 @@ impl WordTally {
 
     /// Removes words from the `tally_map` based on any word `Filters`.
     fn filter(tally_map: &mut IndexMap<Box<str>, u64>, filters: Filters, case: Case) {
-        // Remove any words that lack the minimum number of characters.
+        // Remove any words that lack the minimum count.
         if let Some(MinCount(min_count)) = filters.min_count {
             tally_map.retain(|_, &mut count| count >= min_count);
+        }
+
+        // Remove any words that lack the minimum numbner of characters.
+        if let Some(MinChars(min_chars)) = filters.min_chars {
+            tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars);
         }
 
         // Remove any words on the `exclude` word list.
