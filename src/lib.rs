@@ -124,10 +124,10 @@ pub struct Filters {
     pub min_count: Option<MinCount>,
 
     /// List of specific words to exclude for tallying.
-    pub words_exclude: WordsExclude,
+    pub words_exclude: Option<WordsExclude>,
 
     /// List of specific words to only include for tallying.
-    pub words_only: WordsOnly,
+    pub words_only: Option<WordsOnly>,
 }
 
 /// Min number of chars a word needs to be tallied.
@@ -164,21 +164,21 @@ impl From<u64> for MinCount {
 
 /// A list of words that should not be tallied.
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct WordsExclude(pub Option<Vec<String>>);
+pub struct WordsExclude(pub Vec<String>);
 
 impl From<Vec<String>> for WordsExclude {
     fn from(raw: Vec<String>) -> Self {
-        Self(Some(raw))
+        Self(raw)
     }
 }
 
 /// A list of words that should only be tallied.
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct WordsOnly(pub Option<Vec<String>>);
+pub struct WordsOnly(pub Vec<String>);
 
 impl From<Vec<String>> for WordsOnly {
     fn from(raw: Vec<String>) -> Self {
-        Self(Some(raw))
+        Self(raw)
     }
 }
 
@@ -280,7 +280,7 @@ impl WordTally {
         }
 
         // Remove any words on the `exclude` word list.
-        if let WordsExclude(Some(excludes)) = filters.words_exclude {
+        if let Some(WordsExclude(excludes)) = filters.words_exclude {
             let normalized_excludes: Vec<_> = excludes
                 .iter()
                 .map(|exclude| Self::normalize_case(exclude, case))
@@ -289,7 +289,7 @@ impl WordTally {
         }
 
         // Remove any words absent from the `only` word list.
-        if let WordsOnly(Some(exclusives)) = filters.words_only {
+        if let Some(WordsOnly(exclusives)) = filters.words_only {
             let normalized_exclusives: Vec<_> = exclusives
                 .iter()
                 .map(|exclusive| Self::normalize_case(exclusive, case))

@@ -86,8 +86,8 @@ fn main() -> Result<()> {
     let filters = Filters {
         min_chars: min_chars.map(MinChars),
         min_count: min_count.map(MinCount),
-        words_exclude: WordsExclude(exclude),
-        words_only: WordsOnly(only),
+        words_exclude: exclude.map(WordsExclude),
+        words_only: only.map(WordsOnly),
     };
 
     let word_tally = WordTally::new(reader, case, sort, filters);
