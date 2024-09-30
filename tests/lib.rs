@@ -54,7 +54,7 @@ fn min_char_count_at_max() {
         Case::Lower,
         Sort::Desc,
         Filters {
-            min_chars: MinChars(3),
+            min_chars: Some(MinChars(3)),
             ..Filters::default()
         },
         &ExpectedFields {
@@ -72,7 +72,7 @@ fn min_char_count_above_max() {
         Case::Lower,
         Sort::Desc,
         Filters {
-            min_chars: MinChars(4),
+            min_chars: Some(MinChars(4)),
             ..Filters::default()
         },
         &ExpectedFields {
@@ -105,7 +105,7 @@ fn min_word_count_at_max() {
         Case::Lower,
         Sort::Desc,
         Filters {
-            min_count: MinCount(15),
+            min_count: Some(MinCount(15)),
             ..Filters::default()
         },
         &ExpectedFields {
@@ -366,7 +366,7 @@ fn test_min_count_graphemes() {
         Case::default(),
         Sort::default(),
         Filters {
-            min_chars: MinChars(2),
+            min_chars: Some(MinChars(2)),
             ..Filters::default()
         },
     );

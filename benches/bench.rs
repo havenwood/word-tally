@@ -51,7 +51,7 @@ fn bench_new_min_chars(c: &mut Criterion) {
                     Case::Lower,
                     Sort::Unsorted,
                     Filters {
-                        min_chars: MinChars(5),
+                        min_chars: Some(MinChars(5)),
                         ..Filters::default()
                     },
                 )

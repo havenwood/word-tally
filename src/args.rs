@@ -18,12 +18,12 @@ pub struct Args {
     pub case: Case,
 
     /// Exclude words containing fewer than min chars.
-    #[arg(short, long, default_value_t = 1, value_name = "COUNT")]
-    pub min_chars: usize,
+    #[arg(short, long, value_name = "COUNT")]
+    pub min_chars: Option<usize>,
 
     /// Exclude words appearing fewer than min times.
-    #[arg(short = 'M', long, default_value_t = 1, value_name = "COUNT")]
-    pub min_count: u64,
+    #[arg(short = 'M', long, value_name = "COUNT")]
+    pub min_count: Option<u64>,
 
     /// Exclude any words from a comma-delimited list.
     #[arg(short, long, use_value_delimiter = true, value_name = "WORDS")]

@@ -25,7 +25,7 @@ fn debug_without_input() {
     assert
         .success()
         .stderr(
-            "delimiter \" \"\ncase lower\norder desc\nmin-chars 1\nmin-count 1\nverbose false\ndebug true\n",
+            "delimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\nverbose false\ndebug true\n",
         )
         .stdout("");
 }
@@ -36,7 +36,7 @@ fn debug_with_min_chars() {
     assert
         .success()
         .stderr(
-            "delimiter \" \"\ncase lower\norder desc\nmin-chars 42\nmin-count 1\nverbose false\ndebug true\n",
+            "delimiter \" \"\ncase lower\norder desc\nmin-chars 42\nmin-count none\nverbose false\ndebug true\n",
         )
         .stdout("");
 }
@@ -47,7 +47,7 @@ fn debug_with_min_count() {
     assert
         .success()
         .stderr(
-            "delimiter \" \"\ncase lower\norder desc\nmin-chars 1\nmin-count 42\nverbose false\ndebug true\n",
+            "delimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count 42\nverbose false\ndebug true\n",
         )
         .stdout("");
 }
@@ -57,7 +57,7 @@ fn debug_with_input() {
     let assert = word_tally().write_stdin("wombat").arg("-d").assert();
     assert
         .success()
-        .stderr("delimiter \" \"\ncase lower\norder desc\nmin-chars 1\nmin-count 1\nverbose false\ndebug true\n\n")
+        .stderr("delimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\nverbose false\ndebug true\n\n")
         .stdout("wombat 1\n");
 }
 

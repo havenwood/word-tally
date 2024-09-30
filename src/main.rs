@@ -20,8 +20,8 @@ struct LogConfig {
     debug: bool,
     case: Case,
     sort: Sort,
-    min_chars: usize,
-    min_count: u64,
+    min_chars: Option<usize>,
+    min_count: Option<u64>,
 }
 
 /// `Source` input is either a file path or stdin.
@@ -84,8 +84,8 @@ fn main() -> Result<()> {
         .with_context(|| format!("Failed to read from {}.", source.file_name()))?;
 
     let filters = Filters {
-        min_chars: MinChars(min_chars),
-        min_count: MinCount(min_count),
+        min_chars: min_chars.map(MinChars),
+        min_count: min_count.map(MinCount),
         words_exclude: WordsExclude(exclude),
         words_only: WordsOnly(only),
     };
@@ -141,8 +141,22 @@ fn log_details(
         log_detail(&mut w, "delimiter", delimiter, format!("{delimiter:?}"))?;
         log_detail(&mut w, "case", delimiter, log_config.case)?;
         log_detail(&mut w, "order", delimiter, log_config.sort)?;
-        log_detail(&mut w, "min-chars", delimiter, log_config.min_chars)?;
-        log_detail(&mut w, "min-count", delimiter, log_config.min_count)?;
+        log_detail(
+            &mut w,
+            "min-chars",
+            delimiter,
+            log_config
+                .min_chars
+                .map_or("none".to_string(), |count| count.to_string()),
+        )?;
+        log_detail(
+            &mut w,
+            "min-count",
+            delimiter,
+            log_config
+                .min_count
+                .map_or("none".to_string(), |count| count.to_string()),
+        )?;
         log_detail(&mut w, "verbose", delimiter, log_config.verbose)?;
         log_detail(&mut w, "debug", delimiter, log_config.debug)?;
     }
