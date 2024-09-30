@@ -5,6 +5,7 @@ pub(crate) mod args;
 use anyhow::{anyhow, Context, Result};
 use args::Args;
 use clap::Parser;
+use std::fmt::Display;
 use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Read, Write};
 use std::path::PathBuf;
@@ -13,18 +14,11 @@ use word_tally::{
     Case, Filters, MinChars, MinCount, Options, Sort, WordTally, WordsExclude, WordsOnly,
 };
 
+/// `Reader` is a boxed type for dynamic dispatch of the `Read` trait.
+type Reader = Box<dyn Read>;
+
 /// `Writer` is a boxed type for dynamic dispatch of the `Write` trait.
 type Writer = Box<dyn Write>;
-
-/// `LogConfig` contains `Args` flags that may be used for logging.
-struct LogConfig {
-    verbose: bool,
-    debug: bool,
-    case: Case,
-    sort: Sort,
-    min_chars: Option<usize>,
-    min_count: Option<u64>,
-}
 
 /// `Source` input is either a file path or stdin.
 enum Source {
@@ -46,7 +40,7 @@ impl Source {
     }
 
     /// The reader will be a file from a path or stdin.
-    fn reader(&self) -> io::Result<Box<dyn Read>> {
+    fn reader(&self) -> io::Result<Reader> {
         match self {
             Self::File(path) => Ok(Box::new(File::open(path)?)),
             Self::Stdin => Ok(Box::new(io::stdin())),
@@ -63,6 +57,16 @@ impl Source {
                 .expect("Path is valid UTF-8"),
         }
     }
+}
+
+/// `LogConfig` contains `Args` flags that may be used for logging.
+struct LogConfig {
+    verbose: bool,
+    debug: bool,
+    case: Case,
+    sort: Sort,
+    min_chars: Option<usize>,
+    min_count: Option<u64>,
 }
 
 fn main() -> Result<()> {
@@ -198,12 +202,7 @@ fn write_tally(
 }
 
 /// Log a formatted details line.
-fn log_detail<T: std::fmt::Display>(
-    w: &mut Writer,
-    label: &str,
-    delimiter: &str,
-    value: T,
-) -> Result<()> {
+fn log_detail<T: Display>(w: &mut Writer, label: &str, delimiter: &str, value: T) -> Result<()> {
     let line = format!("{label}{delimiter}{value}\n");
 
     log(w, &line)
@@ -219,7 +218,7 @@ fn log(w: &mut Writer, line: &str) -> Result<()> {
 /// Processes the result of a write, handling `BrokenPipe` errors gracefully.
 // This can be simplified once `-Zon-broken-pipe=kill` stabilizes and can be
 // used to kill the program if it tries to write to a closed pipe.
-fn piping(result: std::io::Result<()>) -> Result<()> {
+fn piping(result: io::Result<()>) -> Result<()> {
     match result {
         Ok(()) => Ok(()),
         Err(err) => match err.kind() {
