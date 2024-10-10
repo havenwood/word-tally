@@ -75,7 +75,7 @@ fn verbose_with_input() {
     let assert = word_tally().write_stdin("wombat").arg("-v").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 1\nunique-words 1\naverage-word-count 1.000\n\n")
+        .stderr("source -\ntotal-words 1\nunique-words 1\n\n")
         .stdout("wombat 1\n");
 }
 

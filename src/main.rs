@@ -140,10 +140,6 @@ fn log_details(
         log_detail(&mut w, "source", delimiter, source)?;
         log_detail(&mut w, "total-words", delimiter, word_tally.count())?;
         log_detail(&mut w, "unique-words", delimiter, word_tally.uniq_count())?;
-
-        if let Some(avg) = word_tally.avg() {
-            log_detail(&mut w, "average-word-count", delimiter, format!("{avg:.3}"))?;
-        }
     }
 
     if log_config.debug {

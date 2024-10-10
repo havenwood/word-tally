@@ -9,7 +9,6 @@ const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 struct ExpectedFields<'a> {
     count: u64,
     uniq_count: usize,
-    avg: Option<f64>,
     tally: Vec<(&'a str, u64)>,
 }
 
@@ -24,7 +23,6 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
     let word_tally = word_tally(Options { case, sort }, filters);
     assert_eq!(word_tally.count(), fields.count);
     assert_eq!(word_tally.uniq_count(), fields.uniq_count);
-    assert_eq!(word_tally.avg(), fields.avg);
 
     let expected_tally = fields
         .tally
@@ -44,7 +42,6 @@ fn lower_case_desc_order() {
         &ExpectedFields {
             count: 45,
             uniq_count: 5,
-            avg: Some(9.0),
             tally: vec![("c", 15), ("d", 11), ("123", 9), ("b", 7), ("a", 3)],
         },
     );
@@ -62,7 +59,6 @@ fn min_char_count_at_max() {
         &ExpectedFields {
             count: 9,
             uniq_count: 1,
-            avg: Some(9.0),
             tally: vec![("123", 9)],
         },
     );
@@ -80,7 +76,6 @@ fn min_char_count_above_max() {
         &ExpectedFields {
             count: 0,
             uniq_count: 0,
-            avg: None,
             tally: vec![],
         },
     );
@@ -95,7 +90,6 @@ fn min_char_count_at_min() {
         &ExpectedFields {
             count: 45,
             uniq_count: 5,
-            avg: Some(9.0),
             tally: vec![("c", 15), ("d", 11), ("123", 9), ("b", 7), ("a", 3)],
         },
     );
@@ -113,7 +107,6 @@ fn min_word_count_at_max() {
         &ExpectedFields {
             count: 15,
             uniq_count: 1,
-            avg: Some(15.0),
             tally: vec![("c", 15)],
         },
     );
@@ -128,7 +121,6 @@ fn default_case_unsorted_order() {
         &ExpectedFields {
             count: 45,
             uniq_count: 5,
-            avg: Some(9.0),
             tally: vec![("d", 11), ("123", 9), ("a", 3), ("c", 15), ("b", 7)],
         },
     );
@@ -143,7 +135,6 @@ fn upper_case_desc_order() {
         &ExpectedFields {
             count: 45,
             uniq_count: 5,
-            avg: Some(9.0),
             tally: vec![("C", 15), ("D", 11), ("123", 9), ("B", 7), ("A", 3)],
         },
     );
@@ -158,7 +149,6 @@ fn lower_case_asc_order() {
         &ExpectedFields {
             count: 45,
             uniq_count: 5,
-            avg: Some(9.0),
             tally: vec![("a", 3), ("b", 7), ("123", 9), ("d", 11), ("c", 15)],
         },
     );
@@ -173,7 +163,6 @@ fn upper_case_asc_order() {
         &ExpectedFields {
             count: 45,
             uniq_count: 5,
-            avg: Some(9.0),
             tally: vec![("A", 3), ("B", 7), ("123", 9), ("D", 11), ("C", 15)],
         },
     );
@@ -188,7 +177,6 @@ fn original_case_desc_order() {
         &ExpectedFields {
             count: 45,
             uniq_count: 9,
-            avg: Some(5.0),
             tally: vec![
                 ("123", 9),
                 ("C", 8),
@@ -213,7 +201,6 @@ fn original_case_asc_order() {
         &ExpectedFields {
             count: 45,
             uniq_count: 9,
-            avg: Some(5.0),
             tally: vec![
                 ("a", 1),
                 ("A", 2),
@@ -391,7 +378,7 @@ fn test_to_json() {
     );
     let serialized = serde_json::to_string(&expected).unwrap();
 
-    let expected_json = r#"{"tally":[["wombat",2],["bat",1]],"count":3,"uniq_count":2,"avg":1.5}"#;
+    let expected_json = r#"{"tally":[["wombat",2],["bat",1]],"count":3,"uniq_count":2}"#;
     assert_eq!(serialized, expected_json);
 }
 
@@ -407,8 +394,7 @@ fn test_from_json() {
     {
         "tally": [["wombat", 2], ["bat", 1]],
         "count": 3,
-        "uniq_count": 2,
-        "avg": 1.5
+        "uniq_count": 2
     }
     "#;
 

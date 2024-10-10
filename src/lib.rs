@@ -15,7 +15,7 @@
 //! `Original` (case sensitive) and `Lower` or `Upper` case normalization. `Sort`
 //! order can be `Unsorted` or sorted `Desc` (descending) or `Asc` (ascending).
 //! A `tally` can be sorted upon contruction or sorted later with the `sort` method.
-//! Sorting doesn't impact the `count`, `uniq_count` or `avg` fields. `Filter`s can
+//! Sorting doesn't impact the `count` or `uniq_count` fields. `Filter`s can
 //! be used to provide list of words that should or shouldn't be tallied.
 //!
 //! # Examples
@@ -29,7 +29,6 @@
 //!
 //! assert_eq!(words.tally(), expected_tally);
 //! ```
-use core::hash::{Hash, Hasher};
 use indexmap::IndexMap;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -43,7 +42,7 @@ pub use filters::{Filters, MinChars, MinCount, WordsExclude, WordsOnly};
 pub use options::{Case, Options, Sort};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 #[non_exhaustive]
 pub struct WordTally {
     /// Ordered pairs of words and the count of times they appear.
@@ -54,18 +53,6 @@ pub struct WordTally {
 
     /// The sum of uniq words tallied.
     uniq_count: usize,
-
-    /// The mean average count per word, if there are words.
-    avg: Option<f64>,
-}
-
-impl Eq for WordTally {}
-
-/// Since the other fields are derived from it, hash by just the `tally`.
-impl Hash for WordTally {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.tally.hash(state);
-    }
 }
 
 /// A `tally` supports `iter` and can also be represented as a `Vec`.
@@ -85,12 +72,10 @@ impl WordTally {
         let count = tally_map.values().sum();
         let tally: Box<[_]> = tally_map.into_iter().collect();
         let uniq_count = tally.len();
-        let avg = Self::calculate_avg(count, uniq_count);
         let mut word_tally = Self {
             tally,
             count,
             uniq_count,
-            avg,
         };
         word_tally.sort(options.sort);
 
@@ -115,17 +100,6 @@ impl WordTally {
     /// Gets the `count` field.
     pub const fn count(&self) -> u64 {
         self.count
-    }
-
-    /// Gets the `avg` field.
-    pub const fn avg(&self) -> Option<f64> {
-        self.avg
-    }
-
-    /// Calculates an approximate mean average word count if there are words.
-    /// Note: Casting `u64` to `f64` and floating point arithmatic cause a loss of precision.
-    fn calculate_avg(count: u64, uniq_count: usize) -> Option<f64> {
-        (count > 0).then(|| count as f64 / uniq_count as f64)
     }
 
     /// Creates a tally of normalized words from an input that implements `Read`.
