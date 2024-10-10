@@ -14,7 +14,7 @@
 //! `Case` normalization, `Sort` order and word `Filters`. `Case` options include
 //! `Original` (case sensitive) and `Lower` or `Upper` case normalization. `Sort`
 //! order can be `Unsorted` or sorted `Desc` (descending) or `Asc` (ascending).
-//! A `tally` can be sorted upon contruction or sorted later with the `sort` method.
+//! A `tally` can be sorted at construction and resorted with the `sort` method.
 //! Sorting doesn't impact the `count` or `uniq_count` fields. `Filter`s can
 //! be used to provide list of words that should or shouldn't be tallied.
 //!
