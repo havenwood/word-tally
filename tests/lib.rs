@@ -7,9 +7,9 @@ use word_tally::{
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 
 struct ExpectedFields<'a> {
-    count: u64,
+    count: usize,
     uniq_count: usize,
-    tally: Vec<(&'a str, u64)>,
+    tally: Vec<(&'a str, usize)>,
 }
 
 fn word_tally(options: Options, filters: Filters) -> WordTally {
@@ -337,7 +337,7 @@ fn test_min_count_display() {
 
 #[test]
 fn test_min_count_from() {
-    let raw = 43_u64;
+    let raw = 43_usize;
     assert_eq!(MinCount::from(raw), MinCount(43));
 }
 

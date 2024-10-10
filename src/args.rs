@@ -23,7 +23,7 @@ pub struct Args {
 
     /// Exclude words appearing fewer than min times.
     #[arg(short = 'M', long, value_name = "COUNT")]
-    pub min_count: Option<u64>,
+    pub min_count: Option<usize>,
 
     /// Exclude any words from a comma-delimited list.
     #[arg(short, long, use_value_delimiter = true, value_name = "WORDS")]

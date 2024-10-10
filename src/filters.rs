@@ -21,7 +21,7 @@ pub struct Filters {
 
 impl Filters {
     /// Removes words from the `tally_map` based on any word `Filters`.
-    pub fn apply(&self, tally_map: &mut IndexMap<Box<str>, u64>, case: Case) {
+    pub fn apply(&self, tally_map: &mut IndexMap<Box<str>, usize>, case: Case) {
         // Remove any words that lack the minimum count.
         if let Some(MinCount(min_count)) = self.min_count {
             tally_map.retain(|_, &mut count| count >= min_count);
@@ -70,7 +70,7 @@ impl From<usize> for MinChars {
 
 /// Min count a word needs to be tallied.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct MinCount(pub u64);
+pub struct MinCount(pub usize);
 
 impl Display for MinCount {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -78,8 +78,8 @@ impl Display for MinCount {
     }
 }
 
-impl From<u64> for MinCount {
-    fn from(raw: u64) -> Self {
+impl From<usize> for MinCount {
+    fn from(raw: usize) -> Self {
         Self(raw)
     }
 }

@@ -25,7 +25,7 @@
 //!
 //! let input = "Cinquedea".as_bytes();
 //! let words = WordTally::new(input, Options::default(), Filters::default());
-//! let expected_tally: Box<[(Box<str>, u64)]> = [("cinquedea".into(), 1)].into();
+//! let expected_tally: Box<[(Box<str>, usize)]> = [("cinquedea".into(), 1)].into();
 //!
 //! assert_eq!(words.tally(), expected_tally);
 //! ```
@@ -46,17 +46,17 @@ pub use options::{Case, Options, Sort};
 #[non_exhaustive]
 pub struct WordTally {
     /// Ordered pairs of words and the count of times they appear.
-    tally: Box<[(Box<str>, u64)]>,
+    tally: Box<[(Box<str>, usize)]>,
 
     /// The sum of all words tallied.
-    count: u64,
+    count: usize,
 
     /// The sum of uniq words tallied.
     uniq_count: usize,
 }
 
 /// A `tally` supports `iter` and can also be represented as a `Vec`.
-impl From<WordTally> for Vec<(Box<str>, u64)> {
+impl From<WordTally> for Vec<(Box<str>, usize)> {
     fn from(word_tally: WordTally) -> Self {
         word_tally.tally.into_vec()
     }
@@ -88,7 +88,7 @@ impl WordTally {
     }
 
     /// Gets the `tally` field.
-    pub fn tally(self) -> Box<[(Box<str>, u64)]> {
+    pub fn tally(self) -> Box<[(Box<str>, usize)]> {
         self.tally
     }
 
@@ -98,12 +98,12 @@ impl WordTally {
     }
 
     /// Gets the `count` field.
-    pub const fn count(&self) -> u64 {
+    pub const fn count(&self) -> usize {
         self.count
     }
 
     /// Creates a tally of normalized words from an input that implements `Read`.
-    fn tally_map<T: Read>(input: T, case: Case) -> IndexMap<Box<str>, u64> {
+    fn tally_map<T: Read>(input: T, case: Case) -> IndexMap<Box<str>, usize> {
         let mut tally = IndexMap::new();
         let lines = BufReader::new(input).lines();
 

@@ -66,7 +66,7 @@ struct LogConfig {
     case: Case,
     sort: Sort,
     min_chars: Option<usize>,
-    min_count: Option<u64>,
+    min_count: Option<usize>,
 }
 
 fn main() -> Result<()> {
