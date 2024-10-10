@@ -27,7 +27,7 @@
 //! let words = WordTally::new(input, Options::default(), Filters::default());
 //! let expected_tally: Box<[(Box<str>, usize)]> = [("cinquedea".into(), 1)].into();
 //!
-//! assert_eq!(words.tally(), expected_tally);
+//! assert_eq!(words.into_tally(), expected_tally);
 //! ```
 use indexmap::IndexMap;
 #[cfg(feature = "serde")]
@@ -58,7 +58,7 @@ pub struct WordTally {
 /// A `tally` supports `iter` and can also be represented as a `Vec`.
 impl From<WordTally> for Vec<(Box<str>, usize)> {
     fn from(word_tally: WordTally) -> Self {
-        word_tally.tally.into_vec()
+        word_tally.into_tally().into_vec()
     }
 }
 
@@ -88,7 +88,12 @@ impl WordTally {
     }
 
     /// Gets the `tally` field.
-    pub fn tally(self) -> Box<[(Box<str>, usize)]> {
+    pub const fn tally(&self) -> &[(Box<str>, usize)] {
+        &self.tally
+    }
+
+    /// Consumes the `tally` field.
+    pub fn into_tally(self) -> Box<[(Box<str>, usize)]> {
         self.tally
     }
 

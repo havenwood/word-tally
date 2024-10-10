@@ -30,7 +30,8 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
         .map(|(word, count)| (Box::from(*word), *count))
         .collect::<Vec<_>>()
         .into_boxed_slice();
-    assert_eq!(word_tally.tally(), expected_tally);
+
+    assert_eq!(word_tally.tally(), expected_tally.as_ref());
 }
 
 #[test]
@@ -278,6 +279,23 @@ fn vec_from() {
 }
 
 #[test]
+fn test_into_tally() {
+    let input = b"bye bye birdy";
+    let options = Options::default();
+    let filters = Filters::default();
+
+    let word_tally = WordTally::new(&input[..], options, filters);
+
+    // Use `tally()` to get a reference to the slice.
+    let tally = word_tally.tally();
+
+    let expected_tally: Box<[(Box<str>, usize)]> =
+        vec![("bye".into(), 2), ("birdy".into(), 1)].into_boxed_slice();
+
+    assert_eq!(tally, expected_tally.as_ref());
+}
+
+#[test]
 fn test_excluding_words() {
     let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let excluded_words = vec!["Heaven".to_string(), "Hell".to_string()];
@@ -315,7 +333,7 @@ fn test_only_words() {
 
     let expected = vec![(Box::from("chaos"), 2), (Box::from("star"), 1)].into_boxed_slice();
 
-    assert_eq!(result, expected);
+    assert_eq!(result, expected.as_ref());
 }
 
 #[test]
