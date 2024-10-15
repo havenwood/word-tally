@@ -30,7 +30,7 @@ pub struct Args {
     pub exclude: Option<Vec<String>>,
 
     /// Delimiter between keys and values.
-    #[arg(short = 'D', long, default_value = " ", value_name = "VALUE")]
+    #[arg(short, long, default_value = " ", value_name = "VALUE")]
     pub delimiter: String,
 
     /// Write output to file rather than stdout.
@@ -40,8 +40,4 @@ pub struct Args {
     /// Print verbose details.
     #[arg(short, long)]
     pub verbose: bool,
-
-    /// Print debugging information.
-    #[arg(short, long)]
-    pub debug: bool,
 }

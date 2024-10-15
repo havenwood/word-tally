@@ -20,10 +20,9 @@ Options:
   -m, --min-chars <COUNT>  Exclude words containing fewer than min chars
   -M, --min-count <COUNT>  Exclude words appearing fewer than min times
   -e, --exclude <WORDS>    Exclude words from a comma-delimited list
-  -D, --delimiter <VALUE>  Delimiter between keys and values [default: " "]
+  -d, --delimiter <VALUE>  Delimiter between keys and values [default: " "]
   -o, --output <PATH>      Write output to file rather than stdout
   -v, --verbose            Print verbose details
-  -d, --debug              Print debugging information
   -h, --help               Print help
   -V, --version            Print version
 ```

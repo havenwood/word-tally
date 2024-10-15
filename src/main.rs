@@ -1,7 +1,9 @@
 //! `word-tally` tallies and outputs the count of words from a given input.
+
 pub(crate) mod args;
 pub(crate) mod input;
 pub(crate) mod output;
+pub(crate) mod verbose;
 
 use anyhow::{Context, Result};
 use args::Args;
@@ -9,7 +11,8 @@ use clap::Parser;
 use input::Input;
 use output::Output;
 use unescaper::unescape;
-use word_tally::{Case, ExcludeWords, Filters, MinChars, MinCount, Options, Sort, WordTally};
+use verbose::Verbose;
+use word_tally::{ExcludeWords, Filters, MinChars, MinCount, Options, WordTally};
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -34,10 +37,8 @@ fn main() -> Result<()> {
 
     let word_tally = WordTally::new(reader, options, filters);
 
-    if args.verbose || args.debug {
-        let log_config = LogConfig {
-            verbose: args.verbose,
-            debug: args.debug,
+    if args.verbose {
+        let verbose = Verbose {
             case: args.case,
             sort: args.sort,
             min_chars: args.min_chars,
@@ -45,14 +46,13 @@ fn main() -> Result<()> {
         };
 
         let mut stderr_output = Output::stderr();
-        log_details(
+        verbose.log(
             &mut stderr_output,
             &word_tally,
             &delimiter,
             &input_file_name,
-            log_config,
         )?;
-    }
+    };
 
     let mut output = Output::from_args(args.output)?;
 
@@ -61,71 +61,6 @@ fn main() -> Result<()> {
     }
 
     output.flush()?;
-
-    Ok(())
-}
-
-/// Log a formatted details line.
-fn log_detail<T: std::fmt::Display>(
-    w: &mut Output,
-    label: &str,
-    delimiter: &str,
-    value: T,
-) -> Result<()> {
-    w.write_line(&format!("{label}{delimiter}{value}\n"))
-}
-
-/// `LogConfig` contains `Args` flags that may be used for logging.
-struct LogConfig {
-    verbose: bool,
-    debug: bool,
-    case: Case,
-    sort: Sort,
-    min_chars: Option<usize>,
-    min_count: Option<usize>,
-}
-
-/// Log verbose and debug details to stderr.
-fn log_details(
-    stderr: &mut Output,
-    word_tally: &WordTally,
-    delimiter: &str,
-    source: &str,
-    log_config: LogConfig,
-) -> Result<()> {
-    if log_config.verbose {
-        log_detail(stderr, "source", delimiter, source)?;
-        log_detail(stderr, "total-words", delimiter, word_tally.count())?;
-        log_detail(stderr, "unique-words", delimiter, word_tally.uniq_count())?;
-    }
-
-    if log_config.debug {
-        log_detail(stderr, "delimiter", delimiter, format!("{:?}", delimiter))?;
-        log_detail(stderr, "case", delimiter, log_config.case)?;
-        log_detail(stderr, "order", delimiter, log_config.sort)?;
-        log_detail(
-            stderr,
-            "min-chars",
-            delimiter,
-            log_config
-                .min_chars
-                .map_or("none".to_string(), |count| count.to_string()),
-        )?;
-        log_detail(
-            stderr,
-            "min-count",
-            delimiter,
-            log_config
-                .min_count
-                .map_or("none".to_string(), |count| count.to_string()),
-        )?;
-        log_detail(stderr, "verbose", delimiter, log_config.verbose)?;
-        log_detail(stderr, "debug", delimiter, log_config.debug)?;
-    }
-
-    if word_tally.count() > 0 {
-        stderr.write_line("\n")?;
-    }
 
     Ok(())
 }
