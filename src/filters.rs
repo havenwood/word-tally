@@ -1,6 +1,7 @@
 use crate::Case;
 use core::fmt::{self, Display, Formatter};
 use indexmap::IndexMap;
+use std::collections::HashSet;
 use unicode_segmentation::UnicodeSegmentation;
 
 /// Filters for words to be included in the tally.
@@ -33,21 +34,17 @@ impl Filters {
         }
 
         // Remove any words on the `exclude` word list.
-        if let Some(WordsExclude(excludes)) = &self.words_exclude {
-            let normalized_excludes: Vec<_> = excludes
-                .iter()
-                .map(|exclude| case.apply_and_box(exclude))
-                .collect();
-            tally_map.retain(|word, _| !normalized_excludes.contains(word));
+        if let Some(WordsExclude(words)) = &self.words_exclude {
+            let exclude_words: HashSet<_> =
+                words.iter().map(|word| case.apply_and_box(word)).collect();
+            tally_map.retain(|word, _| !exclude_words.contains(word));
         }
 
         // Remove any words absent from the `only` word list.
-        if let Some(WordsOnly(exclusives)) = &self.words_only {
-            let normalized_exclusives: Vec<_> = exclusives
-                .iter()
-                .map(|exclusive| case.apply_and_box(exclusive))
-                .collect();
-            tally_map.retain(|word, _| normalized_exclusives.contains(word));
+        if let Some(WordsOnly(words)) = &self.words_only {
+            let only_words: HashSet<_> =
+                words.iter().map(|word| case.apply_and_box(word)).collect();
+            tally_map.retain(|word, _| only_words.contains(word));
         }
     }
 }
