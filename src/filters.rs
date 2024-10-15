@@ -14,10 +14,7 @@ pub struct Filters {
     pub min_count: Option<MinCount>,
 
     /// List of specific words to exclude for tallying.
-    pub words_exclude: Option<WordsExclude>,
-
-    /// List of specific words to only include for tallying.
-    pub words_only: Option<WordsOnly>,
+    pub exclude: Option<ExcludeWords>,
 }
 
 impl Filters {
@@ -33,18 +30,10 @@ impl Filters {
             tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars);
         }
 
-        // Remove any words on the `exclude` word list.
-        if let Some(WordsExclude(words)) = &self.words_exclude {
-            let exclude_words: HashSet<_> =
-                words.iter().map(|word| case.apply_and_box(word)).collect();
-            tally_map.retain(|word, _| !exclude_words.contains(word));
-        }
-
-        // Remove any words absent from the `only` word list.
-        if let Some(WordsOnly(words)) = &self.words_only {
-            let only_words: HashSet<_> =
-                words.iter().map(|word| case.apply_and_box(word)).collect();
-            tally_map.retain(|word, _| only_words.contains(word));
+        // Remove any words on the `discard` list.
+        if let Some(ExcludeWords(words)) = &self.exclude {
+            let discard: HashSet<_> = words.iter().map(|word| case.apply_and_box(word)).collect();
+            tally_map.retain(|word, _| !discard.contains(word));
         }
     }
 }
@@ -83,19 +72,9 @@ impl From<usize> for MinCount {
 
 /// A list of words that should not be tallied.
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct WordsExclude(pub Vec<String>);
+pub struct ExcludeWords(pub Vec<String>);
 
-impl From<Vec<String>> for WordsExclude {
-    fn from(raw: Vec<String>) -> Self {
-        Self(raw)
-    }
-}
-
-/// A list of words that should only be tallied.
-#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
-pub struct WordsOnly(pub Vec<String>);
-
-impl From<Vec<String>> for WordsOnly {
+impl From<Vec<String>> for ExcludeWords {
     fn from(raw: Vec<String>) -> Self {
         Self(raw)
     }

@@ -1,8 +1,6 @@
 use std::fs::File;
 use std::hash::{DefaultHasher, Hash, Hasher};
-use word_tally::{
-    Case, Filters, MinChars, MinCount, Options, Sort, WordTally, WordsExclude, WordsOnly,
-};
+use word_tally::{Case, ExcludeWords, Filters, MinChars, MinCount, Options, Sort, WordTally};
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 
@@ -298,13 +296,13 @@ fn test_into_tally() {
 #[test]
 fn test_excluding_words() {
     let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
-    let excluded_words = vec!["Heaven".to_string(), "Hell".to_string()];
+    let words = vec!["Heaven".to_string(), "Hell".to_string()];
     let options = Options {
         sort: Sort::Unsorted,
         ..Options::default()
     };
     let filters = Filters {
-        words_exclude: Some(WordsExclude(excluded_words)),
+        exclude: Some(ExcludeWords(words)),
         ..Filters::default()
     };
     let tally = WordTally::new(input, options, filters);
@@ -313,27 +311,6 @@ fn test_excluding_words() {
     assert!(result.iter().any(|(word, _)| word.as_ref() == "tree"));
     assert!(!result.iter().any(|(word, _)| word.as_ref() == "heaven"));
     assert!(!result.iter().any(|(word, _)| word.as_ref() == "hell"));
-}
-
-#[test]
-fn test_only_words() {
-    let input = "One must still have chaos in oneself to be able to give birth to a dancing star. I tell you: you have chaos in yourselves.".as_bytes();
-    let only = vec!["chaos".to_string(), "star".to_string()];
-    let options = Options {
-        case: Case::Lower,
-        sort: Sort::Desc,
-    };
-    let filters = Filters {
-        words_only: Some(WordsOnly(only)),
-        ..Filters::default()
-    };
-
-    let tally = WordTally::new(input, options, filters);
-    let result = tally.tally();
-
-    let expected = vec![(Box::from("chaos"), 2), (Box::from("star"), 1)].into_boxed_slice();
-
-    assert_eq!(result, expected.as_ref());
 }
 
 #[test]
@@ -361,14 +338,8 @@ fn test_min_count_from() {
 
 #[test]
 fn test_words_exclude_from() {
-    let excluded = vec!["beep".to_string(), "boop".to_string()];
-    assert_eq!(WordsExclude::from(excluded.clone()), WordsExclude(excluded));
-}
-
-#[test]
-fn test_words_only_from() {
-    let only = vec!["bep".to_string(), "bop".to_string()];
-    assert_eq!(WordsOnly::from(only.clone()), WordsOnly(only));
+    let words = vec!["beep".to_string(), "boop".to_string()];
+    assert_eq!(ExcludeWords::from(words.clone()), ExcludeWords(words));
 }
 
 #[test]

@@ -38,7 +38,7 @@ use unicode_segmentation::UnicodeSegmentation;
 pub mod filters;
 pub mod options;
 
-pub use filters::{Filters, MinChars, MinCount, WordsExclude, WordsOnly};
+pub use filters::{ExcludeWords, Filters, MinChars, MinCount};
 pub use options::{Case, Options, Sort};
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

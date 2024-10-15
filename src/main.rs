@@ -10,9 +10,7 @@ use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Read, Write};
 use std::path::PathBuf;
 use unescaper::unescape;
-use word_tally::{
-    Case, Filters, MinChars, MinCount, Options, Sort, WordTally, WordsExclude, WordsOnly,
-};
+use word_tally::{Case, ExcludeWords, Filters, MinChars, MinCount, Options, Sort, WordTally};
 
 /// `Reader` is a boxed type for dynamic dispatch of the `Read` trait.
 type Reader = Box<dyn Read>;
@@ -75,7 +73,6 @@ fn main() -> Result<()> {
         min_chars,
         min_count,
         exclude,
-        only,
         case,
         sort,
         delimiter,
@@ -96,8 +93,7 @@ fn main() -> Result<()> {
     let filters = Filters {
         min_chars: min_chars.map(MinChars),
         min_count: min_count.map(MinCount),
-        words_exclude: exclude.map(WordsExclude),
-        words_only: only.map(WordsOnly),
+        exclude: exclude.map(ExcludeWords),
     };
 
     let word_tally = WordTally::new(reader, options, filters);

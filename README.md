@@ -9,18 +9,17 @@ Output a tally of the number of times unique words appear in source input.
 ## Usage
 
 ```
-Usage: word-tally [OPTIONS] [INPUT]
+Usage: word-tally [OPTIONS] [PATH]
 
 Arguments:
-  [INPUT]  File path to use as input rather than stdin ("-") [default: -]
+  [PATH]  File path to use as input rather than stdin ("-") [default: -]
 
 Options:
   -s, --sort <ORDER>       Sort order [default: desc] [possible values: desc, asc, unsorted]
   -c, --case <FORMAT>      Case normalization [default: lower] [possible values: original, upper, lower]
-  -m, --min-chars <COUNT>  Exclude words containing fewer than min chars [default: 1]
-  -M, --min-count <COUNT>  Exclude words appearing fewer than min times [default: 1]
-  -e, --exclude <WORDS>    Exclude any words from a comma-delimited list
-  -O, --only <WORDS>       Only include words from a comma-delimited list
+  -m, --min-chars <COUNT>  Exclude words containing fewer than min chars
+  -M, --min-count <COUNT>  Exclude words appearing fewer than min times
+  -e, --exclude <WORDS>    Exclude words from a comma-delimited list
   -D, --delimiter <VALUE>  Delimiter between keys and values [default: " "]
   -o, --output <PATH>      Write output to file rather than stdout
   -v, --verbose            Print verbose details
