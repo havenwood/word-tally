@@ -74,6 +74,12 @@ impl From<usize> for MinCount {
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
 pub struct ExcludeWords(pub Vec<String>);
 
+impl Display for ExcludeWords {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.0.join(","))
+    }
+}
+
 impl From<Vec<String>> for ExcludeWords {
     fn from(raw: Vec<String>) -> Self {
         Self(raw)

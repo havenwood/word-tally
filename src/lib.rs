@@ -48,6 +48,12 @@ pub struct WordTally {
     /// Ordered pairs of words and the count of times they appear.
     tally: Box<[(Box<str>, usize)]>,
 
+    /// Word tallying options like case normalization and sort order.
+    options: Options,
+
+    /// Filters that limit words from being tallied.
+    filters: Filters,
+
     /// The sum of all words tallied.
     count: usize,
 
@@ -74,6 +80,8 @@ impl WordTally {
         let uniq_count = tally.len();
         let mut word_tally = Self {
             tally,
+            options,
+            filters,
             count,
             uniq_count,
         };
@@ -95,6 +103,16 @@ impl WordTally {
     /// Consumes the `tally` field.
     pub fn into_tally(self) -> Box<[(Box<str>, usize)]> {
         self.tally
+    }
+
+    /// Gets the `options` field.
+    pub const fn options(&self) -> Options {
+        self.options
+    }
+
+    /// Gets the `filters` field.
+    pub fn filters(&self) -> Filters {
+        self.filters.clone()
     }
 
     /// Gets the `uniq_count` field.

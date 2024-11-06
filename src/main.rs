@@ -38,12 +38,7 @@ fn main() -> Result<()> {
     let word_tally = WordTally::new(reader, options, filters);
 
     if args.verbose {
-        let verbose = Verbose {
-            case: args.case,
-            sort: args.sort,
-            min_chars: args.min_chars,
-            min_count: args.min_count,
-        };
+        let verbose = Verbose {};
 
         let mut stderr_output = Output::stderr();
         verbose.log(

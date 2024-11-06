@@ -24,7 +24,7 @@ fn verbose_without_input() {
     let assert = word_tally().arg("-v").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\nexclude-words none\n")
         .stdout("");
 }
 
@@ -33,7 +33,7 @@ fn verbose_with_min_chars() {
     let assert = word_tally().arg("-v").arg("--min-chars=42").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars 42\nmin-count none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars 42\nmin-count none\nexclude-words none\n")
         .stdout("");
 }
 
@@ -42,7 +42,19 @@ fn verbose_with_min_count() {
     let assert = word_tally().arg("-v").arg("--min-count=42").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count 42\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count 42\nexclude-words none\n")
+        .stdout("");
+}
+
+#[test]
+fn verbose_with_exclude() {
+    let assert = word_tally()
+        .arg("-v")
+        .arg("--exclude=wombat,trees")
+        .assert();
+    assert
+        .success()
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\nexclude-words wombat,trees\n")
         .stdout("");
 }
 
@@ -51,7 +63,7 @@ fn verbose_with_input() {
     let assert = word_tally().write_stdin("wombat").arg("-v").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 1\nunique-words 1\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\n\n")
+        .stderr("source -\ntotal-words 1\nunique-words 1\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\nexclude-words none\n\n")
         .stdout("wombat 1\n");
 }
 

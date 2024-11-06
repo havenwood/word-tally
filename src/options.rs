@@ -4,14 +4,14 @@ use core::cmp::Reverse;
 use core::fmt::{self, Display, Formatter};
 
 // Tallying options.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
 pub struct Options {
     pub case: Case,
     pub sort: Sort,
 }
 
 /// Word case normalization.
-#[derive(Clone, Copy, Debug, Default, ValueEnum)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, ValueEnum)]
 pub enum Case {
     Original,
     Upper,
@@ -43,7 +43,7 @@ impl Display for Case {
 }
 
 /// Sort order by count.
-#[derive(Clone, Copy, Debug, Default, ValueEnum)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, ValueEnum)]
 pub enum Sort {
     #[default]
     Desc,

@@ -1,14 +1,8 @@
 use crate::output::Output;
 use anyhow::Result;
-use word_tally::{Case, Sort, WordTally};
+use word_tally::WordTally;
 
-/// `Verbose` contains some config details to be logged.
-pub struct Verbose {
-    pub case: Case,
-    pub sort: Sort,
-    pub min_chars: Option<usize>,
-    pub min_count: Option<usize>,
-}
+pub struct Verbose;
 
 impl Verbose {
     /// Log word tally details to stderr.
@@ -23,10 +17,28 @@ impl Verbose {
         self.write_entry(stderr, "total-words", delimiter, word_tally.count())?;
         self.write_entry(stderr, "unique-words", delimiter, word_tally.uniq_count())?;
         self.write_entry(stderr, "delimiter", delimiter, format!("{:?}", delimiter))?;
-        self.write_entry(stderr, "case", delimiter, self.case)?;
-        self.write_entry(stderr, "order", delimiter, self.sort)?;
-        self.write_entry(stderr, "min-chars", delimiter, self.format(self.min_chars))?;
-        self.write_entry(stderr, "min-count", delimiter, self.format(self.min_count))?;
+        self.write_entry(stderr, "case", delimiter, word_tally.options().case)?;
+        self.write_entry(stderr, "order", delimiter, word_tally.options().sort)?;
+
+        let filters = word_tally.filters();
+        self.write_entry(
+            stderr,
+            "min-chars",
+            delimiter,
+            self.format(filters.min_chars),
+        )?;
+        self.write_entry(
+            stderr,
+            "min-count",
+            delimiter,
+            self.format(filters.min_count),
+        )?;
+        self.write_entry(
+            stderr,
+            "exclude-words",
+            delimiter,
+            self.format(filters.exclude),
+        )?;
 
         if word_tally.count() > 0 {
             stderr.write_line("\n")?;
@@ -36,7 +48,7 @@ impl Verbose {
     }
 
     /// Format `"none"` or a `usize` as a `String`.
-    fn format(&self, value: Option<usize>) -> String {
+    fn format<T: ToString>(&self, value: Option<T>) -> String {
         value.map_or_else(|| "none".to_string(), |v| v.to_string())
     }
 
