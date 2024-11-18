@@ -19,10 +19,10 @@ fn main() -> Result<()> {
     let delimiter = unescape(&args.delimiter)?;
 
     let input = Input::from_args(args.input)?;
-    let input_file_name = input.file_name().unwrap_or("-").to_string();
+    let source = input.source();
     let reader = input
         .get_reader()
-        .context(format!("Failed to read from {}.", input_file_name))?;
+        .context(format!("Failed to read from {}.", source))?;
 
     let options = Options {
         case: args.case,
@@ -41,12 +41,7 @@ fn main() -> Result<()> {
         let verbose = Verbose {};
 
         let mut stderr_output = Output::stderr();
-        verbose.log(
-            &mut stderr_output,
-            &word_tally,
-            &delimiter,
-            &input_file_name,
-        )?;
+        verbose.log(&mut stderr_output, &word_tally, &delimiter, &source)?;
     };
 
     let mut output = Output::from_args(args.output)?;

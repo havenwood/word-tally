@@ -11,11 +11,11 @@ pub enum Input {
 
 impl Input {
     /// Construct an `Input` from a file path or stdin.
-    pub fn from_args(path: PathBuf) -> Result<Self> {
-        if path.to_str() == Some("-") {
+    pub fn from_args(path: String) -> Result<Self> {
+        if path == "-" {
             Ok(Self::Stdin)
         } else {
-            Ok(Self::File(path))
+            Ok(Self::File(PathBuf::from(path)))
         }
     }
 
@@ -31,11 +31,16 @@ impl Input {
         }
     }
 
-    /// Returns the file name of the input if available.
-    pub fn file_name(&self) -> Option<&str> {
+    /// Returns the file name of the input or `"-"` for STDIN.
+    pub fn source(&self) -> String {
         match self {
-            Self::File(path) => path.file_name()?.to_str(),
-            Self::Stdin => None,
+            Self::File(path) => path
+                .file_name()
+                .expect("File name inaccessible.")
+                .to_str()
+                .expect("File name invalid UTF-8."),
+            Self::Stdin => "-",
         }
+        .to_string()
     }
 }

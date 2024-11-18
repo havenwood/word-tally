@@ -6,8 +6,8 @@ use word_tally::{Case, Sort};
 #[command(about, version)]
 pub struct Args {
     /// File path to use as input rather than stdin ("-").
-    #[arg(value_name = "PATH", default_value = "-", value_parser = clap::value_parser!(PathBuf))]
-    pub input: PathBuf,
+    #[arg(default_value = "-", value_name = "PATH")]
+    pub input: String,
 
     /// Sort order.
     #[arg(short, long, default_value_t, value_enum, value_name = "ORDER")]
