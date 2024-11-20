@@ -21,7 +21,7 @@ pub enum Case {
 
 impl Case {
     /// Normalizes word case if a `Case` other than `Case::Original` is provided.
-    pub fn apply_and_box(&self, word: &str) -> Box<str> {
+    pub fn normalize(&self, word: &str) -> Box<str> {
         match self {
             Self::Lower => word.to_lowercase().into_boxed_str(),
             Self::Upper => word.to_uppercase().into_boxed_str(),

@@ -29,7 +29,7 @@ impl Filters {
         }
 
         if let Some(ExcludeWords(words)) = &self.exclude {
-            let discard: HashSet<_> = words.iter().map(|word| case.apply_and_box(word)).collect();
+            let discard: HashSet<_> = words.iter().map(|word| case.normalize(word)).collect();
             tally_map.retain(|word, _| !discard.contains(word));
         }
     }

@@ -132,7 +132,7 @@ impl WordTally {
 
         for line in lines.map_while(Result::ok) {
             line.unicode_words().for_each(|word| {
-                *tally.entry(case.apply_and_box(word)).or_insert(0) += 1;
+                *tally.entry(case.normalize(word)).or_insert(0) += 1;
             });
         }
 
