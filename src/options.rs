@@ -3,14 +3,14 @@ use clap::ValueEnum;
 use core::cmp::Reverse;
 use core::fmt::{self, Display, Formatter};
 
-// Tallying options.
+/// Tallying options.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
 pub struct Options {
     pub case: Case,
     pub sort: Sort,
 }
 
-/// Word case normalization.
+/// Word case normalization options.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, ValueEnum)]
 pub enum Case {
     Original,

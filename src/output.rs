@@ -3,10 +3,10 @@ use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Write};
 use std::path::{Path, PathBuf};
 
-/// `Writer` is a boxed type for dynamic dispatch of the `Write` trait.
+/// `Writer` dynamic dispatches the `Write` trait.
 pub type Writer = Box<dyn Write>;
 
-/// `Output` manages writing to either a file, stdout, or stderr.
+/// `Output` writes to either a file or stream like stdout or stderr.
 pub struct Output {
     writer: Writer,
 }

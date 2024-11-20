@@ -47,7 +47,7 @@ impl Verbose {
         Ok(())
     }
 
-    /// Format `"none"` or a `usize` as a `String`.
+    /// Format the `usize`, or `"none"` if none, as a `String`.
     fn format<T: ToString>(&self, value: Option<T>) -> String {
         value.map_or_else(|| "none".to_string(), |v| v.to_string())
     }

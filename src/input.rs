@@ -3,7 +3,7 @@ use std::fs::File;
 use std::io::{self, Read};
 use std::path::PathBuf;
 
-/// `Input` from a file or stdin input source.
+/// `Input` to read from a file or stdin source.
 pub enum Input {
     File(PathBuf),
     Stdin,
@@ -19,7 +19,7 @@ impl Input {
         }
     }
 
-    /// Gets the reader for the input source.
+    /// Gets the reader from the input source.
     pub fn get_reader(&self) -> Result<Box<dyn Read>> {
         match self {
             Self::File(path) => {
@@ -31,7 +31,7 @@ impl Input {
         }
     }
 
-    /// Returns the file name of the input or `"-"` for STDIN.
+    /// Returns the file name of the input or `"-"` for stdin.
     pub fn source(&self) -> String {
         match self {
             Self::File(path) => path
