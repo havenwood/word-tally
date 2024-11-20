@@ -37,7 +37,7 @@ impl Verbose {
             stderr,
             "exclude-words",
             delimiter,
-            self.format(filters.exclude),
+            self.format(filters.exclude.clone()),
         )?;
 
         if word_tally.count() > 0 {

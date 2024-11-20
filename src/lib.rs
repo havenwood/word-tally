@@ -111,8 +111,8 @@ impl WordTally {
     }
 
     /// Gets the `filters` field.
-    pub fn filters(&self) -> Filters {
-        self.filters.clone()
+    pub const fn filters(&self) -> &Filters {
+        &self.filters
     }
 
     /// Gets the `uniq_count` field.
