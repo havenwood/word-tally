@@ -8,14 +8,14 @@ keywords = ["cli", "tally", "words", "count"]
 license = "MIT"
 name = "word-tally"
 repository = "https://github.com/havenwood/word-tally"
-version = "0.14.0"
+version = "0.15.0"
 
 [dependencies]
 anyhow = "1.0.83"
 clap = { version = "4.5.4", features = ["derive"] }
 indexmap = "2.2.6"
-serde = { version = "1.0.203", features = ["derive"], optional = true } 
-serde_json = { version = "1.0.85", optional = true } 
+serde = { version = "1.0.203", features = ["derive"], optional = true }
+serde_json = { version = "1.0.85", optional = true }
 unescaper = "0.1.4"
 unicode-segmentation = "1.11.0"
 
