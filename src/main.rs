@@ -5,7 +5,7 @@ pub(crate) mod input;
 pub(crate) mod output;
 pub(crate) mod verbose;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use args::Args;
 use clap::Parser;
 use input::Input;
@@ -20,9 +20,7 @@ fn main() -> Result<()> {
 
     let input = Input::from_args(args.input)?;
     let source = input.source();
-    let reader = input
-        .get_reader()
-        .context(format!("Failed to read from {}.", source))?;
+    let reader = input.get_reader(&source)?;
 
     let options = Options {
         case: args.case,

@@ -20,11 +20,11 @@ impl Input {
     }
 
     /// Gets the reader from the input source.
-    pub fn get_reader(&self) -> Result<Box<dyn Read>> {
+    pub fn get_reader(&self, source: &str) -> Result<Box<dyn Read>> {
         match self {
             Self::File(path) => {
                 let file =
-                    File::open(path).with_context(|| format!("Failed to open file: {:?}", path))?;
+                    File::open(path).with_context(|| format!("Failed to read from {}", source))?;
                 Ok(Box::new(file))
             }
             Self::Stdin => Ok(Box::new(io::stdin())),
