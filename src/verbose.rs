@@ -2,46 +2,73 @@ use crate::output::Output;
 use anyhow::Result;
 use word_tally::WordTally;
 
-pub struct Verbose;
+pub struct Verbose<'a> {
+    output: Output,
+    tally: &'a WordTally,
+    delimiter: &'a str,
+    source: &'a str,
+}
 
-impl Verbose {
-    /// Log word tally details to stderr.
-    pub fn log(
-        &self,
-        stderr: &mut Output,
-        word_tally: &WordTally,
-        delimiter: &str,
-        source: &str,
-    ) -> Result<()> {
-        self.write_entry(stderr, "source", delimiter, source)?;
-        self.write_entry(stderr, "total-words", delimiter, word_tally.count())?;
-        self.write_entry(stderr, "unique-words", delimiter, word_tally.uniq_count())?;
-        self.write_entry(stderr, "delimiter", delimiter, format!("{:?}", delimiter))?;
-        self.write_entry(stderr, "case", delimiter, word_tally.options().case)?;
-        self.write_entry(stderr, "order", delimiter, word_tally.options().sort)?;
+impl<'a> Verbose<'a> {
+    /// Constructs a new `Verbose` logger with the given output.
+    pub const fn new(
+        output: Output,
+        tally: &'a WordTally,
+        delimiter: &'a str,
+        source: &'a str,
+    ) -> Self {
+        Self {
+            output,
+            tally,
+            delimiter,
+            source,
+        }
+    }
 
-        let filters = word_tally.filters();
+    /// Log verbose details.
+    pub fn log(&mut self) -> Result<()> {
+        self.log_details()?;
+        self.log_options()?;
+        self.log_filters()?;
+        self.log_newline_with_entries()?;
+
+        Ok(())
+    }
+
+    /// Log word tally details.
+    fn log_details(&mut self) -> Result<()> {
+        self.write_entry("source", self.source)?;
+        self.write_entry("total-words", self.tally.count())?;
+        self.write_entry("unique-words", self.tally.uniq_count())?;
+        self.write_entry("delimiter", format!("{:?}", self.delimiter))?;
+
+        Ok(())
+    }
+
+    /// Log word tally options.
+    fn log_options(&mut self) -> Result<()> {
+        self.write_entry("case", self.tally.options().case)?;
+        self.write_entry("order", self.tally.options().sort)?;
+
+        Ok(())
+    }
+
+    /// Log word tally filters.
+    fn log_filters(&mut self) -> Result<()> {
+        self.write_entry("min-chars", self.format(self.tally.filters().min_chars))?;
+        self.write_entry("min-count", self.format(self.tally.filters().min_count))?;
         self.write_entry(
-            stderr,
-            "min-chars",
-            delimiter,
-            self.format(filters.min_chars),
-        )?;
-        self.write_entry(
-            stderr,
-            "min-count",
-            delimiter,
-            self.format(filters.min_count),
-        )?;
-        self.write_entry(
-            stderr,
             "exclude-words",
-            delimiter,
-            self.format(filters.exclude.clone()),
+            self.format(self.tally.filters().exclude.clone()),
         )?;
 
-        if word_tally.count() > 0 {
-            stderr.write_line("\n")?;
+        Ok(())
+    }
+
+    /// Log a newline separator if the tally has entries.
+    fn log_newline_with_entries(&mut self) -> Result<()> {
+        if self.tally.count() > 0 {
+            self.output.write_line("\n")?;
         }
 
         Ok(())
@@ -53,13 +80,8 @@ impl Verbose {
     }
 
     /// Write a formatted log entry line.
-    fn write_entry(
-        &self,
-        w: &mut Output,
-        label: &str,
-        delimiter: &str,
-        value: impl ToString,
-    ) -> Result<()> {
-        w.write_line(&format!("{label}{delimiter}{}\n", value.to_string()))
+    fn write_entry(&mut self, label: &str, value: impl ToString) -> Result<()> {
+        self.output
+            .write_line(&format!("{label}{}{}\n", self.delimiter, value.to_string()))
     }
 }

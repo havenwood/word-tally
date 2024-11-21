@@ -38,10 +38,8 @@ fn main() -> Result<()> {
     let word_tally = WordTally::new(reader, options, filters);
 
     if args.verbose {
-        let verbose = Verbose {};
-
-        let mut stderr_output = Output::stderr();
-        verbose.log(&mut stderr_output, &word_tally, &delimiter, &source)?;
+        let mut verbose = Verbose::new(Output::stderr(), &word_tally, &delimiter, &source);
+        verbose.log()?;
     };
 
     let mut output = Output::from_args(args.output)?;
