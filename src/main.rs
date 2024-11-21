@@ -19,7 +19,6 @@ fn main() -> Result<()> {
     let delimiter = unescape(&args.delimiter)?;
     let input = Input::from_args(&args.input)?;
     let source = input.source();
-    let mut output = Output::from_args(&args.output)?;
 
     let reader = input.get_reader(&source)?;
     let options = Options::new(args.case, args.sort);
@@ -28,10 +27,12 @@ fn main() -> Result<()> {
     let word_tally = WordTally::new(reader, options, filters);
 
     if args.verbose {
-        let mut verbose = Verbose::new(Output::stderr(), &word_tally, &delimiter, &source);
+        let stderr = Output::stderr();
+        let mut verbose = Verbose::new(stderr, &word_tally, &delimiter, &source);
         verbose.log()?;
     }
 
+    let mut output = Output::from_args(&args.output)?;
     for (word, count) in word_tally.tally() {
         output.write_line(&format!("{word}{delimiter}{count}\n"))?;
     }
