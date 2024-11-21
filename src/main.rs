@@ -12,40 +12,29 @@ use input::Input;
 use output::Output;
 use unescaper::unescape;
 use verbose::Verbose;
-use word_tally::{ExcludeWords, Filters, MinChars, MinCount, Options, WordTally};
+use word_tally::{Filters, Options, WordTally};
 
 fn main() -> Result<()> {
     let args = Args::parse();
     let delimiter = unescape(&args.delimiter)?;
-
-    let input = Input::from_args(args.input)?;
+    let input = Input::from_args(&args.input)?;
     let source = input.source();
+    let mut output = Output::from_args(&args.output)?;
+
     let reader = input.get_reader(&source)?;
-
-    let options = Options {
-        case: args.case,
-        sort: args.sort,
-    };
-
-    let filters = Filters {
-        min_chars: args.min_chars.map(MinChars),
-        min_count: args.min_count.map(MinCount),
-        exclude: args.exclude.map(ExcludeWords),
-    };
+    let options = Options::new(args.case, args.sort);
+    let filters = Filters::new(&args.min_chars, &args.min_count, args.exclude);
 
     let word_tally = WordTally::new(reader, options, filters);
 
     if args.verbose {
         let mut verbose = Verbose::new(Output::stderr(), &word_tally, &delimiter, &source);
         verbose.log()?;
-    };
-
-    let mut output = Output::from_args(args.output)?;
+    }
 
     for (word, count) in word_tally.tally() {
         output.write_line(&format!("{word}{delimiter}{count}\n"))?;
     }
-
     output.flush()?;
 
     Ok(())

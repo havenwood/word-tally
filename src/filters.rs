@@ -18,6 +18,19 @@ pub struct Filters {
 }
 
 impl Filters {
+    /// Constructs `Filters`.
+    pub fn new(
+        min_chars: &Option<usize>,
+        min_count: &Option<usize>,
+        exclude: Option<Vec<String>>,
+    ) -> Self {
+        Self {
+            min_chars: min_chars.map(MinChars),
+            min_count: min_count.map(MinCount),
+            exclude: exclude.map(ExcludeWords),
+        }
+    }
+
     /// Removes words from the `tally_map` based on any word `Filters`.
     pub fn apply(&self, tally_map: &mut IndexMap<Box<str>, usize>, case: Case) {
         if let Some(MinCount(min_count)) = self.min_count {

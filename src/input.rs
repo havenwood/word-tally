@@ -11,7 +11,7 @@ pub enum Input {
 
 impl Input {
     /// Construct an `Input` from a file path or stdin.
-    pub fn from_args(path: String) -> Result<Self> {
+    pub fn from_args(path: &str) -> Result<Self> {
         if path == "-" {
             Ok(Self::Stdin)
         } else {

@@ -10,6 +10,13 @@ pub struct Options {
     pub sort: Sort,
 }
 
+/// Construct `Options`.
+impl Options {
+    pub const fn new(case: Case, sort: Sort) -> Self {
+        Self { case, sort }
+    }
+}
+
 /// Word case normalization options.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, ValueEnum)]
 pub enum Case {

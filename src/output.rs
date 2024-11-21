@@ -35,7 +35,7 @@ impl Output {
     }
 
     /// Creates an `Output` from optional arguments, choosing between file or stdout.
-    pub fn from_args(output: Option<PathBuf>) -> Result<Self> {
+    pub fn from_args(output: &Option<PathBuf>) -> Result<Self> {
         match output.as_deref() {
             Some(path) if path == Path::new("-") => Ok(Self::stdout()),
             Some(path) => Self::file(path.to_path_buf()),
