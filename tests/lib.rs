@@ -294,6 +294,47 @@ fn test_into_tally() {
 }
 
 #[test]
+fn test_iterator() {
+    let input = b"double trouble double";
+    let options = Options {
+        case: Case::Lower,
+        sort: Sort::Unsorted,
+    };
+    let filters = Filters::default();
+    let word_tally = WordTally::new(&input[..], options, filters);
+
+    let expected: Vec<(Box<str>, usize)> =
+        vec![(Box::from("double"), 2), (Box::from("trouble"), 1)];
+
+    let collected: Vec<(Box<str>, usize)> = (&word_tally).into_iter().cloned().collect();
+    assert_eq!(collected, expected);
+
+    let mut iter = (&word_tally).into_iter();
+    assert_eq!(iter.next(), Some(&(Box::from("double"), 2)));
+    assert_eq!(iter.next(), Some(&(Box::from("trouble"), 1)));
+    assert_eq!(iter.next(), None);
+}
+
+#[test]
+fn test_iterator_for_loop() {
+    let input = b"llama llama pajamas";
+    let options = Options {
+        case: Case::Lower,
+        sort: Sort::Unsorted,
+    };
+    let filters = Filters::default();
+    let word_tally = WordTally::new(&input[..], options, filters);
+
+    let expected: Vec<(Box<str>, usize)> = vec![(Box::from("llama"), 2), (Box::from("pajamas"), 1)];
+
+    let mut collected = vec![];
+    for item in &word_tally {
+        collected.push(item.clone());
+    }
+    assert_eq!(collected, expected);
+}
+
+#[test]
 fn test_excluding_words() {
     let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let words = vec!["Heaven".to_string(), "Hell".to_string()];

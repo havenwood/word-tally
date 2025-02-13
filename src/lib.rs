@@ -68,6 +68,15 @@ impl From<WordTally> for Vec<(Box<str>, usize)> {
     }
 }
 
+/// A `tally` can also be iterated over directly from a `WordTally`.
+impl<'a> IntoIterator for &'a WordTally {
+    type Item = &'a (Box<str>, usize);
+    type IntoIter = std::slice::Iter<'a, (Box<str>, usize)>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.tally.iter()
+    }
+}
+
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
 impl WordTally {
     /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
