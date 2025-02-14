@@ -25,11 +25,10 @@
 //!
 //! let input = "Cinquedea".as_bytes();
 //! let words = WordTally::new(input, Options::default(), Filters::default());
-//! let expected_tally: Box<[(Box<str>, usize)]> = [("cinquedea".into(), 1)].into();
+//! let expected_tally: Vec<(Box<str>, usize)> = [("cinquedea".into(), 1)].into();
 //!
 //! assert_eq!(words.into_tally(), expected_tally);
 //! ```
-use indexmap::IndexMap;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Read};
@@ -46,7 +45,7 @@ pub use options::{Case, Options, Sort};
 #[non_exhaustive]
 pub struct WordTally {
     /// Ordered pairs of words and the count of times they appear.
-    tally: Box<[(Box<str>, usize)]>,
+    tally: Vec<(Box<str>, usize)>,
 
     /// Word tallying options like case normalization and sort order.
     options: Options,
@@ -64,7 +63,7 @@ pub struct WordTally {
 /// A `tally` supports `iter` and can also be represented as a `Vec`.
 impl From<WordTally> for Vec<(Box<str>, usize)> {
     fn from(word_tally: WordTally) -> Self {
-        word_tally.into_tally().into_vec()
+        word_tally.tally
     }
 }
 
@@ -81,11 +80,9 @@ impl<'a> IntoIterator for &'a WordTally {
 impl WordTally {
     /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
     pub fn new<T: Read>(input: T, options: Options, filters: Filters) -> Self {
-        let mut tally_map = Self::tally_map(input, options.case);
-        filters.apply(&mut tally_map, options.case);
-
-        let count = tally_map.values().sum();
-        let tally: Box<[_]> = tally_map.into_iter().collect();
+        let mut tally = Self::word_tally(input, options.case);
+        filters.apply(&mut tally, options.case);
+        let count = tally.iter().map(|(_, count)| count).sum();
         let uniq_count = tally.len();
         let mut word_tally = Self {
             tally,
@@ -105,12 +102,12 @@ impl WordTally {
     }
 
     /// Gets the `tally` field.
-    pub const fn tally(&self) -> &[(Box<str>, usize)] {
+    pub const fn tally(&self) -> &Vec<(Box<str>, usize)> {
         &self.tally
     }
 
     /// Consumes the `tally` field.
-    pub fn into_tally(self) -> Box<[(Box<str>, usize)]> {
+    pub fn into_tally(self) -> Vec<(Box<str>, usize)> {
         self.tally
     }
 
@@ -135,16 +132,19 @@ impl WordTally {
     }
 
     /// Creates a tally of normalized words from an input that implements `Read`.
-    fn tally_map<T: Read>(input: T, case: Case) -> IndexMap<Box<str>, usize> {
-        let mut tally = IndexMap::new();
-        let lines = BufReader::new(input).lines();
-
-        for line in lines.map_while(Result::ok) {
-            line.unicode_words().for_each(|word| {
-                *tally.entry(case.normalize(word)).or_insert(0) += 1;
-            });
+    fn word_tally<T: Read>(input: T, case: Case) -> Vec<(Box<str>, usize)> {
+        let mut tally = Vec::new();
+        let reader = BufReader::new(input);
+        for line in reader.lines().map_while(Result::ok) {
+            for word in line.unicode_words() {
+                let normalized = case.normalize(word);
+                if let Some((_, count)) = tally.iter_mut().find(|(w, _)| w == &normalized) {
+                    *count += 1;
+                } else {
+                    tally.push((normalized, 1));
+                }
+            }
         }
-
         tally
     }
 }

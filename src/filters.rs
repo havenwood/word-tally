@@ -1,6 +1,5 @@
 use crate::Case;
 use core::fmt::{self, Display, Formatter};
-use indexmap::IndexMap;
 use std::collections::HashSet;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -32,18 +31,19 @@ impl Filters {
     }
 
     /// Removes words from the `tally_map` based on any word `Filters`.
-    pub fn apply(&self, tally_map: &mut IndexMap<Box<str>, usize>, case: Case) {
+    pub fn apply(&self, tally: &mut Vec<(Box<str>, usize)>, case: Case) {
         if let Some(MinCount(min_count)) = self.min_count {
-            tally_map.retain(|_, &mut count| count >= min_count);
+            tally.retain(|(_, count)| *count >= min_count);
         }
 
         if let Some(MinChars(min_chars)) = self.min_chars {
-            tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars);
+            tally.retain(|(word, _)| word.graphemes(true).count() >= min_chars);
         }
 
         if let Some(ExcludeWords(words)) = &self.exclude {
-            let discard: HashSet<_> = words.iter().map(|word| case.normalize(word)).collect();
-            tally_map.retain(|word, _| !discard.contains(word));
+            let discard: HashSet<Box<str>> =
+                words.iter().map(|word| case.normalize(word)).collect();
+            tally.retain(|(word, _)| !discard.contains(word));
         }
     }
 }
