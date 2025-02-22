@@ -2,7 +2,7 @@
 authors = ["Shannon Skipper"]
 categories = ["command-line-utilities", "text-processing"]
 description = "Output a tally of the number of times unique words appear in source input."
-edition = "2021"
+edition = "2024"
 homepage = "https://github.com/havenwood/word-tally"
 keywords = ["cli", "tally", "words", "count"]
 license = "MIT"
