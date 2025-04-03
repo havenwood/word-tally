@@ -1,131 +1,74 @@
-use criterion::{criterion_group, criterion_main, BatchSize, Criterion};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
+use fake::Fake;
+use fake::faker::lorem::en::Words;
 use std::io::Cursor;
 use std::sync::OnceLock;
-use word_tally::{Filters, MinChars, Options, Sort, WordTally};
+use word_tally::{Filters, MinChars, MinCount, Options, Sort, WordTally};
 
-const INPUT: &str = "Orchids bloom silently\nMicrocontrollers hum\nPhalaenopsis thrives\n\
-    Data packets route\nPhalaenopsis BLOOM\nDendrobium anchors\nPhotosynthesis proceeds\n\
-    Circuit boards and roots\nTranspiration observed\nDendrobium grows\n\
-    Algorithms compute\nOrchids in data streams\nPhalaenopsis\nDENDROBIUM\n\
-    microcontrollers HUM\nCircuit Boards and ROOTS\ntranspiration OBSERVED\n\
-    DATA packets route\nPhalaenopsis BLOOM\nOrchids in DATA streams";
+static TEXT: OnceLock<String> = OnceLock::new();
 
-static INPUT_LOCK: OnceLock<String> = OnceLock::new();
-
-fn repeated_input() -> &'static String {
-    INPUT_LOCK.get_or_init(|| INPUT.repeat(42))
+fn sample_text() -> &'static str {
+    TEXT.get_or_init(|| {
+        (0..500).map(|_| Words(10..30).fake::<Vec<String>>().join(" ")).collect::<Vec<_>>().join("\n")
+    })
 }
 
-fn prepare_input() -> Cursor<&'static str> {
-    let input = repeated_input();
-    Cursor::new(input)
-}
-
-fn bench_new_unsorted(c: &mut Criterion) {
-    c.bench_function("new_unsorted", |b| {
-        b.iter_batched(
-            prepare_input,
-            |input| {
-                WordTally::new(
-                    input,
-                    Options {
-                        sort: Sort::Unsorted,
-                        ..Options::default()
-                    },
-                    Filters::default(),
-                )
-            },
-            BatchSize::SmallInput,
-        );
+fn bench_variant(c: &mut Criterion, group_name: &str, name: &str, setup: impl Fn() -> WordTally) {
+    let mut group = c.benchmark_group(group_name);
+    group.bench_function(name, |b| {
+        b.iter_batched(|| (), |_| setup(), BatchSize::LargeInput);
     });
+    group.finish();
 }
 
-fn bench_new_sorted(c: &mut Criterion) {
-    c.bench_function("new_sorted", |b| {
-        b.iter_batched(
-            prepare_input,
-            |input| {
-                WordTally::new(
-                    input,
-                    Options {
-                        sort: Sort::Asc,
-                        ..Options::default()
-                    },
-                    Filters::default(),
-                )
+fn run_benchmarks(c: &mut Criterion) {
+    let make_input = || Cursor::new(sample_text());
+    let sort_options = [
+        ("unsorted", Sort::Unsorted),
+        ("ascending", Sort::Asc),
+        ("descending", Sort::Desc),
+    ];
+    for (name, sort) in sort_options {
+        bench_variant(c, "sorting", name, || {
+            WordTally::new(
+                make_input(),
+                Options {
+                    sort,
+                    ..Options::default()
+                },
+                Filters::default(),
+            )
+        });
+    }
+
+    bench_variant(c, "filtering", "min_count", || {
+        WordTally::new(
+            make_input(),
+            Options::default(),
+            Filters {
+                min_count: Some(MinCount(2)),
+                ..Filters::default()
             },
-            BatchSize::SmallInput,
-        );
+        )
     });
-}
 
-fn bench_new_min_chars(c: &mut Criterion) {
-    c.bench_function("new_min_chars", |b| {
-        b.iter_batched(
-            prepare_input,
-            |input| {
-                WordTally::new(
-                    input,
-                    Options {
-                        sort: Sort::Unsorted,
-                        ..Options::default()
-                    },
-                    Filters {
-                        min_chars: Some(MinChars(5)),
-                        ..Filters::default()
-                    },
-                )
+    bench_variant(c, "filtering", "min_chars", || {
+        WordTally::new(
+            make_input(),
+            Options::default(),
+            Filters {
+                min_chars: Some(MinChars(3)),
+                ..Filters::default()
             },
-            BatchSize::SmallInput,
-        );
+        )
     });
-}
-
-fn bench_new_min_count(c: &mut Criterion) {
-    c.bench_function("new_min_count", |b| {
-        b.iter_batched(
-            prepare_input,
-            |input| {
-                WordTally::new(
-                    input,
-                    Options {
-                        sort: Sort::Unsorted,
-                        ..Options::default()
-                    },
-                    Filters::default(),
-                )
-            },
-            BatchSize::SmallInput,
-        );
-    });
-}
-
-fn bench_sort(c: &mut Criterion) {
-    c.bench_function("sort", |b| {
-        b.iter_batched(
-            || {
-                WordTally::new(
-                    prepare_input(),
-                    Options {
-                        sort: Sort::Unsorted,
-                        ..Options::default()
-                    },
-                    Filters::default(),
-                )
-            },
-            |mut tally| tally.sort(Sort::Asc),
-            BatchSize::SmallInput,
-        );
-    });
-}
-
-fn configure_criterion() -> Criterion {
-    Criterion::default().noise_threshold(0.1)
 }
 
 criterion_group! {
     name = benches;
-    config = configure_criterion();
-    targets = bench_new_unsorted, bench_new_sorted, bench_new_min_chars, bench_new_min_count, bench_sort
+    config = Criterion::default()
+        .configure_from_args();
+    targets = run_benchmarks
 }
+
 criterion_main!(benches);
