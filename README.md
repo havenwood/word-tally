@@ -63,7 +63,7 @@ Add `word-tally` as a dependency.
 
 ```toml
 [dependencies]
-word-tally = "0.16.1"
+word-tally = "0.17.0"
 ```
 
 ## Documentation
