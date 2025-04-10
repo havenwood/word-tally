@@ -30,7 +30,6 @@
 //! assert_eq!(words.into_tally(), expected_tally);
 //! ```
 use indexmap::IndexMap;
-#[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Read};
 use unicode_segmentation::UnicodeSegmentation;
@@ -41,8 +40,7 @@ pub mod options;
 pub use filters::{ExcludeWords, Filters, MinChars, MinCount};
 pub use options::{Case, Options, Sort};
 
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct WordTally {
     /// Ordered pairs of words and the count of times they appear.

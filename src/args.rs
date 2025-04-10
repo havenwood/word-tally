@@ -1,6 +1,13 @@
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use std::path::PathBuf;
 use word_tally::{Case, Sort};
+
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, ValueEnum)]
+pub enum Format {
+    #[default]
+    Text,
+    Json,
+}
 
 #[derive(Debug, Parser)]
 #[command(about, version)]
@@ -38,6 +45,10 @@ pub struct Args {
     pub output: Option<PathBuf>,
 
     /// Print verbose details.
-    #[arg(short, long)]
+    #[arg(short = 'v', long)]
     pub verbose: bool,
+
+    /// Output format.
+    #[arg(short = 'f', long, default_value_t, value_enum, value_name = "FORMAT")]
+    pub format: Format,
 }

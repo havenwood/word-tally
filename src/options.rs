@@ -3,8 +3,10 @@ use clap::ValueEnum;
 use core::cmp::Reverse;
 use core::fmt::{self, Display, Formatter};
 
+use serde::{Deserialize, Serialize};
+
 /// Tallying options.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Options {
     pub case: Case,
     pub sort: Sort,
@@ -18,7 +20,7 @@ impl Options {
 }
 
 /// Word case normalization options.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, ValueEnum)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, ValueEnum, Serialize, Deserialize)]
 pub enum Case {
     Original,
     Upper,
@@ -50,7 +52,7 @@ impl Display for Case {
 }
 
 /// Sort order by count.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, ValueEnum)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, ValueEnum, Serialize, Deserialize)]
 pub enum Sort {
     #[default]
     Desc,

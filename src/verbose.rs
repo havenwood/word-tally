@@ -1,9 +1,9 @@
 use crate::output::Output;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use word_tally::WordTally;
 
 pub struct Verbose<'a> {
-    output: Output,
+    output: &'a mut Output,
     tally: &'a WordTally,
     delimiter: &'a str,
     source: &'a str,
@@ -12,7 +12,7 @@ pub struct Verbose<'a> {
 impl<'a> Verbose<'a> {
     /// Constructs a new `Verbose` logger with the given output.
     pub const fn new(
-        output: Output,
+        output: &'a mut Output,
         tally: &'a WordTally,
         delimiter: &'a str,
         source: &'a str,
@@ -24,6 +24,7 @@ impl<'a> Verbose<'a> {
             source,
         }
     }
+    
 
     /// Log verbose details.
     pub fn log(&mut self) -> Result<()> {
@@ -75,7 +76,7 @@ impl<'a> Verbose<'a> {
     }
 
     /// Format the `usize`, or `"none"` if none, as a `String`.
-    fn format<T: ToString>(&self, value: Option<T>) -> String {
+    pub fn format<T: ToString>(&self, value: Option<T>) -> String {
         value.map_or_else(|| "none".to_string(), |v| v.to_string())
     }
 
@@ -83,5 +84,25 @@ impl<'a> Verbose<'a> {
     fn write_entry(&mut self, label: &str, value: impl ToString) -> Result<()> {
         self.output
             .write_line(&format!("{label}{}{}\n", self.delimiter, value.to_string()))
+    }
+    
+    /// Create a JSON representation of the verbose output.
+    pub fn to_json(&self) -> Result<String> {
+        use serde_json::json;
+        
+        let value = json!({
+            "source": self.source,
+            "total-words": self.tally.count(),
+            "unique-words": self.tally.uniq_count(),
+            "delimiter": format!("{:?}", self.delimiter),
+            "case": self.tally.options().case.to_string(),
+            "order": self.tally.options().sort.to_string(),
+            "min-chars": self.format(self.tally.filters().min_chars),
+            "min-count": self.format(self.tally.filters().min_count),
+            "exclude-words": self.format(self.tally.filters().exclude.clone()),
+        });
+        
+        serde_json::to_string(&value)
+            .with_context(|| "Failed to serialize verbose info to JSON")
     }
 }

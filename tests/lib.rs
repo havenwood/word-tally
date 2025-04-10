@@ -398,7 +398,6 @@ fn test_min_count_graphemes() {
     assert_eq!(tally.count(), 0);
 }
 
-#[cfg(feature = "serde")]
 #[test]
 fn test_to_json() {
     let expected = WordTally::new(
@@ -407,12 +406,15 @@ fn test_to_json() {
         Filters::default(),
     );
     let serialized = serde_json::to_string(&expected).unwrap();
-
-    let expected_json = r#"{"tally":[["wombat",2],["bat",1]],"count":3,"uniq_count":2}"#;
-    assert_eq!(serialized, expected_json);
+    
+    // The serialized JSON now includes options and filters
+    assert!(serialized.contains("\"tally\":[[\"wombat\",2],[\"bat\",1]]"));
+    assert!(serialized.contains("\"count\":3"));
+    assert!(serialized.contains("\"uniq_count\":2"));
+    assert!(serialized.contains("\"options\":"));
+    assert!(serialized.contains("\"filters\":"));
 }
 
-#[cfg(feature = "serde")]
 #[test]
 fn test_from_json() {
     let expected = WordTally::new(
@@ -423,6 +425,8 @@ fn test_from_json() {
     let json = r#"
     {
         "tally": [["wombat", 2], ["bat", 1]],
+        "options": {"case": "Lower", "sort": "Desc"},
+        "filters": {"min_chars": null, "min_count": null, "exclude": null},
         "count": 3,
         "uniq_count": 2
     }

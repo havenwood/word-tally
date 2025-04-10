@@ -22,6 +22,7 @@ Options:
   -e, --exclude <WORDS>    Exclude words from a comma-delimited list
   -d, --delimiter <VALUE>  Delimiter between keys and values [default: " "]
   -o, --output <PATH>      Write output to file rather than stdout
+  -f, --format <FORMAT>    Output format [default: text] [possible values: text, json]
   -v, --verbose            Print verbose details
   -h, --help               Print help
   -V, --version            Print version
@@ -30,14 +31,20 @@ Options:
 ## Examples
 
 ```sh
-> word-tally README.md | head -n3
-tally 22
-word 20
-https 11
+word-tally README.md | head -n3
+#>> tally 22
+#>> word 20
+#>> https 11
 ```
 
+CSV output:
 ```sh
-> word-tally --delimiter="," --output="tally.csv" README.md
+word-tally --delimiter="," --output="tally.csv" README.md > tally.csv
+```
+
+JSON output:
+```sh
+word-tally --format=json README.md > tally.json
 ```
 
 ## Installation
@@ -53,13 +60,6 @@ Add `word-tally` as a dependency.
 ```toml
 [dependencies]
 word-tally = "0.16.1"
-```
-
-Or optionally enable JSON serialization and deserialization with Serde.
-
-```toml
-[dependencies]
-word-tally = { version = "0.16.1", features = ["serde"] }
 ```
 
 ## Documentation
@@ -79,12 +79,6 @@ Run the tests.
 
 ```sh
 cargo test
-```
-
-Or run the tests with the Serde feature included.
-
-```sh
-cargo test --features serde
 ```
 
 And run the benchmarks.

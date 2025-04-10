@@ -4,8 +4,10 @@ use indexmap::IndexMap;
 use std::collections::HashSet;
 use unicode_segmentation::UnicodeSegmentation;
 
+use serde::{Deserialize, Serialize};
+
 /// Filters for which words should be tallied.
-#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Filters {
     /// Minimum characters required for a word.
     pub min_chars: Option<MinChars>,
@@ -49,7 +51,7 @@ impl Filters {
 }
 
 /// Minimum number of characters a word needs to have to be tallied.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct MinChars(pub usize);
 
 impl Display for MinChars {
@@ -65,7 +67,7 @@ impl From<usize> for MinChars {
 }
 
 /// Minimum number of times a word needs to appear to be tallied.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct MinCount(pub usize);
 
 impl Display for MinCount {
@@ -81,7 +83,7 @@ impl From<usize> for MinCount {
 }
 
 /// A list of words that should be omitted from the tally.
-#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct ExcludeWords(pub Vec<String>);
 
 impl Display for ExcludeWords {

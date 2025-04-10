@@ -139,3 +139,12 @@ fn test_discard_words() {
         .success()
         .stdout(contains("tree").and(contains("heaven").not().and(contains("hell").not())));
 }
+
+#[test]
+fn format_json() {
+    let assert = word_tally()
+        .write_stdin("wombat wombat bat")
+        .arg("--format=json")
+        .assert();
+    assert.success().stdout(contains("[\"wombat\",2]").and(contains("[\"bat\",1]")));
+}
