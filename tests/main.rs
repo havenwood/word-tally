@@ -148,3 +148,15 @@ fn format_json() {
         .assert();
     assert.success().stdout(contains("[\"wombat\",2]").and(contains("[\"bat\",1]")));
 }
+
+#[test]
+fn format_csv() {
+    let assert = word_tally()
+        .write_stdin("wombat wombat bat")
+        .arg("--format=csv")
+        .assert();
+    assert.success()
+        .stdout(contains("word,count"))
+        .stdout(contains("wombat,2"))
+        .stdout(contains("bat,1"));
+}

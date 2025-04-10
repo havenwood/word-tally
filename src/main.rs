@@ -29,14 +29,20 @@ fn main() -> Result<()> {
 
     if args.verbose {
         let mut stderr = Output::stderr();
+        let mut verbose = Verbose::new(&mut stderr, &word_tally, &delimiter, &source);
         
-        if args.format == Format::Json {
-            let verbose = Verbose::new(&mut stderr, &word_tally, &delimiter, &source);
-            let json = verbose.to_json()?;
-            stderr.write_line(&format!("{json}\n\n"))?;
-        } else {
-            let mut verbose = Verbose::new(&mut stderr, &word_tally, &delimiter, &source);
-            verbose.log()?;
+        match args.format {
+            Format::Json => {
+                let json = verbose.to_json()?;
+                stderr.write_line(&format!("{json}\n\n"))?;
+            },
+            Format::Csv => {
+                verbose.log_csv()?;
+                stderr.write_line("\n")?;
+            },
+            Format::Text => {
+                verbose.log()?;
+            }
         }
     }
 
@@ -52,6 +58,18 @@ fn main() -> Result<()> {
             let json = serde_json::to_string(&word_tally.tally().iter().map(|(word, count)| (word.as_ref(), count)).collect::<Vec<_>>())
                 .with_context(|| "Failed to serialize word tally to JSON")?;
             output.write_line(&format!("{json}\n"))?;
+        },
+        Format::Csv => {
+            output.write_line("word,count\n")?;
+            for (word, count) in word_tally.tally() {
+                // Properly escape CSV fields
+                let escaped_word = if word.contains(',') || word.contains('"') || word.contains('\n') {
+                    format!("\"{}\"", word.replace('"', "\"\""))
+                } else {
+                    word.to_string()
+                };
+                output.write_line(&format!("{escaped_word},{count}\n"))?;
+            }
         }
     }
 

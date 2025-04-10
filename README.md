@@ -22,7 +22,7 @@ Options:
   -e, --exclude <WORDS>    Exclude words from a comma-delimited list
   -d, --delimiter <VALUE>  Delimiter between keys and values [default: " "]
   -o, --output <PATH>      Write output to file rather than stdout
-  -f, --format <FORMAT>    Output format [default: text] [possible values: text, json]
+  -f, --format <FORMAT>    Output format [default: text] [possible values: text, json, csv]
   -v, --verbose            Print verbose details
   -h, --help               Print help
   -V, --version            Print version
@@ -39,12 +39,16 @@ word-tally README.md | head -n3
 
 CSV output:
 ```sh
-word-tally --delimiter="," --output="tally.csv" README.md > tally.csv
+# Using delimiter (manual CSV)
+word-tally --delimiter="," --output="tally.csv" README.md
+
+# Using CSV format (with header)
+word-tally --format=csv --output="tally.csv" README.md
 ```
 
 JSON output:
 ```sh
-word-tally --format=json README.md > tally.json
+word-tally --format=json --output="tally.json" README.md
 ```
 
 ## Installation

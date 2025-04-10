@@ -7,6 +7,7 @@ pub enum Format {
     #[default]
     Text,
     Json,
+    Csv,
 }
 
 #[derive(Debug, Parser)]
