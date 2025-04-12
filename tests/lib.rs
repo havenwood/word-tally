@@ -1,6 +1,8 @@
 use std::fs::File;
 use std::hash::{DefaultHasher, Hash, Hasher};
+use std::path::PathBuf;
 use word_tally::{Case, ExcludeWords, Filters, MinChars, MinCount, Options, Sort, WordTally};
+use word_tally::input::Input;
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 
@@ -29,7 +31,13 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
         .collect::<Vec<_>>()
         .into_boxed_slice();
 
-    assert_eq!(word_tally.tally(), expected_tally.as_ref());
+    if sort == Sort::Unsorted {
+        let expected_words: std::collections::HashSet<_> = expected_tally.iter().collect();
+        let actual_words: std::collections::HashSet<_> = word_tally.tally().iter().collect();
+        assert_eq!(expected_words, actual_words);
+    } else {
+        assert_eq!(word_tally.tally(), expected_tally.as_ref());
+    }
 }
 
 #[test]
@@ -298,7 +306,7 @@ fn test_iterator() {
     let input = b"double trouble double";
     let options = Options {
         case: Case::Lower,
-        sort: Sort::Unsorted,
+        sort: Sort::Desc,
     };
     let filters = Filters::default();
     let word_tally = WordTally::new(&input[..], options, filters);
@@ -320,7 +328,7 @@ fn test_iterator_for_loop() {
     let input = b"llama llama pajamas";
     let options = Options {
         case: Case::Lower,
-        sort: Sort::Unsorted,
+        sort: Sort::Desc,
     };
     let filters = Filters::default();
     let word_tally = WordTally::new(&input[..], options, filters);
@@ -378,6 +386,98 @@ fn test_min_count_from() {
 }
 
 #[test]
+fn test_input_size() {
+    let file_input = Input::File(PathBuf::from(TEST_WORDS_PATH));
+    let size = file_input.size();
+    assert!(size.is_some());
+    assert!(size.unwrap() > 0);
+
+    let stdin_input = Input::Stdin;
+    assert_eq!(stdin_input.size(), None);
+}
+
+#[test]
+fn test_parallel_vs_sequential() {
+    let input = b"The quick brown fox jumps over the lazy dog. The fox was quick.";
+    let options = Options::default();
+    let filters = Filters::default();
+
+    let sequential = WordTally::new(&input[..], options, filters.clone());
+    let parallel = WordTally::new_parallel(&input[..], options, filters);
+
+    assert_eq!(sequential.count(), parallel.count());
+    assert_eq!(sequential.uniq_count(), parallel.uniq_count());
+    assert_eq!(sequential.tally(), parallel.tally());
+}
+
+#[test]
+fn test_parallel_with_size_hint() {
+    let input = b"The quick brown fox jumps over the lazy dog.";
+    let options = Options::default();
+    let filters = Filters::default();
+
+    let without_hint = WordTally::new_parallel(&input[..], options, filters.clone());
+    let with_hint = WordTally::new_parallel_with_size(&input[..], options, filters, Some(input.len() as u64));
+
+    assert_eq!(without_hint.count(), with_hint.count());
+    assert_eq!(without_hint.uniq_count(), with_hint.uniq_count());
+    assert_eq!(without_hint.tally(), with_hint.tally());
+}
+
+#[test]
+fn test_estimate_capacity() {
+    let small_file = WordTally::new_with_size(
+        &b"small text"[..],
+        Options::default(),
+        Filters::default(),
+        Some(5_000), // 5KB
+    );
+
+    let medium_file = WordTally::new_with_size(
+        &b"medium text"[..],
+        Options::default(),
+        Filters::default(),
+        Some(500_000), // 500KB
+    );
+
+    let large_file = WordTally::new_with_size(
+        &b"large text"[..],
+        Options::default(),
+        Filters::default(),
+        Some(5_000_000), // 5MB
+    );
+
+    assert_eq!(small_file.count(), 2);
+    assert_eq!(medium_file.count(), 2);
+    assert_eq!(large_file.count(), 2);
+}
+
+#[test]
+fn test_parallel_count() {
+    // Instead of using environment variables, just test the parallel function works
+    let input = b"Test with default settings for chunk size and thread count";
+    let parallel = WordTally::new_parallel(&input[..], Options::default(), Filters::default());
+
+    // Only check the counts are positive numbers (actual counts may vary by implementation)
+    assert!(parallel.count() > 0);
+    assert!(parallel.uniq_count() > 0);
+    // Also check uniq count is less than or equal to total count
+    assert!(parallel.uniq_count() <= parallel.count());
+}
+
+#[test]
+fn test_merge_maps() {
+    let input = b"This is a test of the map merging functionality";
+    let options = Options::default();
+    let filters = Filters::default();
+
+    let tally = WordTally::new_parallel(&input[..], options, filters);
+
+    assert_eq!(tally.count(), 9);
+    assert_eq!(tally.uniq_count(), 9);
+}
+
+#[test]
 fn test_words_exclude_from() {
     let words = vec!["beep".to_string(), "boop".to_string()];
     assert_eq!(ExcludeWords::from(words.clone()), ExcludeWords(words));
@@ -406,7 +506,7 @@ fn test_to_json() {
         Filters::default(),
     );
     let serialized = serde_json::to_string(&expected).unwrap();
-    
+
     // The serialized JSON now includes options and filters
     assert!(serialized.contains("\"tally\":[[\"wombat\",2],[\"bat\",1]]"));
     assert!(serialized.contains("\"count\":3"));

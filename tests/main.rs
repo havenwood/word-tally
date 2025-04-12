@@ -2,7 +2,6 @@ use assert_cmd::Command;
 use predicates::prelude::PredicateBooleanExt;
 use predicates::str::{self, contains};
 use std::fs;
-
 fn word_tally() -> Command {
     Command::cargo_bin("word-tally").unwrap()
 }
@@ -159,4 +158,62 @@ fn format_csv() {
         .stdout(contains("word,count"))
         .stdout(contains("wombat,2"))
         .stdout(contains("bat,1"));
+}
+
+#[test]
+fn stdin_with_parallel() {
+    // Test with a small input to verify the fix for the zero chunk size issue
+    let assert = word_tally()
+        .write_stdin("hello world")
+        .arg("--parallel")
+        .assert();
+    assert.success()
+        .stdout(contains("hello 1"))
+        .stdout(contains("world 1"));
+
+    // Test with a multi-line input
+    let assert = word_tally()
+        .write_stdin("hello world\ngoodbye universe\nhello again")
+        .arg("--parallel")
+        .assert();
+    assert.success()
+        .stdout(contains("hello 2"))
+        .stdout(contains("world 1"))
+        .stdout(contains("goodbye 1"))
+        .stdout(contains("universe 1"))
+        .stdout(contains("again 1"));
+}
+
+#[test]
+fn parallel_with_env_vars() {
+    let assert = word_tally()
+        .env("WORD_TALLY_CHUNK_SIZE", "4096")
+        .env("WORD_TALLY_THREADS", "2")
+        .write_stdin("test environment variables with CLI")
+        .arg("--parallel")
+        .assert();
+
+    assert.success()
+        .stdout(contains("test 1"))
+        .stdout(contains("environment 1"))
+        .stdout(contains("variables 1"))
+        .stdout(contains("with 1"))
+        .stdout(contains("cli 1"));
+}
+
+#[test]
+fn parallel_with_large_chunk() {
+    let assert = word_tally()
+        .env("WORD_TALLY_CHUNK_SIZE", "65536")
+        .write_stdin("test with very large chunk size")
+        .arg("--parallel")
+        .assert();
+
+    assert.success()
+        .stdout(contains("test 1"))
+        .stdout(contains("with 1"))
+        .stdout(contains("very 1"))
+        .stdout(contains("large 1"))
+        .stdout(contains("chunk 1"))
+        .stdout(contains("size 1"));
 }

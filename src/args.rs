@@ -52,4 +52,8 @@ pub struct Args {
     /// Output format.
     #[arg(short = 'f', long, default_value_t, value_enum, value_name = "FORMAT")]
     pub format: Format,
+
+    /// Use parallel processing for word counting.
+    #[arg(short = 'p', long)]
+    pub parallel: bool,
 }

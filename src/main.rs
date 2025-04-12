@@ -16,7 +16,7 @@ use word_tally::{Filters, Options, WordTally};
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    
+
     let delimiter = unescape(&args.delimiter)?;
     let input = Input::from_args(&args.input)?;
     let source = input.source();
@@ -24,13 +24,19 @@ fn main() -> Result<()> {
     let reader = input.get_reader(&source)?;
     let options = Options::new(args.case, args.sort);
     let filters = Filters::new(&args.min_chars, &args.min_count, args.exclude);
+    let input_size = input.size();
 
-    let word_tally = WordTally::new(reader, options, filters);
+    // Create word tally with either parallel or sequential processing based on args
+    let word_tally = if args.parallel {
+        WordTally::new_parallel_with_size(reader, options, filters, input_size)
+    } else {
+        WordTally::new_with_size(reader, options, filters, input_size)
+    };
 
     if args.verbose {
         let mut stderr = Output::stderr();
         let mut verbose = Verbose::new(&mut stderr, &word_tally, &delimiter, &source);
-        
+
         match args.format {
             Format::Json => {
                 let json = verbose.to_json()?;

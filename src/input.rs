@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use std::fs::File;
+use std::fs::{self, File};
 use std::io::{self, Read};
 use std::path::PathBuf;
 
@@ -42,5 +42,18 @@ impl Input {
             Self::Stdin => "-",
         }
         .to_string()
+    }
+
+    /// Get the size of the input in bytes, if available.
+    /// Returns None for stdin or if the file size can't be determined.
+    pub fn size(&self) -> Option<u64> {
+        match self {
+            Self::File(path) => {
+                fs::metadata(path)
+                    .map(|metadata| metadata.len())
+                    .ok()
+            }
+            Self::Stdin => None,
+        }
     }
 }

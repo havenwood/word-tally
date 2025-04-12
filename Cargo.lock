@@ -957,6 +957,7 @@ dependencies = [
  "fake",
  "indexmap",
  "predicates",
+ "rayon",
  "serde",
  "serde_json",
  "unescaper",

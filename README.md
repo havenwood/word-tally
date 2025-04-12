@@ -24,6 +24,7 @@ Options:
   -o, --output <PATH>      Write output to file rather than stdout
   -f, --format <FORMAT>    Output format [default: text] [possible values: text, json, csv]
   -v, --verbose            Print verbose details
+  -p, --parallel           Use parallel processing for word counting
   -h, --help               Print help
   -V, --version            Print version
 ```
@@ -49,6 +50,14 @@ word-tally --format=csv --output="tally.csv" README.md
 JSON output:
 ```sh
 word-tally --format=json --output="tally.json" README.md
+```
+
+Parallel processing can be much faster for large files:
+```sh
+word-tally --parallel README.md
+
+# Tune with environment variables
+WORD_TALLY_THREADS=4 WORD_TALLY_CHUNK_SIZE=32768 word-tally --parallel huge-file.txt
 ```
 
 ## Installation
