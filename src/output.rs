@@ -11,6 +11,13 @@ pub struct Output {
     writer: Writer,
 }
 
+impl Default for Output {
+    /// Default output is stdout
+    fn default() -> Self {
+        Self::stdout()
+    }
+}
+
 impl Output {
     /// Creates an `Output` that writes to a file with error context.
     pub fn file(path: PathBuf) -> Result<Self> {

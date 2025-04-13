@@ -4,9 +4,17 @@ use std::io::{self, Read};
 use std::path::PathBuf;
 
 /// `Input` to read from a file or stdin source.
+#[derive(Clone, Debug)]
 pub enum Input {
     File(PathBuf),
     Stdin,
+}
+
+impl Default for Input {
+    /// Default is to use stdin
+    fn default() -> Self {
+        Self::Stdin
+    }
 }
 
 impl Input {
