@@ -24,7 +24,7 @@ const DEFAULT_CHUNK_SIZE: u32 = 16_384; // 16KB default
 /// Environment variable names for configuration
 const ENV_DEFAULT_CAPACITY: &str = "WORD_TALLY_DEFAULT_CAPACITY";
 const ENV_UNIQUENESS_RATIO: &str = "WORD_TALLY_UNIQUENESS_RATIO";
-const ENV_WORD_DENSITY: &str = "WORD_TALLY_UNIQUE_WORD_DENSITY";
+const ENV_WORD_DENSITY: &str = "WORD_TALLY_WORD_DENSITY";
 const ENV_CHUNK_SIZE: &str = "WORD_TALLY_CHUNK_SIZE";
 
 impl Default for Config {
