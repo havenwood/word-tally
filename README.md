@@ -60,6 +60,17 @@ word-tally --parallel README.md
 WORD_TALLY_THREADS=4 WORD_TALLY_CHUNK_SIZE=32768 word-tally --parallel huge-file.txt
 ```
 
+### Environment Variables
+
+- `WORD_TALLY_UNIQUENESS_RATIO` - Divisor for estimating unique words from input size (default: 10)
+- `WORD_TALLY_DEFAULT_CAPACITY` - Default initial capacity when there is no size hint (default: 1024)
+
+These variables only affect the program when using the `--parallel` flag:
+
+- `WORD_TALLY_THREADS` - Number of threads for parallel processing (default: number of cores)
+- `WORD_TALLY_CHUNK_SIZE` - Size of chunks for parallel processing in bytes (default: 16384)
+- `WORD_TALLY_WORD_DENSITY` - Multiplier for estimating unique words per chunk (default: 15)
+
 ## Installation
 
 ```sh
