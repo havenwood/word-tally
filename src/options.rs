@@ -17,12 +17,12 @@ impl Options {
     pub const fn new(case: Case, sort: Sort) -> Self {
         Self { case, sort }
     }
-    
+
     /// Create a new Options with default case and custom sort
     pub fn with_sort(sort: Sort) -> Self {
         Self { sort, ..Default::default() }
     }
-    
+
     /// Create a new Options with custom case and default sort
     pub fn with_case(case: Case) -> Self {
         Self { case, ..Default::default() }

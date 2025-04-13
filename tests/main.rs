@@ -166,12 +166,12 @@ fn csv_escaping() {
     // This tests that the CSV header exists and words are tallied correctly
     // The real test of CSV escaping is happening behind the scenes in the csv crate
     // which handles commas and quotes automatically
-    
+
     let assert = word_tally()
         .write_stdin("hello there \"quoted\" word")
         .arg("--format=csv")
         .assert();
-    
+
     assert.success()
         .stdout(str::starts_with("word,count\n"))
         .stdout(contains("hello,1"))

@@ -386,7 +386,7 @@ fn test_input_size() {
 #[test]
 fn test_parallel_vs_sequential() {
     let input = b"The quick brown fox jumps over the lazy dog. The fox was quick.";
-    
+
     let sequential = WordTally::new_with_defaults(&input[..]);
     let parallel = WordTally::new_parallel_with_defaults(&input[..]);
 
@@ -398,10 +398,10 @@ fn test_parallel_vs_sequential() {
 #[test]
 fn test_parallel_with_size_hint() {
     let input = b"The quick brown fox jumps over the lazy dog.";
-    
+
     let without_hint = WordTally::new_parallel_with_defaults(&input[..]);
     let with_hint = WordTally::new_parallel_with_size(
-        &input[..], 
+        &input[..],
         Options::default(),
         Filters::default(),
         Some(input.len() as u64)
