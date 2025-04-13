@@ -1,8 +1,11 @@
 use std::fs::File;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::PathBuf;
-use word_tally::{Case, ExcludeWords, Filters, MinChars, MinCount, Options, Sort, WordTally};
 use word_tally::input::Input;
+use word_tally::output::Output;
+use word_tally::{
+    Case, Config, ExcludeWords, Filters, MinChars, MinCount, Options, Sort, WordTally,
+};
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 
@@ -417,7 +420,8 @@ fn test_parallel_with_size_hint() {
     let filters = Filters::default();
 
     let without_hint = WordTally::new_parallel(&input[..], options, filters.clone());
-    let with_hint = WordTally::new_parallel_with_size(&input[..], options, filters, Some(input.len() as u64));
+    let with_hint =
+        WordTally::new_parallel_with_size(&input[..], options, filters, Some(input.len() as u64));
 
     assert_eq!(without_hint.count(), with_hint.count());
     assert_eq!(without_hint.uniq_count(), with_hint.uniq_count());
@@ -483,6 +487,113 @@ fn test_words_exclude_from() {
     assert_eq!(ExcludeWords::from(words.clone()), ExcludeWords(words));
 }
 
+// Tests for Options convenience methods
+mod options_tests {
+    use super::*;
+
+    #[test]
+    fn with_sort() {
+        let sort_only = Options::with_sort(Sort::Asc);
+        assert_eq!(sort_only.sort, Sort::Asc);
+        assert_eq!(sort_only.case, Case::default());
+    }
+
+    #[test]
+    fn with_case() {
+        let case_only = Options::with_case(Case::Upper);
+        assert_eq!(case_only.case, Case::Upper);
+        assert_eq!(case_only.sort, Sort::default());
+    }
+}
+
+// Tests for Config struct
+mod config_tests {
+    use super::*;
+
+    #[test]
+    fn default_values() {
+        let config = Config::default();
+        assert_eq!(config.default_capacity(), 1024);
+        assert_eq!(config.uniqueness_ratio(), 10);
+        assert_eq!(config.unique_word_density(), 15);
+        assert_eq!(config.chunk_size(), 16_384);
+    }
+
+    #[test]
+    fn builder_methods() {
+        let config = Config::default()
+            .with_capacity(2048)
+            .with_uniqueness_ratio(5)
+            .with_word_density(20)
+            .with_chunk_size(32_768);
+
+        assert_eq!(config.default_capacity(), 2048);
+        assert_eq!(config.uniqueness_ratio(), 5);
+        assert_eq!(config.unique_word_density(), 20);
+        assert_eq!(config.chunk_size(), 32_768);
+    }
+
+    #[test]
+    fn estimate_capacity() {
+        let config = Config::default();
+
+        // Default when no size hint
+        assert_eq!(config.estimate_capacity(None), 1024);
+
+        // Size hint divided by uniqueness ratio (10)
+        assert_eq!(config.estimate_capacity(Some(10_000)), 1000);
+    }
+}
+
+// Tests for Default implementations
+mod default_impl_tests {
+    use super::*;
+
+    #[test]
+    fn input_default() {
+        let input = Input::default();
+        assert!(matches!(input, Input::Stdin));
+    }
+
+    #[test]
+    fn output_default() {
+        let _output = Output::default();
+        // Just verify it compiles
+    }
+}
+
+// Tests for WordTally convenience constructors
+mod wordtally_constructor_tests {
+    use super::*;
+
+    const TEST_INPUT: &[u8] = b"test convenience constructors";
+
+    #[test]
+    fn with_defaults() {
+        let tally = WordTally::new_with_defaults(&TEST_INPUT[..]);
+        assert_eq!(tally.count(), 3);
+    }
+
+    #[test]
+    fn parallel_with_defaults() {
+        let tally = WordTally::new_parallel_with_defaults(&TEST_INPUT[..]);
+        assert_eq!(tally.count(), 3);
+    }
+
+    #[test]
+    fn with_custom_config() {
+        let config = Config::default().with_chunk_size(128);
+        let tally = WordTally::new_with_config(
+            &TEST_INPUT[..],
+            Options::default(),
+            Filters::default(),
+            None,
+            config,
+        );
+        assert_eq!(tally.count(), 3);
+    }
+}
+
 #[test]
 fn test_min_count_graphemes() {
     let tally = WordTally::new(
@@ -507,7 +618,6 @@ fn test_to_json() {
     );
     let serialized = serde_json::to_string(&expected).unwrap();
 
-    // The serialized JSON now includes options and filters
     assert!(serialized.contains("\"tally\":[[\"wombat\",2],[\"bat\",1]]"));
     assert!(serialized.contains("\"count\":3"));
     assert!(serialized.contains("\"uniq_count\":2"));

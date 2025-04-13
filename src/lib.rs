@@ -38,10 +38,12 @@ use unicode_segmentation::UnicodeSegmentation;
 pub mod filters;
 pub mod input;
 pub mod options;
+pub mod output;
 
 pub use filters::{ExcludeWords, Filters, MinChars, MinCount};
 pub use input::Input;
 pub use options::{Case, Options, Sort};
+pub use output::Output;
 
 /// Configuration for word tallying and processing
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
