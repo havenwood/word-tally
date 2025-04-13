@@ -37,22 +37,19 @@ impl<'a> Verbose<'a> {
 
     /// Log verbose details in CSV format.
     pub fn log_csv(&mut self) -> Result<()> {
-        self.output.write_line("metric,value\n")?;
-
-        // Details
-        self.write_csv_entry("source", self.source)?;
-        self.write_csv_entry("total-words", self.tally.count())?;
-        self.write_csv_entry("unique-words", self.tally.uniq_count())?;
-        self.write_csv_entry("delimiter", format!("{:?}", self.delimiter))?;
-
-        // Options
-        self.write_csv_entry("case", self.tally.options().case)?;
-        self.write_csv_entry("order", self.tally.options().sort)?;
-
-        // Filters
-        self.write_csv_entry("min-chars", self.format(self.tally.filters().min_chars))?;
-        self.write_csv_entry("min-count", self.format(self.tally.filters().min_count))?;
-        self.write_csv_entry("exclude-words", self.format(self.tally.filters().exclude.clone()))?;
+        let mut wtr = csv::Writer::from_writer(Vec::new());
+        wtr.write_record(["metric", "value"])?;
+        wtr.write_record(["source", self.source])?;
+        wtr.write_record(["total-words", &self.tally.count().to_string()])?;
+        wtr.write_record(["unique-words", &self.tally.uniq_count().to_string()])?;
+        wtr.write_record(["delimiter", &format!("{:?}", self.delimiter)])?;
+        wtr.write_record(["case", &self.tally.options().case.to_string()])?;
+        wtr.write_record(["order", &self.tally.options().sort.to_string()])?;
+        wtr.write_record(["min-chars", &self.format(self.tally.filters().min_chars)])?;
+        wtr.write_record(["min-count", &self.format(self.tally.filters().min_count)])?;
+        wtr.write_record(["exclude-words", &self.format(self.tally.filters().exclude.clone())])?;
+        let csv_data = String::from_utf8(wtr.into_inner()?)?;
+        self.output.write_line(&csv_data)?;
 
         Ok(())
     }
@@ -107,17 +104,6 @@ impl<'a> Verbose<'a> {
             .write_line(&format!("{label}{}{}\n", self.delimiter, value.to_string()))
     }
 
-    /// Write a CSV formatted log entry line.
-    fn write_csv_entry(&mut self, name: &str, value: impl ToString) -> Result<()> {
-        let value_str = value.to_string();
-        let escaped_value = if value_str.contains(',') || value_str.contains('"') || value_str.contains('\n') {
-            format!("\"{}\"", value_str.replace('"', "\"\""))
-        } else {
-            value_str
-        };
-
-        self.output.write_line(&format!("{name},{escaped_value}\n"))
-    }
 
     /// Create a JSON representation of the verbose output.
     pub fn to_json(&self) -> Result<String> {

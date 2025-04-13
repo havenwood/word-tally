@@ -66,16 +66,13 @@ fn main() -> Result<()> {
             output.write_line(&format!("{json}\n"))?;
         },
         Format::Csv => {
-            output.write_line("word,count\n")?;
+            let mut wtr = csv::Writer::from_writer(Vec::new());
+            wtr.write_record(["word", "count"])?;
             for (word, count) in word_tally.tally() {
-                // Properly escape CSV fields
-                let escaped_word = if word.contains(',') || word.contains('"') || word.contains('\n') {
-                    format!("\"{}\"", word.replace('"', "\"\""))
-                } else {
-                    word.to_string()
-                };
-                output.write_line(&format!("{escaped_word},{count}\n"))?;
+                wtr.write_record([word.as_ref(), &count.to_string()])?;
             }
+            let csv_data = String::from_utf8(wtr.into_inner()?)?;
+            output.write_line(&csv_data)?;
         }
     }
 

@@ -18,6 +18,16 @@ impl Default for Output {
     }
 }
 
+impl Write for Output {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        self.writer.write(buf)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.writer.flush()
+    }
+}
+
 impl Output {
     /// Creates an `Output` that writes to a file with error context.
     pub fn file(path: PathBuf) -> Result<Self> {
