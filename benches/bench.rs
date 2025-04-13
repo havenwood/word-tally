@@ -30,7 +30,7 @@ fn create_tally(
     filters: Filters,
     parallel: bool
 ) -> impl Fn() -> WordTally {
-    let options = Options { sort, ..Options::default() };
+    let options = Options::with_sort(sort);
     move || {
         if parallel {
             WordTally::new_parallel(input(), options, filters.clone())

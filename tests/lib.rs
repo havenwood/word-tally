@@ -23,7 +23,7 @@ fn word_tally(options: Options, filters: Filters) -> WordTally {
 }
 
 fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFields<'_>) {
-    let word_tally = word_tally(Options { case, sort }, filters);
+    let word_tally = word_tally(Options::new(case, sort), filters);
     assert_eq!(word_tally.count(), fields.count);
     assert_eq!(word_tally.uniq_count(), fields.uniq_count);
 
@@ -290,10 +290,7 @@ fn vec_from() {
 #[test]
 fn test_into_tally() {
     let input = b"bye bye birdy";
-    let options = Options::default();
-    let filters = Filters::default();
-
-    let word_tally = WordTally::new(&input[..], options, filters);
+    let word_tally = WordTally::new_with_defaults(&input[..]);
 
     // Use `tally()` to get a reference to the slice.
     let tally = word_tally.tally();
@@ -307,12 +304,7 @@ fn test_into_tally() {
 #[test]
 fn test_iterator() {
     let input = b"double trouble double";
-    let options = Options {
-        case: Case::Lower,
-        sort: Sort::Desc,
-    };
-    let filters = Filters::default();
-    let word_tally = WordTally::new(&input[..], options, filters);
+    let word_tally = WordTally::new_with_defaults(&input[..]);
 
     let expected: Vec<(Box<str>, usize)> =
         vec![(Box::from("double"), 2), (Box::from("trouble"), 1)];
@@ -329,12 +321,7 @@ fn test_iterator() {
 #[test]
 fn test_iterator_for_loop() {
     let input = b"llama llama pajamas";
-    let options = Options {
-        case: Case::Lower,
-        sort: Sort::Desc,
-    };
-    let filters = Filters::default();
-    let word_tally = WordTally::new(&input[..], options, filters);
+    let word_tally = WordTally::new_with_defaults(&input[..]);
 
     let expected: Vec<(Box<str>, usize)> = vec![(Box::from("llama"), 2), (Box::from("pajamas"), 1)];
 
@@ -349,10 +336,7 @@ fn test_iterator_for_loop() {
 fn test_excluding_words() {
     let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let words = vec!["Heaven".to_string(), "Hell".to_string()];
-    let options = Options {
-        sort: Sort::Unsorted,
-        ..Options::default()
-    };
+    let options = Options::with_sort(Sort::Unsorted);
     let filters = Filters {
         exclude: Some(ExcludeWords(words)),
         ..Filters::default()
@@ -402,11 +386,9 @@ fn test_input_size() {
 #[test]
 fn test_parallel_vs_sequential() {
     let input = b"The quick brown fox jumps over the lazy dog. The fox was quick.";
-    let options = Options::default();
-    let filters = Filters::default();
-
-    let sequential = WordTally::new(&input[..], options, filters.clone());
-    let parallel = WordTally::new_parallel(&input[..], options, filters);
+    
+    let sequential = WordTally::new_with_defaults(&input[..]);
+    let parallel = WordTally::new_parallel_with_defaults(&input[..]);
 
     assert_eq!(sequential.count(), parallel.count());
     assert_eq!(sequential.uniq_count(), parallel.uniq_count());
@@ -416,12 +398,14 @@ fn test_parallel_vs_sequential() {
 #[test]
 fn test_parallel_with_size_hint() {
     let input = b"The quick brown fox jumps over the lazy dog.";
-    let options = Options::default();
-    let filters = Filters::default();
-
-    let without_hint = WordTally::new_parallel(&input[..], options, filters.clone());
-    let with_hint =
-        WordTally::new_parallel_with_size(&input[..], options, filters, Some(input.len() as u64));
+    
+    let without_hint = WordTally::new_parallel_with_defaults(&input[..]);
+    let with_hint = WordTally::new_parallel_with_size(
+        &input[..], 
+        Options::default(),
+        Filters::default(),
+        Some(input.len() as u64)
+    );
 
     assert_eq!(without_hint.count(), with_hint.count());
     assert_eq!(without_hint.uniq_count(), with_hint.uniq_count());
@@ -460,7 +444,7 @@ fn test_estimate_capacity() {
 fn test_parallel_count() {
     // Instead of using environment variables, just test the parallel function works
     let input = b"Test with default settings for chunk size and thread count";
-    let parallel = WordTally::new_parallel(&input[..], Options::default(), Filters::default());
+    let parallel = WordTally::new_parallel_with_defaults(&input[..]);
 
     // Only check the counts are positive numbers (actual counts may vary by implementation)
     assert!(parallel.count() > 0);
@@ -472,10 +456,7 @@ fn test_parallel_count() {
 #[test]
 fn test_merge_maps() {
     let input = b"This is a test of the map merging functionality";
-    let options = Options::default();
-    let filters = Filters::default();
-
-    let tally = WordTally::new_parallel(&input[..], options, filters);
+    let tally = WordTally::new_parallel_with_defaults(&input[..]);
 
     assert_eq!(tally.count(), 9);
     assert_eq!(tally.uniq_count(), 9);
@@ -570,13 +551,13 @@ mod wordtally_constructor_tests {
 
     #[test]
     fn with_defaults() {
-        let tally = WordTally::new_with_defaults(&TEST_INPUT[..]);
+        let tally = WordTally::new_with_defaults(TEST_INPUT);
         assert_eq!(tally.count(), 3);
     }
 
     #[test]
     fn parallel_with_defaults() {
-        let tally = WordTally::new_parallel_with_defaults(&TEST_INPUT[..]);
+        let tally = WordTally::new_parallel_with_defaults(TEST_INPUT);
         assert_eq!(tally.count(), 3);
     }
 
@@ -584,7 +565,7 @@ mod wordtally_constructor_tests {
     fn with_custom_config() {
         let config = Config::default().with_chunk_size(128);
         let tally = WordTally::new_with_config(
-            &TEST_INPUT[..],
+            TEST_INPUT,
             Options::default(),
             Filters::default(),
             None,
