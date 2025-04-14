@@ -21,10 +21,10 @@
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Filters, Options, WordTally};
+//! use word_tally::{Config, Filters, Options, WordTally};
 //!
 //! let input = "Cinquedea".as_bytes();
-//! let words = WordTally::new(input, Options::default(), Filters::default());
+//! let words = WordTally::new(input, Options::default(), Filters::default(), Config::default());
 //! let expected_tally: Box<[(Box<str>, usize)]> = [("cinquedea".into(), 1)].into();
 //!
 //! assert_eq!(words.into_tally(), expected_tally);
@@ -35,17 +35,17 @@ use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Read};
 use unicode_segmentation::UnicodeSegmentation;
 
+pub mod config;
 pub mod filters;
 pub mod input;
 pub mod options;
 pub mod output;
-pub mod config;
 
+pub use config::{Concurrency, Config, SizeHint, Threads};
 pub use filters::{ExcludeWords, Filters, MinChars, MinCount};
 pub use input::Input;
 pub use options::{Case, Options, Sort};
 pub use output::Output;
-pub use config::Config;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -88,88 +88,20 @@ impl<'a> IntoIterator for &'a WordTally {
 
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
 impl WordTally {
-    /// Constructs a new `WordTally` from a source that implements `Read` like file or stdin.
-    /// Uses sequential processing by default.
-    pub fn new<T: Read>(input: T, options: Options, filters: Filters) -> Self {
-        Self::new_with_size(input, options, filters, None)
-    }
-
-    /// Constructs a new `WordTally` from a source using default options and filters.
-    /// Uses sequential processing by default.
-    pub fn new_with_defaults<T: Read>(input: T) -> Self {
-        Self::new(input, Options::default(), Filters::default())
-    }
-
-    /// Constructs a new `WordTally` with an optional size hint for better capacity estimation.
-    pub fn new_with_size<T: Read>(
+    /// Constructs a new `WordTally` from a source that implements `Read`.
+    ///
+    /// Takes options, filters, and a config.
+    pub fn new<T: Read>(
         input: T,
         options: Options,
         filters: Filters,
-        size_hint: Option<u64>,
-    ) -> Self {
-        Self::new_with_config(input, options, filters, size_hint, Config::from_env())
-    }
-
-    /// Constructs a new `WordTally` using parallel processing
-    pub fn new_parallel<T: Read>(input: T, options: Options, filters: Filters) -> Self {
-        Self::new_parallel_with_size(input, options, filters, None)
-    }
-
-    /// Constructs a new `WordTally` using parallel processing with default options and filters.
-    pub fn new_parallel_with_defaults<T: Read>(input: T) -> Self {
-        Self::new_parallel(input, Options::default(), Filters::default())
-    }
-
-    /// Constructs a new `WordTally` using parallel processing with an optional size hint.
-    pub fn new_parallel_with_size<T: Read>(
-        input: T,
-        options: Options,
-        filters: Filters,
-        size_hint: Option<u64>,
-    ) -> Self {
-        Self::new_parallel_with_config(input, options, filters, size_hint, Config::from_env())
-    }
-
-    /// Constructs a new `WordTally` with custom configuration
-    pub fn new_with_config<T: Read>(
-        input: T,
-        options: Options,
-        filters: Filters,
-        size_hint: Option<u64>,
         config: Config,
     ) -> Self {
-        let reader = BufReader::new(input);
-        let mut instance = Self {
-            options,
-            filters,
-            config,
-            ..Default::default()
-        };
 
-        let mut tally_map = instance.tally_map(reader, options.case, size_hint);
-        instance.filters.apply(&mut tally_map, options.case);
-
-        let count = tally_map.values().sum();
-        let tally: Box<[_]> = tally_map.into_iter().collect();
-        let uniq_count = tally.len();
-
-        instance.tally = tally;
-        instance.count = count;
-        instance.uniq_count = uniq_count;
-        instance.sort(options.sort);
-
-        instance
-    }
-
-    /// Constructs a new `WordTally` with parallel processing and custom configuration
-    pub fn new_parallel_with_config<T: Read>(
-        input: T,
-        options: Options,
-        filters: Filters,
-        size_hint: Option<u64>,
-        config: Config,
-    ) -> Self {
-        Self::init_thread_pool();
+        // Initialize thread pool if using parallel processing
+        if matches!(config.concurrency(), Concurrency::Parallel) {
+            Self::init_thread_pool(config.threads());
+        }
 
         let reader = BufReader::new(input);
         let mut instance = Self {
@@ -179,12 +111,16 @@ impl WordTally {
             ..Default::default()
         };
 
-        let mut tally_map = instance.tally_map_parallel(
-            reader,
-            instance.config.chunk_size(),
-            options.case,
-            size_hint,
-        );
+        // Choose processing method based on concurrency setting
+        let mut tally_map = match instance.config.concurrency() {
+            Concurrency::Sequential => instance.tally_map(reader, options.case),
+            Concurrency::Parallel => instance.tally_map_parallel(
+                reader,
+                instance.config.chunk_size(),
+                options.case,
+            ),
+        };
+
         instance.filters.apply(&mut tally_map, options.case);
 
         let count = tally_map.values().sum();
@@ -235,8 +171,8 @@ impl WordTally {
     }
 
     /// Estimates the capacity for word maps based on input size
-    fn estimate_capacity(&self, size_hint: Option<u64>) -> usize {
-        self.config.estimate_capacity(size_hint)
+    const fn estimate_capacity(&self) -> usize {
+        self.config.estimate_capacity()
     }
 
     /// Estimates the capacity for per-chunk word maps based on chunk size
@@ -249,9 +185,8 @@ impl WordTally {
         &self,
         reader: BufReader<T>,
         case: Case,
-        size_hint: Option<u64>,
     ) -> IndexMap<Box<str>, usize> {
-        let estimated_capacity = self.estimate_capacity(size_hint);
+        let estimated_capacity = self.estimate_capacity();
         let mut tally = IndexMap::with_capacity(estimated_capacity);
         for line in reader.lines().map_while(Result::ok) {
             for word in line.unicode_words() {
@@ -261,21 +196,29 @@ impl WordTally {
         tally
     }
 
-    /// Initializes the rayon thread pool with configuration from environment
-    fn init_thread_pool() {
+    /// Initializes the rayon thread pool with configuration from Config
+    fn init_thread_pool(threads: Threads) {
         static INIT_THREAD_POOL: std::sync::Once = std::sync::Once::new();
-        INIT_THREAD_POOL.call_once(|| {
-            if let Ok(thread_count) = std::env::var("WORD_TALLY_THREADS") {
-                if let Ok(num_threads) = thread_count.parse::<usize>() {
+
+        match threads {
+            Threads::Count(count) => {
+                INIT_THREAD_POOL.call_once(|| {
+                    let num_threads = count as usize;
                     if let Err(e) = rayon::ThreadPoolBuilder::new()
                         .num_threads(num_threads)
                         .build_global()
                     {
                         eprintln!("Warning: Failed to set thread pool size: {}", e);
                     }
-                }
+                });
+            },
+            Threads::All => {
+                // Default rayon behavior is to use all available cores
+                INIT_THREAD_POOL.call_once(|| {
+                    // No custom configuration needed - Rayon defaults to all cores
+                });
             }
-        });
+        }
     }
 
     /// Parallel implementation for larger inputs with optimized chunking strategy
@@ -284,9 +227,8 @@ impl WordTally {
         reader: BufReader<T>,
         chunk_size: u32,
         case: Case,
-        size_hint: Option<u64>,
     ) -> IndexMap<Box<str>, usize> {
-        let estimated_capacity = self.estimate_capacity(size_hint);
+        let estimated_capacity = self.estimate_capacity();
         let num_threads = rayon::current_num_threads();
         let mut result_map = IndexMap::with_capacity(estimated_capacity);
         let mut lines_batch = Vec::with_capacity(chunk_size as usize);

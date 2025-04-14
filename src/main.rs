@@ -12,7 +12,7 @@ use input::Input;
 use output::Output;
 use unescaper::unescape;
 use verbose::Verbose;
-use word_tally::{Filters, Options, WordTally};
+use word_tally::{Concurrency, Filters, Options, SizeHint, WordTally};
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -26,12 +26,13 @@ fn main() -> Result<()> {
     let filters = Filters::new(&args.min_chars, &args.min_count, args.exclude);
     let input_size = input.size();
 
-    // Create word tally with either parallel or sequential processing based on args
-    let word_tally = if args.parallel {
-        WordTally::new_parallel_with_size(reader, options, filters, input_size)
-    } else {
-        WordTally::new_with_size(reader, options, filters, input_size)
-    };
+    // Create config with appropriate concurrency mode and size hint
+    let concurrency = if args.parallel { Concurrency::Parallel } else { Concurrency::Sequential };
+    let size_hint = input_size.map_or_else(SizeHint::default, SizeHint::Bytes);
+    let config = word_tally::Config::default()
+        .with_concurrency(concurrency)
+        .with_size_hint(size_hint);
+    let word_tally = WordTally::new(reader, options, filters, config);
 
     if args.verbose {
         let mut stderr = Output::stderr();

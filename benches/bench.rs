@@ -3,7 +3,7 @@ use fake::Fake;
 use fake::faker::lorem::en::Words;
 use std::io::Cursor;
 use std::sync::OnceLock;
-use word_tally::{Filters, MinChars, MinCount, Options, Sort, WordTally};
+use word_tally::{Concurrency, Config, Filters, MinChars, MinCount, Options, SizeHint, Sort, WordTally};
 
 static TEXT: OnceLock<String> = OnceLock::new();
 
@@ -31,12 +31,12 @@ fn create_tally(
     parallel: bool
 ) -> impl Fn() -> WordTally {
     let options = Options::with_sort(sort);
+    let concurrency = if parallel { Concurrency::Parallel } else { Concurrency::Sequential };
     move || {
-        if parallel {
-            WordTally::new_parallel(input(), options, filters.clone())
-        } else {
-            WordTally::new(input(), options, filters.clone())
-        }
+        let config = Config::default()
+            .with_concurrency(concurrency)
+            .with_size_hint(SizeHint::default());
+        WordTally::new(input(), options, filters.clone(), config)
     }
 }
 
