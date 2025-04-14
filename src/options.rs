@@ -5,6 +5,27 @@ use core::fmt::{self, Display, Formatter};
 
 use serde::{Deserialize, Serialize};
 
+/// Output format options.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, ValueEnum, Serialize, Deserialize)]
+pub enum Format {
+    #[default]
+    Text,
+    Json,
+    Csv,
+}
+
+impl Display for Format {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let format = match self {
+            Self::Text => "text",
+            Self::Json => "json",
+            Self::Csv => "csv",
+        };
+
+        f.write_str(format)
+    }
+}
+
 /// Tallying options.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Options {

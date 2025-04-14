@@ -6,7 +6,8 @@ pub(crate) mod output;
 pub(crate) mod verbose;
 
 use anyhow::{Context, Result};
-use args::{Args, Format};
+use args::Args;
+use word_tally::Format;
 use clap::Parser;
 use input::Input;
 use output::Output;

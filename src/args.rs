@@ -1,14 +1,6 @@
-use clap::{Parser, ValueEnum};
+use clap::Parser;
 use std::path::PathBuf;
-use word_tally::{Case, Sort};
-
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, ValueEnum)]
-pub enum Format {
-    #[default]
-    Text,
-    Json,
-    Csv,
-}
+use word_tally::{Case, Format, Sort};
 
 #[derive(Debug, Parser)]
 #[command(about, version)]

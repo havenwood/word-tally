@@ -44,7 +44,7 @@ pub mod output;
 pub use config::{Concurrency, Config, SizeHint, Threads};
 pub use filters::{ExcludeWords, Filters, MinChars, MinCount};
 pub use input::Input;
-pub use options::{Case, Options, Sort};
+pub use options::{Case, Format, Options, Sort};
 pub use output::Output;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
