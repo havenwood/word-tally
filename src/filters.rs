@@ -22,9 +22,13 @@ pub struct Filters {
     /// List of regex patterns to exclude words matching the patterns.
     #[serde(skip)]
     pub exclude_patterns: Option<ExcludePatterns>,
+    
+    /// List of regex patterns to include only words matching the patterns.
+    #[serde(skip)]
+    pub include_patterns: Option<IncludePatterns>,
 }
 
-// Manual implementations to ignore exclude_patterns field
+// Manual implementations to ignore exclude_patterns and include_patterns fields
 impl PartialEq for Filters {
     fn eq(&self, other: &Self) -> bool {
         self.min_chars == other.min_chars && 
@@ -74,6 +78,7 @@ impl Filters {
             min_count: min_count.map(MinCount),
             exclude_words: exclude_words.map(ExcludeWords),
             exclude_patterns: None,
+            include_patterns: None,
         }
     }
     
@@ -83,6 +88,16 @@ impl Filters {
             self.exclude_patterns = None;
         } else {
             self.exclude_patterns = Some(ExcludePatterns::new(patterns)?);
+        }
+        Ok(self)
+    }
+    
+    /// Sets include patterns on an existing `Filters` instance.
+    pub fn with_include_patterns(mut self, patterns: &[String]) -> Result<Self, regex::Error> {
+        if patterns.is_empty() {
+            self.include_patterns = None;
+        } else {
+            self.include_patterns = Some(IncludePatterns::new(patterns)?);
         }
         Ok(self)
     }
@@ -104,6 +119,10 @@ impl Filters {
         
         if let Some(patterns) = &self.exclude_patterns {
             tally_map.retain(|word, _| !patterns.matches(word));
+        }
+        
+        if let Some(patterns) = &self.include_patterns {
+            tally_map.retain(|word, _| patterns.matches(word));
         }
     }
 }
@@ -194,6 +213,49 @@ impl ExcludePatterns {
 }
 
 impl Display for ExcludePatterns {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.original_patterns.join(","))
+    }
+}
+
+/// A collection of regex patterns used to include only words that match.
+/// 
+/// Each pattern is compiled into a Regex and used to filter in only words
+/// whose text matches any of the patterns.
+#[derive(Clone, Debug)]
+pub struct IncludePatterns {
+    /// Compiled regex patterns.
+    patterns: Vec<Regex>,
+    /// Original pattern strings (for display purposes).
+    original_patterns: Vec<String>,
+}
+
+impl IncludePatterns {
+    /// Constructs a new `IncludePatterns` from a slice of pattern strings.
+    ///
+    /// Returns an error if any of the patterns fail to compile as a valid regex.
+    pub fn new(patterns: &[String]) -> Result<Self, regex::Error> {
+        let original_patterns = patterns.to_vec();
+        let compiled_patterns = patterns
+            .iter()
+            .map(|p| Regex::new(p))
+            .collect::<Result<Vec<_>, _>>()?;
+            
+        Ok(Self { 
+            patterns: compiled_patterns,
+            original_patterns,
+        })
+    }
+    
+    /// Checks if a word matches any of the patterns.
+    ///
+    /// Returns `true` if the word matches any pattern, `false` otherwise.
+    pub fn matches(&self, word: &str) -> bool {
+        self.patterns.iter().any(|p| p.is_match(word))
+    }
+}
+
+impl Display for IncludePatterns {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.original_patterns.join(","))
     }

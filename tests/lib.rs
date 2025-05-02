@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
-    Case, Concurrency, Config, ExcludePatterns, ExcludeWords, Filters, MinChars, MinCount, Options, 
+    Case, Concurrency, Config, ExcludeWords, Filters, MinChars, MinCount, Options, 
     SizeHint, Sort, WordTally,
 };
 
@@ -361,10 +361,7 @@ fn test_excluding_patterns() {
     
     // Create patterns to exclude words starting with 't'
     let patterns = vec!["^t.*".to_string()];
-    let filters = Filters {
-        exclude_patterns: ExcludePatterns::new(&patterns).ok(),
-        ..Filters::default()
-    };
+    let filters = Filters::default().with_exclude_patterns(&patterns).unwrap();
     
     let config = Config::default()
         .with_concurrency(Concurrency::Sequential)
@@ -381,6 +378,62 @@ fn test_excluding_patterns() {
     assert!(!result.iter().any(|(word, _)| word.as_ref() == "tree"));
     assert!(!result.iter().any(|(word, _)| word.as_ref() == "that"));
     assert!(!result.iter().any(|(word, _)| word.as_ref() == "to"));
+}
+
+#[test]
+fn test_including_patterns() {
+    let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
+    let options = Options::with_sort(Sort::Unsorted);
+    
+    // Create patterns to include only words starting with 'h'
+    let patterns = vec!["^h.*".to_string()];
+    let filters = Filters::default().with_include_patterns(&patterns).unwrap();
+    
+    let config = Config::default()
+        .with_concurrency(Concurrency::Sequential)
+        .with_size_hint(SizeHint::None);
+    let tally = WordTally::new(input, options, filters, config);
+    let result = tally.tally();
+
+    // These should be present (words starting with 'h')
+    assert!(result.iter().any(|(word, _)| word.as_ref() == "heaven"));
+    assert!(result.iter().any(|(word, _)| word.as_ref() == "hell"));
+    
+    // These should be excluded (words not starting with 'h')
+    assert!(!result.iter().any(|(word, _)| word.as_ref() == "tree"));
+    assert!(!result.iter().any(|(word, _)| word.as_ref() == "would"));
+    assert!(!result.iter().any(|(word, _)| word.as_ref() == "to"));
+    assert!(!result.iter().any(|(word, _)| word.as_ref() == "the"));
+    
+    // Make sure we only have words starting with 'h'
+    assert!(result.iter().all(|(word, _)| word.starts_with('h')));
+}
+
+#[test]
+fn test_combining_include_exclude_patterns() {
+    let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
+    let options = Options::with_sort(Sort::Unsorted);
+    
+    // Include words starting with 'h' but exclude 'hell'
+    let include_patterns = vec!["^h.*".to_string()];
+    let exclude_patterns = vec!["^hell$".to_string()];
+    
+    let filters = Filters::default()
+        .with_include_patterns(&include_patterns).unwrap()
+        .with_exclude_patterns(&exclude_patterns).unwrap();
+    
+    let config = Config::default()
+        .with_concurrency(Concurrency::Sequential)
+        .with_size_hint(SizeHint::None);
+    let tally = WordTally::new(input, options, filters, config);
+    let result = tally.tally();
+
+    // 'heaven' should be the only word present (starts with 'h' but isn't 'hell')
+    assert!(result.iter().any(|(word, _)| word.as_ref() == "heaven"));
+    assert!(!result.iter().any(|(word, _)| word.as_ref() == "hell"));
+    
+    // All other words should be excluded
+    assert_eq!(result.len(), 1);
 }
 
 #[test]

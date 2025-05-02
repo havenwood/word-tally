@@ -21,6 +21,7 @@ Options:
   -M, --min-count <COUNT>      Exclude words appearing fewer than min times
   -E, --exclude-words <WORDS>  Exclude words from a comma-delimited list
   -e, --exclude <PATTERNS>     Exclude words matching regex patterns from a comma-delimited list
+  -i, --include <PATTERNS>     Include only words matching regex patterns from a comma-delimited list
   -d, --delimiter <VALUE>      Delimiter between keys and values [default: " "]
   -o, --output <PATH>      Write output to file rather than stdout
   -f, --format <FORMAT>    Output format [default: text] [possible values: text, json, csv]
@@ -40,6 +41,12 @@ word-tally README.md | head -n3
 
 # Using regex patterns to exclude words
 word-tally --exclude="^a.*,^the$" book.txt      # Exclude words starting with 'a' and the exact word 'the'
+
+# Using regex patterns to include only specific words
+word-tally --include="^[hw].*" book.txt         # Include only words starting with 'h' or 'w'
+
+# Combining include and exclude patterns
+word-tally --include="^[hw].*" --exclude="^who$" book.txt  # Words starting with 'h' or 'w', except for 'who'
 ```
 
 CSV output:

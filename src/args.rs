@@ -32,6 +32,10 @@ pub struct Args {
     /// Exclude words matching regex patterns from a comma-delimited list.
     #[arg(short, long, use_value_delimiter = true, value_name = "PATTERNS")]
     pub exclude: Option<Vec<String>>,
+    
+    /// Include only words matching regex patterns from a comma-delimited list.
+    #[arg(short = 'i', long, use_value_delimiter = true, value_name = "PATTERNS")]
+    pub include: Option<Vec<String>>,
 
     /// Delimiter between keys and values.
     #[arg(short, long, default_value = " ", value_name = "VALUE")]
