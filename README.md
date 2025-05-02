@@ -15,20 +15,20 @@ Arguments:
   [PATH]  File path to use as input rather than stdin ("-") [default: -]
 
 Options:
-  -s, --sort <ORDER>       Sort order [default: desc] [possible values: desc, asc, unsorted]
-  -c, --case <FORMAT>      Case normalization [default: lower] [possible values: original, upper, lower]
+  -s, --sort <ORDER>           Sort order [default: desc] [possible values: desc, asc, unsorted]
+  -c, --case <FORMAT>          Case normalization [default: lower] [possible values: original, upper, lower]
   -m, --min-chars <COUNT>      Exclude words containing fewer than min chars
   -M, --min-count <COUNT>      Exclude words appearing fewer than min times
   -E, --exclude-words <WORDS>  Exclude words from a comma-delimited list
-  -e, --exclude <PATTERNS>     Exclude words matching regex patterns from a comma-delimited list
-  -i, --include <PATTERNS>     Include only words matching regex patterns from a comma-delimited list
+  -x, --exclude <PATTERN>      Exclude words matching a regex pattern
+  -i, --include <PATTERN>      Include only words matching a regex pattern
   -d, --delimiter <VALUE>      Delimiter between keys and values [default: " "]
-  -o, --output <PATH>      Write output to file rather than stdout
-  -f, --format <FORMAT>    Output format [default: text] [possible values: text, json, csv]
-  -v, --verbose            Print verbose details
-  -p, --parallel           Use parallel processing for word counting
-  -h, --help               Print help
-  -V, --version            Print version
+  -o, --output <PATH>          Write output to file rather than stdout
+  -v, --verbose                Print verbose details
+  -f, --format <FORMAT>        Output format [default: text] [possible values: text, json, csv]
+  -p, --parallel               Use parallel processing for word counting
+  -h, --help                   Print help
+  -V, --version                Print version
 ```
 
 ## Examples
@@ -40,13 +40,13 @@ word-tally README.md | head -n3
 #>> https 11
 
 # Using regex patterns to exclude words
-word-tally --exclude="^a.*,^the$" book.txt      # Exclude words starting with 'a' and the exact word 'the'
+word-tally --exclude="^a.*" --exclude="^the$" book.txt
 
 # Using regex patterns to include only specific words
-word-tally --include="^[hw].*" book.txt         # Include only words starting with 'h' or 'w'
+word-tally --include="^h.*" --include="^w.*" book.txt
 
 # Combining include and exclude patterns
-word-tally --include="^[hw].*" --exclude="^who$" book.txt  # Words starting with 'h' or 'w', except for 'who'
+word-tally --include="^h.*" --include="^w.*" --exclude="^who$" book.txt
 ```
 
 CSV output:
@@ -94,7 +94,7 @@ Add `word-tally` as a dependency.
 
 ```toml
 [dependencies]
-word-tally = "0.19.0"
+word-tally = "0.20.0"
 ```
 
 ## Documentation

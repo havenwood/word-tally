@@ -144,7 +144,8 @@ fn test_exclude_patterns() {
     let input = "The tree that would grow to heaven must send its roots to hell.";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
-        .arg("--exclude=^h.*,^t.*$")  // Exclude words starting with 'h' or exact 't'
+        .arg("--exclude=^h.*")  // Exclude words starting with 'h'
+        .arg("--exclude=^t.*$") // Exclude words ending with 't'
         .assert()
         .success()
         .stdout(contains("must"))
@@ -159,12 +160,66 @@ fn test_exclude_patterns() {
 }
 
 #[test]
+fn test_multiple_exclude_patterns() {
+    let input = "apple banana carrot dog elephant fox grape";
+    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    cmd.write_stdin(input)
+        .arg("--exclude=^a.*")  // Exclude words starting with 'a'
+        .arg("--exclude=.*g$")  // Exclude words ending with 'g'
+        .arg("--exclude=c.*t")  // Exclude words starting with 'c' and ending with 't'
+        .assert()
+        .success()
+        .stdout(contains("banana"))
+        .stdout(contains("elephant"))
+        .stdout(contains("fox"))
+        .stdout(contains("apple").not())
+        .stdout(contains("dog").not())
+        .stdout(contains("carrot").not());
+}
+
+#[test]
+fn test_include_patterns() {
+    let input = "apple banana carrot dog elephant fox grape";
+    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    cmd.write_stdin(input)
+        .arg("--include=^[ab].*")  // Include words starting with 'a' or 'b'
+        .assert()
+        .success()
+        .stdout(contains("apple"))
+        .stdout(contains("banana"))
+        .stdout(contains("carrot").not())
+        .stdout(contains("dog").not())
+        .stdout(contains("elephant").not())
+        .stdout(contains("fox").not())
+        .stdout(contains("grape").not());
+}
+
+#[test]
+fn test_multiple_include_patterns() {
+    let input = "apple banana carrot dog elephant fox grape";
+    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    cmd.write_stdin(input)
+        .arg("--include=^a.*")   // Include words starting with 'a'
+        .arg("--include=.*e$")   // Include words ending with 'e'
+        .assert()
+        .success()
+        .stdout(contains("apple"))
+        .stdout(contains("grape"))
+        .stdout(contains("banana").not())
+        .stdout(contains("carrot").not())
+        .stdout(contains("dog").not())
+        .stdout(contains("elephant").not())
+        .stdout(contains("fox").not());
+}
+
+#[test]
 fn test_combine_exclusions() {
     let input = "The tree that would grow to heaven must send its roots to hell.";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
         .arg("--exclude-words=must,send")
-        .arg("--exclude=^h.*,^t.*$") 
+        .arg("--exclude=^h.*")
+        .arg("--exclude=^t.*$")
         .assert()
         .success()
         .stdout(contains("grow"))
@@ -184,7 +239,8 @@ fn test_combine_exclusions() {
 fn verbose_with_exclude_patterns() {
     let assert = word_tally()
         .arg("-v")
-        .arg("--exclude=^t.*,ing$")
+        .arg("--exclude=^t.*")
+        .arg("--exclude=ing$")
         .assert();
     assert
         .success()

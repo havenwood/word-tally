@@ -18,11 +18,11 @@ pub struct Filters {
 
     /// List of specific words to exclude.
     pub exclude_words: Option<ExcludeWords>,
-    
+
     /// List of regex patterns to exclude words matching the patterns.
     #[serde(skip)]
     pub exclude_patterns: Option<ExcludePatterns>,
-    
+
     /// List of regex patterns to include only words matching the patterns.
     #[serde(skip)]
     pub include_patterns: Option<IncludePatterns>,
@@ -31,8 +31,8 @@ pub struct Filters {
 // Manual implementations to ignore exclude_patterns and include_patterns fields
 impl PartialEq for Filters {
     fn eq(&self, other: &Self) -> bool {
-        self.min_chars == other.min_chars && 
-        self.min_count == other.min_count && 
+        self.min_chars == other.min_chars &&
+        self.min_count == other.min_count &&
         self.exclude_words == other.exclude_words
     }
 }
@@ -47,7 +47,7 @@ impl PartialOrd for Filters {
 
 impl Ord for Filters {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match (self.min_chars.cmp(&other.min_chars), 
+        match (self.min_chars.cmp(&other.min_chars),
                self.min_count.cmp(&other.min_count)) {
             (core::cmp::Ordering::Equal, core::cmp::Ordering::Equal) => {
                 self.exclude_words.cmp(&other.exclude_words)
@@ -81,7 +81,7 @@ impl Filters {
             include_patterns: None,
         }
     }
-    
+
     /// Sets exclude patterns on an existing `Filters` instance.
     pub fn with_exclude_patterns(mut self, patterns: &[String]) -> Result<Self, regex::Error> {
         if patterns.is_empty() {
@@ -91,7 +91,7 @@ impl Filters {
         }
         Ok(self)
     }
-    
+
     /// Sets include patterns on an existing `Filters` instance.
     pub fn with_include_patterns(mut self, patterns: &[String]) -> Result<Self, regex::Error> {
         if patterns.is_empty() {
@@ -116,11 +116,11 @@ impl Filters {
             let discard: HashSet<_> = words.iter().map(|word| case.normalize(word)).collect();
             tally_map.retain(|word, _| !discard.contains(word));
         }
-        
+
         if let Some(patterns) = &self.exclude_patterns {
             tally_map.retain(|word, _| !patterns.matches(word));
         }
-        
+
         if let Some(patterns) = &self.include_patterns {
             tally_map.retain(|word, _| patterns.matches(word));
         }
@@ -176,7 +176,7 @@ impl From<Vec<String>> for ExcludeWords {
 }
 
 /// A collection of regex patterns used to exclude words that match.
-/// 
+///
 /// Each pattern is compiled into a Regex and used to filter out words
 /// whose text matches any of the patterns.
 #[derive(Clone, Debug)]
@@ -197,13 +197,13 @@ impl ExcludePatterns {
             .iter()
             .map(|p| Regex::new(p))
             .collect::<Result<Vec<_>, _>>()?;
-            
-        Ok(Self { 
+
+        Ok(Self {
             patterns: compiled_patterns,
             original_patterns,
         })
     }
-    
+
     /// Checks if a word matches any of the patterns.
     ///
     /// Returns `true` if the word matches any pattern, `false` otherwise.
@@ -219,7 +219,7 @@ impl Display for ExcludePatterns {
 }
 
 /// A collection of regex patterns used to include only words that match.
-/// 
+///
 /// Each pattern is compiled into a Regex and used to filter in only words
 /// whose text matches any of the patterns.
 #[derive(Clone, Debug)]
@@ -240,13 +240,13 @@ impl IncludePatterns {
             .iter()
             .map(|p| Regex::new(p))
             .collect::<Result<Vec<_>, _>>()?;
-            
-        Ok(Self { 
+
+        Ok(Self {
             patterns: compiled_patterns,
             original_patterns,
         })
     }
-    
+
     /// Checks if a word matches any of the patterns.
     ///
     /// Returns `true` if the word matches any pattern, `false` otherwise.

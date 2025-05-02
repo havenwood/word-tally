@@ -24,10 +24,10 @@ fn main() -> Result<()> {
 
     let reader = input.get_reader(&source)?;
     let options = Options::new(args.case, args.sort);
-    
+
     // Create initial filters
     let mut filters = Filters::new(&args.min_chars, &args.min_count, args.exclude_words);
-    
+
     // Add exclude regex patterns if provided
     if let Some(ref patterns) = args.exclude {
         if !patterns.is_empty() {
@@ -35,7 +35,7 @@ fn main() -> Result<()> {
                 .with_context(|| "Failed to compile exclude regex patterns")?;
         }
     }
-    
+
     // Add include regex patterns if provided
     if let Some(ref patterns) = args.include {
         if !patterns.is_empty() {
@@ -43,7 +43,7 @@ fn main() -> Result<()> {
                 .with_context(|| "Failed to compile include regex patterns")?;
         }
     }
-    
+
     let input_size = input.size();
 
     // Create config with appropriate concurrency mode and size hint
