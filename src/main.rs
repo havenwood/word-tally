@@ -13,7 +13,7 @@ use input::Input;
 use output::Output;
 use unescaper::unescape;
 use verbose::Verbose;
-use word_tally::{Concurrency, Filters, Options, SizeHint, WordTally};
+use word_tally::{Concurrency, ExcludePatterns, Filters, Options, SizeHint, WordTally};
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -24,7 +24,19 @@ fn main() -> Result<()> {
 
     let reader = input.get_reader(&source)?;
     let options = Options::new(args.case, args.sort);
-    let filters = Filters::new(&args.min_chars, &args.min_count, args.exclude);
+    
+    // Create initial filters
+    let mut filters = Filters::new(&args.min_chars, &args.min_count, args.exclude_words);
+    
+    // Add regex patterns if provided
+    if let Some(ref patterns) = args.exclude {
+        if !patterns.is_empty() {
+            let exclude_patterns = ExcludePatterns::new(patterns)
+                .with_context(|| "Failed to compile regex patterns")?;
+            filters.exclude_patterns = Some(exclude_patterns);
+        }
+    }
+    
     let input_size = input.size();
 
     // Create config with appropriate concurrency mode and size hint

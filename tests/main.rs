@@ -23,7 +23,7 @@ fn verbose_without_input() {
     let assert = word_tally().arg("-v").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\nexclude-words none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\n")
         .stdout("");
 }
 
@@ -32,7 +32,7 @@ fn verbose_with_min_chars() {
     let assert = word_tally().arg("-v").arg("--min-chars=42").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars 42\nmin-count none\nexclude-words none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars 42\nmin-count none\nexclude-words none\nexclude-patterns none\n")
         .stdout("");
 }
 
@@ -41,19 +41,19 @@ fn verbose_with_min_count() {
     let assert = word_tally().arg("-v").arg("--min-count=42").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count 42\nexclude-words none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count 42\nexclude-words none\nexclude-patterns none\n")
         .stdout("");
 }
 
 #[test]
-fn verbose_with_exclude() {
+fn verbose_with_exclude_words() {
     let assert = word_tally()
         .arg("-v")
-        .arg("--exclude=wombat,trees")
+        .arg("--exclude-words=wombat,trees")
         .assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\nexclude-words wombat,trees\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\nexclude-words wombat,trees\nexclude-patterns none\n")
         .stdout("");
 }
 
@@ -62,7 +62,7 @@ fn verbose_with_input() {
     let assert = word_tally().write_stdin("wombat").arg("-v").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 1\nunique-words 1\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\nexclude-words none\n\n")
+        .stderr("source -\ntotal-words 1\nunique-words 1\ndelimiter \" \"\ncase lower\norder desc\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\n\n")
         .stdout("wombat 1\n");
 }
 
@@ -133,10 +133,62 @@ fn test_discard_words() {
     let input = "The tree that would grow to heaven must send its roots to hell.";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
-        .arg("--exclude=heaven,hell")
+        .arg("--exclude-words=heaven,hell")
         .assert()
         .success()
         .stdout(contains("tree").and(contains("heaven").not().and(contains("hell").not())));
+}
+
+#[test]
+fn test_exclude_patterns() {
+    let input = "The tree that would grow to heaven must send its roots to hell.";
+    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    cmd.write_stdin(input)
+        .arg("--exclude=^h.*,^t.*$")  // Exclude words starting with 'h' or exact 't'
+        .assert()
+        .success()
+        .stdout(contains("must"))
+        .stdout(contains("send"))
+        .stdout(contains("roots"))
+        .stdout(contains("heaven").not())
+        .stdout(contains("hell").not())
+        .stdout(contains("the").not())
+        .stdout(contains("tree").not())
+        .stdout(contains("that").not())
+        .stdout(contains("to").not());
+}
+
+#[test]
+fn test_combine_exclusions() {
+    let input = "The tree that would grow to heaven must send its roots to hell.";
+    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    cmd.write_stdin(input)
+        .arg("--exclude-words=must,send")
+        .arg("--exclude=^h.*,^t.*$") 
+        .assert()
+        .success()
+        .stdout(contains("grow"))
+        .stdout(contains("its"))
+        .stdout(contains("roots"))
+        .stdout(contains("heaven").not())
+        .stdout(contains("hell").not())
+        .stdout(contains("the").not())
+        .stdout(contains("tree").not())
+        .stdout(contains("that").not())
+        .stdout(contains("to").not())
+        .stdout(contains("must").not())
+        .stdout(contains("send").not());
+}
+
+#[test]
+fn verbose_with_exclude_patterns() {
+    let assert = word_tally()
+        .arg("-v")
+        .arg("--exclude=^t.*,ing$")
+        .assert();
+    assert
+        .success()
+        .stderr(contains("exclude-patterns ^t.*,ing$"));
 }
 
 #[test]

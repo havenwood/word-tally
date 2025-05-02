@@ -42,7 +42,7 @@ pub mod options;
 pub mod output;
 
 pub use config::{Concurrency, Config, SizeHint, Threads};
-pub use filters::{ExcludeWords, Filters, MinChars, MinCount};
+pub use filters::{ExcludePatterns, ExcludeWords, Filters, MinChars, MinCount};
 pub use input::Input;
 pub use options::{Case, Format, Options, Sort};
 pub use output::Output;

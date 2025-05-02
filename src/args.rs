@@ -26,7 +26,11 @@ pub struct Args {
     pub min_count: Option<usize>,
 
     /// Exclude words from a comma-delimited list.
-    #[arg(short, long, use_value_delimiter = true, value_name = "WORDS")]
+    #[arg(short = 'E', long, use_value_delimiter = true, value_name = "WORDS")]
+    pub exclude_words: Option<Vec<String>>,
+    
+    /// Exclude words matching regex patterns from a comma-delimited list.
+    #[arg(short, long, use_value_delimiter = true, value_name = "PATTERNS")]
     pub exclude: Option<Vec<String>>,
 
     /// Delimiter between keys and values.

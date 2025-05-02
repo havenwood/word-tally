@@ -4,7 +4,8 @@ use std::path::PathBuf;
 use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
-    Case, Concurrency, Config, ExcludeWords, Filters, MinChars, MinCount, Options, SizeHint, Sort, WordTally,
+    Case, Concurrency, Config, ExcludePatterns, ExcludeWords, Filters, MinChars, MinCount, Options, 
+    SizeHint, Sort, WordTally,
 };
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
@@ -339,7 +340,7 @@ fn test_excluding_words() {
     let words = vec!["Heaven".to_string(), "Hell".to_string()];
     let options = Options::with_sort(Sort::Unsorted);
     let filters = Filters {
-        exclude: Some(ExcludeWords(words)),
+        exclude_words: Some(ExcludeWords(words)),
         ..Filters::default()
     };
     let config = Config::default()
@@ -351,6 +352,35 @@ fn test_excluding_words() {
     assert!(result.iter().any(|(word, _)| word.as_ref() == "tree"));
     assert!(!result.iter().any(|(word, _)| word.as_ref() == "heaven"));
     assert!(!result.iter().any(|(word, _)| word.as_ref() == "hell"));
+}
+
+#[test]
+fn test_excluding_patterns() {
+    let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
+    let options = Options::with_sort(Sort::Unsorted);
+    
+    // Create patterns to exclude words starting with 't'
+    let patterns = vec!["^t.*".to_string()];
+    let filters = Filters {
+        exclude_patterns: ExcludePatterns::new(&patterns).ok(),
+        ..Filters::default()
+    };
+    
+    let config = Config::default()
+        .with_concurrency(Concurrency::Sequential)
+        .with_size_hint(SizeHint::None);
+    let tally = WordTally::new(input, options, filters, config);
+    let result = tally.tally();
+
+    // These should be present
+    assert!(result.iter().any(|(word, _)| word.as_ref() == "heaven"));
+    assert!(result.iter().any(|(word, _)| word.as_ref() == "hell"));
+    assert!(result.iter().any(|(word, _)| word.as_ref() == "would"));
+    
+    // These should be excluded by the pattern
+    assert!(!result.iter().any(|(word, _)| word.as_ref() == "tree"));
+    assert!(!result.iter().any(|(word, _)| word.as_ref() == "that"));
+    assert!(!result.iter().any(|(word, _)| word.as_ref() == "to"));
 }
 
 #[test]

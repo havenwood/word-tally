@@ -17,10 +17,11 @@ Arguments:
 Options:
   -s, --sort <ORDER>       Sort order [default: desc] [possible values: desc, asc, unsorted]
   -c, --case <FORMAT>      Case normalization [default: lower] [possible values: original, upper, lower]
-  -m, --min-chars <COUNT>  Exclude words containing fewer than min chars
-  -M, --min-count <COUNT>  Exclude words appearing fewer than min times
-  -e, --exclude <WORDS>    Exclude words from a comma-delimited list
-  -d, --delimiter <VALUE>  Delimiter between keys and values [default: " "]
+  -m, --min-chars <COUNT>      Exclude words containing fewer than min chars
+  -M, --min-count <COUNT>      Exclude words appearing fewer than min times
+  -E, --exclude-words <WORDS>  Exclude words from a comma-delimited list
+  -e, --exclude <PATTERNS>     Exclude words matching regex patterns from a comma-delimited list
+  -d, --delimiter <VALUE>      Delimiter between keys and values [default: " "]
   -o, --output <PATH>      Write output to file rather than stdout
   -f, --format <FORMAT>    Output format [default: text] [possible values: text, json, csv]
   -v, --verbose            Print verbose details
@@ -36,6 +37,9 @@ word-tally README.md | head -n3
 #>> tally 22
 #>> word 20
 #>> https 11
+
+# Using regex patterns to exclude words
+word-tally --exclude="^a.*,^the$" book.txt      # Exclude words starting with 'a' and the exact word 'the'
 ```
 
 CSV output:

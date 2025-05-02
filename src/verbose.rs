@@ -47,7 +47,8 @@ impl<'a> Verbose<'a> {
         wtr.write_record(["order", &self.tally.options().sort.to_string()])?;
         wtr.write_record(["min-chars", &self.format(self.tally.filters().min_chars)])?;
         wtr.write_record(["min-count", &self.format(self.tally.filters().min_count)])?;
-        wtr.write_record(["exclude-words", &self.format(self.tally.filters().exclude.clone())])?;
+        wtr.write_record(["exclude-words", &self.format(self.tally.filters().exclude_words.clone())])?;
+        wtr.write_record(["exclude-patterns", &self.format(self.tally.filters().exclude_patterns.as_ref())])?;
         let csv_data = String::from_utf8(wtr.into_inner()?)?;
         self.output.write_line(&csv_data)?;
 
@@ -78,7 +79,11 @@ impl<'a> Verbose<'a> {
         self.write_entry("min-count", self.format(self.tally.filters().min_count))?;
         self.write_entry(
             "exclude-words",
-            self.format(self.tally.filters().exclude.clone()),
+            self.format(self.tally.filters().exclude_words.clone()),
+        )?;
+        self.write_entry(
+            "exclude-patterns",
+            self.format(self.tally.filters().exclude_patterns.as_ref()),
         )?;
 
         Ok(())
@@ -118,7 +123,8 @@ impl<'a> Verbose<'a> {
             "order": self.tally.options().sort.to_string(),
             "min-chars": self.format(self.tally.filters().min_chars),
             "min-count": self.format(self.tally.filters().min_count),
-            "exclude-words": self.format(self.tally.filters().exclude.clone()),
+            "exclude-words": self.format(self.tally.filters().exclude_words.clone()),
+            "exclude-patterns": self.format(self.tally.filters().exclude_patterns.as_ref()),
         });
 
         serde_json::to_string(&value)

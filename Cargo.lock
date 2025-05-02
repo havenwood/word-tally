@@ -980,6 +980,7 @@ dependencies = [
  "indexmap",
  "predicates",
  "rayon",
+ "regex",
  "serde",
  "serde_json",
  "unescaper",
