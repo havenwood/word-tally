@@ -3,7 +3,9 @@ use fake::Fake;
 use fake::faker::lorem::en::Words;
 use std::io::Cursor;
 use std::sync::OnceLock;
-use word_tally::{Concurrency, Config, Filters, MinChars, MinCount, Options, SizeHint, Sort, WordTally};
+use word_tally::{
+    Concurrency, Config, Filters, MinChars, MinCount, Options, SizeHint, Sort, WordTally,
+};
 
 static TEXT: OnceLock<String> = OnceLock::new();
 
@@ -17,10 +19,9 @@ fn sample_text() -> &'static str {
 }
 
 fn bench_variant(c: &mut Criterion, group_name: &str, name: &str, setup: impl Fn() -> WordTally) {
-    c.benchmark_group(group_name)
-        .bench_function(name, |b| {
-            b.iter_batched(|| (), |_| setup(), BatchSize::LargeInput);
-        });
+    c.benchmark_group(group_name).bench_function(name, |b| {
+        b.iter_batched(|| (), |_| setup(), BatchSize::LargeInput);
+    });
 }
 
 /// Create a WordTally creation function for benchmarking with consistent parameters
@@ -28,10 +29,14 @@ fn create_tally(
     input: impl Fn() -> Cursor<&'static str>,
     sort: Sort,
     filters: Filters,
-    parallel: bool
+    parallel: bool,
 ) -> impl Fn() -> WordTally {
     let options = Options::with_sort(sort);
-    let concurrency = if parallel { Concurrency::Parallel } else { Concurrency::Sequential };
+    let concurrency = if parallel {
+        Concurrency::Parallel
+    } else {
+        Concurrency::Sequential
+    };
     move || {
         let config = Config::default()
             .with_concurrency(concurrency)
@@ -49,11 +54,19 @@ fn run_benchmarks(c: &mut Criterion) {
     ];
 
     for (name, sort) in sort_options {
-        bench_variant(c, "sorting", name,
-            create_tally(make_input, sort, Filters::default(), false));
+        bench_variant(
+            c,
+            "sorting",
+            name,
+            create_tally(make_input, sort, Filters::default(), false),
+        );
 
-        bench_variant(c, "sorting_parallel", name,
-            create_tally(make_input, sort, Filters::default(), true));
+        bench_variant(
+            c,
+            "sorting_parallel",
+            name,
+            create_tally(make_input, sort, Filters::default(), true),
+        );
     }
 
     let min_count_filter = Filters {
@@ -66,11 +79,19 @@ fn run_benchmarks(c: &mut Criterion) {
         ..Filters::default()
     };
 
-    bench_variant(c, "filtering", "min_count",
-        create_tally(make_input, Sort::default(), min_count_filter, false));
+    bench_variant(
+        c,
+        "filtering",
+        "min_count",
+        create_tally(make_input, Sort::default(), min_count_filter, false),
+    );
 
-    bench_variant(c, "filtering", "min_chars",
-        create_tally(make_input, Sort::default(), min_chars_filter, false));
+    bench_variant(
+        c,
+        "filtering",
+        "min_chars",
+        create_tally(make_input, Sort::default(), min_chars_filter, false),
+    );
 }
 
 criterion_group! {

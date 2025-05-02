@@ -4,8 +4,8 @@ use std::path::PathBuf;
 use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
-    Case, Concurrency, Config, ExcludeWords, Filters, MinChars, MinCount, Options,
-    SizeHint, Sort, WordTally,
+    Case, Concurrency, Config, ExcludeWords, Filters, MinChars, MinCount, Options, SizeHint, Sort,
+    WordTally,
 };
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
@@ -292,7 +292,12 @@ fn vec_from() {
 #[test]
 fn test_into_tally() {
     let input = b"bye bye birdy";
-    let word_tally = WordTally::new(&input[..], Options::default(), Filters::default(), Config::default());
+    let word_tally = WordTally::new(
+        &input[..],
+        Options::default(),
+        Filters::default(),
+        Config::default(),
+    );
 
     // Use `tally()` to get a reference to the slice.
     let tally = word_tally.tally();
@@ -306,7 +311,12 @@ fn test_into_tally() {
 #[test]
 fn test_iterator() {
     let input = b"double trouble double";
-    let word_tally = WordTally::new(&input[..], Options::default(), Filters::default(), Config::default());
+    let word_tally = WordTally::new(
+        &input[..],
+        Options::default(),
+        Filters::default(),
+        Config::default(),
+    );
 
     let expected: Vec<(Box<str>, usize)> =
         vec![(Box::from("double"), 2), (Box::from("trouble"), 1)];
@@ -323,7 +333,12 @@ fn test_iterator() {
 #[test]
 fn test_iterator_for_loop() {
     let input = b"llama llama pajamas";
-    let word_tally = WordTally::new(&input[..], Options::default(), Filters::default(), Config::default());
+    let word_tally = WordTally::new(
+        &input[..],
+        Options::default(),
+        Filters::default(),
+        Config::default(),
+    );
 
     let expected: Vec<(Box<str>, usize)> = vec![(Box::from("llama"), 2), (Box::from("pajamas"), 1)];
 
@@ -419,8 +434,10 @@ fn test_combining_include_exclude_patterns() {
     let exclude_patterns = vec!["^hell$".to_string()];
 
     let filters = Filters::default()
-        .with_include_patterns(&include_patterns).unwrap()
-        .with_exclude_patterns(&exclude_patterns).unwrap();
+        .with_include_patterns(&include_patterns)
+        .unwrap()
+        .with_exclude_patterns(&exclude_patterns)
+        .unwrap();
 
     let config = Config::default()
         .with_concurrency(Concurrency::Sequential)
@@ -571,12 +588,7 @@ fn test_parallel_count() {
     // Instead of using environment variables, just test the parallel function works
     let input = b"Test with default settings for chunk size and thread count";
     let config = Config::default().with_concurrency(Concurrency::Parallel);
-    let parallel = WordTally::new(
-        &input[..],
-        Options::default(),
-        Filters::default(),
-        config,
-    );
+    let parallel = WordTally::new(&input[..], Options::default(), Filters::default(), config);
 
     // Only check the counts are positive numbers (actual counts may vary by implementation)
     assert!(parallel.count() > 0);
@@ -589,12 +601,7 @@ fn test_parallel_count() {
 fn test_merge_maps() {
     let input = b"This is a test of the map merging functionality";
     let config = Config::default().with_concurrency(Concurrency::Parallel);
-    let tally = WordTally::new(
-        &input[..],
-        Options::default(),
-        Filters::default(),
-        config,
-    );
+    let tally = WordTally::new(&input[..], Options::default(), Filters::default(), config);
 
     assert_eq!(tally.count(), 9);
     assert_eq!(tally.uniq_count(), 9);
@@ -660,7 +667,12 @@ mod config_tests {
         assert_eq!(config.estimate_capacity(), 1024);
 
         // Size hint divided by uniqueness ratio (10)
-        assert_eq!(config.with_size_hint(SizeHint::Bytes(8192)).estimate_capacity(), 819);
+        assert_eq!(
+            config
+                .with_size_hint(SizeHint::Bytes(8192))
+                .estimate_capacity(),
+            819
+        );
     }
 }
 
@@ -689,7 +701,12 @@ mod wordtally_constructor_tests {
 
     #[test]
     fn with_defaults() {
-        let tally = WordTally::new(TEST_INPUT, Options::default(), Filters::default(), Config::default());
+        let tally = WordTally::new(
+            TEST_INPUT,
+            Options::default(),
+            Filters::default(),
+            Config::default(),
+        );
         assert_eq!(tally.count(), 3);
     }
 
@@ -705,12 +722,7 @@ mod wordtally_constructor_tests {
     #[test]
     fn with_concurrency() {
         let config = Config::default().with_concurrency(Concurrency::Parallel);
-        let tally = WordTally::new(
-            TEST_INPUT,
-            Options::default(),
-            Filters::default(),
-            config,
-        );
+        let tally = WordTally::new(TEST_INPUT, Options::default(), Filters::default(), config);
         assert_eq!(tally.count(), 3);
     }
 

@@ -47,8 +47,14 @@ impl<'a> Verbose<'a> {
         wtr.write_record(["order", &self.tally.options().sort.to_string()])?;
         wtr.write_record(["min-chars", &self.format(self.tally.filters().min_chars)])?;
         wtr.write_record(["min-count", &self.format(self.tally.filters().min_count)])?;
-        wtr.write_record(["exclude-words", &self.format(self.tally.filters().exclude_words.clone())])?;
-        wtr.write_record(["exclude-patterns", &self.format(self.tally.filters().exclude_patterns.as_ref())])?;
+        wtr.write_record([
+            "exclude-words",
+            &self.format(self.tally.filters().exclude_words.clone()),
+        ])?;
+        wtr.write_record([
+            "exclude-patterns",
+            &self.format(self.tally.filters().exclude_patterns.as_ref()),
+        ])?;
         let csv_data = String::from_utf8(wtr.into_inner()?)?;
         self.output.write_line(&csv_data)?;
 
@@ -109,7 +115,6 @@ impl<'a> Verbose<'a> {
             .write_line(&format!("{label}{}{}\n", self.delimiter, value.to_string()))
     }
 
-
     /// Create a JSON representation of the verbose output.
     pub fn to_json(&self) -> Result<String> {
         use serde_json::json;
@@ -127,7 +132,6 @@ impl<'a> Verbose<'a> {
             "exclude-patterns": self.format(self.tally.filters().exclude_patterns.as_ref()),
         });
 
-        serde_json::to_string(&value)
-            .with_context(|| "Failed to serialize verbose info to JSON")
+        serde_json::to_string(&value).with_context(|| "Failed to serialize verbose info to JSON")
     }
 }

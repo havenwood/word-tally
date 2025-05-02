@@ -56,11 +56,7 @@ impl Input {
     /// Returns None for stdin or if the file size can't be determined.
     pub fn size(&self) -> Option<u64> {
         match self {
-            Self::File(path) => {
-                fs::metadata(path)
-                    .map(|metadata| metadata.len())
-                    .ok()
-            }
+            Self::File(path) => fs::metadata(path).map(|metadata| metadata.len()).ok(),
             Self::Stdin => None,
         }
     }

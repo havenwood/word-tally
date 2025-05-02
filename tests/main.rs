@@ -144,7 +144,7 @@ fn test_exclude_patterns() {
     let input = "The tree that would grow to heaven must send its roots to hell.";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
-        .arg("--exclude=^h.*")  // Exclude words starting with 'h'
+        .arg("--exclude=^h.*") // Exclude words starting with 'h'
         .arg("--exclude=^t.*$") // Exclude words ending with 't'
         .assert()
         .success()
@@ -164,9 +164,9 @@ fn test_multiple_exclude_patterns() {
     let input = "apple banana carrot dog elephant fox grape";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
-        .arg("--exclude=^a.*")  // Exclude words starting with 'a'
-        .arg("--exclude=.*g$")  // Exclude words ending with 'g'
-        .arg("--exclude=c.*t")  // Exclude words starting with 'c' and ending with 't'
+        .arg("--exclude=^a.*") // Exclude words starting with 'a'
+        .arg("--exclude=.*g$") // Exclude words ending with 'g'
+        .arg("--exclude=c.*t") // Exclude words starting with 'c' and ending with 't'
         .assert()
         .success()
         .stdout(contains("banana"))
@@ -182,7 +182,7 @@ fn test_include_patterns() {
     let input = "apple banana carrot dog elephant fox grape";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
-        .arg("--include=^[ab].*")  // Include words starting with 'a' or 'b'
+        .arg("--include=^[ab].*") // Include words starting with 'a' or 'b'
         .assert()
         .success()
         .stdout(contains("apple"))
@@ -199,8 +199,8 @@ fn test_multiple_include_patterns() {
     let input = "apple banana carrot dog elephant fox grape";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
-        .arg("--include=^a.*")   // Include words starting with 'a'
-        .arg("--include=.*e$")   // Include words ending with 'e'
+        .arg("--include=^a.*") // Include words starting with 'a'
+        .arg("--include=.*e$") // Include words ending with 'e'
         .assert()
         .success()
         .stdout(contains("apple"))
@@ -253,7 +253,9 @@ fn format_json() {
         .write_stdin("wombat wombat bat")
         .arg("--format=json")
         .assert();
-    assert.success().stdout(contains("[\"wombat\",2]").and(contains("[\"bat\",1]")));
+    assert
+        .success()
+        .stdout(contains("[\"wombat\",2]").and(contains("[\"bat\",1]")));
 }
 
 #[test]
@@ -262,7 +264,8 @@ fn format_csv() {
         .write_stdin("wombat wombat bat")
         .arg("--format=csv")
         .assert();
-    assert.success()
+    assert
+        .success()
         .stdout(contains("word,count"))
         .stdout(contains("wombat,2"))
         .stdout(contains("bat,1"));
@@ -280,7 +283,8 @@ fn csv_escaping() {
         .arg("--format=csv")
         .assert();
 
-    assert.success()
+    assert
+        .success()
         .stdout(str::starts_with("word,count\n"))
         .stdout(contains("hello,1"))
         .stdout(contains("there,1"))
@@ -295,7 +299,8 @@ fn stdin_with_parallel() {
         .write_stdin("hello world")
         .arg("--parallel")
         .assert();
-    assert.success()
+    assert
+        .success()
         .stdout(contains("hello 1"))
         .stdout(contains("world 1"));
 
@@ -304,7 +309,8 @@ fn stdin_with_parallel() {
         .write_stdin("hello world\ngoodbye universe\nhello again")
         .arg("--parallel")
         .assert();
-    assert.success()
+    assert
+        .success()
         .stdout(contains("hello 2"))
         .stdout(contains("world 1"))
         .stdout(contains("goodbye 1"))
@@ -321,7 +327,8 @@ fn parallel_with_env_vars() {
         .arg("--parallel")
         .assert();
 
-    assert.success()
+    assert
+        .success()
         .stdout(contains("test 1"))
         .stdout(contains("environment 1"))
         .stdout(contains("variables 1"))
@@ -337,7 +344,8 @@ fn parallel_with_large_chunk() {
         .arg("--parallel")
         .assert();
 
-    assert.success()
+    assert
+        .success()
         .stdout(contains("test 1"))
         .stdout(contains("with 1"))
         .stdout(contains("very 1"))

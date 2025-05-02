@@ -7,12 +7,12 @@ pub(crate) mod verbose;
 
 use anyhow::{Context, Result};
 use args::Args;
-use word_tally::Format;
 use clap::Parser;
 use input::Input;
 use output::Output;
 use unescaper::unescape;
 use verbose::Verbose;
+use word_tally::Format;
 use word_tally::{Concurrency, Filters, Options, SizeHint, WordTally};
 
 fn main() -> Result<()> {
@@ -31,7 +31,8 @@ fn main() -> Result<()> {
     // Add exclude regex patterns if provided
     if let Some(ref patterns) = args.exclude {
         if !patterns.is_empty() {
-            filters = filters.with_exclude_patterns(patterns)
+            filters = filters
+                .with_exclude_patterns(patterns)
                 .with_context(|| "Failed to compile exclude regex patterns")?;
         }
     }
@@ -39,7 +40,8 @@ fn main() -> Result<()> {
     // Add include regex patterns if provided
     if let Some(ref patterns) = args.include {
         if !patterns.is_empty() {
-            filters = filters.with_include_patterns(patterns)
+            filters = filters
+                .with_include_patterns(patterns)
                 .with_context(|| "Failed to compile include regex patterns")?;
         }
     }
@@ -47,7 +49,11 @@ fn main() -> Result<()> {
     let input_size = input.size();
 
     // Create config with appropriate concurrency mode and size hint
-    let concurrency = if args.parallel { Concurrency::Parallel } else { Concurrency::Sequential };
+    let concurrency = if args.parallel {
+        Concurrency::Parallel
+    } else {
+        Concurrency::Sequential
+    };
     let size_hint = input_size.map_or_else(SizeHint::default, SizeHint::Bytes);
     let config = word_tally::Config::default()
         .with_concurrency(concurrency)
@@ -62,11 +68,11 @@ fn main() -> Result<()> {
             Format::Json => {
                 let json = verbose.to_json()?;
                 stderr.write_line(&format!("{json}\n\n"))?;
-            },
+            }
             Format::Csv => {
                 verbose.log_csv()?;
                 stderr.write_line("\n")?;
-            },
+            }
             Format::Text => {
                 verbose.log()?;
             }
@@ -80,12 +86,18 @@ fn main() -> Result<()> {
             for (word, count) in word_tally.tally() {
                 output.write_line(&format!("{word}{delimiter}{count}\n"))?;
             }
-        },
+        }
         Format::Json => {
-            let json = serde_json::to_string(&word_tally.tally().iter().map(|(word, count)| (word.as_ref(), count)).collect::<Vec<_>>())
-                .with_context(|| "Failed to serialize word tally to JSON")?;
+            let json = serde_json::to_string(
+                &word_tally
+                    .tally()
+                    .iter()
+                    .map(|(word, count)| (word.as_ref(), count))
+                    .collect::<Vec<_>>(),
+            )
+            .with_context(|| "Failed to serialize word tally to JSON")?;
             output.write_line(&format!("{json}\n"))?;
-        },
+        }
         Format::Csv => {
             let mut wtr = csv::Writer::from_writer(Vec::new());
             wtr.write_record(["word", "count"])?;

@@ -91,13 +91,7 @@ impl WordTally {
     /// Constructs a new `WordTally` from a source that implements `Read`.
     ///
     /// Takes options, filters, and a config.
-    pub fn new<T: Read>(
-        input: T,
-        options: Options,
-        filters: Filters,
-        config: Config,
-    ) -> Self {
-
+    pub fn new<T: Read>(input: T, options: Options, filters: Filters, config: Config) -> Self {
         // Initialize thread pool if using parallel processing
         if matches!(config.concurrency(), Concurrency::Parallel) {
             Self::init_thread_pool(config.threads());
@@ -114,11 +108,9 @@ impl WordTally {
         // Choose processing method based on concurrency setting
         let mut tally_map = match instance.config.concurrency() {
             Concurrency::Sequential => instance.tally_map(reader, options.case),
-            Concurrency::Parallel => instance.tally_map_parallel(
-                reader,
-                instance.config.chunk_size(),
-                options.case,
-            ),
+            Concurrency::Parallel => {
+                instance.tally_map_parallel(reader, instance.config.chunk_size(), options.case)
+            }
         };
 
         instance.filters.apply(&mut tally_map, options.case);
@@ -181,11 +173,7 @@ impl WordTally {
     }
 
     /// Sequential implementation for word tallying
-    fn tally_map<T: Read>(
-        &self,
-        reader: BufReader<T>,
-        case: Case,
-    ) -> IndexMap<Box<str>, usize> {
+    fn tally_map<T: Read>(&self, reader: BufReader<T>, case: Case) -> IndexMap<Box<str>, usize> {
         let estimated_capacity = self.estimate_capacity();
         let mut tally = IndexMap::with_capacity(estimated_capacity);
         for line in reader.lines().map_while(Result::ok) {
@@ -211,7 +199,7 @@ impl WordTally {
                         eprintln!("Warning: Failed to set thread pool size: {}", e);
                     }
                 });
-            },
+            }
             Threads::All => {
                 // Default rayon behavior is to use all available cores
                 INIT_THREAD_POOL.call_once(|| {

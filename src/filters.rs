@@ -31,9 +31,9 @@ pub struct Filters {
 // Manual implementations to ignore exclude_patterns and include_patterns fields
 impl PartialEq for Filters {
     fn eq(&self, other: &Self) -> bool {
-        self.min_chars == other.min_chars &&
-        self.min_count == other.min_count &&
-        self.exclude_words == other.exclude_words
+        self.min_chars == other.min_chars
+            && self.min_count == other.min_count
+            && self.exclude_words == other.exclude_words
     }
 }
 
@@ -47,8 +47,10 @@ impl PartialOrd for Filters {
 
 impl Ord for Filters {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match (self.min_chars.cmp(&other.min_chars),
-               self.min_count.cmp(&other.min_count)) {
+        match (
+            self.min_chars.cmp(&other.min_chars),
+            self.min_count.cmp(&other.min_count),
+        ) {
             (core::cmp::Ordering::Equal, core::cmp::Ordering::Equal) => {
                 self.exclude_words.cmp(&other.exclude_words)
             }
@@ -128,7 +130,9 @@ impl Filters {
 }
 
 /// Minimum number of characters a word needs to have to be tallied.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 pub struct MinChars(pub usize);
 
 impl Display for MinChars {
@@ -144,7 +148,9 @@ impl From<usize> for MinChars {
 }
 
 /// Minimum number of times a word needs to appear to be tallied.
-#[derive(Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize,
+)]
 pub struct MinCount(pub usize);
 
 impl Display for MinCount {
