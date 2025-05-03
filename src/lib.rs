@@ -21,99 +21,198 @@
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Config, Filters, Options, WordTally};
+//! use word_tally::{Filters, Options, WordTally};
 //!
 //! let input = "Cinquedea".as_bytes();
-//! let words = WordTally::new(input, Options::default(), Filters::default(), Config::default());
+//! let options = Options::default();
+//! let words = WordTally::new(input, &options);
 //! let expected_tally: Box<[(Box<str>, usize)]> = [("cinquedea".into(), 1)].into();
 //!
 //! assert_eq!(words.into_tally(), expected_tally);
 //! ```
+use anyhow::{Context, Result};
 use indexmap::IndexMap;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Read};
 use unicode_segmentation::UnicodeSegmentation;
 
-pub mod config;
+// Note: args.rs module exists in src/ but is used only by main.rs, not part of library
 pub mod filters;
+pub mod formatting;
 pub mod input;
 pub mod options;
 pub mod output;
+pub mod performance;
 
-pub use config::{Concurrency, Config, SizeHint, Threads};
-pub use filters::{ExcludePatterns, ExcludeWords, Filters, IncludePatterns, MinChars, MinCount};
+pub use filters::{
+    ExcludePatterns, ExcludeWords, Filters, IncludePatterns, MinChars, MinCount, MinValue,
+};
+pub use formatting::{Case, Format, Formatting, Sort};
 pub use input::Input;
-pub use options::{Case, Format, Options, Sort};
+pub use options::Options;
 pub use output::Output;
+pub use performance::{Concurrency, Performance, SizeHint, Threads};
 
-#[derive(Clone, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Deserialize)]
+struct WordTallyData {
+    tally: Box<[(Box<str>, usize)]>,
+    #[serde(default, skip_deserializing)]
+    _options: (),
+    count: usize,
+    #[serde(rename = "uniqueCount")]
+    uniq_count: usize,
+}
+
+#[derive(Debug, PartialEq, Eq)]
 #[non_exhaustive]
-pub struct WordTally {
+pub struct WordTally<'a> {
     /// Ordered pairs of words and the count of times they appear.
     tally: Box<[(Box<str>, usize)]>,
 
-    /// Word tallying options like case normalization and sort order.
-    options: Options,
-
-    /// Filters that limit words from being tallied.
-    filters: Filters,
+    /// Options for tallying, including formatting, filters, and performance settings.
+    options: &'a Options,
 
     /// The sum of all words tallied.
     count: usize,
 
     /// The sum of uniq words tallied.
     uniq_count: usize,
+}
 
-    /// Configuration for word tallying and processing (not serialized)
-    #[serde(skip)]
-    config: Config,
+impl std::hash::Hash for WordTally<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.tally.hash(state);
+        self.count.hash(state);
+        self.uniq_count.hash(state);
+    }
+}
+
+impl Serialize for WordTally<'_> {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        use serde::ser::SerializeStruct;
+        let mut state = serializer.serialize_struct("WordTally", 4)?;
+        state.serialize_field("tally", &self.tally)?;
+        state.serialize_field("options", &self.options)?;
+        state.serialize_field("count", &self.count)?;
+        state.serialize_field("uniqueCount", &self.uniq_count)?;
+        state.end()
+    }
+}
+
+impl<'de> Deserialize<'de> for WordTally<'_> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let data = WordTallyData::deserialize(deserializer)?;
+        static DEFAULT_OPTIONS: std::sync::OnceLock<Options> = std::sync::OnceLock::new();
+        let options = DEFAULT_OPTIONS.get_or_init(Options::default);
+
+        Ok(Self {
+            tally: data.tally,
+            options,
+            count: data.count,
+            uniq_count: data.uniq_count,
+        })
+    }
+}
+
+// Default implementation for testing
+impl Default for WordTally<'static> {
+    fn default() -> Self {
+        static DEFAULT_OPTIONS: std::sync::OnceLock<Options> = std::sync::OnceLock::new();
+
+        Self {
+            tally: Box::new([]),
+            options: DEFAULT_OPTIONS.get_or_init(Options::default),
+            count: 0,
+            uniq_count: 0,
+        }
+    }
 }
 
 /// A `tally` supports `iter` and can also be represented as a `Vec`.
-impl From<WordTally> for Vec<(Box<str>, usize)> {
-    fn from(word_tally: WordTally) -> Self {
+impl<'a> From<WordTally<'a>> for Vec<(Box<str>, usize)> {
+    fn from(word_tally: WordTally<'a>) -> Self {
         word_tally.into_tally().into_vec()
     }
 }
 
 /// A `tally` can also be iterated over directly from a `WordTally`.
-impl<'a> IntoIterator for &'a WordTally {
-    type Item = &'a (Box<str>, usize);
-    type IntoIter = std::slice::Iter<'a, (Box<str>, usize)>;
+impl<'i> IntoIterator for &'i WordTally<'_> {
+    type Item = &'i (Box<str>, usize);
+    type IntoIter = std::slice::Iter<'i, (Box<str>, usize)>;
     fn into_iter(self) -> Self::IntoIter {
         self.tally.iter()
     }
 }
 
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
-impl WordTally {
+impl<'a> WordTally<'a> {
+    /// Deserializes a WordTally from a JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the JSON string contains invalid syntax or missing required fields.
+    pub fn from_json_str(json_str: &str, options: &'a Options) -> Result<Self> {
+        let data: WordTallyData = serde_json::from_str(json_str)
+            .context("Failed to deserialize WordTally from JSON string")?;
+
+        Ok(Self {
+            tally: data.tally,
+            options,
+            count: data.count,
+            uniq_count: data.uniq_count,
+        })
+    }
+
+    /// Deserializes a WordTally from a JSON reader.
+    ///
+    /// Returns an error if the JSON contains invalid syntax, missing required fields,
+    /// or if an I/O error occurs while reading.
+    pub fn from_json_reader<R: std::io::Read>(reader: R, options: &'a Options) -> Result<Self> {
+        let data: WordTallyData = serde_json::from_reader(reader)
+            .context("Failed to deserialize WordTally from reader")?;
+
+        Ok(Self {
+            tally: data.tally,
+            options,
+            count: data.count,
+            uniq_count: data.uniq_count,
+        })
+    }
+
     /// Constructs a new `WordTally` from a source that implements `Read`.
     ///
-    /// Takes options, filters, and a config.
-    pub fn new<T: Read>(input: T, options: Options, filters: Filters, config: Config) -> Self {
+    /// Takes a reference to unified options that include formatting, filters, and performance settings.
+    pub fn new<T: Read>(input: T, options: &'a Options) -> Self {
         // Initialize thread pool if using parallel processing
-        if matches!(config.concurrency(), Concurrency::Parallel) {
-            Self::init_thread_pool(config.threads());
+        if matches!(options.concurrency(), Concurrency::Parallel) {
+            options.performance().init_thread_pool();
         }
 
         let reader = BufReader::new(input);
         let mut instance = Self {
             options,
-            filters,
-            config,
-            ..Default::default()
+            tally: Box::new([]),
+            count: 0,
+            uniq_count: 0,
         };
 
-        // Choose processing method based on concurrency setting
-        let mut tally_map = match instance.config.concurrency() {
-            Concurrency::Sequential => instance.tally_map(reader, options.case),
-            Concurrency::Parallel => {
-                instance.tally_map_parallel(reader, instance.config.chunk_size(), options.case)
-            }
+        let mut tally_map = match options.concurrency() {
+            Concurrency::Sequential => instance.tally_map(reader, options.case()),
+            Concurrency::Parallel => instance.tally_map_parallel(
+                reader,
+                options.performance().chunk_size(),
+                options.case(),
+            ),
         };
 
-        instance.filters.apply(&mut tally_map, options.case);
+        options.filters().apply(&mut tally_map, options.case());
 
         let count = tally_map.values().sum();
         let tally: Box<[_]> = tally_map.into_iter().collect();
@@ -122,7 +221,7 @@ impl WordTally {
         instance.tally = tally;
         instance.count = count;
         instance.uniq_count = uniq_count;
-        instance.sort(options.sort);
+        instance.sort(options.sort());
 
         instance
     }
@@ -142,14 +241,14 @@ impl WordTally {
         self.tally
     }
 
-    /// Gets the `options` field.
-    pub const fn options(&self) -> Options {
+    /// Gets a reference to the options.
+    pub const fn options(&self) -> &Options {
         self.options
     }
 
-    /// Gets the `filters` field.
+    /// Gets the filters from the options.
     pub const fn filters(&self) -> &Filters {
-        &self.filters
+        self.options.filters()
     }
 
     /// Gets the `uniq_count` field.
@@ -162,19 +261,9 @@ impl WordTally {
         self.count
     }
 
-    /// Estimates the capacity for word maps based on input size
-    const fn estimate_capacity(&self) -> usize {
-        self.config.estimate_capacity()
-    }
-
-    /// Estimates the capacity for per-chunk word maps based on chunk size
-    const fn estimate_chunk_capacity(&self, chunk_size: usize) -> usize {
-        self.config.estimate_chunk_capacity(chunk_size)
-    }
-
     /// Sequential implementation for word tallying
     fn tally_map<T: Read>(&self, reader: BufReader<T>, case: Case) -> IndexMap<Box<str>, usize> {
-        let estimated_capacity = self.estimate_capacity();
+        let estimated_capacity = self.options().performance().estimate_capacity();
         let mut tally = IndexMap::with_capacity(estimated_capacity);
         for line in reader.lines().map_while(Result::ok) {
             for word in line.unicode_words() {
@@ -184,31 +273,6 @@ impl WordTally {
         tally
     }
 
-    /// Initializes the rayon thread pool with configuration from Config
-    fn init_thread_pool(threads: Threads) {
-        static INIT_THREAD_POOL: std::sync::Once = std::sync::Once::new();
-
-        match threads {
-            Threads::Count(count) => {
-                INIT_THREAD_POOL.call_once(|| {
-                    let num_threads = count as usize;
-                    if let Err(e) = rayon::ThreadPoolBuilder::new()
-                        .num_threads(num_threads)
-                        .build_global()
-                    {
-                        eprintln!("Warning: Failed to set thread pool size: {}", e);
-                    }
-                });
-            }
-            Threads::All => {
-                // Default rayon behavior is to use all available cores
-                INIT_THREAD_POOL.call_once(|| {
-                    // No custom configuration needed - Rayon defaults to all cores
-                });
-            }
-        }
-    }
-
     /// Parallel implementation for larger inputs with optimized chunking strategy
     fn tally_map_parallel<T: Read>(
         &self,
@@ -216,7 +280,8 @@ impl WordTally {
         chunk_size: u32,
         case: Case,
     ) -> IndexMap<Box<str>, usize> {
-        let estimated_capacity = self.estimate_capacity();
+        let performance = self.options().performance();
+        let estimated_capacity = performance.estimate_capacity();
         let num_threads = rayon::current_num_threads();
         let mut result_map = IndexMap::with_capacity(estimated_capacity);
         let mut lines_batch = Vec::with_capacity(chunk_size as usize);
@@ -280,12 +345,13 @@ impl WordTally {
         estimated_capacity: usize,
         num_threads: usize,
     ) -> IndexMap<Box<str>, usize> {
+        let performance = self.options().performance();
         let chunk_size = std::cmp::max(4, lines.len() / num_threads.max(1));
         let thread_maps: Vec<IndexMap<Box<str>, usize>> = lines
             .par_chunks(chunk_size)
             .map(|chunk| {
                 let mut local_counts =
-                    IndexMap::with_capacity(self.estimate_chunk_capacity(chunk.len()));
+                    IndexMap::with_capacity(performance.estimate_chunk_capacity(chunk.len()));
                 for line in chunk {
                     for word in line.unicode_words() {
                         *local_counts.entry(case.normalize(word)).or_insert(0) += 1;

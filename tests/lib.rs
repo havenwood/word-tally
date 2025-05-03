@@ -1,11 +1,12 @@
 use std::fs::File;
 use std::hash::{DefaultHasher, Hash, Hasher};
 use std::path::PathBuf;
+use std::sync::Arc;
 use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
-    Case, Concurrency, Config, ExcludeWords, Filters, MinChars, MinCount, Options, SizeHint, Sort,
-    WordTally,
+    Case, Concurrency, ExcludeWords, Filters, Formatting, MinChars, MinCount, MinValue, Options,
+    Performance, SizeHint, Sort, WordTally,
 };
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
@@ -16,16 +17,28 @@ struct ExpectedFields<'a> {
     tally: Vec<(&'a str, usize)>,
 }
 
-fn word_tally(options: Options, filters: Filters) -> WordTally {
+// Create an Arc to keep Options alive for the lifetime of tests
+fn make_shared<T>(value: T) -> Arc<T> {
+    Arc::new(value)
+}
+
+fn word_tally(formatting: Formatting, filters: Filters) -> WordTally<'static> {
     let input = File::open(TEST_WORDS_PATH)
         .expect("Expected test words file (`files/words.txt`) to be readable.");
 
-    let config = Config::default().with_concurrency(Concurrency::Sequential);
-    WordTally::new(input, options, filters, config)
+    let performance = Performance::default().with_concurrency(Concurrency::Sequential);
+    let options = Options::new(formatting, filters, performance);
+
+    // For tests only: create a 'static reference using Box::leak
+    // This is safe in tests since they are short-lived
+    let options_static = Box::leak(Box::new(options));
+
+    WordTally::new(input, options_static)
 }
 
 fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFields<'_>) {
-    let word_tally = word_tally(Options::new(case, sort), filters);
+    let formatting = Formatting::new(case, sort);
+    let word_tally = word_tally(formatting, filters);
     assert_eq!(word_tally.count(), fields.count);
     assert_eq!(word_tally.uniq_count(), fields.uniq_count);
 
@@ -64,10 +77,7 @@ fn min_char_count_at_max() {
     word_tally_test(
         Case::Lower,
         Sort::Desc,
-        Filters {
-            min_chars: Some(MinChars(3)),
-            ..Filters::default()
-        },
+        Filters::default().with_min_chars(3),
         &ExpectedFields {
             count: 9,
             uniq_count: 1,
@@ -81,10 +91,7 @@ fn min_char_count_above_max() {
     word_tally_test(
         Case::Lower,
         Sort::Desc,
-        Filters {
-            min_chars: Some(MinChars(4)),
-            ..Filters::default()
-        },
+        Filters::default().with_min_chars(4),
         &ExpectedFields {
             count: 0,
             uniq_count: 0,
@@ -112,10 +119,7 @@ fn min_word_count_at_max() {
     word_tally_test(
         Case::Lower,
         Sort::Desc,
-        Filters {
-            min_count: Some(MinCount(15)),
-            ..Filters::default()
-        },
+        Filters::default().with_min_count(15),
         &ExpectedFields {
             count: 15,
             uniq_count: 1,
@@ -230,17 +234,17 @@ fn original_case_asc_order() {
 
 #[test]
 fn equality_and_hashing() {
-    fn hash_value(word_tally: &WordTally) -> u64 {
+    fn hash_value(word_tally: &WordTally<'_>) -> u64 {
         let mut hasher = DefaultHasher::new();
         word_tally.hash(&mut hasher);
         hasher.finish()
     }
 
-    fn assert_hash_eq(tally_a: &WordTally, tally_b: &WordTally) {
+    fn assert_hash_eq(tally_a: &WordTally<'_>, tally_b: &WordTally<'_>) {
         assert_eq!(hash_value(tally_a), hash_value(tally_b));
     }
 
-    fn assert_hash_ne(tally_a: &WordTally, tally_b: &WordTally) {
+    fn assert_hash_ne(tally_a: &WordTally<'_>, tally_b: &WordTally<'_>) {
         assert_ne!(hash_value(tally_a), hash_value(tally_b));
     }
 
@@ -253,9 +257,12 @@ fn equality_and_hashing() {
         (Case::Lower, Sort::Desc),
     ];
 
-    let tallies: Vec<WordTally> = cases_and_sorts
+    let tallies: Vec<WordTally<'static>> = cases_and_sorts
         .iter()
-        .map(|&(case, sort)| word_tally(Options { case, sort }, Filters::default()))
+        .map(|&(case, sort)| {
+            let formatting = Formatting::new(case, sort);
+            word_tally(formatting, Filters::default())
+        })
         .collect();
 
     for tally in &tallies {
@@ -275,7 +282,7 @@ fn equality_and_hashing() {
 
 #[test]
 fn vec_from() {
-    let tally = word_tally(Options::default(), Filters::default());
+    let tally = word_tally(Formatting::default(), Filters::default());
 
     assert_eq!(
         Vec::from(tally),
@@ -292,12 +299,8 @@ fn vec_from() {
 #[test]
 fn test_into_tally() {
     let input = b"bye bye birdy";
-    let word_tally = WordTally::new(
-        &input[..],
-        Options::default(),
-        Filters::default(),
-        Config::default(),
-    );
+    let options = make_shared(Options::default());
+    let word_tally = WordTally::new(&input[..], &options);
 
     // Use `tally()` to get a reference to the slice.
     let tally = word_tally.tally();
@@ -311,12 +314,8 @@ fn test_into_tally() {
 #[test]
 fn test_iterator() {
     let input = b"double trouble double";
-    let word_tally = WordTally::new(
-        &input[..],
-        Options::default(),
-        Filters::default(),
-        Config::default(),
-    );
+    let options = make_shared(Options::default());
+    let word_tally = WordTally::new(&input[..], &options);
 
     let expected: Vec<(Box<str>, usize)> =
         vec![(Box::from("double"), 2), (Box::from("trouble"), 1)];
@@ -333,12 +332,8 @@ fn test_iterator() {
 #[test]
 fn test_iterator_for_loop() {
     let input = b"llama llama pajamas";
-    let word_tally = WordTally::new(
-        &input[..],
-        Options::default(),
-        Filters::default(),
-        Config::default(),
-    );
+    let options = make_shared(Options::default());
+    let word_tally = WordTally::new(&input[..], &options);
 
     let expected: Vec<(Box<str>, usize)> = vec![(Box::from("llama"), 2), (Box::from("pajamas"), 1)];
 
@@ -353,15 +348,14 @@ fn test_iterator_for_loop() {
 fn test_excluding_words() {
     let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let words = vec!["Heaven".to_string(), "Hell".to_string()];
-    let options = Options::with_sort(Sort::Unsorted);
-    let filters = Filters {
-        exclude_words: Some(ExcludeWords(words)),
-        ..Filters::default()
-    };
-    let config = Config::default()
+    let formatting = Formatting::with_sort(Sort::Unsorted);
+    let filters = Filters::default().with_exclude_words(words);
+    let performance = Performance::default()
         .with_concurrency(Concurrency::Sequential)
         .with_size_hint(SizeHint::None);
-    let tally = WordTally::new(input, options, filters, config);
+    let options = Options::new(formatting, filters, performance);
+    let options_arc = make_shared(options);
+    let tally = WordTally::new(input, &options_arc);
     let result = tally.tally();
 
     assert!(result.iter().any(|(word, _)| word.as_ref() == "tree"));
@@ -372,16 +366,18 @@ fn test_excluding_words() {
 #[test]
 fn test_excluding_patterns() {
     let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
-    let options = Options::with_sort(Sort::Unsorted);
+    let formatting = Formatting::with_sort(Sort::Unsorted);
 
     // Create patterns to exclude words starting with 't'
     let patterns = vec!["^t.*".to_string()];
     let filters = Filters::default().with_exclude_patterns(&patterns).unwrap();
 
-    let config = Config::default()
+    let performance = Performance::default()
         .with_concurrency(Concurrency::Sequential)
         .with_size_hint(SizeHint::None);
-    let tally = WordTally::new(input, options, filters, config);
+    let options = Options::new(formatting, filters, performance);
+    let options_arc = make_shared(options);
+    let tally = WordTally::new(input, &options_arc);
     let result = tally.tally();
 
     // These should be present
@@ -398,16 +394,18 @@ fn test_excluding_patterns() {
 #[test]
 fn test_including_patterns() {
     let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
-    let options = Options::with_sort(Sort::Unsorted);
+    let formatting = Formatting::with_sort(Sort::Unsorted);
 
     // Create patterns to include only words starting with 'h'
     let patterns = vec!["^h.*".to_string()];
     let filters = Filters::default().with_include_patterns(&patterns).unwrap();
 
-    let config = Config::default()
+    let performance = Performance::default()
         .with_concurrency(Concurrency::Sequential)
         .with_size_hint(SizeHint::None);
-    let tally = WordTally::new(input, options, filters, config);
+    let options = Options::new(formatting, filters, performance);
+    let options_arc = make_shared(options);
+    let tally = WordTally::new(input, &options_arc);
     let result = tally.tally();
 
     // These should be present (words starting with 'h')
@@ -427,7 +425,7 @@ fn test_including_patterns() {
 #[test]
 fn test_combining_include_exclude_patterns() {
     let input = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
-    let options = Options::with_sort(Sort::Unsorted);
+    let formatting = Formatting::with_sort(Sort::Unsorted);
 
     // Include words starting with 'h' but exclude 'hell'
     let include_patterns = vec!["^h.*".to_string()];
@@ -439,10 +437,12 @@ fn test_combining_include_exclude_patterns() {
         .with_exclude_patterns(&exclude_patterns)
         .unwrap();
 
-    let config = Config::default()
+    let performance = Performance::default()
         .with_concurrency(Concurrency::Sequential)
         .with_size_hint(SizeHint::None);
-    let tally = WordTally::new(input, options, filters, config);
+    let options = Options::new(formatting, filters, performance);
+    let options_arc = make_shared(options);
+    let tally = WordTally::new(input, &options_arc);
     let result = tally.tally();
 
     // 'heaven' should be the only word present (starts with 'h' but isn't 'hell')
@@ -455,25 +455,25 @@ fn test_combining_include_exclude_patterns() {
 
 #[test]
 fn test_min_chars_display() {
-    let min_chars = MinChars(42);
+    let min_chars = MinValue::new(42);
     assert_eq!(min_chars.to_string(), "42".to_string());
 }
 
 #[test]
 fn test_min_chars_from() {
-    assert_eq!(MinChars::from(42), MinChars(42));
+    assert_eq!(MinChars::from(42), MinValue::new(42));
 }
 
 #[test]
 fn test_min_count_display() {
-    let min_count = MinCount(43);
+    let min_count = MinValue::new(43);
     assert_eq!(min_count.to_string(), "43".to_string());
 }
 
 #[test]
 fn test_min_count_from() {
     let raw = 43_usize;
-    assert_eq!(MinCount::from(raw), MinCount(43));
+    assert_eq!(MinCount::from(raw), MinValue::new(43));
 }
 
 #[test]
@@ -491,21 +491,18 @@ fn test_input_size() {
 fn test_parallel_vs_sequential() {
     let input = b"The quick brown fox jumps over the lazy dog. The fox was quick.";
 
-    let seq_config = Config::default().with_concurrency(Concurrency::Sequential);
-    let sequential = WordTally::new(
-        &input[..],
-        Options::default(),
-        Filters::default(),
-        seq_config,
-    );
+    // Sequential processing
+    let seq_performance = Performance::default().with_concurrency(Concurrency::Sequential);
+    let filters = Filters::default();
+    let seq_options = Options::new(Formatting::default(), filters.clone(), seq_performance);
+    let seq_options_arc = make_shared(seq_options);
+    let sequential = WordTally::new(&input[..], &seq_options_arc);
 
-    let par_config = Config::default().with_concurrency(Concurrency::Parallel);
-    let parallel = WordTally::new(
-        &input[..],
-        Options::default(),
-        Filters::default(),
-        par_config,
-    );
+    // Parallel processing
+    let par_performance = Performance::default().with_concurrency(Concurrency::Parallel);
+    let par_options = Options::new(Formatting::default(), filters, par_performance);
+    let par_options_arc = make_shared(par_options);
+    let parallel = WordTally::new(&input[..], &par_options_arc);
 
     assert_eq!(sequential.count(), parallel.count());
     assert_eq!(sequential.uniq_count(), parallel.uniq_count());
@@ -516,27 +513,22 @@ fn test_parallel_vs_sequential() {
 fn test_with_size_hint() {
     let input = b"The quick brown fox jumps over the lazy dog.";
 
-    let no_hint_config = Config::default()
+    // Without size hint
+    let no_hint_performance = Performance::default()
         .with_concurrency(Concurrency::Parallel)
         .with_size_hint(SizeHint::default());
+    let filters = Filters::default();
+    let no_hint_options = Options::new(Formatting::default(), filters.clone(), no_hint_performance);
 
-    let without_hint = WordTally::new(
-        &input[..],
-        Options::default(),
-        Filters::default(),
-        no_hint_config,
-    );
+    let without_hint = WordTally::new(&input[..], &no_hint_options);
 
-    let with_hint_config = Config::default()
+    // With size hint
+    let with_hint_performance = Performance::default()
         .with_concurrency(Concurrency::Parallel)
         .with_size_hint(SizeHint::Bytes(input.len() as u64));
+    let with_hint_options = Options::new(Formatting::default(), filters, with_hint_performance);
 
-    let with_hint = WordTally::new(
-        &input[..],
-        Options::default(),
-        Filters::default(),
-        with_hint_config,
-    );
+    let with_hint = WordTally::new(&input[..], &with_hint_options);
 
     assert_eq!(without_hint.count(), with_hint.count());
     assert_eq!(without_hint.uniq_count(), with_hint.uniq_count());
@@ -545,38 +537,26 @@ fn test_with_size_hint() {
 
 #[test]
 fn test_estimate_capacity() {
-    let small_config = Config::default()
+    let small_performance = Performance::default()
         .with_concurrency(Concurrency::Sequential)
         .with_size_hint(SizeHint::Bytes(8192)); // 8KB
+    let small_options = Options::with_defaults(Formatting::default(), small_performance);
 
-    let small_file = WordTally::new(
-        &b"small text"[..],
-        Options::default(),
-        Filters::default(),
-        small_config,
-    );
+    let small_file = WordTally::new(&b"small text"[..], &small_options);
 
-    let medium_config = Config::default()
+    let medium_performance = Performance::default()
         .with_concurrency(Concurrency::Sequential)
         .with_size_hint(SizeHint::Bytes(524288)); // 512KB
+    let medium_options = Options::with_defaults(Formatting::default(), medium_performance);
 
-    let medium_file = WordTally::new(
-        &b"medium text"[..],
-        Options::default(),
-        Filters::default(),
-        medium_config,
-    );
+    let medium_file = WordTally::new(&b"medium text"[..], &medium_options);
 
-    let large_config = Config::default()
+    let large_performance = Performance::default()
         .with_concurrency(Concurrency::Sequential)
         .with_size_hint(SizeHint::Bytes(4194304)); // 4MB
+    let large_options = Options::with_defaults(Formatting::default(), large_performance);
 
-    let large_file = WordTally::new(
-        &b"large text"[..],
-        Options::default(),
-        Filters::default(),
-        large_config,
-    );
+    let large_file = WordTally::new(&b"large text"[..], &large_options);
 
     assert_eq!(small_file.count(), 2);
     assert_eq!(medium_file.count(), 2);
@@ -587,8 +567,9 @@ fn test_estimate_capacity() {
 fn test_parallel_count() {
     // Instead of using environment variables, just test the parallel function works
     let input = b"Test with default settings for chunk size and thread count";
-    let config = Config::default().with_concurrency(Concurrency::Parallel);
-    let parallel = WordTally::new(&input[..], Options::default(), Filters::default(), config);
+    let performance = Performance::default().with_concurrency(Concurrency::Parallel);
+    let options = Options::with_defaults(Formatting::default(), performance);
+    let parallel = WordTally::new(&input[..], &options);
 
     // Only check the counts are positive numbers (actual counts may vary by implementation)
     assert!(parallel.count() > 0);
@@ -600,8 +581,9 @@ fn test_parallel_count() {
 #[test]
 fn test_merge_maps() {
     let input = b"This is a test of the map merging functionality";
-    let config = Config::default().with_concurrency(Concurrency::Parallel);
-    let tally = WordTally::new(&input[..], Options::default(), Filters::default(), config);
+    let performance = Performance::default().with_concurrency(Concurrency::Parallel);
+    let options = Options::with_defaults(Formatting::default(), performance);
+    let tally = WordTally::new(&input[..], &options);
 
     assert_eq!(tally.count(), 9);
     assert_eq!(tally.uniq_count(), 9);
@@ -613,62 +595,62 @@ fn test_words_exclude_from() {
     assert_eq!(ExcludeWords::from(words.clone()), ExcludeWords(words));
 }
 
-// Tests for Options convenience methods
-mod options_tests {
+// Tests for Formatting convenience methods
+mod formatting_tests {
     use super::*;
 
     #[test]
     fn with_sort() {
-        let sort_only = Options::with_sort(Sort::Asc);
-        assert_eq!(sort_only.sort, Sort::Asc);
-        assert_eq!(sort_only.case, Case::default());
+        let sort_only = Formatting::with_sort(Sort::Asc);
+        assert_eq!(sort_only.sort(), Sort::Asc);
+        assert_eq!(sort_only.case(), Case::default());
     }
 
     #[test]
     fn with_case() {
-        let case_only = Options::with_case(Case::Upper);
-        assert_eq!(case_only.case, Case::Upper);
-        assert_eq!(case_only.sort, Sort::default());
+        let case_only = Formatting::with_case(Case::Upper);
+        assert_eq!(case_only.case(), Case::Upper);
+        assert_eq!(case_only.sort(), Sort::default());
     }
 }
 
-// Tests for Config struct
-mod config_tests {
+// Tests for Performance struct
+mod performance_tests {
     use super::*;
 
     #[test]
     fn default_values() {
-        let config = Config::default();
-        assert_eq!(config.default_capacity(), 1024);
-        assert_eq!(config.uniqueness_ratio(), 10);
-        assert_eq!(config.unique_word_density(), 15);
-        assert_eq!(config.chunk_size(), 16_384);
+        let performance = Performance::default();
+        assert_eq!(performance.default_capacity(), 1024);
+        assert_eq!(performance.uniqueness_ratio(), 10);
+        assert_eq!(performance.unique_word_density(), 15);
+        assert_eq!(performance.chunk_size(), 16_384);
     }
 
     #[test]
     fn builder_methods() {
-        let config = Config::default()
+        let performance = Performance::default()
             .with_capacity(2048)
             .with_uniqueness_ratio(5)
             .with_word_density(20)
             .with_chunk_size(32_768);
 
-        assert_eq!(config.default_capacity(), 2048);
-        assert_eq!(config.uniqueness_ratio(), 5);
-        assert_eq!(config.unique_word_density(), 20);
-        assert_eq!(config.chunk_size(), 32_768);
+        assert_eq!(performance.default_capacity(), 2048);
+        assert_eq!(performance.uniqueness_ratio(), 5);
+        assert_eq!(performance.unique_word_density(), 20);
+        assert_eq!(performance.chunk_size(), 32_768);
     }
 
     #[test]
     fn estimate_capacity() {
-        let config = Config::default();
+        let performance = Performance::default();
 
         // Default when no size hint
-        assert_eq!(config.estimate_capacity(), 1024);
+        assert_eq!(performance.estimate_capacity(), 1024);
 
         // Size hint divided by uniqueness ratio (10)
         assert_eq!(
-            config
+            performance
                 .with_size_hint(SizeHint::Bytes(8192))
                 .estimate_capacity(),
             819
@@ -701,12 +683,8 @@ mod wordtally_constructor_tests {
 
     #[test]
     fn with_defaults() {
-        let tally = WordTally::new(
-            TEST_INPUT,
-            Options::default(),
-            Filters::default(),
-            Config::default(),
-        );
+        let options = Options::default();
+        let tally = WordTally::new(TEST_INPUT, &options);
         assert_eq!(tally.count(), 3);
     }
 
@@ -721,42 +699,34 @@ mod wordtally_constructor_tests {
 
     #[test]
     fn with_concurrency() {
-        let config = Config::default().with_concurrency(Concurrency::Parallel);
-        let tally = WordTally::new(TEST_INPUT, Options::default(), Filters::default(), config);
+        let performance = Performance::default().with_concurrency(Concurrency::Parallel);
+        let options = Options::with_defaults(Formatting::default(), performance);
+        let tally = WordTally::new(TEST_INPUT, &options);
         assert_eq!(tally.count(), 3);
     }
 
     #[test]
     fn with_custom_chunk_size() {
-        // Create a custom config with a specific chunk size
-        let concurrency = Concurrency::Parallel;
-        // Now we can test with a custom config with a specific chunk size
-        let custom_config = Config::default()
-            .with_concurrency(concurrency)
+        // Create custom performance with a specific chunk size
+        let performance = Performance::default()
+            .with_concurrency(Concurrency::Parallel)
             .with_chunk_size(32_768);
+        let options = Options::with_defaults(Formatting::default(), performance);
 
-        let tally = WordTally::new(
-            TEST_INPUT,
-            Options::default(),
-            Filters::default(),
-            custom_config,
-        );
+        let tally = WordTally::new(TEST_INPUT, &options);
         assert_eq!(tally.count(), 3);
     }
 }
 
 #[test]
 fn test_min_count_graphemes() {
-    let config = Config::default().with_concurrency(Concurrency::Sequential);
+    let performance = Performance::default().with_concurrency(Concurrency::Sequential);
+    let filters = Filters::default().with_min_chars(2);
+    let options = Options::new(Formatting::default(), filters, performance);
     let tally = WordTally::new(
         // An `"é"` is only one char.
         &b"e\xCC\x81"[..],
-        Options::default(),
-        Filters {
-            min_chars: Some(MinChars(2)),
-            ..Filters::default()
-        },
-        config,
+        &options,
     );
 
     assert_eq!(tally.count(), 0);
@@ -764,41 +734,133 @@ fn test_min_count_graphemes() {
 
 #[test]
 fn test_to_json() {
-    let config = Config::default().with_concurrency(Concurrency::Sequential);
-    let expected = WordTally::new(
-        &b"wombat wombat bat"[..],
-        Options::default(),
-        Filters::default(),
-        config,
-    );
+    // Create options
+    let performance = Performance::default().with_concurrency(Concurrency::Sequential);
+    let filters = Filters::default();
+    let options = Options::new(Formatting::default(), filters, performance);
+
+    // Create a static reference
+    let shared_options = make_shared(options);
+
+    let expected = WordTally::new(&b"wombat wombat bat"[..], &shared_options);
     let serialized = serde_json::to_string(&expected).unwrap();
 
     assert!(serialized.contains("\"tally\":[[\"wombat\",2],[\"bat\",1]]"));
     assert!(serialized.contains("\"count\":3"));
-    assert!(serialized.contains("\"uniq_count\":2"));
+    assert!(serialized.contains("\"uniqueCount\":2"));
+    assert!(!serialized.contains("\"uniq_count\":"));
     assert!(serialized.contains("\"options\":"));
     assert!(serialized.contains("\"filters\":"));
 }
 
 #[test]
 fn test_from_json() {
-    let config = Config::default().with_concurrency(Concurrency::Sequential);
-    let expected = WordTally::new(
-        &b"wombat wombat bat"[..],
-        Options::default(),
-        Filters::default(),
-        config,
-    );
+    let performance = Performance::default().with_concurrency(Concurrency::Sequential);
+    let filters = Filters::default();
+    let options = Options::new(Formatting::default(), filters, performance);
+    let shared_options = make_shared(options);
+
+    let expected = WordTally::new(&b"wombat wombat bat"[..], &shared_options);
     let json = r#"
     {
         "tally": [["wombat", 2], ["bat", 1]],
-        "options": {"case": "Lower", "sort": "Desc"},
-        "filters": {"min_chars": null, "min_count": null, "exclude": null},
+        "options": {
+            "formatting": {"case": "Lower", "sort": "Desc"},
+            "filters": {"min_chars": null, "min_count": null, "exclude_words": null}
+        },
         "count": 3,
-        "uniq_count": 2
+        "uniqueCount": 2
     }
     "#;
 
-    let deserialized: WordTally = serde_json::from_str(json).unwrap();
+    let deserialized = WordTally::from_json_str(json, &shared_options).unwrap();
     assert_eq!(deserialized, expected);
+}
+
+#[test]
+fn test_explicit_deserialization() {
+    let options = Options::default();
+    let original = WordTally::new(&b"wombat wombat bat"[..], &options);
+    let json = serde_json::to_string(&original).unwrap();
+    let deserialized = WordTally::from_json_str(&json, &options).unwrap();
+
+    assert_eq!(deserialized.count(), original.count());
+    assert_eq!(deserialized.uniq_count(), original.uniq_count());
+    assert_eq!(deserialized.tally(), original.tally());
+    assert!(std::ptr::eq(deserialized.options(), &options));
+}
+
+#[test]
+fn test_json_field_renamed() {
+    // Test that the field renaming in the serialization works correctly
+    let options = Options::default();
+    let original = WordTally::new(&b"test json field renaming"[..], &options);
+    let json = serde_json::to_string(&original).unwrap();
+
+    // Check that the JSON contains "uniqueCount" instead of "uniq_count"
+    assert!(json.contains("uniqueCount"));
+    assert!(!json.contains("uniq_count"));
+}
+
+#[test]
+fn test_json_field_camel_case_deserialization() {
+    // Test that camelCase field names are used in serialization and deserialization
+    let options = make_shared(Options::default());
+
+    // JSON with camelCase field names
+    let json = r#"
+    {
+        "tally": [["test", 1]],
+        "options": {
+            "formatting": {"case": "Lower", "sort": "Desc"},
+            "filters": {}
+        },
+        "count": 1,
+        "uniqueCount": 1
+    }
+    "#;
+
+    // Should deserialize correctly
+    let deserialized = WordTally::from_json_str(json, &options).unwrap();
+
+    assert_eq!(deserialized.count(), 1);
+    assert_eq!(deserialized.uniq_count(), 1);
+
+    // Serialize and verify it uses camelCase
+    let serialized = serde_json::to_string(&deserialized).unwrap();
+    assert!(serialized.contains("\"uniqueCount\":1"));
+    assert!(!serialized.contains("\"uniq_count\":"));
+}
+
+#[test]
+fn test_error_handling_invalid_json() {
+    let options = Options::default();
+
+    // Invalid JSON syntax
+    let invalid_json = r#"
+    {
+        "tally": [["test", 1]],
+        "count": 1,
+        "uniq_count": 1,
+        this is invalid
+    }
+    "#;
+
+    let result = WordTally::from_json_str(invalid_json, &options);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_error_handling_missing_fields() {
+    let options = Options::default();
+
+    // Missing required fields
+    let missing_fields_json = r#"
+    {
+        "tally": [["test", 1]]
+    }
+    "#;
+
+    let result = WordTally::from_json_str(missing_fields_json, &options);
+    assert!(result.is_err());
 }

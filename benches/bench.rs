@@ -2,10 +2,8 @@ use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use fake::Fake;
 use fake::faker::lorem::en::Words;
 use std::io::Cursor;
-use std::sync::OnceLock;
-use word_tally::{
-    Concurrency, Config, Filters, MinChars, MinCount, Options, SizeHint, Sort, WordTally,
-};
+use std::sync::{Arc, OnceLock};
+use word_tally::{Concurrency, Filters, Options, SizeHint, Sort, WordTally};
 
 static TEXT: OnceLock<String> = OnceLock::new();
 
@@ -18,35 +16,46 @@ fn sample_text() -> &'static str {
     })
 }
 
-fn bench_variant(c: &mut Criterion, group_name: &str, name: &str, setup: impl Fn() -> WordTally) {
-    c.benchmark_group(group_name).bench_function(name, |b| {
-        b.iter_batched(|| (), |_| setup(), BatchSize::LargeInput);
-    });
+// Create a shared reference for reusing values in benchmarks
+fn make_shared<T>(value: T) -> Arc<T> {
+    Arc::new(value)
 }
 
-/// Create a WordTally creation function for benchmarking with consistent parameters
-fn create_tally(
-    input: impl Fn() -> Cursor<&'static str>,
+fn bench_variant(
+    c: &mut Criterion,
+    group_name: &str,
+    name: &str,
     sort: Sort,
     filters: Filters,
     parallel: bool,
-) -> impl Fn() -> WordTally {
-    let options = Options::with_sort(sort);
+) {
+    // Create a static reference to options that we'll reuse
     let concurrency = if parallel {
         Concurrency::Parallel
     } else {
         Concurrency::Sequential
     };
-    move || {
-        let config = Config::default()
-            .with_concurrency(concurrency)
-            .with_size_hint(SizeHint::default());
-        WordTally::new(input(), options, filters.clone(), config)
-    }
+
+    // Create options with sorting, filtering and performance configuration
+    let options = Options::default()
+        .with_sort(sort)
+        .with_filters(filters)
+        .with_concurrency(concurrency)
+        .with_size_hint(SizeHint::default());
+
+    // Create a shared reference for the options
+    let shared_options = make_shared(options);
+
+    c.benchmark_group(group_name).bench_function(name, |b| {
+        b.iter_batched(
+            || Cursor::new(sample_text()),
+            |input| WordTally::new(input, &shared_options),
+            BatchSize::LargeInput,
+        );
+    });
 }
 
 fn run_benchmarks(c: &mut Criterion) {
-    let make_input = || Cursor::new(sample_text());
     let sort_options = [
         ("unsorted", Sort::Unsorted),
         ("ascending", Sort::Asc),
@@ -54,43 +63,33 @@ fn run_benchmarks(c: &mut Criterion) {
     ];
 
     for (name, sort) in sort_options {
-        bench_variant(
-            c,
-            "sorting",
-            name,
-            create_tally(make_input, sort, Filters::default(), false),
-        );
+        // Sequential sorting benchmarks
+        bench_variant(c, "sorting", name, sort, Filters::default(), false);
 
-        bench_variant(
-            c,
-            "sorting_parallel",
-            name,
-            create_tally(make_input, sort, Filters::default(), true),
-        );
+        // Parallel sorting benchmarks
+        bench_variant(c, "sorting_parallel", name, sort, Filters::default(), true);
     }
 
-    let min_count_filter = Filters {
-        min_count: Some(MinCount(2)),
-        ..Filters::default()
-    };
+    let min_count_filter = Filters::default().with_min_count(2);
+    let min_chars_filter = Filters::default().with_min_chars(3);
 
-    let min_chars_filter = Filters {
-        min_chars: Some(MinChars(3)),
-        ..Filters::default()
-    };
-
+    // Filtering benchmarks
     bench_variant(
         c,
         "filtering",
         "min_count",
-        create_tally(make_input, Sort::default(), min_count_filter, false),
+        Sort::default(),
+        min_count_filter,
+        false,
     );
 
     bench_variant(
         c,
         "filtering",
         "min_chars",
-        create_tally(make_input, Sort::default(), min_chars_filter, false),
+        Sort::default(),
+        min_chars_filter,
+        false,
     );
 }
 

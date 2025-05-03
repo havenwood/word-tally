@@ -1,5 +1,6 @@
 use crate::Case;
 use core::fmt::{self, Display, Formatter};
+use core::ops::Deref;
 use indexmap::IndexMap;
 use regex::Regex;
 use std::collections::HashSet;
@@ -8,80 +9,140 @@ use unicode_segmentation::UnicodeSegmentation;
 use serde::{Deserialize, Serialize};
 
 /// Filters for which words should be tallied.
-#[derive(Clone, Debug, Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Filters {
     /// Minimum characters required for a word.
-    pub min_chars: Option<MinChars>,
+    min_chars: Option<MinChars>,
 
     /// Minimum count for number of times a word must appear.
-    pub min_count: Option<MinCount>,
+    min_count: Option<MinCount>,
 
     /// List of specific words to exclude.
-    pub exclude_words: Option<ExcludeWords>,
+    exclude_words: Option<ExcludeWords>,
 
     /// List of regex patterns to exclude words matching the patterns.
     #[serde(skip)]
-    pub exclude_patterns: Option<ExcludePatterns>,
+    exclude_patterns: Option<ExcludePatterns>,
 
     /// List of regex patterns to include only words matching the patterns.
     #[serde(skip)]
-    pub include_patterns: Option<IncludePatterns>,
-}
-
-// Manual implementations to ignore exclude_patterns and include_patterns fields
-impl PartialEq for Filters {
-    fn eq(&self, other: &Self) -> bool {
-        self.min_chars == other.min_chars
-            && self.min_count == other.min_count
-            && self.exclude_words == other.exclude_words
-    }
-}
-
-impl Eq for Filters {}
-
-impl PartialOrd for Filters {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Filters {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        match (
-            self.min_chars.cmp(&other.min_chars),
-            self.min_count.cmp(&other.min_count),
-        ) {
-            (core::cmp::Ordering::Equal, core::cmp::Ordering::Equal) => {
-                self.exclude_words.cmp(&other.exclude_words)
-            }
-            (core::cmp::Ordering::Equal, ord) => ord,
-            (ord, _) => ord,
-        }
-    }
-}
-
-impl std::hash::Hash for Filters {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.min_chars.hash(state);
-        self.min_count.hash(state);
-        self.exclude_words.hash(state);
-    }
+    include_patterns: Option<IncludePatterns>,
 }
 
 impl Filters {
+    /// Constructs an empty `Filters` instance.
+    pub const fn empty() -> Self {
+        Self {
+            min_chars: None,
+            min_count: None,
+            exclude_words: None,
+            exclude_patterns: None,
+            include_patterns: None,
+        }
+    }
+
     /// Constructs `Filters`.
+    ///
+    /// Note: not const fn due to Option::map operations
     pub fn new(
         min_chars: &Option<usize>,
         min_count: &Option<usize>,
         exclude_words: Option<Vec<String>>,
     ) -> Self {
         Self {
-            min_chars: min_chars.map(MinChars),
-            min_count: min_count.map(MinCount),
+            min_chars: min_chars.map(MinValue::new),
+            min_count: min_count.map(MinValue::new),
             exclude_words: exclude_words.map(ExcludeWords),
             exclude_patterns: None,
             include_patterns: None,
         }
+    }
+
+    /// Get the minimum character requirement
+    pub const fn min_chars(&self) -> &Option<MinChars> {
+        &self.min_chars
+    }
+
+    /// Get the minimum count requirement
+    pub const fn min_count(&self) -> &Option<MinCount> {
+        &self.min_count
+    }
+
+    /// Get the excluded words list
+    pub const fn exclude_words(&self) -> &Option<ExcludeWords> {
+        &self.exclude_words
+    }
+
+    /// Get the excluded patterns
+    pub const fn exclude_patterns(&self) -> &Option<ExcludePatterns> {
+        &self.exclude_patterns
+    }
+
+    /// Get the included patterns
+    pub const fn include_patterns(&self) -> &Option<IncludePatterns> {
+        &self.include_patterns
+    }
+
+    /// Constructs `Filters` from references without cloning.
+    pub fn from_refs(
+        min_chars: &Option<usize>,
+        min_count: &Option<usize>,
+        exclude_words: Option<&Vec<String>>,
+    ) -> Self {
+        Self {
+            min_chars: min_chars.map(MinValue::new),
+            min_count: min_count.map(MinValue::new),
+            exclude_words: exclude_words
+                .map(|words| ExcludeWords(words.iter().map(|w| w.to_string()).collect())),
+            exclude_patterns: None,
+            include_patterns: None,
+        }
+    }
+
+    /// Creates a Filters instance from arguments
+    pub fn create_from_args(
+        min_chars: &Option<usize>,
+        min_count: &Option<usize>,
+        exclude_words: Option<&Vec<String>>,
+        exclude_patterns: Option<&Vec<String>>,
+        include_patterns: Option<&Vec<String>>,
+    ) -> Result<Self, regex::Error> {
+        // Create initial filters
+        let mut filters = Self::from_refs(min_chars, min_count, exclude_words);
+
+        // Add exclude regex patterns if provided
+        if let Some(patterns) = exclude_patterns {
+            if !patterns.is_empty() {
+                filters = filters.with_exclude_patterns(patterns)?;
+            }
+        }
+
+        // Add include regex patterns if provided
+        if let Some(patterns) = include_patterns {
+            if !patterns.is_empty() {
+                filters = filters.with_include_patterns(patterns)?;
+            }
+        }
+
+        Ok(filters)
+    }
+
+    /// Set minimum character requirement.
+    pub const fn with_min_chars(mut self, min_chars: usize) -> Self {
+        self.min_chars = Some(MinValue::new(min_chars));
+        self
+    }
+
+    /// Set minimum count requirement.
+    pub const fn with_min_count(mut self, min_count: usize) -> Self {
+        self.min_count = Some(MinValue::new(min_count));
+        self
+    }
+
+    /// Set words to exclude.
+    pub fn with_exclude_words(mut self, words: Vec<String>) -> Self {
+        self.exclude_words = Some(ExcludeWords(words));
+        self
     }
 
     /// Sets exclude patterns on an existing `Filters` instance.
@@ -106,64 +167,74 @@ impl Filters {
 
     /// Removes words from the `tally_map` based on any word `Filters`.
     pub fn apply(&self, tally_map: &mut IndexMap<Box<str>, usize>, case: Case) {
-        if let Some(MinCount(min_count)) = self.min_count {
-            tally_map.retain(|_, &mut count| count >= min_count);
+        if let Some(min_count) = self.min_count() {
+            let min_count_val = min_count.value;
+            tally_map.retain(|_, &mut count| count >= min_count_val);
         }
 
-        if let Some(MinChars(min_chars)) = self.min_chars {
-            tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars);
+        if let Some(min_chars) = self.min_chars() {
+            let min_chars_val = min_chars.value;
+            tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars_val);
         }
 
-        if let Some(ExcludeWords(words)) = &self.exclude_words {
+        if let Some(ExcludeWords(words)) = self.exclude_words() {
             let discard: HashSet<_> = words.iter().map(|word| case.normalize(word)).collect();
             tally_map.retain(|word, _| !discard.contains(word));
         }
 
-        if let Some(patterns) = &self.exclude_patterns {
+        if let Some(patterns) = self.exclude_patterns() {
             tally_map.retain(|word, _| !patterns.matches(word));
         }
 
-        if let Some(patterns) = &self.include_patterns {
+        if let Some(patterns) = self.include_patterns() {
             tally_map.retain(|word, _| patterns.matches(word));
         }
     }
 }
 
-/// Minimum number of characters a word needs to have to be tallied.
+/// Generic wrapper for minimum value requirements.
 #[derive(
     Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize,
 )]
-pub struct MinChars(pub usize);
+pub struct MinValue<T> {
+    pub value: T,
+}
 
-impl Display for MinChars {
+impl<T> MinValue<T> {
+    pub const fn new(value: T) -> Self {
+        Self { value }
+    }
+}
+
+impl<T: Display> Display for MinValue<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
+        write!(f, "{}", self.value)
     }
 }
 
-impl From<usize> for MinChars {
-    fn from(raw: usize) -> Self {
-        Self(raw)
+impl<T> From<T> for MinValue<T> {
+    fn from(value: T) -> Self {
+        Self { value }
     }
 }
+
+impl<T> AsRef<T> for MinValue<T> {
+    fn as_ref(&self) -> &T {
+        &self.value
+    }
+}
+
+impl From<MinValue<Self>> for usize {
+    fn from(val: MinValue<Self>) -> Self {
+        val.value
+    }
+}
+
+/// Minimum number of characters a word needs to have to be tallied.
+pub type MinChars = MinValue<usize>;
 
 /// Minimum number of times a word needs to appear to be tallied.
-#[derive(
-    Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
-pub struct MinCount(pub usize);
-
-impl Display for MinCount {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
-impl From<usize> for MinCount {
-    fn from(raw: usize) -> Self {
-        Self(raw)
-    }
-}
+pub type MinCount = MinValue<usize>;
 
 /// A list of words that should be omitted from the tally.
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -181,23 +252,29 @@ impl From<Vec<String>> for ExcludeWords {
     }
 }
 
-/// A collection of regex patterns used to exclude words that match.
-///
-/// Each pattern is compiled into a Regex and used to filter out words
-/// whose text matches any of the patterns.
-#[derive(Clone, Debug)]
-pub struct ExcludePatterns {
-    /// Compiled regex patterns.
+impl AsRef<Vec<String>> for ExcludeWords {
+    fn as_ref(&self) -> &Vec<String> {
+        &self.0
+    }
+}
+
+impl Deref for ExcludeWords {
+    type Target = Vec<String>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+/// Base struct for regex pattern filtering.
+#[derive(Clone, Debug, Default)]
+struct Patterns {
     patterns: Vec<Regex>,
-    /// Original pattern strings (for display purposes).
     original_patterns: Vec<String>,
 }
 
-impl ExcludePatterns {
-    /// Constructs a new `ExcludePatterns` from a slice of pattern strings.
-    ///
-    /// Returns an error if any of the patterns fail to compile as a valid regex.
-    pub fn new(patterns: &[String]) -> Result<Self, regex::Error> {
+impl Patterns {
+    fn new(patterns: &[String]) -> Result<Self, regex::Error> {
         let original_patterns = patterns.to_vec();
         let compiled_patterns = patterns
             .iter()
@@ -210,59 +287,131 @@ impl ExcludePatterns {
         })
     }
 
-    /// Checks if a word matches any of the patterns.
-    ///
-    /// Returns `true` if the word matches any pattern, `false` otherwise.
-    pub fn matches(&self, word: &str) -> bool {
+    fn matches(&self, word: &str) -> bool {
         self.patterns.iter().any(|p| p.is_match(word))
+    }
+}
+
+impl PartialEq for Patterns {
+    fn eq(&self, other: &Self) -> bool {
+        self.original_patterns == other.original_patterns
+    }
+}
+
+impl Eq for Patterns {}
+
+impl PartialOrd for Patterns {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Patterns {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.original_patterns.cmp(&other.original_patterns)
+    }
+}
+
+impl std::hash::Hash for Patterns {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.original_patterns.hash(state);
+    }
+}
+
+impl Display for Patterns {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", self.original_patterns.join(","))
+    }
+}
+
+/// Regex patterns used to exclude matching words.
+#[derive(Clone, Debug, Default)]
+pub struct ExcludePatterns(Patterns);
+
+impl ExcludePatterns {
+    pub fn new(patterns: &[String]) -> Result<Self, regex::Error> {
+        Ok(Self(Patterns::new(patterns)?))
+    }
+
+    pub fn matches(&self, word: &str) -> bool {
+        self.0.matches(word)
+    }
+}
+
+impl PartialEq for ExcludePatterns {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Eq for ExcludePatterns {}
+
+impl PartialOrd for ExcludePatterns {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ExcludePatterns {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+impl std::hash::Hash for ExcludePatterns {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }
 
 impl Display for ExcludePatterns {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.original_patterns.join(","))
+        self.0.fmt(f)
     }
 }
 
-/// A collection of regex patterns used to include only words that match.
-///
-/// Each pattern is compiled into a Regex and used to filter in only words
-/// whose text matches any of the patterns.
-#[derive(Clone, Debug)]
-pub struct IncludePatterns {
-    /// Compiled regex patterns.
-    patterns: Vec<Regex>,
-    /// Original pattern strings (for display purposes).
-    original_patterns: Vec<String>,
-}
+/// Regex patterns used to include only matching words.
+#[derive(Clone, Debug, Default)]
+pub struct IncludePatterns(Patterns);
 
 impl IncludePatterns {
-    /// Constructs a new `IncludePatterns` from a slice of pattern strings.
-    ///
-    /// Returns an error if any of the patterns fail to compile as a valid regex.
     pub fn new(patterns: &[String]) -> Result<Self, regex::Error> {
-        let original_patterns = patterns.to_vec();
-        let compiled_patterns = patterns
-            .iter()
-            .map(|p| Regex::new(p))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(Self {
-            patterns: compiled_patterns,
-            original_patterns,
-        })
+        Ok(Self(Patterns::new(patterns)?))
     }
 
-    /// Checks if a word matches any of the patterns.
-    ///
-    /// Returns `true` if the word matches any pattern, `false` otherwise.
     pub fn matches(&self, word: &str) -> bool {
-        self.patterns.iter().any(|p| p.is_match(word))
+        self.0.matches(word)
+    }
+}
+
+impl PartialEq for IncludePatterns {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
+
+impl Eq for IncludePatterns {}
+
+impl PartialOrd for IncludePatterns {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for IncludePatterns {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.0.cmp(&other.0)
+    }
+}
+
+impl std::hash::Hash for IncludePatterns {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.0.hash(state);
     }
 }
 
 impl Display for IncludePatterns {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.original_patterns.join(","))
+        self.0.fmt(f)
     }
 }

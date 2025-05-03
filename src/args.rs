@@ -1,59 +1,132 @@
+//! Command-line argument parsing and access.
+
+use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::PathBuf;
-use word_tally::{Case, Format, Sort};
+use unescaper::unescape;
 
+use word_tally::formatting::{Case, Format, Sort};
+use word_tally::performance::Concurrency;
+
+/// A utility for tallying word frequencies in text.
 #[derive(Debug, Parser)]
 #[command(about, version)]
 pub struct Args {
     /// File path to use as input rather than stdin ("-").
     #[arg(default_value = "-", value_name = "PATH")]
-    pub input: String,
+    input: String,
+
+    // Formatting options
+    /// Case normalization.
+    #[arg(short, long, default_value_t, value_enum, value_name = "FORMAT")]
+    case: Case,
 
     /// Sort order.
     #[arg(short, long, default_value_t, value_enum, value_name = "ORDER")]
-    pub sort: Sort,
+    sort: Sort,
 
-    /// Case normalization.
-    #[arg(short, long, default_value_t, value_enum, value_name = "FORMAT")]
-    pub case: Case,
-
+    // Filtering options
     /// Exclude words containing fewer than min chars.
     #[arg(short, long, value_name = "COUNT")]
-    pub min_chars: Option<usize>,
+    min_chars: Option<usize>,
 
     /// Exclude words appearing fewer than min times.
     #[arg(short = 'M', long, value_name = "COUNT")]
-    pub min_count: Option<usize>,
+    min_count: Option<usize>,
 
     /// Exclude words from a comma-delimited list.
     #[arg(short = 'E', long, use_value_delimiter = true, value_name = "WORDS")]
-    pub exclude_words: Option<Vec<String>>,
-
-    /// Exclude words matching a regex pattern.
-    #[arg(short = 'x', long, value_name = "PATTERN", action = clap::ArgAction::Append)]
-    pub exclude: Option<Vec<String>>,
+    exclude_words: Option<Vec<String>>,
 
     /// Include only words matching a regex pattern.
     #[arg(short = 'i', long, value_name = "PATTERN", action = clap::ArgAction::Append)]
-    pub include: Option<Vec<String>>,
+    include: Option<Vec<String>>,
+
+    /// Exclude words matching a regex pattern.
+    #[arg(short = 'x', long, value_name = "PATTERN", action = clap::ArgAction::Append)]
+    exclude: Option<Vec<String>>,
+
+    // Output options
+    /// Output format.
+    #[arg(short = 'f', long, default_value_t, value_enum, value_name = "FORMAT")]
+    format: Format,
 
     /// Delimiter between keys and values.
     #[arg(short, long, default_value = " ", value_name = "VALUE")]
-    pub delimiter: String,
+    delimiter: String,
 
     /// Write output to file rather than stdout.
     #[arg(short, long, value_name = "PATH")]
-    pub output: Option<PathBuf>,
+    output: Option<PathBuf>,
 
     /// Print verbose details.
     #[arg(short = 'v', long)]
-    pub verbose: bool,
+    verbose: bool,
 
-    /// Output format.
-    #[arg(short = 'f', long, default_value_t, value_enum, value_name = "FORMAT")]
-    pub format: Format,
-
+    // Performance options
     /// Use parallel processing for word counting.
     #[arg(short = 'p', long)]
-    pub parallel: bool,
+    parallel: bool,
+}
+
+impl Args {
+    pub const fn get_input(&self) -> &String {
+        &self.input
+    }
+
+    pub const fn get_case(&self) -> Case {
+        self.case
+    }
+
+    pub const fn get_sort(&self) -> Sort {
+        self.sort
+    }
+
+    pub const fn get_min_chars(&self) -> Option<usize> {
+        self.min_chars
+    }
+
+    pub const fn get_min_count(&self) -> Option<usize> {
+        self.min_count
+    }
+
+    pub const fn get_exclude_words(&self) -> Option<&Vec<String>> {
+        self.exclude_words.as_ref()
+    }
+
+    pub const fn get_include_patterns(&self) -> Option<&Vec<String>> {
+        self.include.as_ref()
+    }
+
+    pub const fn get_exclude_patterns(&self) -> Option<&Vec<String>> {
+        self.exclude.as_ref()
+    }
+
+    pub const fn get_format(&self) -> Format {
+        self.format
+    }
+
+    pub const fn get_delimiter(&self) -> &String {
+        &self.delimiter
+    }
+
+    pub const fn get_output(&self) -> &Option<PathBuf> {
+        &self.output
+    }
+
+    pub const fn is_verbose(&self) -> bool {
+        self.verbose
+    }
+
+    pub fn get_unescaped_delimiter(&self) -> Result<String> {
+        unescape(self.get_delimiter().as_str()).with_context(|| "Failed to unescape delimiter")
+    }
+
+    pub const fn get_concurrency(&self) -> Concurrency {
+        if self.parallel {
+            Concurrency::Parallel
+        } else {
+            Concurrency::Sequential
+        }
+    }
 }

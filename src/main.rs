@@ -5,111 +5,54 @@ pub(crate) mod input;
 pub(crate) mod output;
 pub(crate) mod verbose;
 
+use crate::input::Input;
+use crate::output::Output;
 use anyhow::{Context, Result};
 use args::Args;
 use clap::Parser;
-use input::Input;
-use output::Output;
-use unescaper::unescape;
-use verbose::Verbose;
-use word_tally::Format;
-use word_tally::{Concurrency, Filters, Options, SizeHint, WordTally};
+use word_tally::{Filters, Format, Formatting, Options, Performance, SizeHint, WordTally};
 
 fn main() -> Result<()> {
+    // Parse arguments.
     let args = Args::parse();
 
-    let delimiter = unescape(&args.delimiter)?;
-    let input = Input::from_args(&args.input)?;
-    let source = input.source();
-
-    let reader = input.get_reader(&source)?;
-    let options = Options::new(args.case, args.sort);
-
-    // Create initial filters
-    let mut filters = Filters::new(&args.min_chars, &args.min_count, args.exclude_words);
-
-    // Add exclude regex patterns if provided
-    if let Some(ref patterns) = args.exclude {
-        if !patterns.is_empty() {
-            filters = filters
-                .with_exclude_patterns(patterns)
-                .with_context(|| "Failed to compile exclude regex patterns")?;
-        }
-    }
-
-    // Add include regex patterns if provided
-    if let Some(ref patterns) = args.include {
-        if !patterns.is_empty() {
-            filters = filters
-                .with_include_patterns(patterns)
-                .with_context(|| "Failed to compile include regex patterns")?;
-        }
-    }
-
+    let input = Input::from_args(args.get_input().as_str())?;
     let input_size = input.size();
-
-    // Create config with appropriate concurrency mode and size hint
-    let concurrency = if args.parallel {
-        Concurrency::Parallel
-    } else {
-        Concurrency::Sequential
-    };
     let size_hint = input_size.map_or_else(SizeHint::default, SizeHint::Bytes);
-    let config = word_tally::Config::default()
+    let source = input.source();
+    let reader = input.get_reader(&source)?;
+
+    let formatting = Formatting::new(args.get_case(), args.get_sort());
+    let filters = Filters::create_from_args(
+        &args.get_min_chars(),
+        &args.get_min_count(),
+        args.get_exclude_words(),
+        args.get_exclude_patterns(),
+        args.get_include_patterns(),
+    )
+    .with_context(|| "Failed to compile filter patterns")?;
+    let concurrency = args.get_concurrency();
+    let performance = Performance::default()
         .with_concurrency(concurrency)
         .with_size_hint(size_hint);
-    let word_tally = WordTally::new(reader, options, filters, config);
+    let options = Options::new(formatting, filters, performance);
 
-    if args.verbose {
-        let mut stderr = Output::stderr();
-        let mut verbose = Verbose::new(&mut stderr, &word_tally, &delimiter, &source);
+    // Create a WordTally instance.
+    let word_tally = WordTally::new(reader, &options);
 
-        match args.format {
-            Format::Json => {
-                let json = verbose.to_json()?;
-                stderr.write_line(&format!("{json}\n\n"))?;
-            }
-            Format::Csv => {
-                verbose.log_csv()?;
-                stderr.write_line("\n")?;
-            }
-            Format::Text => {
-                verbose.log()?;
-            }
-        }
-    }
+    // Process output.
+    let delimiter = args.get_unescaped_delimiter()?;
 
-    let mut output = Output::from_args(&args.output)?;
+    crate::verbose::handle_verbose_output(
+        args.is_verbose(),
+        args.get_format(),
+        &word_tally,
+        &delimiter,
+        &source,
+    )?;
 
-    match args.format {
-        Format::Text => {
-            for (word, count) in word_tally.tally() {
-                output.write_line(&format!("{word}{delimiter}{count}\n"))?;
-            }
-        }
-        Format::Json => {
-            let json = serde_json::to_string(
-                &word_tally
-                    .tally()
-                    .iter()
-                    .map(|(word, count)| (word.as_ref(), count))
-                    .collect::<Vec<_>>(),
-            )
-            .with_context(|| "Failed to serialize word tally to JSON")?;
-            output.write_line(&format!("{json}\n"))?;
-        }
-        Format::Csv => {
-            let mut wtr = csv::Writer::from_writer(Vec::new());
-            wtr.write_record(["word", "count"])?;
-            for (word, count) in word_tally.tally() {
-                wtr.write_record([word.as_ref(), &count.to_string()])?;
-            }
-            let csv_data = String::from_utf8(wtr.into_inner()?)?;
-            output.write_line(&csv_data)?;
-        }
-    }
-
-    output.flush()?;
+    let mut output = Output::from_args(args.get_output())?;
+    output.write_formatted_tally(word_tally.tally(), args.get_format(), &delimiter)?;
 
     Ok(())
 }

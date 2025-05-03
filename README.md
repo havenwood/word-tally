@@ -15,17 +15,17 @@ Arguments:
   [PATH]  File path to use as input rather than stdin ("-") [default: -]
 
 Options:
-  -s, --sort <ORDER>           Sort order [default: desc] [possible values: desc, asc, unsorted]
   -c, --case <FORMAT>          Case normalization [default: lower] [possible values: original, upper, lower]
+  -s, --sort <ORDER>           Sort order [default: desc] [possible values: desc, asc, unsorted]
   -m, --min-chars <COUNT>      Exclude words containing fewer than min chars
   -M, --min-count <COUNT>      Exclude words appearing fewer than min times
   -E, --exclude-words <WORDS>  Exclude words from a comma-delimited list
-  -x, --exclude <PATTERN>      Exclude words matching a regex pattern
   -i, --include <PATTERN>      Include only words matching a regex pattern
+  -x, --exclude <PATTERN>      Exclude words matching a regex pattern
+  -f, --format <FORMAT>        Output format [default: text] [possible values: text, json, csv]
   -d, --delimiter <VALUE>      Delimiter between keys and values [default: " "]
   -o, --output <PATH>          Write output to file rather than stdout
   -v, --verbose                Print verbose details
-  -f, --format <FORMAT>        Output format [default: text] [possible values: text, json, csv]
   -p, --parallel               Use parallel processing for word counting
   -h, --help                   Print help
   -V, --version                Print version

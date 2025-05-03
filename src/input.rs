@@ -4,16 +4,24 @@ use std::io::{self, Read};
 use std::path::PathBuf;
 
 /// `Input` to read from a file or stdin source.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Input {
     File(PathBuf),
     Stdin,
 }
 
 impl Default for Input {
-    /// Default is to use stdin
     fn default() -> Self {
         Self::Stdin
+    }
+}
+
+impl std::fmt::Display for Input {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::File(path) => write!(f, "File({})", path.display()),
+            Self::Stdin => write!(f, "Stdin"),
+        }
     }
 }
 
@@ -46,10 +54,10 @@ impl Input {
                 .file_name()
                 .expect("File name inaccessible.")
                 .to_str()
-                .expect("File name invalid UTF-8."),
-            Self::Stdin => "-",
+                .expect("File name invalid UTF-8.")
+                .to_string(),
+            Self::Stdin => "-".to_string(),
         }
-        .to_string()
     }
 
     /// Get the size of the input in bytes, if available.

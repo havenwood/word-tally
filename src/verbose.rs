@@ -1,19 +1,31 @@
 use crate::output::Output;
 use anyhow::{Context, Result};
-use word_tally::WordTally;
+use std::fmt::{self, Debug, Formatter};
+use word_tally::{Format, WordTally};
 
-pub struct Verbose<'a> {
+pub struct Verbose<'a, 'b> {
     output: &'a mut Output,
-    tally: &'a WordTally,
+    tally: &'a WordTally<'b>,
     delimiter: &'a str,
     source: &'a str,
 }
 
-impl<'a> Verbose<'a> {
+impl Debug for Verbose<'_, '_> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Verbose")
+            .field("output", self.output)
+            .field("tally", self.tally)
+            .field("delimiter", &self.delimiter)
+            .field("source", &self.source)
+            .finish()
+    }
+}
+
+impl<'a, 'b> Verbose<'a, 'b> {
     /// Constructs a new `Verbose` logger with the given output.
     pub const fn new(
         output: &'a mut Output,
-        tally: &'a WordTally,
+        tally: &'a WordTally<'b>,
         delimiter: &'a str,
         source: &'a str,
     ) -> Self {
@@ -43,17 +55,17 @@ impl<'a> Verbose<'a> {
         wtr.write_record(["total-words", &self.tally.count().to_string()])?;
         wtr.write_record(["unique-words", &self.tally.uniq_count().to_string()])?;
         wtr.write_record(["delimiter", &format!("{:?}", self.delimiter)])?;
-        wtr.write_record(["case", &self.tally.options().case.to_string()])?;
-        wtr.write_record(["order", &self.tally.options().sort.to_string()])?;
-        wtr.write_record(["min-chars", &self.format(self.tally.filters().min_chars)])?;
-        wtr.write_record(["min-count", &self.format(self.tally.filters().min_count)])?;
+        wtr.write_record(["case", &self.tally.options().case().to_string()])?;
+        wtr.write_record(["order", &self.tally.options().sort().to_string()])?;
+        wtr.write_record(["min-chars", &self.format(*self.tally.filters().min_chars())])?;
+        wtr.write_record(["min-count", &self.format(*self.tally.filters().min_count())])?;
         wtr.write_record([
             "exclude-words",
-            &self.format(self.tally.filters().exclude_words.clone()),
+            &self.format(self.tally.filters().exclude_words().clone()),
         ])?;
         wtr.write_record([
             "exclude-patterns",
-            &self.format(self.tally.filters().exclude_patterns.as_ref()),
+            &self.format(self.tally.filters().exclude_patterns().as_ref()),
         ])?;
         let csv_data = String::from_utf8(wtr.into_inner()?)?;
         self.output.write_line(&csv_data)?;
@@ -73,23 +85,23 @@ impl<'a> Verbose<'a> {
 
     /// Log word tally options.
     fn log_options(&mut self) -> Result<()> {
-        self.write_entry("case", self.tally.options().case)?;
-        self.write_entry("order", self.tally.options().sort)?;
+        self.write_entry("case", self.tally.options().case())?;
+        self.write_entry("order", self.tally.options().sort())?;
 
         Ok(())
     }
 
     /// Log word tally filters.
     fn log_filters(&mut self) -> Result<()> {
-        self.write_entry("min-chars", self.format(self.tally.filters().min_chars))?;
-        self.write_entry("min-count", self.format(self.tally.filters().min_count))?;
+        self.write_entry("min-chars", self.format(*self.tally.filters().min_chars()))?;
+        self.write_entry("min-count", self.format(*self.tally.filters().min_count()))?;
         self.write_entry(
             "exclude-words",
-            self.format(self.tally.filters().exclude_words.clone()),
+            self.format(self.tally.filters().exclude_words().clone()),
         )?;
         self.write_entry(
             "exclude-patterns",
-            self.format(self.tally.filters().exclude_patterns.as_ref()),
+            self.format(self.tally.filters().exclude_patterns().as_ref()),
         )?;
 
         Ok(())
@@ -124,14 +136,66 @@ impl<'a> Verbose<'a> {
             "total-words": self.tally.count(),
             "unique-words": self.tally.uniq_count(),
             "delimiter": format!("{:?}", self.delimiter),
-            "case": self.tally.options().case.to_string(),
-            "order": self.tally.options().sort.to_string(),
-            "min-chars": self.format(self.tally.filters().min_chars),
-            "min-count": self.format(self.tally.filters().min_count),
-            "exclude-words": self.format(self.tally.filters().exclude_words.clone()),
-            "exclude-patterns": self.format(self.tally.filters().exclude_patterns.as_ref()),
+            "case": self.tally.options().case().to_string(),
+            "order": self.tally.options().sort().to_string(),
+            "min-chars": self.format(*self.tally.filters().min_chars()),
+            "min-count": self.format(*self.tally.filters().min_count()),
+            "exclude-words": self.format(self.tally.filters().exclude_words().clone()),
+            "exclude-patterns": self.format(self.tally.filters().exclude_patterns().as_ref()),
         });
 
         serde_json::to_string(&value).with_context(|| "Failed to serialize verbose info to JSON")
     }
+}
+
+/// Output the selected format to stderr if verbose is enabled.
+pub fn handle_output_from_args(
+    is_verbose: bool,
+    format: Format,
+    word_tally: &WordTally<'_>,
+    delimiter: &str,
+    source: &str,
+) -> Result<()> {
+    if !is_verbose {
+        return Ok(());
+    }
+
+    match format {
+        Format::Json => output_json(word_tally, delimiter, source),
+        Format::Csv => output_csv(word_tally, delimiter, source),
+        Format::Text => output_text(word_tally, delimiter, source),
+    }
+}
+
+/// Handle verbose output based on word tally results.
+pub fn handle_verbose_output(
+    is_verbose: bool,
+    format: Format,
+    word_tally: &WordTally<'_>,
+    delimiter: &str,
+    source: &str,
+) -> Result<()> {
+    handle_output_from_args(is_verbose, format, word_tally, delimiter, source)
+}
+
+fn output_json(word_tally: &WordTally<'_>, delimiter: &str, source: &str) -> Result<()> {
+    let mut stderr = Output::stderr();
+    let verbose = Verbose::new(&mut stderr, word_tally, delimiter, source);
+    let json = verbose.to_json()?;
+    stderr.write_line(&format!("{json}\n\n"))
+}
+
+fn output_csv(word_tally: &WordTally<'_>, delimiter: &str, source: &str) -> Result<()> {
+    let mut stderr = Output::stderr();
+    {
+        let mut verbose = Verbose::new(&mut stderr, word_tally, delimiter, source);
+        verbose.log_csv()?;
+    }
+    stderr.write_line("\n")
+}
+
+fn output_text(word_tally: &WordTally<'_>, delimiter: &str, source: &str) -> Result<()> {
+    let mut stderr = Output::stderr();
+    let mut verbose = Verbose::new(&mut stderr, word_tally, delimiter, source);
+    verbose.log()
 }

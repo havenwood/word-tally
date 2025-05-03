@@ -1,15 +1,25 @@
-//! Configuration for word tallying and processing.
+//! Configuration for word tallying performance.
 
+use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
 
 /// Determines whether to use parallel or sequential processing
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Concurrency {
     /// Process input sequentially
     Sequential,
 
     /// Process input in parallel
     Parallel,
+}
+
+impl Display for Concurrency {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Sequential => write!(f, "sequential"),
+            Self::Parallel => write!(f, "parallel"),
+        }
+    }
 }
 
 impl Default for Concurrency {
@@ -19,13 +29,28 @@ impl Default for Concurrency {
 }
 
 /// Thread count configuration for parallel processing
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Threads {
     /// Use all available cores
     All,
 
     /// Use a specific number of threads
     Count(u16),
+}
+
+impl Display for Threads {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::All => write!(f, "all"),
+            Self::Count(count) => write!(f, "{}", count),
+        }
+    }
+}
+
+impl From<u16> for Threads {
+    fn from(count: u16) -> Self {
+        Self::Count(count)
+    }
 }
 
 impl Default for Threads {
@@ -35,13 +60,22 @@ impl Default for Threads {
 }
 
 /// Represents a size hint for input data to optimize capacity allocation
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum SizeHint {
-    /// No size hint available, use default capacity
+    /// No size hint available (use default capacity)
     None,
 
     /// Size hint in bytes
     Bytes(u64),
+}
+
+impl Display for SizeHint {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::None => write!(f, "none"),
+            Self::Bytes(size) => write!(f, "{} bytes", size),
+        }
+    }
 }
 
 impl Default for SizeHint {
@@ -58,17 +92,16 @@ impl From<Option<u64>> for SizeHint {
 
 impl From<SizeHint> for Option<u64> {
     fn from(hint: SizeHint) -> Self {
-        if let SizeHint::Bytes(size) = hint {
-            Some(size)
-        } else {
-            None
+        match hint {
+            SizeHint::Bytes(size) => Some(size),
+            SizeHint::None => None,
         }
     }
 }
 
-/// Configuration for word tallying and processing
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub struct Config {
+/// Configuration for word tallying performance
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct Performance {
     /// Default capacity for IndexMap when no size hint is available
     default_capacity: usize,
 
@@ -104,7 +137,7 @@ const ENV_WORD_DENSITY: &str = "WORD_TALLY_WORD_DENSITY";
 const ENV_CHUNK_SIZE: &str = "WORD_TALLY_CHUNK_SIZE";
 const ENV_THREADS: &str = "WORD_TALLY_THREADS";
 
-impl Default for Config {
+impl Default for Performance {
     fn default() -> Self {
         Self {
             default_capacity: DEFAULT_CAPACITY,
@@ -118,8 +151,8 @@ impl Default for Config {
     }
 }
 
-impl Config {
-    /// Create a new configuration for a word tally
+impl Performance {
+    /// Create a new performance configuration for a word tally
     pub const fn new(
         default_capacity: usize,
         uniqueness_ratio: u8,
@@ -140,7 +173,7 @@ impl Config {
         }
     }
 
-    /// Create configuration from common environment variables if present
+    /// Create performance configuration from common environment variables if present
     ///
     /// This loads the non-parallel specific environment variables.
     /// Parallel-specific environment variables are loaded in `with_concurrency`.
@@ -148,7 +181,7 @@ impl Config {
         use std::sync::OnceLock;
 
         // Parse environment variables only once and cache the result
-        static CONFIG: OnceLock<Config> = OnceLock::new();
+        static CONFIG: OnceLock<Performance> = OnceLock::new();
 
         *CONFIG.get_or_init(|| {
             fn parse_env_var<T: std::str::FromStr>(name: &str, default: T) -> T {
@@ -226,22 +259,28 @@ impl Config {
         self.concurrency = concurrency;
 
         if matches!(concurrency, Concurrency::Parallel) {
-            if let Ok(chunk_size_str) = std::env::var(ENV_CHUNK_SIZE) {
-                if let Ok(chunk_size) = chunk_size_str.parse() {
-                    self.chunk_size = chunk_size;
-                }
+            // Update chunk size if env var exists and can be parsed
+            if let Some(size) = std::env::var(ENV_CHUNK_SIZE)
+                .ok()
+                .and_then(|val| val.parse().ok())
+            {
+                self.chunk_size = size;
             }
 
-            if let Ok(density_str) = std::env::var(ENV_WORD_DENSITY) {
-                if let Ok(density) = density_str.parse() {
-                    self.unique_word_density = density;
-                }
+            // Update word density if env var exists and can be parsed
+            if let Some(density) = std::env::var(ENV_WORD_DENSITY)
+                .ok()
+                .and_then(|val| val.parse().ok())
+            {
+                self.unique_word_density = density;
             }
 
-            if let Ok(threads_str) = std::env::var(ENV_THREADS) {
-                if let Ok(threads) = threads_str.parse::<u16>() {
-                    self.threads = Threads::Count(threads);
-                }
+            // Update thread count if env var exists and can be parsed
+            if let Some(threads) = std::env::var(ENV_THREADS)
+                .ok()
+                .and_then(|val| val.parse::<u16>().ok())
+            {
+                self.threads = Threads::Count(threads);
             }
         }
 
@@ -285,5 +324,32 @@ impl Config {
     /// Estimate chunk map capacity based on chunk size
     pub const fn estimate_chunk_capacity(&self, chunk_size: usize) -> usize {
         chunk_size * self.unique_word_density as usize
+    }
+
+    /// Initializes the rayon thread pool with configuration from Performance
+    pub fn init_thread_pool(&self) {
+        use rayon::ThreadPoolBuilder;
+        use std::sync::Once;
+        static INIT_THREAD_POOL: Once = Once::new();
+
+        match self.threads {
+            Threads::Count(count) => {
+                INIT_THREAD_POOL.call_once(|| {
+                    let num_threads = count as usize;
+                    if let Err(e) = ThreadPoolBuilder::new()
+                        .num_threads(num_threads)
+                        .build_global()
+                    {
+                        eprintln!("Warning: Failed to set thread pool size: {}", e);
+                    }
+                });
+            }
+            Threads::All => {
+                // Default rayon behavior is to use all available cores
+                INIT_THREAD_POOL.call_once(|| {
+                    // No custom configuration needed - Rayon defaults to all cores
+                });
+            }
+        }
     }
 }

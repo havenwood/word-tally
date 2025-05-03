@@ -1,4 +1,6 @@
+use crate::Format;
 use anyhow::{Context, Result};
+use std::fmt::{self, Debug, Formatter};
 use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Write};
 use std::path::{Path, PathBuf};
@@ -9,6 +11,14 @@ pub type Writer = Box<dyn Write>;
 /// `Output` writes to either a file or stream like stdout or stderr.
 pub struct Output {
     writer: Writer,
+}
+
+impl Debug for Output {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        f.debug_struct("Output")
+            .field("writer", &"<dyn Write>")
+            .finish()
+    }
 }
 
 impl Default for Output {
@@ -79,5 +89,42 @@ impl Output {
                 _ => Err(err.into()),
             },
         }
+    }
+
+    /// Writes word tally data in the specified format.
+    pub fn write_formatted_tally(
+        &mut self,
+        word_data: &[(Box<str>, usize)],
+        format: Format,
+        delimiter: &str,
+    ) -> Result<()> {
+        match format {
+            Format::Text => {
+                for (word, count) in word_data {
+                    self.write_line(&format!("{word}{delimiter}{count}\n"))?;
+                }
+            }
+            Format::Json => {
+                let json = serde_json::to_string(
+                    &word_data
+                        .iter()
+                        .map(|(word, count)| (word.as_ref(), count))
+                        .collect::<Vec<_>>(),
+                )
+                .with_context(|| "Failed to serialize word tally to JSON")?;
+                self.write_line(&format!("{json}\n"))?;
+            }
+            Format::Csv => {
+                let mut wtr = csv::Writer::from_writer(Vec::new());
+                wtr.write_record(["word", "count"])?;
+                for (word, count) in word_data {
+                    wtr.write_record([word.as_ref(), &count.to_string()])?;
+                }
+                let csv_data = String::from_utf8(wtr.into_inner()?)?;
+                self.write_line(&csv_data)?;
+            }
+        }
+
+        self.flush()
     }
 }
