@@ -1,30 +1,70 @@
 //! A tally of words with a count of the number of times each appears.
 //!
-//! A `WordTally` represents a tally of the total number of times each word
-//! appears in an input source that implements `Read`. When a `WordTally` is
-//! constructed, the provided input is iterated over line by line to count words.
-//! Ordered pairs of words and their count are stored in the `tally` field.
+//! `WordTally` tallies the occurrences of words in text sources. It operates by streaming
+//! input line by line, eliminating the need to load entire files or streams into memory.
 //!
-//! The `unicode-segmentation` Crate segments along "Word Bounaries" according
-//! to the [Unicode Standard Annex #29](http://www.unicode.org/reports/tr29/).
+//! Word boundaries are determined using the [`unicode-segmentation`](https://docs.rs/unicode-segmentation/)
+//! crate, which implements the [Unicode Standard Annex #29](https://unicode.org/reports/tr29/)
+//! specification for text segmentation across languages.
 //!
-//! # `Case`, `Sort` and `Filters`
-
-//! In addition to source input, a `WordTally` is constructed with options for
-//! `Case` normalization, `Sort` order and word `Filters`. `Case` options include
-//! `Original` (case sensitive) and `Lower` or `Upper` case normalization. `Sort`
-//! order can be `Unsorted` or sorted `Desc` (descending) or `Asc` (ascending).
-//! A `tally` can be sorted at construction and resorted with the `sort` method.
-//! Sorting doesn't impact the `count` or `uniq_count` fields. `Filter`s can
-//! be used to provide list of words that should or shouldn't be tallied.
+//! The library offers both sequential and parallel processing modes. When operating
+//! in parallel mode, the input is processed in discrete chunks across available CPU cores,
+//! maintaining memory efficiency while improving processing speed for larger inputs.
+//!
+//! # Options
+//!
+//! The [`Options`] struct provides a unified interface for configuring all aspects of word tallying:
+//!
+//! ```
+//! use word_tally::{Options, WordTally};
+//!
+//! // Use default options
+//! let options = Options::default();
+//! let input = "The quick brown fox jumps over the lazy dog".as_bytes();
+//! let words = WordTally::new(input, &options);
+//! ```
+//!
+//! ## Formatting
+//!
+//! Controls how words are normalized and results are ordered:
+//!
+//! * [`Case`]: Normalize word case (`Original`, `Lower`, or `Upper`)
+//! * [`Sort`]: Order results by frequency (`Unsorted`, `Desc`, or `Asc`)
+//!
+//! ## Filters
+//!
+//! Determine which words appear in the final tally:
+//!
+//! * Length filters: [`MinChars`] excludes words shorter than specified
+//! * Frequency filters: [`MinCount`] includes only words appearing more than N times
+//! * Pattern matching: [`IncludePatterns`] and [`ExcludePatterns`] for regex-based filtering
+//! * Word lists: [`ExcludeWords`] for explicit exclusion of specific terms
+//!
+//! ## Performance
+//!
+//! Optimize execution for different workloads:
+//!
+//! * [`Concurrency`]: Choose between sequential or parallel processing
+//! * [`Threads`]: Control the thread pool size for parallel execution
+//! * [`SizeHint`]: Tune collection capacity pre-allocation
+//!
+//! ## Output
+//!
+//! Format results for different use cases:
+//!
+//! * [`Format`]: Specify output format (Text, CSV, JSON)
 //!
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Filters, Options, WordTally};
+//! use word_tally::{Case, Filters, Options, WordTally};
+//!
+//! // Create options with case normalization and minimum character length filter
+//! let options = Options::default()
+//!     .with_case(Case::Lower)
+//!     .with_filters(Filters::default().with_min_chars(3));
 //!
 //! let input = "Cinquedea".as_bytes();
-//! let options = Options::default();
 //! let words = WordTally::new(input, &options);
 //! let expected_tally: Box<[(Box<str>, usize)]> = [("cinquedea".into(), 1)].into();
 //!
@@ -37,7 +77,6 @@ use serde::{Deserialize, Serialize};
 use std::io::{BufRead, BufReader, Read};
 use unicode_segmentation::UnicodeSegmentation;
 
-// Note: args.rs module exists in src/ but is used only by main.rs, not part of library
 pub mod filters;
 pub mod formatting;
 pub mod input;
