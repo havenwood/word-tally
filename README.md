@@ -63,6 +63,16 @@ JSON output:
 word-tally --format=json --output="tally.json" README.md
 ```
 
+Transform JSON output for visualization with [d3-cloud](https://github.com/jasondavies/d3-cloud#readme):
+```sh
+word-tally --format=json README.md | jq 'map({text: .[0], value: .[1]})' > d3-cloud.json
+```
+
+Transform and pipe the JSON output to the [wordcloud_cli](https://github.com/amueller/word_cloud#readme) to produce an image:
+```sh
+word-tally --format=json README.md | jq -r 'map(.[0] + " ") | join(" ")' | wordcloud_cli --imagefile wordcloud.png
+```
+
 Parallel processing can be much faster for large files:
 ```sh
 word-tally --parallel README.md
