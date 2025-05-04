@@ -4,11 +4,11 @@ use anyhow::{Context, Result};
 use std::fmt::{self, Debug, Formatter};
 use word_tally::WordTally;
 
-pub struct Verbose<'a, 'b> {
-    output: &'a mut Output,
-    tally: &'a WordTally<'b>,
-    delimiter: &'a str,
-    source: &'a str,
+pub struct Verbose<'v, 'a> {
+    output: &'v mut Output,
+    tally: &'v WordTally<'a>,
+    delimiter: &'v str,
+    source: &'v str,
 }
 
 impl Debug for Verbose<'_, '_> {
@@ -22,13 +22,13 @@ impl Debug for Verbose<'_, '_> {
     }
 }
 
-impl<'a, 'b> Verbose<'a, 'b> {
+impl<'v, 'a> Verbose<'v, 'a> {
     /// Constructs a new `Verbose` logger with the given output.
     pub const fn new(
-        output: &'a mut Output,
-        tally: &'a WordTally<'b>,
-        delimiter: &'a str,
-        source: &'a str,
+        output: &'v mut Output,
+        tally: &'v WordTally<'a>,
+        delimiter: &'v str,
+        source: &'v str,
     ) -> Self {
         Self {
             output,
