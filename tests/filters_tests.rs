@@ -1,14 +1,14 @@
 use word_tally::Filters;
 
 #[test]
-fn test_create_from_args() {
+fn test_filters_new() {
     let min_chars = Some(3);
     let min_count = Some(2);
     let exclude_words = Some(vec!["the".to_string(), "and".to_string()]);
     let exclude_patterns: Option<Vec<String>> = None;
     let include_patterns: Option<Vec<String>> = None;
 
-    let filters = Filters::create_from_args(
+    let filters = Filters::new(
         &min_chars,
         &min_count,
         exclude_words.as_ref(),
@@ -24,7 +24,7 @@ fn test_create_from_args() {
     assert!(filters.include_patterns().is_none());
 
     let exclude_patterns = Some(vec!["^t.*".to_string()]);
-    let filters = Filters::create_from_args(
+    let filters = Filters::new(
         &min_chars,
         &min_count,
         exclude_words.as_ref(),
@@ -41,7 +41,7 @@ fn test_create_from_args() {
 
     let exclude_patterns = None;
     let include_patterns = Some(vec!["^a.*".to_string()]);
-    let filters = Filters::create_from_args(
+    let filters = Filters::new(
         &min_chars,
         &min_count,
         exclude_words.as_ref(),
@@ -58,7 +58,7 @@ fn test_create_from_args() {
 
     let exclude_patterns = Some(vec!["^t.*".to_string()]);
     let include_patterns = Some(vec!["^a.*".to_string()]);
-    let filters = Filters::create_from_args(
+    let filters = Filters::new(
         &min_chars,
         &min_count,
         exclude_words.as_ref(),
@@ -74,7 +74,7 @@ fn test_create_from_args() {
     assert!(filters.include_patterns().is_some());
 
     let exclude_patterns = Some(vec!["[".to_string()]);
-    let result = Filters::create_from_args(
+    let result = Filters::new(
         &min_chars,
         &min_count,
         exclude_words.as_ref(),
@@ -85,14 +85,14 @@ fn test_create_from_args() {
 }
 
 #[test]
-fn test_create_from_args_with_empty_patterns() {
+fn test_filters_with_empty_patterns() {
     let min_chars = Some(3);
     let min_count = Some(2);
     let exclude_words = Some(vec!["the".to_string(), "and".to_string()]);
     let exclude_patterns = Some(vec![]);
     let include_patterns = Some(vec![]);
 
-    let filters = Filters::create_from_args(
+    let filters = Filters::new(
         &min_chars,
         &min_count,
         exclude_words.as_ref(),
@@ -117,7 +117,7 @@ fn test_serialization_with_patterns() {
     let exclude_patterns = Some(vec![r"\d+".to_string()]);
     let include_patterns = Some(vec![r"[a-z]+".to_string()]);
 
-    let filters = Filters::create_from_args(
+    let filters = Filters::new(
         &min_chars,
         &min_count,
         exclude_words.as_ref(),

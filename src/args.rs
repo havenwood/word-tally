@@ -107,7 +107,7 @@ impl Args {
     }
 
     pub fn get_filters(&self) -> Result<Filters> {
-        Filters::create_from_args(
+        Filters::new(
             &self.min_chars,
             &self.min_count,
             self.exclude_words.as_ref(),

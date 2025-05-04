@@ -41,21 +41,47 @@ impl Filters {
         }
     }
 
-    /// Constructs `Filters`.
+    /// Constructs a new `Filters` instance with the specified filters.
     ///
-    /// Note: not const fn due to Option::map operations
+    /// # Arguments
+    ///
+    /// * `min_chars` - Minimum characters per word
+    /// * `min_count` - Minimum occurrences required
+    /// * `exclude_words` - Words to exclude
+    /// * `exclude_patterns` - Regex patterns to exclude
+    /// * `include_patterns` - Regex patterns to include
     pub fn new(
         min_chars: &Option<usize>,
         min_count: &Option<usize>,
-        exclude_words: Option<Vec<String>>,
-    ) -> Self {
-        Self {
+        exclude_words: Option<&Vec<String>>,
+        exclude_patterns: Option<&Vec<String>>,
+        include_patterns: Option<&Vec<String>>,
+    ) -> Result<Self, regex::Error> {
+        // Create initial filters
+        let mut filters = Self {
             min_chars: min_chars.map(MinValue::new),
             min_count: min_count.map(MinValue::new),
-            exclude_words: exclude_words.map(ExcludeWords),
+            exclude_words: exclude_words
+                .map(|words| ExcludeWords(words.iter().map(|w| w.to_string()).collect())),
             exclude_patterns: None,
             include_patterns: None,
+        };
+
+        // Add exclude regex patterns if provided
+        if let Some(patterns) = exclude_patterns {
+            if !patterns.is_empty() {
+                filters = filters.with_exclude_patterns(patterns)?;
+            }
         }
+
+        // Add include regex patterns if provided
+        if let Some(patterns) = include_patterns {
+            if !patterns.is_empty() {
+                filters = filters.with_include_patterns(patterns)?;
+            }
+        }
+
+        Ok(filters)
     }
 
     /// Get the minimum character requirement
@@ -81,50 +107,6 @@ impl Filters {
     /// Get the included patterns
     pub const fn include_patterns(&self) -> &Option<IncludePatterns> {
         &self.include_patterns
-    }
-
-    /// Constructs `Filters` from references without cloning.
-    pub fn from_refs(
-        min_chars: &Option<usize>,
-        min_count: &Option<usize>,
-        exclude_words: Option<&Vec<String>>,
-    ) -> Self {
-        Self {
-            min_chars: min_chars.map(MinValue::new),
-            min_count: min_count.map(MinValue::new),
-            exclude_words: exclude_words
-                .map(|words| ExcludeWords(words.iter().map(|w| w.to_string()).collect())),
-            exclude_patterns: None,
-            include_patterns: None,
-        }
-    }
-
-    /// Creates a Filters instance from arguments
-    pub fn create_from_args(
-        min_chars: &Option<usize>,
-        min_count: &Option<usize>,
-        exclude_words: Option<&Vec<String>>,
-        exclude_patterns: Option<&Vec<String>>,
-        include_patterns: Option<&Vec<String>>,
-    ) -> Result<Self, regex::Error> {
-        // Create initial filters
-        let mut filters = Self::from_refs(min_chars, min_count, exclude_words);
-
-        // Add exclude regex patterns if provided
-        if let Some(patterns) = exclude_patterns {
-            if !patterns.is_empty() {
-                filters = filters.with_exclude_patterns(patterns)?;
-            }
-        }
-
-        // Add include regex patterns if provided
-        if let Some(patterns) = include_patterns {
-            if !patterns.is_empty() {
-                filters = filters.with_include_patterns(patterns)?;
-            }
-        }
-
-        Ok(filters)
     }
 
     /// Set minimum character requirement.
@@ -345,7 +327,7 @@ impl<'de> Deserialize<'de> for ExcludePatterns {
         use serde::de::Error;
         let patterns: Vec<String> = Vec::deserialize(deserializer)?;
 
-        ExcludePatterns::new(&patterns).map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
+        Self::new(&patterns).map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
     }
 }
 
@@ -412,7 +394,7 @@ impl<'de> Deserialize<'de> for IncludePatterns {
         use serde::de::Error;
         let patterns: Vec<String> = Vec::deserialize(deserializer)?;
 
-        IncludePatterns::new(&patterns).map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
+        Self::new(&patterns).map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
     }
 }
 
