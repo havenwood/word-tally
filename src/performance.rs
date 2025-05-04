@@ -13,18 +13,18 @@ pub enum Concurrency {
     Parallel,
 }
 
+impl Default for Concurrency {
+    fn default() -> Self {
+        Self::Sequential
+    }
+}
+
 impl Display for Concurrency {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Sequential => write!(f, "sequential"),
             Self::Parallel => write!(f, "parallel"),
         }
-    }
-}
-
-impl Default for Concurrency {
-    fn default() -> Self {
-        Self::Sequential
     }
 }
 
@@ -36,6 +36,12 @@ pub enum Threads {
 
     /// Use a specific number of threads
     Count(u16),
+}
+
+impl Default for Threads {
+    fn default() -> Self {
+        Self::All
+    }
 }
 
 impl Display for Threads {
@@ -53,12 +59,6 @@ impl From<u16> for Threads {
     }
 }
 
-impl Default for Threads {
-    fn default() -> Self {
-        Self::All
-    }
-}
-
 /// Represents a size hint for input data to optimize capacity allocation
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum SizeHint {
@@ -69,18 +69,18 @@ pub enum SizeHint {
     Bytes(u64),
 }
 
+impl Default for SizeHint {
+    fn default() -> Self {
+        Self::None
+    }
+}
+
 impl Display for SizeHint {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::None => write!(f, "none"),
             Self::Bytes(size) => write!(f, "{} bytes", size),
         }
-    }
-}
-
-impl Default for SizeHint {
-    fn default() -> Self {
-        Self::None
     }
 }
 

@@ -176,35 +176,42 @@ impl Options {
     }
 }
 
-// From<(Formatting, Filters, Performance)> for Options
+impl fmt::Display for Options {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Options {{ formatting: {}, filters: {:?}, concurrency: {:?} }}",
+            self.formatting,
+            self.filters,
+            self.performance.concurrency()
+        )
+    }
+}
+
 impl From<(Formatting, Filters, Performance)> for Options {
     fn from((formatting, filters, performance): (Formatting, Filters, Performance)) -> Self {
         Self::new(formatting, filters, performance)
     }
 }
 
-// From<(Formatting, Performance)> for Options with default Filters
 impl From<(Formatting, Performance)> for Options {
     fn from((formatting, performance): (Formatting, Performance)) -> Self {
         Self::with_defaults(formatting, performance)
     }
 }
 
-// From<Formatting> for Options with default Filters and Performance
 impl From<Formatting> for Options {
     fn from(formatting: Formatting) -> Self {
         Self::with_defaults(formatting, Performance::default())
     }
 }
 
-// From<Performance> for Options with default Formatting and Filters
 impl From<Performance> for Options {
     fn from(performance: Performance) -> Self {
         Self::with_defaults(Formatting::default(), performance)
     }
 }
 
-// Implement AsRef for Options components for better interoperability
 impl AsRef<Formatting> for Options {
     fn as_ref(&self) -> &Formatting {
         &self.formatting
@@ -220,17 +227,5 @@ impl AsRef<Filters> for Options {
 impl AsRef<Performance> for Options {
     fn as_ref(&self) -> &Performance {
         &self.performance
-    }
-}
-
-impl fmt::Display for Options {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Options {{ formatting: {}, filters: {:?}, concurrency: {:?} }}",
-            self.formatting,
-            self.filters,
-            self.performance.concurrency()
-        )
     }
 }

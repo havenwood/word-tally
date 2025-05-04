@@ -310,37 +310,6 @@ impl Display for Patterns {
 #[derive(Clone, Debug, Default)]
 pub struct ExcludePatterns(Patterns);
 
-impl Serialize for ExcludePatterns {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.0.original_patterns.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for ExcludePatterns {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::Error;
-        let patterns: Vec<String> = Vec::deserialize(deserializer)?;
-
-        Self::new(&patterns).map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
-    }
-}
-
-impl ExcludePatterns {
-    pub fn new(patterns: &[String]) -> Result<Self, regex::Error> {
-        Ok(Self(Patterns::new(patterns)?))
-    }
-
-    pub fn matches(&self, word: &str) -> bool {
-        self.0.matches(word)
-    }
-}
-
 impl PartialEq for ExcludePatterns {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
@@ -373,11 +342,7 @@ impl Display for ExcludePatterns {
     }
 }
 
-/// Regex patterns used to include only matching words.
-#[derive(Clone, Debug, Default)]
-pub struct IncludePatterns(Patterns);
-
-impl Serialize for IncludePatterns {
+impl Serialize for ExcludePatterns {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -386,7 +351,7 @@ impl Serialize for IncludePatterns {
     }
 }
 
-impl<'de> Deserialize<'de> for IncludePatterns {
+impl<'de> Deserialize<'de> for ExcludePatterns {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
@@ -398,7 +363,7 @@ impl<'de> Deserialize<'de> for IncludePatterns {
     }
 }
 
-impl IncludePatterns {
+impl ExcludePatterns {
     pub fn new(patterns: &[String]) -> Result<Self, regex::Error> {
         Ok(Self(Patterns::new(patterns)?))
     }
@@ -407,6 +372,10 @@ impl IncludePatterns {
         self.0.matches(word)
     }
 }
+
+/// Regex patterns used to include only matching words.
+#[derive(Clone, Debug, Default)]
+pub struct IncludePatterns(Patterns);
 
 impl PartialEq for IncludePatterns {
     fn eq(&self, other: &Self) -> bool {
@@ -437,5 +406,36 @@ impl std::hash::Hash for IncludePatterns {
 impl Display for IncludePatterns {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
+    }
+}
+
+impl Serialize for IncludePatterns {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.original_patterns.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for IncludePatterns {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        let patterns: Vec<String> = Vec::deserialize(deserializer)?;
+
+        Self::new(&patterns).map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
+    }
+}
+
+impl IncludePatterns {
+    pub fn new(patterns: &[String]) -> Result<Self, regex::Error> {
+        Ok(Self(Patterns::new(patterns)?))
+    }
+
+    pub fn matches(&self, word: &str) -> bool {
+        self.0.matches(word)
     }
 }

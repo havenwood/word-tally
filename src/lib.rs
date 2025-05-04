@@ -129,6 +129,19 @@ impl std::hash::Hash for WordTally<'_> {
     }
 }
 
+impl Default for WordTally<'static> {
+    fn default() -> Self {
+        static DEFAULT_OPTIONS: std::sync::OnceLock<Options> = std::sync::OnceLock::new();
+
+        Self {
+            tally: Box::new([]),
+            options: DEFAULT_OPTIONS.get_or_init(Options::default),
+            count: 0,
+            uniq_count: 0,
+        }
+    }
+}
+
 impl Serialize for WordTally<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -159,20 +172,6 @@ impl<'de> Deserialize<'de> for WordTally<'_> {
             count: data.count,
             uniq_count: data.uniq_count,
         })
-    }
-}
-
-// Default implementation for testing
-impl Default for WordTally<'static> {
-    fn default() -> Self {
-        static DEFAULT_OPTIONS: std::sync::OnceLock<Options> = std::sync::OnceLock::new();
-
-        Self {
-            tally: Box::new([]),
-            options: DEFAULT_OPTIONS.get_or_init(Options::default),
-            count: 0,
-            uniq_count: 0,
-        }
     }
 }
 

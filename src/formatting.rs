@@ -47,6 +47,16 @@ pub struct Formatting {
     format: Format,
 }
 
+impl fmt::Display for Formatting {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "Formatting {{ case: {}, sort: {}, format: {} }}",
+            self.case, self.sort, self.format
+        )
+    }
+}
+
 /// Construct `Formatting`.
 impl Formatting {
     pub const fn new(case: Case, sort: Sort, format: Format) -> Self {
@@ -111,17 +121,6 @@ impl Formatting {
     }
 }
 
-/// Display implementation for Formatting
-impl fmt::Display for Formatting {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Formatting {{ case: {}, sort: {}, format: {} }}",
-            self.case, self.sort, self.format
-        )
-    }
-}
-
 /// Word case normalization options.
 #[derive(
     Clone,
@@ -144,6 +143,16 @@ pub enum Case {
     Lower,
 }
 
+impl Display for Case {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Lower => write!(f, "lower"),
+            Self::Upper => write!(f, "upper"),
+            Self::Original => write!(f, "original"),
+        }
+    }
+}
+
 impl Case {
     /// Normalizes word case if a `Case` other than `Case::Original` is provided.
     pub fn normalize(&self, word: &str) -> Box<str> {
@@ -151,16 +160,6 @@ impl Case {
             Self::Lower => word.to_lowercase().into_boxed_str(),
             Self::Upper => word.to_uppercase().into_boxed_str(),
             Self::Original => Box::from(word),
-        }
-    }
-}
-
-impl Display for Case {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Lower => write!(f, "lower"),
-            Self::Upper => write!(f, "upper"),
-            Self::Original => write!(f, "original"),
         }
     }
 }
@@ -187,6 +186,16 @@ pub enum Sort {
     Unsorted,
 }
 
+impl Display for Sort {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Desc => write!(f, "desc"),
+            Self::Asc => write!(f, "asc"),
+            Self::Unsorted => write!(f, "unsorted"),
+        }
+    }
+}
+
 impl Sort {
     /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
     pub fn apply(&self, w: &mut WordTally<'_>) {
@@ -194,16 +203,6 @@ impl Sort {
             Self::Desc => w.tally.sort_unstable_by_key(|&(_, count)| Reverse(count)),
             Self::Asc => w.tally.sort_unstable_by_key(|&(_, count)| count),
             Self::Unsorted => (),
-        }
-    }
-}
-
-impl Display for Sort {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Desc => write!(f, "desc"),
-            Self::Asc => write!(f, "asc"),
-            Self::Unsorted => write!(f, "unsorted"),
         }
     }
 }
