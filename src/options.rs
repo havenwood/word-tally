@@ -1,24 +1,122 @@
+//! Configuration options for word tallying.
+//!
+//! This module provides the [`Options`] struct, a unified container for all
+//! word-tally configuration settings.
+//!
+//! # Structure
+//!
+//! Options are organized into three components:
+//!
+//! 1. **Formatting** ([`Formatting`]): Controls text normalization and presentation
+//!    - [`Case`]: Word case handling (original, lowercase, uppercase)
+//!    - [`Sort`]: Result ordering (unsorted, ascending, descending)
+//!    - [`Format`]: Output format (text, CSV, JSON)
+//!
+//! 2. **Filters** ([`Filters`]): Determines which words appear in results
+//!    - Length filters: Minimum character count
+//!    - Frequency filters: Occurrence thresholds
+//!    - Pattern matching: Regular expression filters
+//!    - Word lists: Explicit exclusions
+//!
+//! 3. **Performance** ([`Performance`]): Optimizes processing efficiency
+//!    - [`Concurrency`]: Processing mode (sequential, parallel)
+//!    - [`Threads`]: Thread pool configuration
+//!    - [`SizeHint`]: Collection allocation tuning
+//!
+//! # Usage
+//!
+//! ```
+//! use word_tally::{Options, Case, Format, Concurrency};
+//!
+//! // Default options
+//! let options = Options::default();
+//!
+//! // With specific settings
+//! let options = Options::default()
+//!     .with_case(Case::Lower)
+//!     .with_format(Format::Json)
+//!     .with_concurrency(Concurrency::Parallel);
+//! ```
+//!
+//! # Environment Variables
+//!
+//! Performance settings can be controlled via environment variables:
+//!
+//! - `WORD_TALLY_CHUNK_SIZE`: Chunk size for parallel processing (default: 16384)
+//! - `WORD_TALLY_THREADS`: Thread count (default: all available cores)
+//! - `WORD_TALLY_UNIQUENESS_RATIO`: Capacity estimation (default: 10)
+//! - `WORD_TALLY_WORD_DENSITY`: Per-chunk map capacity (default: 15)
+
 use crate::filters::Filters;
 use crate::formatting::{Case, Format, Formatting, Sort};
 use crate::performance::{Concurrency, Performance, SizeHint, Threads};
 use core::fmt;
 use serde::{Deserialize, Serialize};
 
-/// Unified options for word tallying, combining formatting, filtering, and performance settings.
+/// Unified configuration for word tallying operations.
+///
+/// `Options` consolidates all configuration aspects of word tallying into a single structure.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
 pub struct Options {
-    /// Options for word formatting, case normalization, sorting, and output format
+    /// Formatting configuration (case normalization, sorting, output format)
     formatting: Formatting,
 
-    /// Filters for which words should be tallied
+    /// Filter settings (word length, frequency, patterns, exclusions)
     filters: Filters,
 
-    /// Configuration for performance, processing strategies, and resource allocation
+    /// Performance configuration (concurrency, threads, memory allocation)
     performance: Performance,
 }
 
 impl Options {
-    /// Create a new unified Options with custom formatting, filters, and performance configurations
+    /// Creates a new `Options` with custom formatting, filters, and performance configurations.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use word_tally::{Options, Formatting, Filters, Performance, Case, Format, Concurrency};
+    ///
+    /// // Customization using component structs
+    /// let options = Options::new(
+    ///     Formatting::default().with_case_setting(Case::Lower),
+    ///     Filters::default().with_min_chars(3),
+    ///     Performance::default().with_concurrency(Concurrency::Parallel)
+    /// );
+    ///
+    /// // Default configuration
+    /// let options = Options::default();
+    ///
+    /// // Targeted customization with builder methods
+    /// let options = Options::default()
+    ///     .with_case(Case::Lower)
+    ///     .with_format(Format::Json);
+    /// ```
+    ///
+    /// # Tests
+    ///
+    /// ```
+    /// use word_tally::{Options, Formatting, Filters, Performance, Case, Format, Concurrency};
+    ///
+    /// // Verify examples work correctly
+    /// let custom_options = Options::new(
+    ///     Formatting::default().with_case_setting(Case::Lower),
+    ///     Filters::default().with_min_chars(3),
+    ///     Performance::default().with_concurrency(Concurrency::Parallel)
+    /// );
+    ///
+    /// let default_options = Options::default();
+    ///
+    /// let builder_options = Options::default()
+    ///     .with_case(Case::Lower)
+    ///     .with_format(Format::Json);
+    ///
+    /// assert_eq!(custom_options.formatting().case(), Case::Lower);
+    /// assert!(custom_options.filters().min_chars().is_some());
+    /// assert_eq!(custom_options.performance().concurrency(), Concurrency::Parallel);
+    ///
+    /// assert_eq!(builder_options.formatting().case(), Case::Lower);
+    /// assert_eq!(builder_options.formatting().format(), Format::Json);
+    /// ```
     pub const fn new(formatting: Formatting, filters: Filters, performance: Performance) -> Self {
         Self {
             formatting,
