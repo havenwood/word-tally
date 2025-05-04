@@ -150,7 +150,7 @@ impl<'a, 'b> Verbose<'a, 'b> {
 }
 
 /// Output the selected format to stderr if verbose is enabled.
-pub fn handle_output_from_args(
+pub fn handle_output(
     is_verbose: bool,
     format: Format,
     word_tally: &WordTally<'_>,
@@ -176,7 +176,7 @@ pub fn handle_verbose_output(
     delimiter: &str,
     source: &str,
 ) -> Result<()> {
-    handle_output_from_args(is_verbose, format, word_tally, delimiter, source)
+    handle_output(is_verbose, format, word_tally, delimiter, source)
 }
 
 fn output_json(word_tally: &WordTally<'_>, delimiter: &str, source: &str) -> Result<()> {

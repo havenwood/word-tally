@@ -19,7 +19,7 @@ fn main() -> Result<()> {
     // Parse arguments and prepare an input reader.
     let args = Args::parse();
 
-    let input = Input::from_args(args.get_input().as_str())?;
+    let input = Input::new(args.get_input().as_str())?;
     let input_size = input.size();
     let size_hint = input_size.map_or_else(SizeHint::default, SizeHint::Bytes);
     let options = args.get_options(size_hint)?;
@@ -41,7 +41,7 @@ fn main() -> Result<()> {
         &source,
     )?;
 
-    let mut output = Output::from_args(args.get_output())?;
+    let mut output = Output::new(args.get_output())?;
     output.write_formatted_tally(word_tally.tally(), options.format(), &delimiter)?;
 
     Ok(())

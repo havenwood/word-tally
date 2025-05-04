@@ -27,7 +27,7 @@ impl std::fmt::Display for Input {
 
 impl Input {
     /// Construct an `Input` from a file path or stdin.
-    pub fn from_args(path: &str) -> Result<Self> {
+    pub fn new(path: &str) -> Result<Self> {
         if path == "-" {
             Ok(Self::Stdin)
         } else {
