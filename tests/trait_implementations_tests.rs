@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use word_tally::{
-    Concurrency, Formatting, Input, MinValue, Options, Performance, SizeHint, Sort, Threads,
-    filters::ExcludeWords,
+    Concurrency, Format, Formatting, Input, MinValue, Options, Performance, SizeHint, Sort,
+    Threads, filters::ExcludeWords,
 };
 
 #[test]
@@ -51,8 +51,8 @@ fn test_thread_conversions() {
 
 #[test]
 fn test_ordering_traits() {
-    let fmt1 = Formatting::new(Default::default(), Sort::Desc);
-    let fmt2 = Formatting::new(Default::default(), Sort::Asc);
+    let fmt1 = Formatting::new(Default::default(), Sort::Desc, Format::Text);
+    let fmt2 = Formatting::new(Default::default(), Sort::Asc, Format::Text);
     assert!(fmt1 < fmt2);
 
     // Test Performance ordering

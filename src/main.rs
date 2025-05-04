@@ -5,12 +5,15 @@ pub(crate) mod input;
 pub(crate) mod output;
 pub(crate) mod verbose;
 
+// Import formatting module from the crate
+use word_tally::formatting;
+
 use crate::input::Input;
 use crate::output::Output;
 use anyhow::{Context, Result};
 use args::Args;
 use clap::Parser;
-use word_tally::{Filters, Format, Formatting, Options, Performance, SizeHint, WordTally};
+use word_tally::{Filters, Options, Performance, SizeHint, WordTally};
 
 fn main() -> Result<()> {
     // Parse arguments.
@@ -22,7 +25,7 @@ fn main() -> Result<()> {
     let source = input.source();
     let reader = input.get_reader(&source)?;
 
-    let formatting = Formatting::new(args.get_case(), args.get_sort());
+    let formatting = args.get_formatting();
     let filters = Filters::create_from_args(
         &args.get_min_chars(),
         &args.get_min_count(),
@@ -45,14 +48,14 @@ fn main() -> Result<()> {
 
     crate::verbose::handle_verbose_output(
         args.is_verbose(),
-        args.get_format(),
+        options.format(),
         &word_tally,
         &delimiter,
         &source,
     )?;
 
     let mut output = Output::from_args(args.get_output())?;
-    output.write_formatted_tally(word_tally.tally(), args.get_format(), &delimiter)?;
+    output.write_formatted_tally(word_tally.tally(), options.format(), &delimiter)?;
 
     Ok(())
 }

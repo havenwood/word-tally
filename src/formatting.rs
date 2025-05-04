@@ -44,15 +44,16 @@ impl Display for Format {
 pub struct Formatting {
     case: Case,
     sort: Sort,
+    format: Format,
 }
 
 /// Construct `Formatting`.
 impl Formatting {
-    pub const fn new(case: Case, sort: Sort) -> Self {
-        Self { case, sort }
+    pub const fn new(case: Case, sort: Sort, format: Format) -> Self {
+        Self { case, sort, format }
     }
 
-    /// Create a new Formatting with default case and custom sort
+    /// With custom sort
     pub fn with_sort(sort: Sort) -> Self {
         Self {
             sort,
@@ -60,10 +61,18 @@ impl Formatting {
         }
     }
 
-    /// Create a new Formatting with custom case and default sort
+    /// With custom case
     pub fn with_case(case: Case) -> Self {
         Self {
             case,
+            ..Default::default()
+        }
+    }
+
+    /// With custom format
+    pub fn with_format(format: Format) -> Self {
+        Self {
+            format,
             ..Default::default()
         }
     }
@@ -78,6 +87,11 @@ impl Formatting {
         self.sort
     }
 
+    /// Get the format setting
+    pub const fn format(&self) -> Format {
+        self.format
+    }
+
     /// Set the case option and return a new instance
     pub const fn with_case_setting(mut self, case: Case) -> Self {
         self.case = case;
@@ -89,6 +103,12 @@ impl Formatting {
         self.sort = sort;
         self
     }
+
+    /// Set the format option and return a new instance
+    pub const fn with_format_setting(mut self, format: Format) -> Self {
+        self.format = format;
+        self
+    }
 }
 
 /// Display implementation for Formatting
@@ -96,8 +116,8 @@ impl fmt::Display for Formatting {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Formatting {{ case: {}, sort: {} }}",
-            self.case, self.sort
+            "Formatting {{ case: {}, sort: {}, format: {} }}",
+            self.case, self.sort, self.format
         )
     }
 }

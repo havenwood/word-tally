@@ -1,7 +1,8 @@
+use crate::formatting::Format;
 use crate::output::Output;
 use anyhow::{Context, Result};
 use std::fmt::{self, Debug, Formatter};
-use word_tally::{Format, WordTally};
+use word_tally::WordTally;
 
 pub struct Verbose<'a, 'b> {
     output: &'a mut Output,

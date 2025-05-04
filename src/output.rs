@@ -1,4 +1,4 @@
-use crate::Format;
+use crate::formatting::Format;
 use anyhow::{Context, Result};
 use std::fmt::{self, Debug, Formatter};
 use std::fs::File;

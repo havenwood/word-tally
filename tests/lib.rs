@@ -5,8 +5,8 @@ use std::sync::Arc;
 use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
-    Case, Concurrency, ExcludeWords, Filters, Formatting, MinChars, MinCount, MinValue, Options,
-    Performance, SizeHint, Sort, WordTally,
+    Case, Concurrency, ExcludeWords, Filters, Format, Formatting, MinChars, MinCount, MinValue,
+    Options, Performance, SizeHint, Sort, WordTally,
 };
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
@@ -37,7 +37,7 @@ fn word_tally(formatting: Formatting, filters: Filters) -> WordTally<'static> {
 }
 
 fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFields<'_>) {
-    let formatting = Formatting::new(case, sort);
+    let formatting = Formatting::new(case, sort, Format::Text);
     let word_tally = word_tally(formatting, filters);
     assert_eq!(word_tally.count(), fields.count);
     assert_eq!(word_tally.uniq_count(), fields.uniq_count);
@@ -260,7 +260,7 @@ fn equality_and_hashing() {
     let tallies: Vec<WordTally<'static>> = cases_and_sorts
         .iter()
         .map(|&(case, sort)| {
-            let formatting = Formatting::new(case, sort);
+            let formatting = Formatting::new(case, sort, Format::Text);
             word_tally(formatting, Filters::default())
         })
         .collect();

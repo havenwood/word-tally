@@ -26,10 +26,11 @@
 //!
 //! ## Formatting
 //!
-//! Controls how words are normalized and results are ordered:
+//! Controls how words are normalized, results are ordered, and output is formatted:
 //!
 //! * [`Case`]: Normalize word case (`Original`, `Lower`, or `Upper`)
 //! * [`Sort`]: Order results by frequency (`Unsorted`, `Desc`, or `Asc`)
+//! * [`Format`]: Specify output format (`Text`, `CSV`, `JSON`)
 //!
 //! ## Filters
 //!
@@ -50,18 +51,19 @@
 //!
 //! ## Output
 //!
-//! Format results for different use cases:
+//! Output the results:
 //!
-//! * [`Format`]: Specify output format (Text, CSV, JSON)
+//! * [`Output`]: Generate formatted output based on the specified format in `Formatting`
 //!
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Case, Filters, Options, WordTally};
+//! use word_tally::{Case, Filters, Format, Options, WordTally};
 //!
-//! // Create options with case normalization and minimum character length filter
+//! // Create options with case normalization, output format, and minimum character length filter
 //! let options = Options::default()
 //!     .with_case(Case::Lower)
+//!     .with_format(Format::Json)
 //!     .with_filters(Filters::default().with_min_chars(3));
 //!
 //! let input = "Cinquedea".as_bytes();

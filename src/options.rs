@@ -7,14 +7,13 @@ use serde::{Deserialize, Serialize};
 /// Unified options for word tallying, combining formatting, filtering, and performance settings.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
 pub struct Options {
-    /// Options for word formatting, case normalization, and sorting
+    /// Options for word formatting, case normalization, sorting, and output format
     formatting: Formatting,
 
     /// Filters for which words should be tallied
     filters: Filters,
 
     /// Configuration for performance, processing strategies, and resource allocation
-    #[serde(skip_serializing, skip_deserializing, default)]
     performance: Performance,
 }
 
@@ -144,9 +143,15 @@ impl Options {
         self.formatting.sort()
     }
 
-    /// Get the format setting
+    /// Get the format setting from formatting options
     pub const fn format(&self) -> Format {
-        Format::Text
+        self.formatting.format()
+    }
+
+    /// Set output format while preserving other options
+    pub const fn with_format(mut self, format: Format) -> Self {
+        self.formatting = self.formatting.with_format_setting(format);
+        self
     }
 
     /// Get the concurrency setting from performance options

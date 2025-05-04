@@ -5,7 +5,7 @@ use clap::Parser;
 use std::path::PathBuf;
 use unescaper::unescape;
 
-use word_tally::formatting::{Case, Format, Sort};
+use word_tally::formatting::{Case, Format, Formatting, Sort};
 use word_tally::performance::Concurrency;
 
 /// A utility for tallying word frequencies in text.
@@ -74,14 +74,6 @@ impl Args {
         &self.input
     }
 
-    pub const fn get_case(&self) -> Case {
-        self.case
-    }
-
-    pub const fn get_sort(&self) -> Sort {
-        self.sort
-    }
-
     pub const fn get_min_chars(&self) -> Option<usize> {
         self.min_chars
     }
@@ -102,8 +94,8 @@ impl Args {
         self.exclude.as_ref()
     }
 
-    pub const fn get_format(&self) -> Format {
-        self.format
+    pub const fn get_formatting(&self) -> Formatting {
+        Formatting::new(self.case, self.sort, self.format)
     }
 
     pub const fn get_delimiter(&self) -> &String {
