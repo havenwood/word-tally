@@ -2,6 +2,7 @@
 
 use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
+use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Determines whether to use parallel or sequential processing
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -327,29 +328,29 @@ impl Performance {
         chunk_size * self.unique_word_density as usize
     }
 
-    /// Initializes the rayon thread pool with configuration from Performance
+    /// Initialize the Rayon thread pool with configuration from `Performance`.
+    ///
+    /// If thread pool init fails as configured, log an error and carry on with
+    /// the default Rayon thread pool configuration.
     pub fn init_thread_pool(&self) {
         use rayon::ThreadPoolBuilder;
-        use std::sync::Once;
-        static INIT_THREAD_POOL: Once = Once::new();
 
-        match self.threads {
-            Threads::Count(count) => {
-                INIT_THREAD_POOL.call_once(|| {
-                    let num_threads = count as usize;
-                    if let Err(e) = ThreadPoolBuilder::new()
-                        .num_threads(num_threads)
-                        .build_global()
-                    {
-                        eprintln!("Warning: Failed to set thread pool size: {}", e);
-                    }
-                });
-            }
-            Threads::All => {
-                // Default rayon behavior is to use all available cores
-                INIT_THREAD_POOL.call_once(|| {
-                    // No custom configuration needed - Rayon defaults to all cores
-                });
+        static INIT_ATTEMPTED: AtomicBool = AtomicBool::new(false);
+
+        // Only attempt initialization once
+        if INIT_ATTEMPTED.swap(true, Ordering::SeqCst) {
+            return;
+        }
+
+        if let Threads::Count(count) = self.threads {
+            if let Err(e) = ThreadPoolBuilder::new()
+                .num_threads(count as usize)
+                .build_global()
+            {
+                eprintln!(
+                    "Warning: Failed to configure thread pool with {} threads ({}). Using default configuration.",
+                    count, e
+                );
             }
         }
     }
