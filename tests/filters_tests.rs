@@ -104,3 +104,56 @@ fn test_create_from_args_with_empty_patterns() {
     assert!(filters.exclude_patterns().is_none());
     assert!(filters.include_patterns().is_none());
 }
+
+#[test]
+fn test_serialization_with_patterns() {
+    use serde_json;
+    use word_tally::Case;
+    use indexmap::IndexMap;
+
+    let min_chars = Some(3);
+    let min_count = Some(2);
+    let exclude_words = Some(vec!["the".to_string(), "and".to_string()]);
+    let exclude_patterns = Some(vec![r"\d+".to_string()]);
+    let include_patterns = Some(vec![r"[a-z]+".to_string()]);
+
+    let filters = Filters::create_from_args(
+        &min_chars,
+        &min_count,
+        exclude_words.as_ref(),
+        exclude_patterns.as_ref(),
+        include_patterns.as_ref(),
+    ).unwrap();
+
+    let json = serde_json::to_string(&filters).unwrap();
+    assert!(json.contains("excludePatterns"));
+    assert!(json.contains("includePatterns"));
+
+    let deserialized_filters: Filters = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(deserialized_filters.min_chars().as_ref().unwrap().value, 3);
+    assert_eq!(deserialized_filters.min_count().as_ref().unwrap().value, 2);
+
+    let deserialized_exclude_words = deserialized_filters.exclude_words().as_ref().unwrap();
+    assert_eq!(deserialized_exclude_words.len(), 2);
+    assert!(deserialized_exclude_words.contains(&"the".to_string()));
+    assert!(deserialized_exclude_words.contains(&"and".to_string()));
+
+    let deserialized_exclude_patterns = deserialized_filters.exclude_patterns().as_ref().unwrap();
+    assert!(deserialized_exclude_patterns.matches("123"));
+    assert!(!deserialized_exclude_patterns.matches("abc"));
+
+    let deserialized_include_patterns = deserialized_filters.include_patterns().as_ref().unwrap();
+    assert!(deserialized_include_patterns.matches("abc"));
+    assert!(!deserialized_include_patterns.matches("123"));
+
+    let mut tally_map = IndexMap::new();
+    tally_map.insert("the".into(), 5);
+    tally_map.insert("abc".into(), 2);
+    tally_map.insert("123".into(), 3);
+
+    deserialized_filters.apply(&mut tally_map, Case::Original);
+
+    assert_eq!(tally_map.len(), 1);
+    assert!(tally_map.contains_key("abc"));
+}

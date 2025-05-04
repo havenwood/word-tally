@@ -21,11 +21,11 @@ pub struct Filters {
     exclude_words: Option<ExcludeWords>,
 
     /// List of regex patterns to exclude words matching the patterns.
-    #[serde(skip)]
+    #[serde(rename = "excludePatterns")]
     exclude_patterns: Option<ExcludePatterns>,
 
     /// List of regex patterns to include only words matching the patterns.
-    #[serde(skip)]
+    #[serde(rename = "includePatterns")]
     include_patterns: Option<IncludePatterns>,
 }
 
@@ -328,6 +328,27 @@ impl Display for Patterns {
 #[derive(Clone, Debug, Default)]
 pub struct ExcludePatterns(Patterns);
 
+impl Serialize for ExcludePatterns {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.original_patterns.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ExcludePatterns {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        let patterns: Vec<String> = Vec::deserialize(deserializer)?;
+
+        ExcludePatterns::new(&patterns).map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
+    }
+}
+
 impl ExcludePatterns {
     pub fn new(patterns: &[String]) -> Result<Self, regex::Error> {
         Ok(Self(Patterns::new(patterns)?))
@@ -373,6 +394,27 @@ impl Display for ExcludePatterns {
 /// Regex patterns used to include only matching words.
 #[derive(Clone, Debug, Default)]
 pub struct IncludePatterns(Patterns);
+
+impl Serialize for IncludePatterns {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.original_patterns.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for IncludePatterns {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        let patterns: Vec<String> = Vec::deserialize(deserializer)?;
+
+        IncludePatterns::new(&patterns).map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
+    }
+}
 
 impl IncludePatterns {
     pub fn new(patterns: &[String]) -> Result<Self, regex::Error> {
