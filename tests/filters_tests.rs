@@ -107,9 +107,9 @@ fn test_filters_with_empty_patterns() {
 
 #[test]
 fn test_serialization_with_patterns() {
+    use indexmap::IndexMap;
     use serde_json;
     use word_tally::Case;
-    use indexmap::IndexMap;
 
     let min_chars = Some(3);
     let min_count = Some(2);
@@ -123,7 +123,8 @@ fn test_serialization_with_patterns() {
         exclude_words.as_ref(),
         exclude_patterns.as_ref(),
         include_patterns.as_ref(),
-    ).unwrap();
+    )
+    .unwrap();
 
     let json = serde_json::to_string(&filters).unwrap();
     assert!(json.contains("excludePatterns"));
