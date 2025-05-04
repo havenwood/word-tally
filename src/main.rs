@@ -10,35 +10,22 @@ use word_tally::formatting;
 
 use crate::input::Input;
 use crate::output::Output;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use args::Args;
 use clap::Parser;
-use word_tally::{Filters, Options, Performance, SizeHint, WordTally};
+use word_tally::{SizeHint, WordTally};
 
 fn main() -> Result<()> {
-    // Parse arguments.
+    // Parse arguments and prepare an input reader.
     let args = Args::parse();
 
     let input = Input::from_args(args.get_input().as_str())?;
     let input_size = input.size();
     let size_hint = input_size.map_or_else(SizeHint::default, SizeHint::Bytes);
+    let options = args.get_options(size_hint)?;
+
     let source = input.source();
     let reader = input.get_reader(&source)?;
-
-    let formatting = args.get_formatting();
-    let filters = Filters::create_from_args(
-        &args.get_min_chars(),
-        &args.get_min_count(),
-        args.get_exclude_words(),
-        args.get_exclude_patterns(),
-        args.get_include_patterns(),
-    )
-    .with_context(|| "Failed to compile filter patterns")?;
-    let concurrency = args.get_concurrency();
-    let performance = Performance::default()
-        .with_concurrency(concurrency)
-        .with_size_hint(size_hint);
-    let options = Options::new(formatting, filters, performance);
 
     // Create a WordTally instance.
     let word_tally = WordTally::new(reader, &options);

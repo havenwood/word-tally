@@ -5,8 +5,10 @@ use clap::Parser;
 use std::path::PathBuf;
 use unescaper::unescape;
 
+use word_tally::filters::Filters;
 use word_tally::formatting::{Case, Format, Formatting, Sort};
-use word_tally::performance::Concurrency;
+use word_tally::options::Options;
+use word_tally::performance::{Concurrency, Performance, SizeHint};
 
 /// A utility for tallying word frequencies in text.
 #[derive(Debug, Parser)]
@@ -74,34 +76,6 @@ impl Args {
         &self.input
     }
 
-    pub const fn get_min_chars(&self) -> Option<usize> {
-        self.min_chars
-    }
-
-    pub const fn get_min_count(&self) -> Option<usize> {
-        self.min_count
-    }
-
-    pub const fn get_exclude_words(&self) -> Option<&Vec<String>> {
-        self.exclude_words.as_ref()
-    }
-
-    pub const fn get_include_patterns(&self) -> Option<&Vec<String>> {
-        self.include.as_ref()
-    }
-
-    pub const fn get_exclude_patterns(&self) -> Option<&Vec<String>> {
-        self.exclude.as_ref()
-    }
-
-    pub const fn get_formatting(&self) -> Formatting {
-        Formatting::new(self.case, self.sort, self.format)
-    }
-
-    pub const fn get_delimiter(&self) -> &String {
-        &self.delimiter
-    }
-
     pub const fn get_output(&self) -> &Option<PathBuf> {
         &self.output
     }
@@ -110,15 +84,48 @@ impl Args {
         self.verbose
     }
 
+    const fn get_delimiter(&self) -> &String {
+        &self.delimiter
+    }
+
     pub fn get_unescaped_delimiter(&self) -> Result<String> {
         unescape(self.get_delimiter().as_str()).with_context(|| "Failed to unescape delimiter")
     }
 
-    pub const fn get_concurrency(&self) -> Concurrency {
+    const fn get_concurrency(&self) -> Concurrency {
         if self.parallel {
             Concurrency::Parallel
         } else {
             Concurrency::Sequential
         }
+    }
+
+    pub fn get_performance(&self, size_hint: SizeHint) -> Performance {
+        Performance::default()
+            .with_concurrency(self.get_concurrency())
+            .with_size_hint(size_hint)
+    }
+
+    pub fn get_filters(&self) -> Result<Filters> {
+        Filters::create_from_args(
+            &self.min_chars,
+            &self.min_count,
+            self.exclude_words.as_ref(),
+            self.exclude.as_ref(),
+            self.include.as_ref(),
+        )
+        .with_context(|| "Failed to compile filter patterns")
+    }
+
+    pub const fn get_formatting(&self) -> Formatting {
+        Formatting::new(self.case, self.sort, self.format)
+    }
+
+    pub fn get_options(&self, size_hint: SizeHint) -> Result<Options> {
+        let formatting = self.get_formatting();
+        let filters = self.get_filters()?;
+        let performance = self.get_performance(size_hint);
+
+        Ok(Options::new(formatting, filters, performance))
     }
 }
