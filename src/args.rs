@@ -100,10 +100,8 @@ impl Args {
         }
     }
 
-    pub fn get_performance(&self, size_hint: SizeHint) -> Performance {
-        Performance::default()
-            .with_concurrency(self.get_concurrency())
-            .with_size_hint(size_hint)
+    pub const fn get_formatting(&self) -> Formatting {
+        Formatting::new(self.case, self.sort, self.format)
     }
 
     pub fn get_filters(&self) -> Result<Filters> {
@@ -117,8 +115,10 @@ impl Args {
         .with_context(|| "Failed to compile filter patterns")
     }
 
-    pub const fn get_formatting(&self) -> Formatting {
-        Formatting::new(self.case, self.sort, self.format)
+    pub fn get_performance(&self, size_hint: SizeHint) -> Performance {
+        Performance::default()
+            .with_concurrency(self.get_concurrency())
+            .with_size_hint(size_hint)
     }
 
     pub fn get_options(&self, size_hint: SizeHint) -> Result<Options> {

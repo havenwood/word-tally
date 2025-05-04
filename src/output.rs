@@ -39,6 +39,15 @@ impl Write for Output {
 }
 
 impl Output {
+    /// Creates an `Output` from optional arguments, choosing between file or stdout.
+    pub fn new(output: &Option<PathBuf>) -> Result<Self> {
+        match output.as_deref() {
+            Some(path) if path == Path::new("-") => Ok(Self::stdout()),
+            Some(path) => Self::file(path.to_path_buf()),
+            None => Ok(Self::stdout()),
+        }
+    }
+
     /// Creates an `Output` that writes to a file with error context.
     pub fn file(path: PathBuf) -> Result<Self> {
         let file = File::create(&path)
@@ -61,15 +70,6 @@ impl Output {
         }
     }
 
-    /// Creates an `Output` from optional arguments, choosing between file or stdout.
-    pub fn new(output: &Option<PathBuf>) -> Result<Self> {
-        match output.as_deref() {
-            Some(path) if path == Path::new("-") => Ok(Self::stdout()),
-            Some(path) => Self::file(path.to_path_buf()),
-            None => Ok(Self::stdout()),
-        }
-    }
-
     /// Writes a line to the writer, handling `BrokenPipe` errors gracefully.
     pub fn write_line(&mut self, line: &str) -> Result<()> {
         Self::handle_broken_pipe(self.writer.write_all(line.as_bytes()))
@@ -78,17 +78,6 @@ impl Output {
     /// Flushes the writer, ensuring all output is written.
     pub fn flush(&mut self) -> Result<()> {
         Self::handle_broken_pipe(self.writer.flush())
-    }
-
-    /// Processes the result of a write, handling `BrokenPipe` errors gracefully.
-    fn handle_broken_pipe(result: io::Result<()>) -> Result<()> {
-        match result {
-            Ok(()) => Ok(()),
-            Err(err) => match err.kind() {
-                BrokenPipe => Ok(()),
-                _ => Err(err.into()),
-            },
-        }
     }
 
     /// Writes word tally data in the specified format.
@@ -126,5 +115,16 @@ impl Output {
         }
 
         self.flush()
+    }
+
+    /// Processes the result of a write, handling `BrokenPipe` errors gracefully.
+    fn handle_broken_pipe(result: io::Result<()>) -> Result<()> {
+        match result {
+            Ok(()) => Ok(()),
+            Err(err) => match err.kind() {
+                BrokenPipe => Ok(()),
+                _ => Err(err.into()),
+            },
+        }
     }
 }

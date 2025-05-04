@@ -35,18 +35,6 @@ impl Input {
         }
     }
 
-    /// Gets the reader from the input source.
-    pub fn get_reader(&self, source: &str) -> Result<Box<dyn Read>> {
-        match self {
-            Self::File(path) => {
-                let file =
-                    File::open(path).with_context(|| format!("Failed to read from {}", source))?;
-                Ok(Box::new(file))
-            }
-            Self::Stdin => Ok(Box::new(io::stdin())),
-        }
-    }
-
     /// Returns the file name of the input or `"-"` for stdin.
     pub fn source(&self) -> String {
         match self {
@@ -66,6 +54,18 @@ impl Input {
         match self {
             Self::File(path) => fs::metadata(path).map(|metadata| metadata.len()).ok(),
             Self::Stdin => None,
+        }
+    }
+
+    /// Gets the reader from the input source.
+    pub fn get_reader(&self, source: &str) -> Result<Box<dyn Read>> {
+        match self {
+            Self::File(path) => {
+                let file =
+                    File::open(path).with_context(|| format!("Failed to read from {}", source))?;
+                Ok(Box::new(file))
+            }
+            Self::Stdin => Ok(Box::new(io::stdin())),
         }
     }
 }

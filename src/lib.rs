@@ -194,39 +194,6 @@ impl<'i> IntoIterator for &'i WordTally<'_> {
 
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
 impl<'a> WordTally<'a> {
-    /// Deserializes a WordTally from a JSON string.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the JSON string contains invalid syntax or missing required fields.
-    pub fn from_json_str(json_str: &str, options: &'a Options) -> Result<Self> {
-        let data: WordTallyData = serde_json::from_str(json_str)
-            .context("Failed to deserialize WordTally from JSON string")?;
-
-        Ok(Self {
-            tally: data.tally,
-            options,
-            count: data.count,
-            uniq_count: data.uniq_count,
-        })
-    }
-
-    /// Deserializes a WordTally from a JSON reader.
-    ///
-    /// Returns an error if the JSON contains invalid syntax, missing required fields,
-    /// or if an I/O error occurs while reading.
-    pub fn from_json_reader<R: std::io::Read>(reader: R, options: &'a Options) -> Result<Self> {
-        let data: WordTallyData = serde_json::from_reader(reader)
-            .context("Failed to deserialize WordTally from reader")?;
-
-        Ok(Self {
-            tally: data.tally,
-            options,
-            count: data.count,
-            uniq_count: data.uniq_count,
-        })
-    }
-
     /// Constructs a new `WordTally` from a source that implements `Read`.
     ///
     /// Takes a reference to unified options that include formatting, filters, and performance settings.
@@ -267,19 +234,47 @@ impl<'a> WordTally<'a> {
         instance
     }
 
-    /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
-    pub fn sort(&mut self, sort: Sort) {
-        sort.apply(self);
+    /// Deserializes a WordTally from a JSON string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the JSON string contains invalid syntax or missing required fields.
+    pub fn from_json_str(json_str: &str, options: &'a Options) -> Result<Self> {
+        let data: WordTallyData = serde_json::from_str(json_str)
+            .context("Failed to deserialize WordTally from JSON string")?;
+
+        Ok(Self {
+            tally: data.tally,
+            options,
+            count: data.count,
+            uniq_count: data.uniq_count,
+        })
     }
 
-    /// Gets the `tally` field.
-    pub const fn tally(&self) -> &[(Box<str>, usize)] {
-        &self.tally
+    /// Deserializes a WordTally from a JSON reader.
+    ///
+    /// Returns an error if the JSON contains invalid syntax, missing required fields,
+    /// or if an I/O error occurs while reading.
+    pub fn from_json_reader<R: std::io::Read>(reader: R, options: &'a Options) -> Result<Self> {
+        let data: WordTallyData = serde_json::from_reader(reader)
+            .context("Failed to deserialize WordTally from reader")?;
+
+        Ok(Self {
+            tally: data.tally,
+            options,
+            count: data.count,
+            uniq_count: data.uniq_count,
+        })
     }
 
     /// Consumes the `tally` field.
     pub fn into_tally(self) -> Box<[(Box<str>, usize)]> {
         self.tally
+    }
+
+    /// Gets the `tally` field.
+    pub const fn tally(&self) -> &[(Box<str>, usize)] {
+        &self.tally
     }
 
     /// Gets a reference to the options.
@@ -300,6 +295,11 @@ impl<'a> WordTally<'a> {
     /// Gets the `count` field.
     pub const fn count(&self) -> usize {
         self.count
+    }
+
+    /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
+    pub fn sort(&mut self, sort: Sort) {
+        sort.apply(self);
     }
 
     /// Sequential implementation for word tallying
@@ -353,31 +353,6 @@ impl<'a> WordTally<'a> {
         result_map
     }
 
-    /// Processes a batch and merges the results
-    #[inline]
-    fn process_and_merge_batch(
-        &self,
-        result_map: &mut IndexMap<Box<str>, usize>,
-        lines: &[String],
-        case: Case,
-        estimated_capacity: usize,
-        num_threads: usize,
-    ) {
-        if lines.is_empty() {
-            return;
-        }
-        let batch_map = self.process_batch(lines, case, estimated_capacity, num_threads);
-        Self::merge_map_into(result_map, batch_map);
-    }
-
-    /// Merges maps by combining word counts
-    #[inline]
-    fn merge_map_into(dest: &mut IndexMap<Box<str>, usize>, source: IndexMap<Box<str>, usize>) {
-        for (word, count) in source {
-            *dest.entry(word).or_insert(0) += count;
-        }
-    }
-
     /// Processes a batch of lines in parallel
     fn process_batch(
         &self,
@@ -408,5 +383,30 @@ impl<'a> WordTally<'a> {
         }
 
         result
+    }
+
+    /// Processes a batch and merges the results
+    #[inline]
+    fn process_and_merge_batch(
+        &self,
+        result_map: &mut IndexMap<Box<str>, usize>,
+        lines: &[String],
+        case: Case,
+        estimated_capacity: usize,
+        num_threads: usize,
+    ) {
+        if lines.is_empty() {
+            return;
+        }
+        let batch_map = self.process_batch(lines, case, estimated_capacity, num_threads);
+        Self::merge_map_into(result_map, batch_map);
+    }
+
+    /// Merges maps by combining word counts
+    #[inline]
+    fn merge_map_into(dest: &mut IndexMap<Box<str>, usize>, source: IndexMap<Box<str>, usize>) {
+        for (word, count) in source {
+            *dest.entry(word).or_insert(0) += count;
+        }
     }
 }

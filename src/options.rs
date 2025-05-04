@@ -42,21 +42,6 @@ impl Options {
         Self::with_defaults(Formatting::default(), performance)
     }
 
-    /// Get a reference to the formatting options
-    pub const fn formatting(&self) -> &Formatting {
-        &self.formatting
-    }
-
-    /// Get a reference to the filters
-    pub const fn filters(&self) -> &Filters {
-        &self.filters
-    }
-
-    /// Get a reference to the performance configuration
-    pub const fn performance(&self) -> &Performance {
-        &self.performance
-    }
-
     /// Set formatting options while preserving other options
     pub const fn with_formatting(mut self, formatting: Formatting) -> Self {
         self.formatting = formatting;
@@ -75,8 +60,6 @@ impl Options {
         self
     }
 
-    // Specific formatting builder methods
-
     /// Set case normalization option
     pub const fn with_case(mut self, case: Case) -> Self {
         self.formatting = self.formatting.with_case_setting(case);
@@ -89,7 +72,11 @@ impl Options {
         self
     }
 
-    // Specific performance builder methods
+    /// Set output format while preserving other options
+    pub const fn with_format(mut self, format: Format) -> Self {
+        self.formatting = self.formatting.with_format_setting(format);
+        self
+    }
 
     /// Set concurrency mode
     pub fn with_concurrency(mut self, concurrency: Concurrency) -> Self {
@@ -133,6 +120,21 @@ impl Options {
         self
     }
 
+    /// Get a reference to the formatting options
+    pub const fn formatting(&self) -> &Formatting {
+        &self.formatting
+    }
+
+    /// Get a reference to the filters
+    pub const fn filters(&self) -> &Filters {
+        &self.filters
+    }
+
+    /// Get a reference to the performance configuration
+    pub const fn performance(&self) -> &Performance {
+        &self.performance
+    }
+
     /// Get the case setting from formatting options
     pub const fn case(&self) -> Case {
         self.formatting.case()
@@ -146,12 +148,6 @@ impl Options {
     /// Get the format setting from formatting options
     pub const fn format(&self) -> Format {
         self.formatting.format()
-    }
-
-    /// Set output format while preserving other options
-    pub const fn with_format(mut self, format: Format) -> Self {
-        self.formatting = self.formatting.with_format_setting(format);
-        self
     }
 
     /// Get the concurrency setting from performance options

@@ -38,6 +38,31 @@ impl<'v, 'a> Verbose<'v, 'a> {
         }
     }
 
+    /// Format the `usize`, or `"none"` if none, as a `String`.
+    pub fn format<T: ToString>(&self, value: Option<T>) -> String {
+        value.map_or_else(|| "none".to_string(), |v| v.to_string())
+    }
+
+    /// Create a JSON representation of the verbose output.
+    pub fn to_json(&self) -> Result<String> {
+        use serde_json::json;
+
+        let value = json!({
+            "source": self.source,
+            "total-words": self.tally.count(),
+            "unique-words": self.tally.uniq_count(),
+            "delimiter": format!("{:?}", self.delimiter),
+            "case": self.tally.options().case().to_string(),
+            "order": self.tally.options().sort().to_string(),
+            "min-chars": self.format(*self.tally.filters().min_chars()),
+            "min-count": self.format(*self.tally.filters().min_count()),
+            "exclude-words": self.format(self.tally.filters().exclude_words().clone()),
+            "exclude-patterns": self.format(self.tally.filters().exclude_patterns().as_ref()),
+        });
+
+        serde_json::to_string(&value).with_context(|| "Failed to serialize verbose info to JSON")
+    }
+
     /// Log verbose details in text format.
     pub fn log(&mut self) -> Result<()> {
         self.log_details()?;
@@ -72,6 +97,12 @@ impl<'v, 'a> Verbose<'v, 'a> {
         self.output.write_line(&csv_data)?;
 
         Ok(())
+    }
+
+    /// Write a formatted log entry line.
+    fn write_entry(&mut self, label: &str, value: impl ToString) -> Result<()> {
+        self.output
+            .write_line(&format!("{label}{}{}\n", self.delimiter, value.to_string()))
     }
 
     /// Log word tally details.
@@ -115,37 +146,6 @@ impl<'v, 'a> Verbose<'v, 'a> {
         }
 
         Ok(())
-    }
-
-    /// Format the `usize`, or `"none"` if none, as a `String`.
-    pub fn format<T: ToString>(&self, value: Option<T>) -> String {
-        value.map_or_else(|| "none".to_string(), |v| v.to_string())
-    }
-
-    /// Write a formatted log entry line.
-    fn write_entry(&mut self, label: &str, value: impl ToString) -> Result<()> {
-        self.output
-            .write_line(&format!("{label}{}{}\n", self.delimiter, value.to_string()))
-    }
-
-    /// Create a JSON representation of the verbose output.
-    pub fn to_json(&self) -> Result<String> {
-        use serde_json::json;
-
-        let value = json!({
-            "source": self.source,
-            "total-words": self.tally.count(),
-            "unique-words": self.tally.uniq_count(),
-            "delimiter": format!("{:?}", self.delimiter),
-            "case": self.tally.options().case().to_string(),
-            "order": self.tally.options().sort().to_string(),
-            "min-chars": self.format(*self.tally.filters().min_chars()),
-            "min-count": self.format(*self.tally.filters().min_count()),
-            "exclude-words": self.format(self.tally.filters().exclude_words().clone()),
-            "exclude-patterns": self.format(self.tally.filters().exclude_patterns().as_ref()),
-        });
-
-        serde_json::to_string(&value).with_context(|| "Failed to serialize verbose info to JSON")
     }
 }
 

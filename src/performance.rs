@@ -208,26 +208,6 @@ impl Performance {
         })
     }
 
-    /// Get the default capacity for hash maps
-    pub const fn default_capacity(&self) -> usize {
-        self.default_capacity
-    }
-
-    /// Get the uniqueness ratio used for capacity estimation
-    pub const fn uniqueness_ratio(&self) -> u8 {
-        self.uniqueness_ratio
-    }
-
-    /// Get the unique word density used for chunk capacity estimation
-    pub const fn unique_word_density(&self) -> u8 {
-        self.unique_word_density
-    }
-
-    /// Get the chunk size for parallel processing
-    pub const fn chunk_size(&self) -> u32 {
-        self.chunk_size
-    }
-
     /// Create a new configuration with custom settings
     pub const fn with_capacity(mut self, capacity: usize) -> Self {
         self.default_capacity = capacity;
@@ -287,9 +267,36 @@ impl Performance {
         self
     }
 
+    /// Set the size hint for this configuration
     pub const fn with_size_hint(mut self, size_hint: SizeHint) -> Self {
         self.size_hint = size_hint;
         self
+    }
+
+    /// Set the thread configuration
+    pub const fn with_threads(mut self, threads: Threads) -> Self {
+        self.threads = threads;
+        self
+    }
+
+    /// Get the default capacity for hash maps
+    pub const fn default_capacity(&self) -> usize {
+        self.default_capacity
+    }
+
+    /// Get the uniqueness ratio used for capacity estimation
+    pub const fn uniqueness_ratio(&self) -> u8 {
+        self.uniqueness_ratio
+    }
+
+    /// Get the unique word density used for chunk capacity estimation
+    pub const fn unique_word_density(&self) -> u8 {
+        self.unique_word_density
+    }
+
+    /// Get the chunk size for parallel processing
+    pub const fn chunk_size(&self) -> u32 {
+        self.chunk_size
     }
 
     /// Get the size hint
@@ -300,12 +307,6 @@ impl Performance {
     /// Get the thread configuration
     pub const fn threads(&self) -> Threads {
         self.threads
-    }
-
-    /// Set the thread configuration
-    pub const fn with_threads(mut self, threads: Threads) -> Self {
-        self.threads = threads;
-        self
     }
 
     /// Get the concurrency mode

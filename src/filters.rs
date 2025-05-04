@@ -30,17 +30,6 @@ pub struct Filters {
 }
 
 impl Filters {
-    /// Constructs an empty `Filters` instance.
-    pub const fn empty() -> Self {
-        Self {
-            min_chars: None,
-            min_count: None,
-            exclude_words: None,
-            exclude_patterns: None,
-            include_patterns: None,
-        }
-    }
-
     /// Constructs a new `Filters` instance with the specified filters.
     ///
     /// # Arguments
@@ -84,29 +73,15 @@ impl Filters {
         Ok(filters)
     }
 
-    /// Get the minimum character requirement
-    pub const fn min_chars(&self) -> &Option<MinChars> {
-        &self.min_chars
-    }
-
-    /// Get the minimum count requirement
-    pub const fn min_count(&self) -> &Option<MinCount> {
-        &self.min_count
-    }
-
-    /// Get the excluded words list
-    pub const fn exclude_words(&self) -> &Option<ExcludeWords> {
-        &self.exclude_words
-    }
-
-    /// Get the excluded patterns
-    pub const fn exclude_patterns(&self) -> &Option<ExcludePatterns> {
-        &self.exclude_patterns
-    }
-
-    /// Get the included patterns
-    pub const fn include_patterns(&self) -> &Option<IncludePatterns> {
-        &self.include_patterns
+    /// Constructs an empty `Filters` instance.
+    pub const fn empty() -> Self {
+        Self {
+            min_chars: None,
+            min_count: None,
+            exclude_words: None,
+            exclude_patterns: None,
+            include_patterns: None,
+        }
     }
 
     /// Set minimum character requirement.
@@ -145,6 +120,31 @@ impl Filters {
             self.include_patterns = Some(IncludePatterns::new(patterns)?);
         }
         Ok(self)
+    }
+
+    /// Get the minimum character requirement
+    pub const fn min_chars(&self) -> &Option<MinChars> {
+        &self.min_chars
+    }
+
+    /// Get the minimum count requirement
+    pub const fn min_count(&self) -> &Option<MinCount> {
+        &self.min_count
+    }
+
+    /// Get the excluded words list
+    pub const fn exclude_words(&self) -> &Option<ExcludeWords> {
+        &self.exclude_words
+    }
+
+    /// Get the excluded patterns
+    pub const fn exclude_patterns(&self) -> &Option<ExcludePatterns> {
+        &self.exclude_patterns
+    }
+
+    /// Get the included patterns
+    pub const fn include_patterns(&self) -> &Option<IncludePatterns> {
+        &self.include_patterns
     }
 
     /// Removes words from the `tally_map` based on any word `Filters`.

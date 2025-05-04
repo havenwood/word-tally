@@ -77,21 +77,6 @@ impl Formatting {
         }
     }
 
-    /// Get the case setting
-    pub const fn case(&self) -> Case {
-        self.case
-    }
-
-    /// Get the sort setting
-    pub const fn sort(&self) -> Sort {
-        self.sort
-    }
-
-    /// Get the format setting
-    pub const fn format(&self) -> Format {
-        self.format
-    }
-
     /// Set the case option and return a new instance
     pub const fn with_case_setting(mut self, case: Case) -> Self {
         self.case = case;
@@ -108,6 +93,21 @@ impl Formatting {
     pub const fn with_format_setting(mut self, format: Format) -> Self {
         self.format = format;
         self
+    }
+
+    /// Get the case setting
+    pub const fn case(&self) -> Case {
+        self.case
+    }
+
+    /// Get the sort setting
+    pub const fn sort(&self) -> Sort {
+        self.sort
+    }
+
+    /// Get the format setting
+    pub const fn format(&self) -> Format {
+        self.format
     }
 }
 
