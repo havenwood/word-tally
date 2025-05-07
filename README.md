@@ -6,10 +6,6 @@
 
 Output a tally of the number of times unique words appear in source input.
 
-## Stability Notice
-
-**Pre-release level stability**: This project is currently in pre-release stage. Expect breaking interface changes at MINOR version bumps (0.x.0) as the API evolves. The library will maintain API stability once it reaches 1.0.0.
-
 ## Usage
 
 ```
@@ -30,49 +26,48 @@ Options:
   -d, --delimiter <VALUE>      Delimiter between keys and values [default: " "]
   -o, --output <PATH>          Write output to file rather than stdout
   -v, --verbose                Print verbose details
-  -p, --parallel               Use parallel processing for word counting
-  -h, --help                   Print help
+      --io <STRATEGY>          I/O strategy to use for input processing [default: streamed] [possible values: streamed, buffered, mmap]
+  -p, --parallel               Use parallel processing
+  -h, --help                   Print help (see more with '--help')
   -V, --version                Print version
 ```
+
+## Stability Notice
+
+**Pre-release level stability**: This project is currently in pre-release stage. Expect breaking interface changes at MINOR version bumps (0.x.0) as the API evolves. The library will maintain API stability once it reaches 1.0.0.
 
 ## Examples
 
 ### Basic Usage
 
 ```sh
-# Count words from a file
 word-tally README.md | head -n3
 #>> tally 22
 #>> word 20
 #>> https 11
 
-# Count words from stdin
 echo "one two two three three three" | word-tally
 #>> three 3
 #>> two 2
 #>> one 1
 
-# Count words and output to a file
 word-tally README.md --output=words.txt
 ```
 
 ### Filtering Words
 
 ```sh
-# Exclude words starting with "a" or exactly matching "the"
-word-tally --exclude="^a.*" --exclude="^the$" book.txt
-
-# Include only words starting with "h" or "w"
-word-tally --include="^h.*" --include="^w.*" book.txt
+# Only include words that appear at least 10 times
+word-tally --min-count=10 book.txt
 
 # Exclude words with fewer than 5 characters
 word-tally --min-chars=5 book.txt
 
-# Only include words that appear at least 10 times
-word-tally --min-count=10 book.txt
+# Exclude words by pattern
+word-tally --exclude="^a.*" --exclude="^the$" book.txt
 
 # Combining include and exclude patterns
-word-tally --include="^h.*" --include="^w.*" --exclude="^who$" book.txt
+word-tally --include="^w.*" --include=".*o$" --exclude="^who$" book.txt
 
 # Exclude specific words
 word-tally --exclude-words="the,a,an,and,or,but" book.txt
@@ -83,7 +78,7 @@ CSV output:
 # Using delimiter (manual CSV)
 word-tally --delimiter="," --output="tally.csv" README.md
 
-# Using CSV format (with header)
+# Using CSV format (with headers)
 word-tally --format=csv --output="tally.csv" README.md
 ```
 
@@ -102,29 +97,67 @@ Transform and pipe the JSON output to the [wordcloud_cli](https://github.com/amu
 word-tally --format=json README.md | jq -r 'map(.[0] + " ") | join(" ")' | wordcloud_cli --imagefile wordcloud.png
 ```
 
-### Stream Processing and Parallelization
+### I/O and Processing Strategies
 
-word-tally efficiently processes text input of any size through streaming, reading line-by-line to maintain minimal memory usage. For large inputs, the `--parallel` flag enables multi-threaded processing that can significantly improve performance by utilizing multiple CPU cores.
+word-tally supports various I/O modes and parallel processing:
 
 ```sh
-# Process large input using parallel mode
+# --io=streamed is the default I/O strategy
+output | word-tally
+
+word-tally file.txt
+
 word-tally --parallel large-file.txt
+
+word-tally --io=mmap --parallel large-file.txt
+
+word-tally --io=buffered file.txt
+
+word-tally --io=mmap file.txt
 ```
 
-Performance can be further tuned through environment variables (detailed in the Environment Variables section below).
+#### Performance Considerations
+
+Synthetic enchmarks with semi-realistic data suggest these strategies based on file size:
+
+| File Size | Best for Speed | Best for Memory | Balanced Approach |
+|-----------|----------------|-----------------|-------------------|
+| Small (<1MB) | Sequential + Memory-mapped | Sequential + Streamed | Sequential + Streamed |
+| Medium (1-80MB) | Sequential + Memory-mapped | Sequential + Streamed | Sequential + Memory-mapped |
+| Large (>80MB) | Parallel + Memory-mapped | Parallel + Streamed | Parallel + Memory-mapped |
+| Very Large (>1GB) | Parallel + Buffered | Parallel + Streamed | Parallel + Streamed |
+
+Anecdotal insights:
+
+- The inflection point where parallel processing becomes faster for me is around 80MB
+- At this point, parallel processing may be several times faster than sequential
+- For pipes and non-seekable sources, streaming I/O is required
+- Memory-mapped I/O provides excellent performance but requires a seekable file
+- Sequential streaming processing remains memory-efficient for files under 80MB
+
+Performance can be further tuned through environment variables (detailed below).
 
 ### Environment Variables
 
-These variables affect memory allocation and performance in all modes:
+The following environment variables configure various aspects of the library:
+
+Memory allocation and performance in all modes:
 
 - `WORD_TALLY_UNIQUENESS_RATIO` - Divisor for estimating unique words from input size (default: 10)
 - `WORD_TALLY_DEFAULT_CAPACITY` - Default initial capacity when there is no size hint (default: 1024)
-
-These variables tune parallel processing when using the `--parallel` flag:
-
-- `WORD_TALLY_THREADS` - Number of threads for parallel processing (default: number of cores)
-- `WORD_TALLY_CHUNK_SIZE` - Size of chunks for parallel processing in bytes (default: 16384)
 - `WORD_TALLY_WORD_DENSITY` - Multiplier for estimating unique words per chunk (default: 15)
+- `WORD_TALLY_RESERVE_THRESHOLD` - Base threshold for capacity reservation when merging maps (default: 1000, scales with input size)
+
+Parallel processing configuration:
+
+- `WORD_TALLY_THREADS` - Number of threads for parallel processing (default: all available cores)
+- `WORD_TALLY_CHUNK_SIZE` - Size of chunks for parallel processing in bytes (default: 65536, 64KB)
+
+I/O and processing strategy configuration:
+
+- `WORD_TALLY_IO` - I/O strategy (default: streamed, options: streamed, buffered, memory-mapped)
+- `WORD_TALLY_PROCESSING` - Processing strategy (default: sequential, options: sequential, parallel)
+- `WORD_TALLY_VERBOSE` - Enable verbose mode (default: false, options: true/1/yes/on)
 
 ## Installation
 
@@ -141,14 +174,23 @@ word-tally = "0.21.0"
 
 ```rust
 use std::fs::File;
-use word_tally::{Options, WordTally};
+use word_tally::{Io, Options, Processing, WordTally};
 
 fn main() -> std::io::Result<()> {
-    // Create a word tally by streaming data from a file
+    // Create a word tally with default options (Streamed I/O, Sequential processing)
     let file = File::open("document.txt")?;
     let word_tally = WordTally::new(file, &Options::default());
 
-    // Print basic statistics about the word tally
+    // Or customize I/O and processing strategies
+    let file = File::open("large-document.txt")?;
+    let options = Options::default()
+        .with_io(Io::MemoryMapped)  // Use memory-mapped I/O for better performance with large files
+        .with_processing(Processing::Parallel); // Use parallel processing for multi-core efficiency
+
+    // For memory-mapped I/O, use try_from_file to handle potential errors
+    let word_tally = WordTally::try_from_file(file, &options).expect("Failed to process file");
+
+    // Print basic statistics
     println!("Words: {} total, {} unique", word_tally.count(), word_tally.uniq_count());
 
     // Print the top 5 words and the count of times each appear
@@ -160,13 +202,13 @@ fn main() -> std::io::Result<()> {
 }
 ```
 
-The library supports customization including case normalization, sorting, filtering, and parallel processing.
+The library supports customization including case normalization, sorting, filtering, and I/O and processing strategies.
 
 ## Documentation
 
 [https://docs.rs/word-tally](https://docs.rs/word-tally/latest/word_tally/)
 
-## Tests & benchmarks
+## Tests & Benchmarks
 
 Clone the repository.
 
@@ -181,8 +223,23 @@ Run the tests.
 cargo test
 ```
 
-And run the benchmarks.
+Run the benchmarks.
 
 ```sh
 cargo bench
+```
+
+### Benchmarks
+
+The project includes comprehensive benchmarks for measuring performance across different strategies:
+
+```sh
+# Run specific benchmark groups
+cargo bench --bench core
+cargo bench --bench io
+cargo bench --bench features
+
+# Run specific benchmark tests
+cargo bench --bench io -- size_10kb
+cargo bench --bench io -- size_75kb
 ```

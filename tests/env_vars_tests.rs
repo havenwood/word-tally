@@ -1,43 +1,34 @@
-// Instead of directly testing environment variables which requires unsafe code,
-// let's test the parsing logic indirectly through the functions that use it
-use word_tally::{Concurrency, Performance, SizeHint, Threads};
-
-// Note: This file contains tests for functions that use environment variable parsing
-// But avoids actually testing with real environment variables since that requires unsafe
+use word_tally::{Io, Performance, Processing, SizeHint, Threads};
 
 #[test]
 fn test_parse_env_var_indirectly() {
-    // Test SizeHint::Bytes conversion to capacity estimate
     let size_hint = SizeHint::Bytes(100_000);
 
-    // Create performance config with size hint and test it
     let performance = Performance::default()
-        .with_concurrency(Concurrency::Parallel)
+        .with_processing(Processing::Parallel)
         .with_size_hint(size_hint);
 
-    // Verify capacity estimation logic works properly
-    // This indirectly tests the parsing logic since it uses the same pattern
     assert_eq!(performance.estimate_capacity(), 10_000); // 100_000 / 10 (default uniqueness ratio)
 }
 
 #[test]
 fn test_parallel_mode_configuration() {
-    // This test focuses on the fluent interface rather than env vars
-    // Test that setting parallel mode works correctly
     let perf_sequential = Performance::default();
-    assert_eq!(perf_sequential.concurrency(), Concurrency::Sequential);
-    assert_eq!(perf_sequential.chunk_size(), 16_384); // Default value
+    assert_eq!(perf_sequential.processing(), Processing::Sequential);
+    assert_eq!(perf_sequential.io(), Io::Streamed);
+    assert_eq!(perf_sequential.chunk_size(), 65_536); // Default value (64KB)
 
     // Switching to parallel should retain the configuration
-    let perf_parallel = perf_sequential.with_concurrency(Concurrency::Parallel);
-    assert_eq!(perf_parallel.concurrency(), Concurrency::Parallel);
-    assert_eq!(perf_parallel.chunk_size(), 16_384); // Default should be unchanged
+    let perf_parallel = perf_sequential.with_processing(Processing::Parallel);
+    assert_eq!(perf_parallel.processing(), Processing::Parallel);
+    assert_eq!(perf_parallel.chunk_size(), 65_536);
 
     // Test explicit configuration
     let perf_configured = Performance::default()
         .with_chunk_size(32_768)
         .with_word_density(20)
-        .with_concurrency(Concurrency::Parallel);
+        .with_processing(Processing::Parallel)
+        .with_io(Io::MemoryMapped);
 
     assert_eq!(perf_configured.chunk_size(), 32_768);
     assert_eq!(perf_configured.unique_word_density(), 20);
@@ -70,6 +61,6 @@ fn test_size_hint_methods() {
     let with_hint = Performance::default().with_size_hint(size_hint);
     assert_eq!(with_hint.estimate_capacity(), 10_000); // 100_000 / 10
 
-    // Test chunk capacity estimation
-    assert_eq!(with_hint.estimate_chunk_capacity(1000), 15_000); // 1000 * 15
+    // Test chunk capacity estimation with new formula: (chunk_size * word_density) / 10 + 10
+    assert_eq!(with_hint.estimate_chunk_capacity(1000), 1510); // (1000 * 15) / 10 + 10
 }

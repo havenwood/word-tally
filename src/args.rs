@@ -8,7 +8,7 @@ use unescaper::unescape;
 use word_tally::filters::Filters;
 use word_tally::formatting::{Case, Format, Formatting, Sort};
 use word_tally::options::Options;
-use word_tally::performance::{Concurrency, Performance, SizeHint};
+use word_tally::performance::{Io, Performance, Processing, SizeHint};
 
 /// A utility for tallying word frequencies in text.
 #[derive(Debug, Parser)]
@@ -65,8 +65,11 @@ pub struct Args {
     #[arg(short = 'v', long)]
     verbose: bool,
 
-    // Performance options
-    /// Use parallel processing for word counting.
+    /// I/O strategy to use for input processing.
+    #[arg(long, value_enum, default_value_t = Io::Streamed, value_name = "STRATEGY")]
+    io: Io,
+
+    /// Use parallel processing.
     #[arg(short = 'p', long)]
     parallel: bool,
 }
@@ -92,11 +95,15 @@ impl Args {
         unescape(self.get_delimiter().as_str()).with_context(|| "Failed to unescape delimiter")
     }
 
-    const fn get_concurrency(&self) -> Concurrency {
+    const fn get_io_strategy(&self) -> Io {
+        self.io
+    }
+
+    const fn get_processing_strategy(&self) -> Processing {
         if self.parallel {
-            Concurrency::Parallel
+            Processing::Parallel
         } else {
-            Concurrency::Sequential
+            Processing::Sequential
         }
     }
 
@@ -117,8 +124,10 @@ impl Args {
 
     pub fn get_performance(&self, size_hint: SizeHint) -> Performance {
         Performance::default()
-            .with_concurrency(self.get_concurrency())
+            .with_io(self.get_io_strategy())
+            .with_processing(self.get_processing_strategy())
             .with_size_hint(size_hint)
+            .with_verbose(self.verbose)
     }
 
     pub fn get_options(&self, size_hint: SizeHint) -> Result<Options> {

@@ -38,12 +38,15 @@ impl Input {
     /// Returns the file name of the input or `"-"` for stdin.
     pub fn source(&self) -> String {
         match self {
-            Self::File(path) => path
-                .file_name()
-                .expect("File name inaccessible.")
-                .to_str()
-                .expect("File name invalid UTF-8.")
-                .to_string(),
+            Self::File(path) => path.file_name().map_or_else(
+                || format!("No filename: {}", path.display()),
+                |name| {
+                    name.to_str().map_or_else(
+                        || format!("Non UTF-8 filename: {:?}", name),
+                        |utf8_name| utf8_name.to_string(),
+                    )
+                },
+            ),
             Self::Stdin => "-".to_string(),
         }
     }

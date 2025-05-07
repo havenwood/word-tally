@@ -19,14 +19,15 @@
 //!    - Word lists: Explicit exclusions
 //!
 //! 3. **Performance** ([`Performance`]): Optimizes processing efficiency
-//!    - [`Concurrency`]: Processing mode (sequential, parallel)
+//!    - [`Processing`]: Processing mode (sequential, parallel)
+//!    - [`Io`]: I/O method (streamed, buffered, memory-mapped)
 //!    - [`Threads`]: Thread pool configuration
 //!    - [`SizeHint`]: Collection allocation tuning
 //!
 //! # Usage
 //!
 //! ```
-//! use word_tally::{Options, Case, Format, Concurrency};
+//! use word_tally::{Options, Case, Format, Io, Processing};
 //!
 //! // Default options
 //! let options = Options::default();
@@ -35,7 +36,8 @@
 //! let options = Options::default()
 //!     .with_case(Case::Lower)
 //!     .with_format(Format::Json)
-//!     .with_concurrency(Concurrency::Parallel);
+//!     .with_processing(Processing::Parallel)
+//!     .with_io(Io::MemoryMapped);
 //! ```
 //!
 //! # Environment Variables
@@ -49,7 +51,7 @@
 
 use crate::filters::Filters;
 use crate::formatting::{Case, Format, Formatting, Sort};
-use crate::performance::{Concurrency, Performance, SizeHint, Threads};
+use crate::performance::{Io, Performance, Processing, SizeHint, Threads};
 use core::fmt;
 use serde::{Deserialize, Serialize};
 
@@ -64,7 +66,7 @@ pub struct Options {
     /// Filter settings (word length, frequency, patterns, exclusions)
     filters: Filters,
 
-    /// Performance configuration (concurrency, threads, memory allocation)
+    /// Performance configuration (I/O strategy, processing mode, threads, memory allocation)
     performance: Performance,
 }
 
@@ -74,13 +76,13 @@ impl Options {
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{Options, Formatting, Filters, Performance, Case, Format, Concurrency};
+    /// use word_tally::{Options, Formatting, Filters, Performance, Case, Format, Io, Processing};
     ///
     /// // Customization using component structs
     /// let options = Options::new(
     ///     Formatting::default().with_case_setting(Case::Lower),
     ///     Filters::default().with_min_chars(3),
-    ///     Performance::default().with_concurrency(Concurrency::Parallel)
+    ///     Performance::default().with_processing(Processing::Parallel)
     /// );
     ///
     /// // Default configuration
@@ -95,13 +97,13 @@ impl Options {
     /// # Tests
     ///
     /// ```
-    /// use word_tally::{Options, Formatting, Filters, Performance, Case, Format, Concurrency};
+    /// use word_tally::{Options, Formatting, Filters, Performance, Case, Format, Processing};
     ///
     /// // Verify examples work correctly
     /// let custom_options = Options::new(
     ///     Formatting::default().with_case_setting(Case::Lower),
     ///     Filters::default().with_min_chars(3),
-    ///     Performance::default().with_concurrency(Concurrency::Parallel)
+    ///     Performance::default().with_processing(Processing::Parallel)
     /// );
     ///
     /// let default_options = Options::default();
@@ -112,7 +114,7 @@ impl Options {
     ///
     /// assert_eq!(custom_options.formatting().case(), Case::Lower);
     /// assert!(custom_options.filters().min_chars().is_some());
-    /// assert_eq!(custom_options.performance().concurrency(), Concurrency::Parallel);
+    /// assert_eq!(custom_options.processing(), Processing::Parallel);
     ///
     /// assert_eq!(builder_options.formatting().case(), Case::Lower);
     /// assert_eq!(builder_options.formatting().format(), Format::Json);
@@ -176,9 +178,15 @@ impl Options {
         self
     }
 
-    /// Set concurrency mode
-    pub fn with_concurrency(mut self, concurrency: Concurrency) -> Self {
-        self.performance = self.performance.with_concurrency(concurrency);
+    /// Set I/O strategy
+    pub const fn with_io(mut self, io: Io) -> Self {
+        self.performance = self.performance.with_io(io);
+        self
+    }
+
+    /// Set processing strategy
+    pub const fn with_processing(mut self, processing: Processing) -> Self {
+        self.performance = self.performance.with_processing(processing);
         self
     }
 
@@ -248,9 +256,14 @@ impl Options {
         self.formatting.format()
     }
 
-    /// Get the concurrency setting from performance options
-    pub const fn concurrency(&self) -> Concurrency {
-        self.performance.concurrency()
+    /// Get the I/O strategy from performance options
+    pub const fn io(&self) -> Io {
+        self.performance.io()
+    }
+
+    /// Get the processing strategy from performance options
+    pub const fn processing(&self) -> Processing {
+        self.performance.processing()
     }
 
     /// Get the threads setting from performance options
@@ -278,10 +291,11 @@ impl fmt::Display for Options {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Options {{ formatting: {}, filters: {:?}, concurrency: {:?} }}",
+            "Options {{ formatting: {}, filters: {:?}, processing: {:?}, io: {:?} }}",
             self.formatting,
             self.filters,
-            self.performance.concurrency()
+            self.performance.processing(),
+            self.performance.io()
         )
     }
 }

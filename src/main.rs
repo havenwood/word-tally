@@ -10,9 +10,10 @@ use word_tally::formatting;
 
 use crate::input::Input;
 use crate::output::Output;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use args::Args;
 use clap::Parser;
+use std::fs::File;
 use word_tally::{SizeHint, WordTally};
 
 fn main() -> Result<()> {
@@ -25,10 +26,25 @@ fn main() -> Result<()> {
     let options = args.get_options(size_hint)?;
 
     let source = input.source();
-    let reader = input.get_reader(&source)?;
 
-    // Create a WordTally instance.
-    let word_tally = WordTally::new(reader, &options);
+    // Create WordTally instance based on input type
+    let word_tally = match &input {
+        Input::File(path) => {
+            let file =
+                File::open(path).with_context(|| format!("Failed to read from {}", source))?;
+            // Use try_from_file only for memory-mapped I/O, otherwise use new()
+            if matches!(options.io(), word_tally::Io::MemoryMapped) {
+                WordTally::try_from_file(file, &options)?
+            } else {
+                WordTally::new(file, &options)
+            }
+        }
+        Input::Stdin => {
+            // For stdin, use the standard new method with a reader
+            let reader = input.get_reader(&source)?;
+            WordTally::new(reader, &options)
+        }
+    };
 
     // Process output.
     let delimiter = args.get_unescaped_delimiter()?;

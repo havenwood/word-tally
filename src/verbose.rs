@@ -54,6 +54,8 @@ impl<'v, 'a> Verbose<'v, 'a> {
             "delimiter": format!("{:?}", self.delimiter),
             "case": self.tally.options().case().to_string(),
             "order": self.tally.options().sort().to_string(),
+            "processing": self.tally.options().processing().to_string(),
+            "io": self.tally.options().io().to_string(),
             "min-chars": self.format(*self.tally.filters().min_chars()),
             "min-count": self.format(*self.tally.filters().min_count()),
             "exclude-words": self.format(self.tally.filters().exclude_words().clone()),
@@ -83,6 +85,8 @@ impl<'v, 'a> Verbose<'v, 'a> {
         wtr.write_record(["delimiter", &format!("{:?}", self.delimiter)])?;
         wtr.write_record(["case", &self.tally.options().case().to_string()])?;
         wtr.write_record(["order", &self.tally.options().sort().to_string()])?;
+        wtr.write_record(["processing", &self.tally.options().processing().to_string()])?;
+        wtr.write_record(["io", &self.tally.options().io().to_string()])?;
         wtr.write_record(["min-chars", &self.format(*self.tally.filters().min_chars())])?;
         wtr.write_record(["min-count", &self.format(*self.tally.filters().min_count())])?;
         wtr.write_record([
@@ -119,6 +123,8 @@ impl<'v, 'a> Verbose<'v, 'a> {
     fn log_options(&mut self) -> Result<()> {
         self.write_entry("case", self.tally.options().case())?;
         self.write_entry("order", self.tally.options().sort())?;
+        self.write_entry("processing", self.tally.options().processing())?;
+        self.write_entry("io", self.tally.options().io())?;
 
         Ok(())
     }
@@ -149,8 +155,8 @@ impl<'v, 'a> Verbose<'v, 'a> {
     }
 }
 
-/// Output the selected format to stderr if verbose is enabled.
-pub fn handle_output(
+/// Handle verbose output based on word tally results.
+pub fn handle_verbose_output(
     is_verbose: bool,
     format: Format,
     word_tally: &WordTally<'_>,
@@ -168,22 +174,11 @@ pub fn handle_output(
     }
 }
 
-/// Handle verbose output based on word tally results.
-pub fn handle_verbose_output(
-    is_verbose: bool,
-    format: Format,
-    word_tally: &WordTally<'_>,
-    delimiter: &str,
-    source: &str,
-) -> Result<()> {
-    handle_output(is_verbose, format, word_tally, delimiter, source)
-}
-
 fn output_json(word_tally: &WordTally<'_>, delimiter: &str, source: &str) -> Result<()> {
     let mut stderr = Output::stderr();
     let verbose = Verbose::new(&mut stderr, word_tally, delimiter, source);
     let json = verbose.to_json()?;
-    stderr.write_line(&format!("{json}\n\n"))
+    stderr.write_line(&format!("{json}\n"))
 }
 
 fn output_csv(word_tally: &WordTally<'_>, delimiter: &str, source: &str) -> Result<()> {

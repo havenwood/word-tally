@@ -45,7 +45,8 @@
 //!
 //! Optimize execution for different workloads:
 //!
-//! * [`Concurrency`]: Choose between sequential or parallel processing
+//! * [`Processing`]: Choose between sequential or parallel processing
+//! * [`Io`]: Control the input method (streamed, buffered, or memory-mapped)
 //! * [`Threads`]: Control the thread pool size for parallel execution
 //! * [`SizeHint`]: Tune collection capacity pre-allocation
 //!
@@ -58,13 +59,15 @@
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Case, Filters, Format, Options, WordTally};
+//! use word_tally::{Case, Filters, Format, Options, WordTally, Io, Processing};
 //!
-//! // Create options with case normalization, output format, and minimum character length filter
+//! // Create options with case normalization, output format, and other settings
 //! let options = Options::default()
 //!     .with_case(Case::Lower)
 //!     .with_format(Format::Json)
-//!     .with_filters(Filters::default().with_min_chars(3));
+//!     .with_filters(Filters::default().with_min_chars(3))
+//!     .with_processing(Processing::Parallel)
+//!     .with_io(Io::MemoryMapped);
 //!
 //! let input = "Cinquedea".as_bytes();
 //! let words = WordTally::new(input, &options);
@@ -74,8 +77,10 @@
 //! ```
 use anyhow::{Context, Result};
 use indexmap::IndexMap;
+use memmap2::Mmap;
 use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
+use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -93,7 +98,7 @@ pub use formatting::{Case, Format, Formatting, Sort};
 pub use input::Input;
 pub use options::Options;
 pub use output::Output;
-pub use performance::{Concurrency, Performance, SizeHint, Threads};
+pub use performance::{Io, Performance, Processing, SizeHint, Threads};
 
 #[derive(Deserialize)]
 struct WordTallyData {
@@ -195,14 +200,13 @@ impl<'i> IntoIterator for &'i WordTally<'_> {
 impl<'a> WordTally<'a> {
     /// Constructs a new `WordTally` from a source that implements `Read`.
     ///
-    /// Takes a reference to unified options that include formatting, filters, and performance settings.
+    /// Uses the I/O and processing strategies specified in the options.
     pub fn new<T: Read>(input: T, options: &'a Options) -> Self {
-        // Initialize thread pool if using parallel processing
-        if matches!(options.concurrency(), Concurrency::Parallel) {
+        // Initialize thread pool if parallel processing is selected
+        if matches!(options.processing(), Processing::Parallel) {
             options.performance().init_thread_pool();
         }
 
-        let reader = BufReader::new(input);
         let mut instance = Self {
             options,
             tally: Box::new([]),
@@ -210,30 +214,107 @@ impl<'a> WordTally<'a> {
             uniq_count: 0,
         };
 
-        let mut tally_map = match options.concurrency() {
-            Concurrency::Sequential => instance.tally_map(reader, options.case()),
-            Concurrency::Parallel => instance.tally_map_parallel(
-                reader,
-                options.performance().chunk_size(),
-                options.case(),
-            ),
-        };
+        // Process the input based on selected strategy
+        let mut tally_map = instance.process_input(input, options);
 
-        options.filters().apply(&mut tally_map, options.case());
-
-        let count = tally_map.values().sum();
-        let tally: Box<[_]> = tally_map.into_iter().collect();
-        let uniq_count = tally.len();
-
-        instance.tally = tally;
-        instance.count = count;
-        instance.uniq_count = uniq_count;
-        instance.sort(options.sort());
+        // Process tally results and populate instance fields
+        instance.populate_from_tally_map(&mut tally_map);
 
         instance
     }
 
-    /// Deserializes a WordTally from a JSON string.
+    /// Processes input using the I/O strategy specified in options.
+    fn process_input<T: Read>(&self, input: T, options: &Options) -> IndexMap<Box<str>, usize> {
+        // Show memory mapping note if that I/O mode was requested with non-file input
+        if matches!(options.io(), Io::MemoryMapped) && self.options.performance().verbose() {
+            eprintln!(
+                "Note: Memory-mapped I/O requires a file source. Use WordTally::try_from_file() for memory mapping."
+            );
+        }
+
+        match (options.io(), options.processing()) {
+            // Streamed I/O
+            (Io::Streamed, Processing::Sequential) => {
+                let reader = BufReader::new(input);
+                self.tally_map_sequential_streamed(reader, options.case())
+            }
+            (Io::Streamed, Processing::Parallel) => {
+                let reader = BufReader::new(input);
+                self.tally_map_parallel_streamed(
+                    reader,
+                    options.performance().chunk_size(),
+                    options.case(),
+                )
+            }
+
+            // Buffered I/O
+            (Io::Buffered, Processing::Sequential) => {
+                self.tally_map_sequential_buffered(input, options.case())
+            }
+            (Io::Buffered, Processing::Parallel) => {
+                self.tally_map_parallel_buffered(input, options.case())
+            }
+
+            // Memory-mapped fallback to streaming
+            (Io::MemoryMapped, _) => {
+                let reader = BufReader::new(input);
+                self.tally_map_sequential_streamed(reader, options.case())
+            }
+        }
+    }
+
+    /// Constructs a new `WordTally` specifically using memory-mapped I/O.
+    ///
+    /// This method is specialized for memory-mapped I/O, which can provide better
+    /// performance for large files by using the operating system's virtual memory system.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if memory mapping fails or if the file contains invalid UTF-8.
+    pub fn try_from_file(file: File, options: &'a Options) -> Result<Self> {
+        if matches!(options.processing(), Processing::Parallel) {
+            options.performance().init_thread_pool();
+        }
+
+        Self::process_with_mmap(&file, options)
+    }
+
+    /// Populates a `WordTally` instance with filtered results from a tally map
+    fn populate_from_tally_map(&mut self, tally_map: &mut IndexMap<Box<str>, usize>) {
+        // Apply filters
+        self.options.filters().apply(tally_map, self.options.case());
+
+        // Convert results to final form
+        let count = tally_map.values().sum();
+        let tally: Box<[_]> = tally_map.clone().into_iter().collect();
+        let uniq_count = tally.len();
+
+        // Update instance fields
+        self.tally = tally;
+        self.count = count;
+        self.uniq_count = uniq_count;
+
+        // Apply sorting
+        self.sort(self.options.sort());
+    }
+
+    // Helper method to process with memory mapping
+    fn process_with_mmap(file: &File, options: &'a Options) -> Result<Self> {
+        let mut instance = Self {
+            options,
+            tally: Box::new([]),
+            count: 0,
+            uniq_count: 0,
+        };
+
+        // Process with memory-mapped I/O
+        let mut tally_map = instance.tally_map_memory_mapped(file, options.case())?;
+        instance.populate_from_tally_map(&mut tally_map);
+
+        Ok(instance)
+    }
+
+    /// Deserializes a `WordTally` from a JSON string.
     ///
     /// # Errors
     ///
@@ -250,7 +331,7 @@ impl<'a> WordTally<'a> {
         })
     }
 
-    /// Deserializes a WordTally from a JSON reader.
+    /// Deserializes a `WordTally` from a JSON reader.
     ///
     /// Returns an error if the JSON contains invalid syntax, missing required fields,
     /// or if an I/O error occurs while reading.
@@ -301,104 +382,46 @@ impl<'a> WordTally<'a> {
         sort.apply(self);
     }
 
-    /// Sequential implementation for word tallying
-    fn tally_map<T: Read>(&self, reader: BufReader<T>, case: Case) -> IndexMap<Box<str>, usize> {
-        let estimated_capacity = self.options().performance().estimate_capacity();
-        let mut tally = IndexMap::with_capacity(estimated_capacity);
-        for line in reader.lines().map_while(Result::ok) {
-            for word in line.unicode_words() {
-                *tally.entry(case.normalize(word)).or_insert(0) += 1;
-            }
-        }
-        tally
-    }
-
-    /// Parallel implementation for larger inputs with optimized chunking strategy
-    fn tally_map_parallel<T: Read>(
-        &self,
-        reader: BufReader<T>,
-        chunk_size: u32,
-        case: Case,
-    ) -> IndexMap<Box<str>, usize> {
-        let performance = self.options().performance();
-        let estimated_capacity = performance.estimate_capacity();
-        let num_threads = rayon::current_num_threads();
-        let mut result_map = IndexMap::with_capacity(estimated_capacity);
-        let mut lines_batch = Vec::with_capacity(chunk_size as usize);
-
-        for line in reader.lines().map_while(Result::ok) {
-            lines_batch.push(line);
-
-            if lines_batch.len() >= chunk_size as usize {
-                self.process_and_merge_batch(
-                    &mut result_map,
-                    &lines_batch,
-                    case,
-                    estimated_capacity,
-                    num_threads,
-                );
-                lines_batch.clear();
-            }
-        }
-
-        self.process_and_merge_batch(
-            &mut result_map,
-            &lines_batch,
-            case,
-            estimated_capacity,
-            num_threads,
-        );
-
-        result_map
-    }
-
-    /// Processes a batch of lines in parallel
-    fn process_batch(
-        &self,
-        lines: &[String],
-        case: Case,
-        estimated_capacity: usize,
-        num_threads: usize,
-    ) -> IndexMap<Box<str>, usize> {
-        let performance = self.options().performance();
-        let chunk_size = std::cmp::max(4, lines.len() / num_threads.max(1));
-        let thread_maps: Vec<IndexMap<Box<str>, usize>> = lines
-            .par_chunks(chunk_size)
-            .map(|chunk| {
-                let mut local_counts =
-                    IndexMap::with_capacity(performance.estimate_chunk_capacity(chunk.len()));
-                for line in chunk {
-                    for word in line.unicode_words() {
-                        *local_counts.entry(case.normalize(word)).or_insert(0) += 1;
-                    }
-                }
-                local_counts
-            })
-            .collect();
-
-        let mut result = IndexMap::with_capacity(estimated_capacity);
-        for map in thread_maps {
-            Self::merge_map_into(&mut result, map);
-        }
-
-        result
-    }
-
-    /// Processes a batch and merges the results
+    /// Creates a tally map with the estimated capacity based on performance settings
     #[inline]
-    fn process_and_merge_batch(
-        &self,
-        result_map: &mut IndexMap<Box<str>, usize>,
-        lines: &[String],
-        case: Case,
-        estimated_capacity: usize,
-        num_threads: usize,
-    ) {
-        if lines.is_empty() {
-            return;
+    fn create_tally_map(&self) -> IndexMap<Box<str>, usize> {
+        let estimated_capacity = self.options().performance().estimate_capacity();
+        IndexMap::with_capacity(estimated_capacity)
+    }
+
+    /// Reads from input into a String, handling errors appropriately
+    fn read_to_string<T: Read>(&self, mut input: T) -> String {
+        let mut content = String::new();
+        if let Err(err) = input.read_to_string(&mut content) {
+            if self.options.performance().verbose() {
+                eprintln!(
+                    "Warning: Error reading input to string: {err}, falling back to empty content"
+                );
+            }
         }
-        let batch_map = self.process_batch(lines, case, estimated_capacity, num_threads);
-        Self::merge_map_into(result_map, batch_map);
+        content
+    }
+
+    /// Counts words in a string and adds them to the tally map
+    #[inline]
+    fn count_words_in_line(line: &str, tally: &mut IndexMap<Box<str>, usize>, case: Case) {
+        for word in line.unicode_words() {
+            *tally.entry(case.normalize(word)).or_insert(0) += 1;
+        }
+    }
+
+    /// Processes lines sequentially, adding words to the tally
+    fn process_lines_sequentially<'b, I>(&self, lines: I, case: Case) -> IndexMap<Box<str>, usize>
+    where
+        I: Iterator<Item = &'b str>,
+    {
+        let mut tally = self.create_tally_map();
+
+        for line in lines {
+            Self::count_words_in_line(line, &mut tally, case);
+        }
+
+        tally
     }
 
     /// Merges maps by combining word counts
@@ -407,5 +430,326 @@ impl<'a> WordTally<'a> {
         for (word, count) in source {
             *dest.entry(word).or_insert(0) += count;
         }
+    }
+
+    /// Reserves capacity in the result map if needed based on dynamic threshold
+    ///
+    /// - Use a dynamic threshold based on input size and configuration
+    /// - Only reserve capacity when the combined size exceeds the threshold
+    /// - Avoid unnecessary allocations for small maps
+    /// - Provide more aggressive capacity reservation for large maps
+    #[inline]
+    fn reserve_capacity_if_needed(
+        &self,
+        result_map: &mut IndexMap<Box<str>, usize>,
+        local_map_len: usize,
+    ) {
+        // Skip reservation for empty or very small maps
+        if local_map_len <= 4 {
+            return;
+        }
+
+        let threshold = self.options.performance().calc_reserve_threshold();
+        let result_len = result_map.len();
+
+        if result_len == 0 {
+            // For empty result maps, allocate with adequate capacity
+            result_map.reserve(local_map_len);
+        } else if result_len + local_map_len > threshold {
+            // For larger merges, use more aggressive reservation to reduce rehashing
+            let capacity_needed = if local_map_len > 1000 {
+                // For very large maps, add extra capacity to reduce future reallocations
+                (local_map_len * 5) / 4 // Add 25% extra capacity
+            } else {
+                local_map_len
+            };
+
+            result_map.reserve(capacity_needed);
+        }
+    }
+
+    /// Sequential implementation for streamed word tallying
+    fn tally_map_sequential_streamed<T: Read>(
+        &self,
+        reader: BufReader<T>,
+        case: Case,
+    ) -> IndexMap<Box<str>, usize> {
+        // Process each line as it comes in
+        let mut tally = self.create_tally_map();
+
+        // Process lines one at a time, never loading the entire file into memory
+        for line in reader.lines().map_while(Result::ok) {
+            Self::count_words_in_line(&line, &mut tally, case);
+        }
+
+        tally
+    }
+
+    /// Parallel implementation for streamed processing
+    ///
+    /// This implementation uses a limited-memory sliding window approach:
+    /// - Process the input in fixed-size chunks without accumulating the entire file
+    /// - Use Rayon's parallel iterator for each chunk independently
+    /// - Combine results using thread-local storage
+    fn tally_map_parallel_streamed<T: Read>(
+        &self,
+        reader: BufReader<T>,
+        chunk_size: u32,
+        case: Case,
+    ) -> IndexMap<Box<str>, usize> {
+        let chunk_bytes = chunk_size.max(16_384) as usize;
+
+        let perf = self.options().performance();
+        let result_map_capacity = perf.default_capacity().max(1024);
+        let mut result_map = IndexMap::with_capacity(result_map_capacity);
+
+        let buffer_capacity = (chunk_bytes / 64).max(256);
+        let mut buffer: Vec<String> = Vec::with_capacity(buffer_capacity);
+        let mut bytes_read = 0;
+
+        for line_result in reader.lines() {
+            if let Ok(line) = line_result {
+                let line_len = line.len();
+
+                // Process when buffer reaches chunk size
+                if bytes_read + line_len > chunk_bytes && !buffer.is_empty() {
+                    // Process current batch in parallel
+                    let local_map = self.process_lines_in_parallel(&buffer, case);
+
+                    // Merge results
+                    self.reserve_capacity_if_needed(&mut result_map, local_map.len());
+                    Self::merge_map_into(&mut result_map, local_map);
+
+                    // Clear buffer for next batch
+                    buffer.clear();
+                    bytes_read = 0;
+                }
+
+                // Add current line to buffer
+                buffer.push(line);
+                bytes_read += line_len;
+            } else {
+                break;
+            }
+        }
+
+        // Process any remaining lines
+        if !buffer.is_empty() {
+            let local_map = self.process_lines_in_parallel(&buffer, case);
+
+            // Merge final results
+            self.reserve_capacity_if_needed(&mut result_map, local_map.len());
+            Self::merge_map_into(&mut result_map, local_map);
+        }
+
+        result_map
+    }
+
+    /// Process a batch of lines in parallel using Rayon's work-stealing thread pool
+    ///
+    /// - Divide work into reasonably sized chunks to avoid per-item overhead
+    /// - Use `fold()` for thread-local accumulation to minimize contention
+    /// - Use `reduce()` for combining results
+    fn process_lines_in_parallel(&self, lines: &[String], case: Case) -> IndexMap<Box<str>, usize> {
+        let perf = self.options().performance();
+
+        let threads = match perf.threads() {
+            Threads::All => rayon::current_num_threads(),
+            Threads::Count(n) => n as usize,
+        };
+
+        let total_lines = lines.len();
+        let thread_local_capacity = perf
+            .estimate_thread_local_capacity()
+            .min(total_lines / 2)
+            .max(16);
+
+        if total_lines < 32 || threads <= 1 {
+            // For very small inputs, process sequentially to avoid parallelism overhead
+            let mut result = IndexMap::with_capacity(thread_local_capacity);
+            for line in lines {
+                Self::count_words_in_line(line, &mut result, case);
+            }
+            return result;
+        }
+
+        // Use Rayon's fold/reduce pattern for work stealing
+        lines
+            .par_iter()
+            .fold(
+                || IndexMap::with_capacity(thread_local_capacity),
+                |mut acc, line| {
+                    Self::count_words_in_line(line, &mut acc, case);
+                    acc
+                },
+            )
+            .reduce(IndexMap::new, |mut a, mut b| {
+                // Always merge smaller map into the larger one
+                if a.len() < b.len() {
+                    std::mem::swap(&mut a, &mut b);
+                }
+
+                // Pre-allocate capacity if the combined size is significant
+                self.reserve_capacity_if_needed(&mut a, b.len());
+
+                // Merge b into a
+                for (word, count) in b {
+                    *a.entry(word).or_insert(0) += count;
+                }
+                a
+            })
+    }
+
+    /// Sequential implementation for buffered word tallying
+    fn tally_map_sequential_buffered<T: Read>(
+        &self,
+        input: T,
+        case: Case,
+    ) -> IndexMap<Box<str>, usize> {
+        let content = self.read_to_string(input);
+
+        // Optimize map capacity using the actual content size
+        let total_bytes = content.len();
+        let uniqueness_ratio = self.options().performance().uniqueness_ratio() as usize;
+        let estimated_capacity = total_bytes / uniqueness_ratio;
+
+        let mut tally = IndexMap::with_capacity(estimated_capacity);
+
+        // Process all lines in one efficient pass, leveraging being fully in memory
+        for line in content.lines() {
+            Self::count_words_in_line(line, &mut tally, case);
+        }
+
+        tally
+    }
+
+    /// Parallel implementation for buffered word tallying
+    ///
+    /// - Read the entire input into memory once
+    /// - Use Rayon's `par_lines()` for parallel processing
+    /// - Provide capacity hints based on input size
+    /// - Balance thread-local allocations for best performance
+    /// - Use Rayon's fold/reduce pattern
+    fn tally_map_parallel_buffered<T: Read>(
+        &self,
+        input: T,
+        case: Case,
+    ) -> IndexMap<Box<str>, usize> {
+        let content = self.read_to_string(input);
+
+        let perf = self.options().performance();
+        let thread_capacity = perf.estimate_thread_local_capacity();
+        let uniqueness_ratio = perf.uniqueness_ratio() as usize;
+        let result_capacity = content.len() / uniqueness_ratio;
+
+        // For small inputs, process sequentially to avoid parallelism overhead
+        let line_count = content.lines().count();
+        if line_count < 32 || matches!(perf.threads(), Threads::Count(1)) {
+            let mut result = IndexMap::with_capacity(result_capacity.min(1024));
+            for line in content.lines() {
+                Self::count_words_in_line(line, &mut result, case);
+            }
+            return result;
+        }
+
+        // Process content in parallel using Rayon's fold/reduce pattern
+        content
+            .par_lines()
+            .fold(
+                || IndexMap::with_capacity(thread_capacity),
+                |mut local_map, line| {
+                    Self::count_words_in_line(line, &mut local_map, case);
+                    local_map
+                },
+            )
+            .reduce(IndexMap::new, |mut a, mut b| {
+                // Always merge smaller map into larger one for efficiency
+                if a.len() < b.len() {
+                    std::mem::swap(&mut a, &mut b);
+                }
+
+                // Pre-allocate capacity if the combined size is significant
+                self.reserve_capacity_if_needed(&mut a, b.len());
+
+                // Merge b into a
+                for (word, count) in b {
+                    *a.entry(word).or_insert(0) += count;
+                }
+                a
+            })
+    }
+
+    /// Process memory-mapped content in parallel using the OS virtual memory system
+    ///
+    /// This implementation leverages memory mapping for efficient file access:
+    /// - Use the OS virtual memory system rather than loading content into RAM
+    /// - Optimize capacity allocation based on file size
+    /// - Use Rayon's recommended fold/reduce pattern for efficient parallelism
+    fn process_mmap_in_parallel(&self, content: &str, case: Case) -> IndexMap<Box<str>, usize> {
+        let perf = self.options().performance();
+        let thread_capacity = perf.estimate_thread_local_capacity();
+        let result_capacity = content.len() / perf.uniqueness_ratio() as usize;
+
+        // For small inputs, process sequentially to avoid parallelism overhead
+        let line_count = content.lines().count();
+        if line_count < 32 || matches!(perf.threads(), Threads::Count(1)) {
+            let mut result = IndexMap::with_capacity(result_capacity.min(1024));
+            for line in content.lines() {
+                Self::count_words_in_line(line, &mut result, case);
+            }
+            return result;
+        }
+
+        // Use Rayon's parallel iterator approach with memory-mapped content
+        content
+            .par_lines()
+            .fold(
+                || IndexMap::with_capacity(thread_capacity),
+                |mut local_map, line| {
+                    Self::count_words_in_line(line, &mut local_map, case);
+                    local_map
+                },
+            )
+            .reduce(IndexMap::new, |mut a, mut b| {
+                // Always merge smaller map into larger one for efficiency
+                if a.len() < b.len() {
+                    std::mem::swap(&mut a, &mut b);
+                }
+
+                // Pre-allocate capacity if the combined size is significant
+                self.reserve_capacity_if_needed(&mut a, b.len());
+
+                // Merge b into a
+                for (word, count) in b {
+                    *a.entry(word).or_insert(0) += count;
+                }
+                a
+            })
+    }
+
+    fn tally_map_memory_mapped(
+        &self,
+        file: &File,
+        case: Case,
+    ) -> Result<IndexMap<Box<str>, usize>> {
+        // Memory-mapping uses OS virtual memory for efficient file access
+        // Note: All memory mapping operations require unsafe per the memmap2 crate design
+        let mmap = unsafe { Mmap::map(file).context("Failed to memory map the file")? };
+        let content =
+            std::str::from_utf8(&mmap).context("Memory-mapped file contains invalid UTF-8")?;
+
+        // Use the processing strategy from options
+        let result = match self.options().processing() {
+            Processing::Sequential => {
+                // Stream through lines in the memory-mapped file sequentially
+                self.process_lines_sequentially(content.lines(), case)
+            }
+            Processing::Parallel => {
+                // Process memory-mapped content in parallel
+                self.process_mmap_in_parallel(content, case)
+            }
+        };
+
+        Ok(result)
     }
 }

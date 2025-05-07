@@ -5,8 +5,8 @@ use std::sync::Arc;
 use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
-    Case, Concurrency, ExcludeWords, Filters, Format, Formatting, MinChars, MinCount, MinValue,
-    Options, Performance, SizeHint, Sort, WordTally,
+    Case, ExcludeWords, Filters, Format, Formatting, Io, MinChars, MinCount, MinValue, Options,
+    Performance, Processing, SizeHint, Sort, WordTally,
 };
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
@@ -26,7 +26,9 @@ fn word_tally(formatting: Formatting, filters: Filters) -> WordTally<'static> {
     let input = File::open(TEST_WORDS_PATH)
         .expect("Expected test words file (`files/words.txt`) to be readable.");
 
-    let performance = Performance::default().with_concurrency(Concurrency::Sequential);
+    let performance = Performance::default()
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential);
     let options = Options::new(formatting, filters, performance);
 
     // For tests only: create a 'static reference using Box::leak
@@ -351,7 +353,8 @@ fn test_excluding_words() {
     let formatting = Formatting::with_sort(Sort::Unsorted);
     let filters = Filters::default().with_exclude_words(words);
     let performance = Performance::default()
-        .with_concurrency(Concurrency::Sequential)
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential)
         .with_size_hint(SizeHint::None);
     let options = Options::new(formatting, filters, performance);
     let options_arc = make_shared(options);
@@ -373,7 +376,8 @@ fn test_excluding_patterns() {
     let filters = Filters::default().with_exclude_patterns(&patterns).unwrap();
 
     let performance = Performance::default()
-        .with_concurrency(Concurrency::Sequential)
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential)
         .with_size_hint(SizeHint::None);
     let options = Options::new(formatting, filters, performance);
     let options_arc = make_shared(options);
@@ -401,7 +405,8 @@ fn test_including_patterns() {
     let filters = Filters::default().with_include_patterns(&patterns).unwrap();
 
     let performance = Performance::default()
-        .with_concurrency(Concurrency::Sequential)
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential)
         .with_size_hint(SizeHint::None);
     let options = Options::new(formatting, filters, performance);
     let options_arc = make_shared(options);
@@ -438,7 +443,8 @@ fn test_combining_include_exclude_patterns() {
         .unwrap();
 
     let performance = Performance::default()
-        .with_concurrency(Concurrency::Sequential)
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential)
         .with_size_hint(SizeHint::None);
     let options = Options::new(formatting, filters, performance);
     let options_arc = make_shared(options);
@@ -492,14 +498,18 @@ fn test_parallel_vs_sequential() {
     let input = b"The quick brown fox jumps over the lazy dog. The fox was quick.";
 
     // Sequential processing
-    let seq_performance = Performance::default().with_concurrency(Concurrency::Sequential);
+    let seq_performance = Performance::default()
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential);
     let filters = Filters::default();
     let seq_options = Options::new(Formatting::default(), filters.clone(), seq_performance);
     let seq_options_arc = make_shared(seq_options);
     let sequential = WordTally::new(&input[..], &seq_options_arc);
 
     // Parallel processing
-    let par_performance = Performance::default().with_concurrency(Concurrency::Parallel);
+    let par_performance = Performance::default()
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Parallel);
     let par_options = Options::new(Formatting::default(), filters, par_performance);
     let par_options_arc = make_shared(par_options);
     let parallel = WordTally::new(&input[..], &par_options_arc);
@@ -510,12 +520,66 @@ fn test_parallel_vs_sequential() {
 }
 
 #[test]
+fn test_memory_mapped_vs_streamed() {
+    // Open the test file (this is required for memory mapping)
+    let file_path = TEST_WORDS_PATH;
+    let file = File::open(file_path).expect("Failed to open test file for memory mapping");
+
+    // Create a copy of the file for streaming
+    let stream_file = File::open(file_path).expect("Failed to open test file for streaming");
+
+    // Set up options for memory-mapped I/O (sequential)
+    let mmap_performance = Performance::default()
+        .with_io(Io::MemoryMapped)
+        .with_processing(Processing::Sequential);
+    let filters = Filters::default();
+    let mmap_options = Options::new(Formatting::default(), filters.clone(), mmap_performance);
+
+    // Set up options for streaming I/O (sequential)
+    let stream_performance = Performance::default()
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential);
+    let stream_options = Options::new(Formatting::default(), filters.clone(), stream_performance);
+
+    // Create WordTally instances with the different I/O modes
+    let memory_mapped =
+        WordTally::try_from_file(file, &mmap_options).expect("Memory mapping failed");
+    let streamed = WordTally::new(stream_file, &stream_options);
+
+    // Verify results are the same regardless of I/O mode
+    assert_eq!(memory_mapped.count(), streamed.count());
+    assert_eq!(memory_mapped.uniq_count(), streamed.uniq_count());
+    assert_eq!(memory_mapped.tally(), streamed.tally());
+
+    // Now test with parallel processing
+    let file = File::open(file_path).expect("Failed to open test file for memory mapping");
+    let stream_file = File::open(file_path).expect("Failed to open test file for streaming");
+
+    // Set up options for parallel I/O
+    let parallel_performance = Performance::default()
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Parallel);
+    let parallel_options = Options::new(Formatting::default(), filters, parallel_performance);
+
+    // Create WordTally instances with parallel processing
+    let parallel_result = WordTally::new(file, &parallel_options);
+
+    // Test that parallel also works with standard file I/O
+    let parallel_stream = WordTally::new(stream_file, &parallel_options);
+
+    // Verify results are the same with parallel processing
+    assert_eq!(parallel_result.count(), parallel_stream.count());
+    assert_eq!(parallel_result.uniq_count(), parallel_stream.uniq_count());
+}
+
+#[test]
 fn test_with_size_hint() {
     let input = b"The quick brown fox jumps over the lazy dog.";
 
     // Without size hint
     let no_hint_performance = Performance::default()
-        .with_concurrency(Concurrency::Parallel)
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Parallel)
         .with_size_hint(SizeHint::default());
     let filters = Filters::default();
     let no_hint_options = Options::new(Formatting::default(), filters.clone(), no_hint_performance);
@@ -524,7 +588,8 @@ fn test_with_size_hint() {
 
     // With size hint
     let with_hint_performance = Performance::default()
-        .with_concurrency(Concurrency::Parallel)
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Parallel)
         .with_size_hint(SizeHint::Bytes(input.len() as u64));
     let with_hint_options = Options::new(Formatting::default(), filters, with_hint_performance);
 
@@ -538,21 +603,24 @@ fn test_with_size_hint() {
 #[test]
 fn test_estimate_capacity() {
     let small_performance = Performance::default()
-        .with_concurrency(Concurrency::Sequential)
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential)
         .with_size_hint(SizeHint::Bytes(8192)); // 8KB
     let small_options = Options::with_defaults(Formatting::default(), small_performance);
 
     let small_file = WordTally::new(&b"small text"[..], &small_options);
 
     let medium_performance = Performance::default()
-        .with_concurrency(Concurrency::Sequential)
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential)
         .with_size_hint(SizeHint::Bytes(524288)); // 512KB
     let medium_options = Options::with_defaults(Formatting::default(), medium_performance);
 
     let medium_file = WordTally::new(&b"medium text"[..], &medium_options);
 
     let large_performance = Performance::default()
-        .with_concurrency(Concurrency::Sequential)
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential)
         .with_size_hint(SizeHint::Bytes(4194304)); // 4MB
     let large_options = Options::with_defaults(Formatting::default(), large_performance);
 
@@ -567,7 +635,9 @@ fn test_estimate_capacity() {
 fn test_parallel_count() {
     // Instead of using environment variables, just test the parallel function works
     let input = b"Test with default settings for chunk size and thread count";
-    let performance = Performance::default().with_concurrency(Concurrency::Parallel);
+    let performance = Performance::default()
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Parallel);
     let options = Options::with_defaults(Formatting::default(), performance);
     let parallel = WordTally::new(&input[..], &options);
 
@@ -581,7 +651,9 @@ fn test_parallel_count() {
 #[test]
 fn test_merge_maps() {
     let input = b"This is a test of the map merging functionality";
-    let performance = Performance::default().with_concurrency(Concurrency::Parallel);
+    let performance = Performance::default()
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Parallel);
     let options = Options::with_defaults(Formatting::default(), performance);
     let tally = WordTally::new(&input[..], &options);
 
@@ -624,7 +696,7 @@ mod performance_tests {
         assert_eq!(performance.default_capacity(), 1024);
         assert_eq!(performance.uniqueness_ratio(), 10);
         assert_eq!(performance.unique_word_density(), 15);
-        assert_eq!(performance.chunk_size(), 16_384);
+        assert_eq!(performance.chunk_size(), 65_536);
     }
 
     #[test]
@@ -698,8 +770,10 @@ mod wordtally_constructor_tests {
     }
 
     #[test]
-    fn with_concurrency() {
-        let performance = Performance::default().with_concurrency(Concurrency::Parallel);
+    fn with_parallel_processing() {
+        let performance = Performance::default()
+            .with_io(Io::Streamed)
+            .with_processing(Processing::Parallel);
         let options = Options::with_defaults(Formatting::default(), performance);
         let tally = WordTally::new(TEST_INPUT, &options);
         assert_eq!(tally.count(), 3);
@@ -709,7 +783,8 @@ mod wordtally_constructor_tests {
     fn with_custom_chunk_size() {
         // Create custom performance with a specific chunk size
         let performance = Performance::default()
-            .with_concurrency(Concurrency::Parallel)
+            .with_io(Io::Streamed)
+            .with_processing(Processing::Parallel)
             .with_chunk_size(32_768);
         let options = Options::with_defaults(Formatting::default(), performance);
 
@@ -720,7 +795,9 @@ mod wordtally_constructor_tests {
 
 #[test]
 fn test_min_count_graphemes() {
-    let performance = Performance::default().with_concurrency(Concurrency::Sequential);
+    let performance = Performance::default()
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential);
     let filters = Filters::default().with_min_chars(2);
     let options = Options::new(Formatting::default(), filters, performance);
     let tally = WordTally::new(
@@ -735,7 +812,9 @@ fn test_min_count_graphemes() {
 #[test]
 fn test_to_json() {
     // Create options
-    let performance = Performance::default().with_concurrency(Concurrency::Sequential);
+    let performance = Performance::default()
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential);
     let filters = Filters::default();
     let options = Options::new(Formatting::default(), filters, performance);
 
@@ -755,7 +834,9 @@ fn test_to_json() {
 
 #[test]
 fn test_from_json() {
-    let performance = Performance::default().with_concurrency(Concurrency::Sequential);
+    let performance = Performance::default()
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential);
     let filters = Filters::default();
     let options = Options::new(Formatting::default(), filters, performance);
     let shared_options = make_shared(options);

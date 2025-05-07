@@ -1,14 +1,19 @@
 use std::path::PathBuf;
 use word_tally::{
-    Concurrency, Format, Formatting, Input, MinValue, Options, Performance, SizeHint, Sort,
+    Format, Formatting, Input, Io, MinValue, Options, Performance, Processing, SizeHint, Sort,
     Threads, filters::ExcludeWords,
 };
 
 #[test]
 fn test_display_implementations() {
-    // Test Concurrency Display
-    assert_eq!(format!("{}", Concurrency::Sequential), "sequential");
-    assert_eq!(format!("{}", Concurrency::Parallel), "parallel");
+    // Test Io Display
+    assert_eq!(format!("{}", Io::Streamed), "streamed");
+    assert_eq!(format!("{}", Io::Buffered), "buffered");
+    assert_eq!(format!("{}", Io::MemoryMapped), "memory-mapped");
+
+    // Test Processing Display
+    assert_eq!(format!("{}", Processing::Sequential), "sequential");
+    assert_eq!(format!("{}", Processing::Parallel), "parallel");
 
     // Test Threads Display
     assert_eq!(format!("{}", Threads::All), "all");
@@ -68,10 +73,6 @@ fn test_ordering_traits() {
 
 #[test]
 fn test_pattern_ordering() {
-    // We can't directly test with ExcludePatterns and IncludePatterns constructors
-    // because they require Result, but we can verify that the ordering is passed
-    // through to Options which contain them
-
     let filters1 = word_tally::Filters::default();
     let filters2 = word_tally::Filters::default().with_min_chars(5);
     assert!(filters1 < filters2);
@@ -117,18 +118,15 @@ fn test_pathbuf_as_ref() {
 
 #[test]
 fn test_input_display() {
-    // Test Display implementation for Input::File
     let file_input = Input::File(PathBuf::from("/tmp/test.txt"));
     assert_eq!(format!("{}", file_input), "File(/tmp/test.txt)");
 
-    // Test Display implementation for Input::Stdin
     let stdin_input = Input::Stdin;
     assert_eq!(format!("{}", stdin_input), "Stdin");
 }
 
 #[test]
 fn test_const_format_fn() {
-    // Test the const fn format method
     let options = Options::default();
     let format = options.format();
     assert_eq!(format, word_tally::Format::Text);

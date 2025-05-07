@@ -39,6 +39,10 @@ impl Filters {
     /// * `exclude_words` - Words to exclude
     /// * `exclude_patterns` - Regex patterns to exclude
     /// * `include_patterns` - Regex patterns to include
+    ///
+    /// # Errors
+    ///
+    /// Returns a `regex::Error` if any of the provided patterns cannot be compiled into valid regular expressions.
     pub fn new(
         min_chars: &Option<usize>,
         min_count: &Option<usize>,
@@ -51,7 +55,7 @@ impl Filters {
             min_chars: min_chars.map(MinValue::new),
             min_count: min_count.map(MinValue::new),
             exclude_words: exclude_words
-                .map(|words| ExcludeWords(words.iter().map(|w| w.to_string()).collect())),
+                .map(|words| ExcludeWords(words.iter().map(ToString::to_string).collect())),
             exclude_patterns: None,
             include_patterns: None,
         };

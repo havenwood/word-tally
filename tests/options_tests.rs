@@ -24,7 +24,6 @@ fn test_options_display_includes_format() {
     let options = Options::default().with_format(Format::Json);
     let display_string = options.to_string();
 
-    // Format should be shown in the formatting section
     assert!(display_string.contains("formatting:"));
     assert!(display_string.contains("format: json"));
 }
