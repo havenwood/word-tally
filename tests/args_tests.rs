@@ -30,11 +30,21 @@ fn test_get_performance() {
         .write_stdin("hello world")
         .assert();
 
-    // Verify parallel mode is being used
     assert.success();
+}
 
-    // We can test this indirectly by running a large data set, but for now
-    // we just verify the program completes successfully with --parallel
+#[test]
+fn test_io_shorthand_flag() {
+    let assert = Command::cargo_bin("word-tally")
+        .unwrap()
+        .arg("-I=buffered")
+        .arg("-v")
+        .write_stdin("hello world")
+        .assert();
+
+    assert
+        .success()
+        .stderr(contains("io buffered"));
 }
 
 #[test]

@@ -18,6 +18,15 @@ pub struct Args {
     #[arg(default_value = "-", value_name = "PATH")]
     input: String,
 
+    // Performance options
+    /// I/O strategy.
+    #[arg(short = 'I', long, value_enum, default_value_t = Io::Streamed, value_name = "STRATEGY")]
+    io: Io,
+
+    /// Use threads for parallel processing.
+    #[arg(short = 'p', long)]
+    parallel: bool,
+
     // Formatting options
     /// Case normalization.
     #[arg(short, long, default_value_t, value_enum, value_name = "FORMAT")]
@@ -64,14 +73,6 @@ pub struct Args {
     /// Print verbose details.
     #[arg(short = 'v', long)]
     verbose: bool,
-
-    /// I/O strategy to use for input processing.
-    #[arg(long, value_enum, default_value_t = Io::Streamed, value_name = "STRATEGY")]
-    io: Io,
-
-    /// Use parallel processing.
-    #[arg(short = 'p', long)]
-    parallel: bool,
 }
 
 impl Args {

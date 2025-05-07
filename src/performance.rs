@@ -19,15 +19,15 @@ use std::sync::atomic::{AtomicBool, Ordering};
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ValueEnum,
 )]
 pub enum Io {
+    /// Use memory-mapped I/O for efficient file access
+    #[clap(name = "mmap")]
+    MemoryMapped,
+
     /// Process input line-by-line without loading entire file into memory
     Streamed,
 
     /// Read entire file into memory before processing
     Buffered,
-
-    /// Use memory-mapped I/O for efficient file access
-    #[clap(name = "mmap")]
-    MemoryMapped,
 }
 
 /// Determines the processing strategy

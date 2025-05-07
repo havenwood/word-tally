@@ -15,6 +15,8 @@ Arguments:
   [PATH]  File path to use as input rather than stdin ("-") [default: -]
 
 Options:
+  -I, --io <STRATEGY>          I/O strategy [default: streamed] [possible values: mmap, streamed, buffered]
+  -p, --parallel               Use threads for parallel processing
   -c, --case <FORMAT>          Case normalization [default: lower] [possible values: original, upper, lower]
   -s, --sort <ORDER>           Sort order [default: desc] [possible values: desc, asc, unsorted]
   -m, --min-chars <COUNT>      Exclude words containing fewer than min chars
@@ -26,8 +28,6 @@ Options:
   -d, --delimiter <VALUE>      Delimiter between keys and values [default: " "]
   -o, --output <PATH>          Write output to file rather than stdout
   -v, --verbose                Print verbose details
-      --io <STRATEGY>          I/O strategy to use for input processing [default: streamed] [possible values: streamed, buffered, mmap]
-  -p, --parallel               Use parallel processing
   -h, --help                   Print help (see more with '--help')
   -V, --version                Print version
 ```
@@ -102,18 +102,17 @@ word-tally --format=json README.md | jq -r 'map(.[0] + " ") | join(" ")' | wordc
 word-tally supports various I/O modes and parallel processing:
 
 ```sh
-# --io=streamed is the default I/O strategy
-output | word-tally
+output | word-tally # `--io=streamed` is the default I/O strategy
 
-word-tally file.txt
+word-tally -Istreamed file.txt # `-I` is a short form alias for `--io`
 
-word-tally --parallel large-file.txt
+word-tally --io=streamed --parallel large-file.txt
 
 word-tally --io=mmap --parallel large-file.txt
 
-word-tally --io=buffered file.txt
-
 word-tally --io=mmap file.txt
+
+word-tally --io=buffered file.txt
 ```
 
 #### Performance Considerations
