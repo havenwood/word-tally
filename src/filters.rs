@@ -1,7 +1,6 @@
-use crate::Case;
+use crate::{Case, TallyMap};
 use core::fmt::{self, Display, Formatter};
 use core::ops::Deref;
-use indexmap::IndexMap;
 use regex::Regex;
 use std::collections::HashSet;
 use unicode_segmentation::UnicodeSegmentation;
@@ -152,7 +151,7 @@ impl Filters {
     }
 
     /// Removes words from the `tally_map` based on any word `Filters`.
-    pub fn apply(&self, tally_map: &mut IndexMap<Box<str>, usize>, case: Case) {
+    pub fn apply(&self, tally_map: &mut TallyMap, case: Case) {
         if let Some(min_count) = self.min_count() {
             let min_count_val = min_count.value;
             tally_map.retain(|_, &mut count| count >= min_count_val);

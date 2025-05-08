@@ -42,9 +42,7 @@ fn test_io_shorthand_flag() {
         .write_stdin("hello world")
         .assert();
 
-    assert
-        .success()
-        .stderr(contains("io buffered"));
+    assert.success().stderr(contains("io buffered"));
 }
 
 #[test]
