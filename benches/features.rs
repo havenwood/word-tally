@@ -3,7 +3,7 @@
 use std::io::Cursor;
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use word_tally::{Options, Processing};
+use word_tally::{Filters, Options, Processing};
 
 #[path = "common.rs"]
 pub mod common;
@@ -57,8 +57,80 @@ fn bench_processing_comparison(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark regex pattern performance
+fn bench_regex_patterns(c: &mut Criterion) {
+    let mut group = create_bench_group(c, "regex_patterns");
+    let text_sample = medium_text();
+
+    let base_options = Options::default()
+        .with_processing(Processing::Parallel)
+        .with_filters(Filters::default());
+
+    group.bench_function("no_patterns", |b| {
+        self::common::bench_word_tally_with_string(
+            b,
+            text_sample.clone(),
+            &make_shared(base_options.clone()),
+            Cursor::new,
+        );
+    });
+
+    let few_patterns = vec![
+        "^[aeiou].*".to_string(),
+        ".*ing$".to_string(),
+        "^[A-Z][a-z]*$".to_string(),
+        "^[a-z]{1,3}$".to_string(),
+    ];
+
+    let few_patterns_options = base_options.clone().with_filters(
+        Filters::default()
+            .with_include_patterns(&few_patterns)
+            .unwrap(),
+    );
+
+    group.bench_function("few_patterns", |b| {
+        self::common::bench_word_tally_with_string(
+            b,
+            text_sample.clone(),
+            &make_shared(few_patterns_options.clone()),
+            Cursor::new,
+        );
+    });
+
+    let many_patterns = vec![
+        "^[aeiou].*".to_string(),
+        ".*ing$".to_string(),
+        "^[A-Z][a-z]*$".to_string(),
+        "^[a-z]{1,3}$".to_string(),
+        "^[^aeiou]*[aeiou][^aeiou]*$".to_string(),
+        ".*[0-9].*".to_string(),
+        "^(re|un|in|dis).*".to_string(),
+        ".*[^a-zA-Z0-9].*".to_string(),
+        "^(the|and|but|or|for|with)$".to_string(),
+        "^.{10,}$".to_string(),
+    ];
+
+    let many_patterns_options = base_options.clone().with_filters(
+        Filters::default()
+            .with_include_patterns(&many_patterns)
+            .unwrap(),
+    );
+
+    group.bench_function("many_patterns", |b| {
+        self::common::bench_word_tally_with_string(
+            b,
+            text_sample.clone(),
+            &make_shared(many_patterns_options.clone()),
+            Cursor::new,
+        );
+    });
+
+    group.finish();
+}
+
 fn run_benchmarks(c: &mut Criterion) {
     bench_processing_comparison(c);
+    bench_regex_patterns(c);
 }
 
 criterion_group! {

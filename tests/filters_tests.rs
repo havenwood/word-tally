@@ -158,3 +158,39 @@ fn test_serialization_with_patterns() {
     assert_eq!(tally_map.len(), 1);
     assert!(tally_map.contains_key("abc"));
 }
+
+#[test]
+fn test_multiple_regexp_patterns() {
+    use indexmap::IndexMap;
+    use word_tally::Case;
+
+    let multiple_patterns = vec![
+        r"^[aeiou].*".to_string(),
+        r".*ing$".to_string(),
+        r"^[A-Z].*".to_string(),
+    ];
+
+    let filters = Filters::default()
+        .with_include_patterns(&multiple_patterns)
+        .unwrap();
+
+    let mut tally_map = IndexMap::new();
+    tally_map.insert("apple".into(), 3);
+    tally_map.insert("banana".into(), 2);
+    tally_map.insert("eating".into(), 5);
+    tally_map.insert("orange".into(), 1);
+    tally_map.insert("running".into(), 4);
+    tally_map.insert("Example".into(), 2);
+    tally_map.insert("test".into(), 6);
+
+    filters.apply(&mut tally_map, Case::Original);
+
+    assert_eq!(tally_map.len(), 5);
+    assert!(tally_map.contains_key("apple"));
+    assert!(!tally_map.contains_key("banana"));
+    assert!(tally_map.contains_key("eating"));
+    assert!(tally_map.contains_key("orange"));
+    assert!(tally_map.contains_key("running"));
+    assert!(tally_map.contains_key("Example"));
+    assert!(!tally_map.contains_key("test"));
+}

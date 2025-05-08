@@ -1,11 +1,20 @@
 use crate::{Case, Count, TallyMap};
 use core::fmt::{self, Display, Formatter};
 use core::ops::Deref;
-use regex::Regex;
+use regex::RegexSet;
 use std::collections::HashSet;
 use unicode_segmentation::UnicodeSegmentation;
 
 use serde::{Deserialize, Serialize};
+
+/// Collection of regex pattern strings.
+type InputPatterns = Vec<String>;
+
+/// Minimum number of characters a word needs to have to be tallied.
+pub type MinChars = Count;
+
+/// Minimum number of times a word needs to appear to be tallied.
+pub type MinCount = Count;
 
 /// Filters for which words should be tallied.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -53,24 +62,19 @@ impl Filters {
         let mut filters = Self {
             min_chars: *min_chars,
             min_count: *min_count,
-            exclude_words: exclude_words
-                .map(|words| ExcludeWords(words.iter().map(ToString::to_string).collect())),
+            exclude_words: exclude_words.map(|words| ExcludeWords::from(words.to_vec())),
             exclude_patterns: None,
             include_patterns: None,
         };
 
         // Add exclude regex patterns if provided
-        if let Some(patterns) = exclude_patterns {
-            if !patterns.is_empty() {
-                filters = filters.with_exclude_patterns(patterns)?;
-            }
+        if let Some(patterns) = exclude_patterns.filter(|p| !p.is_empty()) {
+            filters = filters.with_exclude_patterns(patterns)?;
         }
 
         // Add include regex patterns if provided
-        if let Some(patterns) = include_patterns {
-            if !patterns.is_empty() {
-                filters = filters.with_include_patterns(patterns)?;
-            }
+        if let Some(patterns) = include_patterns.filter(|p| !p.is_empty()) {
+            filters = filters.with_include_patterns(patterns)?;
         }
 
         Ok(filters)
@@ -105,24 +109,39 @@ impl Filters {
         self
     }
 
-    /// Sets exclude patterns on an existing `Filters` instance.
-    pub fn with_exclude_patterns(mut self, patterns: &[String]) -> Result<Self, regex::Error> {
-        if patterns.is_empty() {
-            self.exclude_patterns = None;
+    /// Helper method to set patterns on filters
+    fn with_patterns<T>(
+        mut self,
+        input_patterns: &[String],
+        setter: impl FnOnce(&mut Self, Option<T>),
+        converter: impl FnOnce(&[String]) -> Result<T, regex::Error>,
+    ) -> Result<Self, regex::Error> {
+        let pattern = if input_patterns.is_empty() {
+            None
         } else {
-            self.exclude_patterns = Some(ExcludePatterns::new(patterns)?);
-        }
+            Some(converter(input_patterns)?)
+        };
+
+        setter(&mut self, pattern);
         Ok(self)
     }
 
-    /// Sets include patterns on an existing `Filters` instance.
-    pub fn with_include_patterns(mut self, patterns: &[String]) -> Result<Self, regex::Error> {
-        if patterns.is_empty() {
-            self.include_patterns = None;
-        } else {
-            self.include_patterns = Some(IncludePatterns::new(patterns)?);
-        }
-        Ok(self)
+    /// Sets patterns to exclude words that match.
+    pub fn with_exclude_patterns(self, input_patterns: &[String]) -> Result<Self, regex::Error> {
+        self.with_patterns(
+            input_patterns,
+            |s, p| s.exclude_patterns = p,
+            |patterns| patterns.try_into(),
+        )
+    }
+
+    /// Sets patterns to include only words that match.
+    pub fn with_include_patterns(self, input_patterns: &[String]) -> Result<Self, regex::Error> {
+        self.with_patterns(
+            input_patterns,
+            |s, p| s.include_patterns = p,
+            |patterns| patterns.try_into(),
+        )
     }
 
     /// Get the minimum character requirement
@@ -165,21 +184,15 @@ impl Filters {
             tally_map.retain(|word, _| !discard.contains(word));
         }
 
-        if let Some(patterns) = self.exclude_patterns() {
-            tally_map.retain(|word, _| !patterns.matches(word));
+        if let Some(input_patterns) = self.exclude_patterns() {
+            tally_map.retain(|word, _| !input_patterns.matches(word));
         }
 
-        if let Some(patterns) = self.include_patterns() {
-            tally_map.retain(|word, _| patterns.matches(word));
+        if let Some(input_patterns) = self.include_patterns() {
+            tally_map.retain(|word, _| input_patterns.matches(word));
         }
     }
 }
-
-/// Minimum number of characters a word needs to have to be tallied.
-pub type MinChars = Count;
-
-/// Minimum number of times a word needs to appear to be tallied.
-pub type MinCount = Count;
 
 /// A list of words that should be omitted from the tally.
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -212,34 +225,24 @@ impl Deref for ExcludeWords {
 }
 
 /// Base struct for regex pattern filtering.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 struct Patterns {
-    patterns: Vec<Regex>,
-    original_patterns: Vec<String>,
+    /// Original pattern strings
+    input_patterns: InputPatterns,
+    /// Compiled regex set for matching
+    regex_set: RegexSet,
 }
 
-impl Patterns {
-    fn new(patterns: &[String]) -> Result<Self, regex::Error> {
-        let original_patterns = patterns.to_vec();
-        let compiled_patterns = patterns
-            .iter()
-            .map(|p| Regex::new(p))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        Ok(Self {
-            patterns: compiled_patterns,
-            original_patterns,
-        })
-    }
-
-    fn matches(&self, word: &str) -> bool {
-        self.patterns.iter().any(|p| p.is_match(word))
+impl Default for Patterns {
+    fn default() -> Self {
+        // Use an empty patterns array and empty RegexSet
+        Self::new(Vec::new()).expect("Default creation with empty vec should never fail")
     }
 }
 
 impl PartialEq for Patterns {
     fn eq(&self, other: &Self) -> bool {
-        self.original_patterns == other.original_patterns
+        self.input_patterns == other.input_patterns
     }
 }
 
@@ -253,25 +256,94 @@ impl PartialOrd for Patterns {
 
 impl Ord for Patterns {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.original_patterns.cmp(&other.original_patterns)
+        self.input_patterns.cmp(&other.input_patterns)
     }
 }
 
 impl std::hash::Hash for Patterns {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.original_patterns.hash(state);
+        self.input_patterns.hash(state);
     }
 }
 
 impl Display for Patterns {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.original_patterns.join(","))
+        write!(f, "{}", self.input_patterns.join(","))
+    }
+}
+
+impl AsRef<[String]> for Patterns {
+    fn as_ref(&self) -> &[String] {
+        &self.input_patterns
+    }
+}
+
+impl Patterns {
+    /// Creates a pattern set and compiles the RegexSet.
+    fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
+        let regex_set = RegexSet::new(&input_patterns)?;
+        Ok(Self {
+            regex_set,
+            input_patterns,
+        })
+    }
+
+    /// Creates a pattern set from a slice of strings.
+    fn from_slice(input_patterns: &[String]) -> Result<Self, regex::Error> {
+        Self::new(input_patterns.to_vec())
+    }
+
+    /// Checks if a word matches any pattern in the RegexSet.
+    fn matches(&self, word: &str) -> bool {
+        self.regex_set.is_match(word)
     }
 }
 
 /// Regex patterns used to exclude matching words.
 #[derive(Clone, Debug, Default)]
 pub struct ExcludePatterns(Patterns);
+
+impl ExcludePatterns {
+    /// Creates exclude patterns from owned pattern strings.
+    pub fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
+        Ok(Self(Patterns::new(input_patterns)?))
+    }
+
+    /// Tests if a word matches any exclude pattern.
+    pub fn matches(&self, word: &str) -> bool {
+        self.0.matches(word)
+    }
+}
+
+impl<'a> TryFrom<&'a [String]> for ExcludePatterns {
+    type Error = regex::Error;
+
+    fn try_from(input_patterns: &'a [String]) -> Result<Self, Self::Error> {
+        Ok(Self(Patterns::from_slice(input_patterns)?))
+    }
+}
+
+impl Serialize for ExcludePatterns {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.input_patterns.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for ExcludePatterns {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        let input_patterns: InputPatterns = Vec::deserialize(deserializer)?;
+
+        Self::new(input_patterns)
+            .map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
+    }
+}
 
 impl PartialEq for ExcludePatterns {
     fn eq(&self, other: &Self) -> bool {
@@ -305,40 +377,51 @@ impl Display for ExcludePatterns {
     }
 }
 
-impl Serialize for ExcludePatterns {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.0.original_patterns.serialize(serializer)
-    }
-}
+/// Regex patterns used to include only matching words.
+#[derive(Clone, Debug, Default)]
+pub struct IncludePatterns(Patterns);
 
-impl<'de> Deserialize<'de> for ExcludePatterns {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::Error;
-        let patterns: Vec<String> = Vec::deserialize(deserializer)?;
-
-        Self::new(&patterns).map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
-    }
-}
-
-impl ExcludePatterns {
-    pub fn new(patterns: &[String]) -> Result<Self, regex::Error> {
-        Ok(Self(Patterns::new(patterns)?))
+impl IncludePatterns {
+    /// Creates include patterns from owned pattern strings.
+    pub fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
+        Ok(Self(Patterns::new(input_patterns)?))
     }
 
+    /// Tests if a word matches any include pattern.
     pub fn matches(&self, word: &str) -> bool {
         self.0.matches(word)
     }
 }
 
-/// Regex patterns used to include only matching words.
-#[derive(Clone, Debug, Default)]
-pub struct IncludePatterns(Patterns);
+impl<'a> TryFrom<&'a [String]> for IncludePatterns {
+    type Error = regex::Error;
+
+    fn try_from(input_patterns: &'a [String]) -> Result<Self, Self::Error> {
+        Ok(Self(Patterns::from_slice(input_patterns)?))
+    }
+}
+
+impl Serialize for IncludePatterns {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.0.input_patterns.serialize(serializer)
+    }
+}
+
+impl<'de> Deserialize<'de> for IncludePatterns {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+        let input_patterns: InputPatterns = Vec::deserialize(deserializer)?;
+
+        Self::new(input_patterns)
+            .map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
+    }
+}
 
 impl PartialEq for IncludePatterns {
     fn eq(&self, other: &Self) -> bool {
@@ -369,36 +452,5 @@ impl std::hash::Hash for IncludePatterns {
 impl Display for IncludePatterns {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
-    }
-}
-
-impl Serialize for IncludePatterns {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.0.original_patterns.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for IncludePatterns {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::Error;
-        let patterns: Vec<String> = Vec::deserialize(deserializer)?;
-
-        Self::new(&patterns).map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
-    }
-}
-
-impl IncludePatterns {
-    pub fn new(patterns: &[String]) -> Result<Self, regex::Error> {
-        Ok(Self(Patterns::new(patterns)?))
-    }
-
-    pub fn matches(&self, word: &str) -> bool {
-        self.0.matches(word)
     }
 }
