@@ -332,7 +332,7 @@ impl<'a> WordTally<'a> {
     }
 
     /// Gets the `tally` field.
-    pub const fn tally(&self) -> &[(Word, Count)] {
+    pub fn tally(&self) -> &[(Word, Count)] {
         &self.tally
     }
 
@@ -375,7 +375,6 @@ impl<'a> WordTally<'a> {
     }
 
     /// Counts words in a string and adds them to the tally map
-    #[inline]
     fn add_words_to_tally(tally: &mut TallyMap, line: &str, case: Case) {
         for word in line.unicode_words() {
             *tally.entry(case.normalize(word)).or_insert(0) += 1;
@@ -398,7 +397,6 @@ impl<'a> WordTally<'a> {
     }
 
     /// Merges maps by combining word counts
-    #[inline]
     fn merge_map_into(dest: &mut TallyMap, source: TallyMap) {
         for (word, count) in source {
             *dest.entry(word).or_insert(0) += count;
@@ -411,7 +409,6 @@ impl<'a> WordTally<'a> {
     /// - Only reserve capacity when the combined size exceeds the threshold
     /// - Avoid unnecessary allocations for small maps
     /// - Provide more aggressive capacity reservation for large maps
-    #[inline]
     fn reserve_capacity_if_needed(
         result_map: &mut TallyMap,
         local_map_len: usize,
