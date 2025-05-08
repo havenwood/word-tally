@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     // Parse arguments and prepare an input reader.
     let args = Args::parse();
 
-    let input = Input::new(args.get_input().as_str())?;
+    let input = Input::new(args.get_input().as_str());
     let input_size = input.size();
     let size_hint = input_size.map_or_else(SizeHint::default, SizeHint::Bytes);
     let options = args.get_options(size_hint)?;
@@ -49,13 +49,9 @@ fn main() -> Result<()> {
     // Process output.
     let delimiter = args.get_unescaped_delimiter()?;
 
-    crate::verbose::handle_verbose_output(
-        args.is_verbose(),
-        options.format(),
-        &word_tally,
-        &delimiter,
-        &source,
-    )?;
+    if args.is_verbose() {
+        crate::verbose::handle_verbose_output(&word_tally, options.format(), &delimiter, &source)?;
+    }
 
     let mut output = Output::new(args.get_output())?;
     output.write_formatted_tally(word_tally.tally(), options.format(), &delimiter)?;

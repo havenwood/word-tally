@@ -43,14 +43,14 @@ impl Output {
     pub fn new(output: &Option<PathBuf>) -> Result<Self> {
         match output.as_deref() {
             Some(path) if path == Path::new("-") => Ok(Self::stdout()),
-            Some(path) => Self::file(path.to_path_buf()),
+            Some(path) => Self::file(path),
             None => Ok(Self::stdout()),
         }
     }
 
     /// Creates an `Output` that writes to a file with error context.
-    pub fn file(path: PathBuf) -> Result<Self> {
-        let file = File::create(&path)
+    pub fn file(path: &Path) -> Result<Self> {
+        let file = File::create(path)
             .map(|file| Box::new(LineWriter::new(file)) as Writer)
             .with_context(|| format!("Failed to create file: {:?}", path))?;
         Ok(Self { writer: file })

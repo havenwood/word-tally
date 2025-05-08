@@ -27,11 +27,11 @@ impl std::fmt::Display for Input {
 
 impl Input {
     /// Construct an `Input` from a file path or stdin.
-    pub fn new(path: &str) -> Result<Self> {
+    pub fn new(path: &str) -> Self {
         if path == "-" {
-            Ok(Self::Stdin)
+            Self::Stdin
         } else {
-            Ok(Self::File(PathBuf::from(path)))
+            Self::File(PathBuf::from(path))
         }
     }
 

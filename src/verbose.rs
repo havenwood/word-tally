@@ -157,16 +157,11 @@ impl<'v, 'a> Verbose<'v, 'a> {
 
 /// Handle verbose output based on word tally results.
 pub fn handle_verbose_output(
-    is_verbose: bool,
-    format: Format,
     word_tally: &WordTally<'_>,
+    format: Format,
     delimiter: &str,
     source: &str,
 ) -> Result<()> {
-    if !is_verbose {
-        return Ok(());
-    }
-
     match format {
         Format::Json => output_json(word_tally, delimiter, source),
         Format::Csv => output_csv(word_tally, delimiter, source),
