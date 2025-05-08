@@ -407,7 +407,7 @@ impl<'a> WordTally<'a> {
 
     /// Counts words in a string and adds them to the tally map
     #[inline]
-    fn count_words_in_line(line: &str, tally: &mut TallyMap, case: Case) {
+    fn add_words_to_tally(line: &str, tally: &mut TallyMap, case: Case) {
         for word in line.unicode_words() {
             *tally.entry(case.normalize(word)).or_insert(0) += 1;
         }
@@ -421,7 +421,7 @@ impl<'a> WordTally<'a> {
         let mut tally = self.create_tally_map();
 
         for line in lines {
-            Self::count_words_in_line(line, &mut tally, case);
+            Self::add_words_to_tally(line, &mut tally, case);
         }
 
         tally
@@ -474,7 +474,7 @@ impl<'a> WordTally<'a> {
 
         // Process lines one at a time, never loading the entire file into memory
         for line in reader.lines().map_while(Result::ok) {
-            Self::count_words_in_line(&line, &mut tally, case);
+            Self::add_words_to_tally(&line, &mut tally, case);
         }
 
         tally
@@ -563,7 +563,7 @@ impl<'a> WordTally<'a> {
             // For very small inputs, process sequentially to avoid parallelism overhead
             let mut result = TallyMap::with_capacity(thread_local_capacity);
             for line in lines {
-                Self::count_words_in_line(line, &mut result, case);
+                Self::add_words_to_tally(line, &mut result, case);
             }
             return result;
         }
@@ -574,7 +574,7 @@ impl<'a> WordTally<'a> {
             .fold(
                 || TallyMap::with_capacity(thread_local_capacity),
                 |mut acc, line| {
-                    Self::count_words_in_line(line, &mut acc, case);
+                    Self::add_words_to_tally(line, &mut acc, case);
                     acc
                 },
             )
@@ -608,7 +608,7 @@ impl<'a> WordTally<'a> {
 
         // Process all lines in one efficient pass, leveraging being fully in memory
         for line in content.lines() {
-            Self::count_words_in_line(line, &mut tally, case);
+            Self::add_words_to_tally(line, &mut tally, case);
         }
 
         tally
@@ -634,7 +634,7 @@ impl<'a> WordTally<'a> {
         if line_count < 32 || matches!(perf.threads(), Threads::Count(1)) {
             let mut result = TallyMap::with_capacity(result_capacity.min(1024));
             for line in content.lines() {
-                Self::count_words_in_line(line, &mut result, case);
+                Self::add_words_to_tally(line, &mut result, case);
             }
             return result;
         }
@@ -645,7 +645,7 @@ impl<'a> WordTally<'a> {
             .fold(
                 || TallyMap::with_capacity(thread_capacity),
                 |mut local_map, line| {
-                    Self::count_words_in_line(line, &mut local_map, case);
+                    Self::add_words_to_tally(line, &mut local_map, case);
                     local_map
                 },
             )
@@ -682,7 +682,7 @@ impl<'a> WordTally<'a> {
         if line_count < 32 || matches!(perf.threads(), Threads::Count(1)) {
             let mut result = TallyMap::with_capacity(result_capacity.min(1024));
             for line in content.lines() {
-                Self::count_words_in_line(line, &mut result, case);
+                Self::add_words_to_tally(line, &mut result, case);
             }
             return result;
         }
@@ -693,7 +693,7 @@ impl<'a> WordTally<'a> {
             .fold(
                 || TallyMap::with_capacity(thread_capacity),
                 |mut local_map, line| {
-                    Self::count_words_in_line(line, &mut local_map, case);
+                    Self::add_words_to_tally(line, &mut local_map, case);
                     local_map
                 },
             )
