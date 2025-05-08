@@ -1,4 +1,4 @@
-use crate::WordTally;
+use crate::{Word, WordTally};
 use clap::ValueEnum;
 use core::cmp::Reverse;
 use core::fmt::{self, Display, Formatter};
@@ -155,7 +155,7 @@ impl Display for Case {
 
 impl Case {
     /// Normalizes word case if a `Case` other than `Case::Original` is provided.
-    pub fn normalize(&self, word: &str) -> Box<str> {
+    pub fn normalize(&self, word: &str) -> Word {
         match self {
             Self::Lower => word.to_lowercase().into_boxed_str(),
             Self::Upper => word.to_uppercase().into_boxed_str(),

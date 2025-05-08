@@ -11,7 +11,7 @@
 // Each strategy is tested to verify they all produce identical results.
 
 use std::io::Cursor;
-use word_tally::{Io, Options, Processing, WordTally};
+use word_tally::{Count, Io, Options, Processing, WordTally};
 
 // Test data that's small enough for tests but has multiple lines and words
 const TEST_TEXT: &str = "The quick brown fox
@@ -19,9 +19,9 @@ jumps over the lazy dog
 Pack my box with five dozen liquor jugs";
 
 // Unique words (note: "the" appears twice)
-const EXPECTED_WORD_COUNT: usize = 16;
+const EXPECTED_WORD_COUNT: Count = 16;
 // Total words including duplicates
-const EXPECTED_TOTAL_COUNT: usize = 17;
+const EXPECTED_TOTAL_COUNT: Count = 17;
 
 // Helper to create options with specific I/O and processing strategy
 fn make_options(io: Io, processing: Processing) -> Options {

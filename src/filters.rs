@@ -1,4 +1,4 @@
-use crate::{Case, TallyMap};
+use crate::{Case, Count, TallyMap};
 use core::fmt::{self, Display, Formatter};
 use core::ops::Deref;
 use regex::Regex;
@@ -43,8 +43,8 @@ impl Filters {
     ///
     /// Returns a `regex::Error` if any of the provided patterns cannot be compiled into valid regular expressions.
     pub fn new(
-        min_chars: &Option<usize>,
-        min_count: &Option<usize>,
+        min_chars: &Option<Count>,
+        min_count: &Option<Count>,
         exclude_words: Option<&Vec<String>>,
         exclude_patterns: Option<&Vec<String>>,
         include_patterns: Option<&Vec<String>>,
@@ -88,13 +88,13 @@ impl Filters {
     }
 
     /// Set minimum character requirement.
-    pub const fn with_min_chars(mut self, min_chars: usize) -> Self {
+    pub const fn with_min_chars(mut self, min_chars: Count) -> Self {
         self.min_chars = Some(MinValue::new(min_chars));
         self
     }
 
     /// Set minimum count requirement.
-    pub const fn with_min_count(mut self, min_count: usize) -> Self {
+    pub const fn with_min_count(mut self, min_count: Count) -> Self {
         self.min_count = Some(MinValue::new(min_count));
         self
     }
@@ -153,12 +153,12 @@ impl Filters {
     /// Removes words from the `tally_map` based on any word `Filters`.
     pub fn apply(&self, tally_map: &mut TallyMap, case: Case) {
         if let Some(min_count) = self.min_count() {
-            let min_count_val = min_count.value;
+            let min_count_val = *min_count.count();
             tally_map.retain(|_, &mut count| count >= min_count_val);
         }
 
         if let Some(min_chars) = self.min_chars() {
-            let min_chars_val = min_chars.value;
+            let min_chars_val = *min_chars.count();
             tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars_val);
         }
 
@@ -189,11 +189,15 @@ impl<T> MinValue<T> {
     pub const fn new(value: T) -> Self {
         Self { value }
     }
+
+    pub const fn count(&self) -> &T {
+        &self.value
+    }
 }
 
 impl<T: Display> Display for MinValue<T> {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.value)
+        write!(f, "{}", self.count())
     }
 }
 
@@ -205,21 +209,21 @@ impl<T> From<T> for MinValue<T> {
 
 impl<T> AsRef<T> for MinValue<T> {
     fn as_ref(&self) -> &T {
-        &self.value
+        self.count()
     }
 }
 
-impl From<MinValue<Self>> for usize {
+impl From<MinValue<Self>> for Count {
     fn from(val: MinValue<Self>) -> Self {
-        val.value
+        *val.count()
     }
 }
 
 /// Minimum number of characters a word needs to have to be tallied.
-pub type MinChars = MinValue<usize>;
+pub type MinChars = MinValue<Count>;
 
 /// Minimum number of times a word needs to appear to be tallied.
-pub type MinCount = MinValue<usize>;
+pub type MinCount = MinValue<Count>;
 
 /// A list of words that should be omitted from the tally.
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

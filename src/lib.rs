@@ -59,7 +59,7 @@
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Case, Filters, Format, Options, WordTally, Io, Processing};
+//! use word_tally::{Case, Filters, Format, Io, Options, Processing, Tally, WordTally};
 //!
 //! // Create options with case normalization, output format, and other settings
 //! let options = Options::default()
@@ -71,7 +71,7 @@
 //!
 //! let input = "Cinquedea".as_bytes();
 //! let words = WordTally::new(input, &options);
-//! let expected_tally: Box<[(Box<str>, usize)]> = [("cinquedea".into(), 1)].into();
+//! let expected_tally: Tally = [("cinquedea".into(), 1)].into();
 //!
 //! assert_eq!(words.into_tally(), expected_tally);
 //! ```
@@ -84,7 +84,10 @@ use std::fs::File;
 use std::io::{BufRead, BufReader, Read};
 use unicode_segmentation::UnicodeSegmentation;
 
-type TallyMap = IndexMap<Box<str>, usize>;
+pub type Word = Box<str>;
+pub type Count = usize;
+pub type Tally = Box<[(Word, Count)]>;
+type TallyMap = IndexMap<Word, Count>;
 
 pub mod filters;
 pub mod formatting;
@@ -104,28 +107,28 @@ pub use performance::{Io, Performance, Processing, SizeHint, Threads};
 
 #[derive(Deserialize)]
 struct WordTallyData {
-    tally: Box<[(Box<str>, usize)]>,
+    tally: Tally,
     #[serde(default, skip_deserializing)]
     _options: (),
-    count: usize,
+    count: Count,
     #[serde(rename = "uniqueCount")]
-    uniq_count: usize,
+    uniq_count: Count,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 #[non_exhaustive]
 pub struct WordTally<'a> {
     /// Ordered pairs of words and the count of times they appear.
-    tally: Box<[(Box<str>, usize)]>,
+    tally: Tally,
 
     /// Options for tallying, including formatting, filters, and performance settings.
     options: &'a Options,
 
     /// The sum of all words tallied.
-    count: usize,
+    count: Count,
 
     /// The sum of uniq words tallied.
-    uniq_count: usize,
+    uniq_count: Count,
 }
 
 impl std::hash::Hash for WordTally<'_> {
@@ -183,7 +186,7 @@ impl<'de> Deserialize<'de> for WordTally<'_> {
 }
 
 /// A `tally` supports `iter` and can also be represented as a `Vec`.
-impl<'a> From<WordTally<'a>> for Vec<(Box<str>, usize)> {
+impl<'a> From<WordTally<'a>> for Vec<(Word, Count)> {
     fn from(word_tally: WordTally<'a>) -> Self {
         word_tally.into_tally().into_vec()
     }
@@ -191,8 +194,8 @@ impl<'a> From<WordTally<'a>> for Vec<(Box<str>, usize)> {
 
 /// A `tally` can also be iterated over directly from a `WordTally`.
 impl<'i> IntoIterator for &'i WordTally<'_> {
-    type Item = &'i (Box<str>, usize);
-    type IntoIter = std::slice::Iter<'i, (Box<str>, usize)>;
+    type Item = &'i (Word, Count);
+    type IntoIter = std::slice::Iter<'i, (Word, Count)>;
     fn into_iter(self) -> Self::IntoIter {
         self.tally.iter()
     }
@@ -350,12 +353,12 @@ impl<'a> WordTally<'a> {
     }
 
     /// Consumes the `tally` field.
-    pub fn into_tally(self) -> Box<[(Box<str>, usize)]> {
+    pub fn into_tally(self) -> Tally {
         self.tally
     }
 
     /// Gets the `tally` field.
-    pub const fn tally(&self) -> &[(Box<str>, usize)] {
+    pub const fn tally(&self) -> &[(Word, Count)] {
         &self.tally
     }
 
@@ -370,12 +373,12 @@ impl<'a> WordTally<'a> {
     }
 
     /// Gets the `uniq_count` field.
-    pub const fn uniq_count(&self) -> usize {
+    pub const fn uniq_count(&self) -> Count {
         self.uniq_count
     }
 
     /// Gets the `count` field.
-    pub const fn count(&self) -> usize {
+    pub const fn count(&self) -> Count {
         self.count
     }
 

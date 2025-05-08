@@ -5,10 +5,10 @@ use clap::Parser;
 use std::path::PathBuf;
 use unescaper::unescape;
 
-use word_tally::filters::Filters;
 use word_tally::formatting::{Case, Format, Formatting, Sort};
 use word_tally::options::Options;
 use word_tally::performance::{Io, Performance, Processing, SizeHint};
+use word_tally::{Count, filters::Filters};
 
 /// A utility for tallying word frequencies in text.
 #[derive(Debug, Parser)]
@@ -39,11 +39,11 @@ pub struct Args {
     // Filtering options
     /// Exclude words containing fewer than min chars.
     #[arg(short, long, value_name = "COUNT")]
-    min_chars: Option<usize>,
+    min_chars: Option<Count>,
 
     /// Exclude words appearing fewer than min times.
     #[arg(short = 'M', long, value_name = "COUNT")]
-    min_count: Option<usize>,
+    min_count: Option<Count>,
 
     /// Exclude words from a comma-delimited list.
     #[arg(short = 'E', long, use_value_delimiter = true, value_name = "WORDS")]

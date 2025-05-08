@@ -1,11 +1,11 @@
 use std::fs::File;
 use std::io::Cursor;
 use std::sync::Arc;
-use word_tally::{Io, Options, Processing, WordTally};
+use word_tally::{Count, Io, Options, Processing, WordTally};
 
 const API_EXAMPLE_TEXT: &str = "The quick brown fox jumps over the lazy dog";
-const EXPECTED_API_WORD_COUNT: usize = 9;
-const EXPECTED_API_UNIQ_COUNT: usize = 8;
+const EXPECTED_API_WORD_COUNT: Count = 9;
+const EXPECTED_API_UNIQ_COUNT: Count = 8;
 
 fn verify_api_example_tally(tally: &WordTally<'_>) {
     assert_eq!(

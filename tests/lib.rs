@@ -5,16 +5,16 @@ use std::sync::Arc;
 use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
-    Case, ExcludeWords, Filters, Format, Formatting, Io, MinChars, MinCount, MinValue, Options,
-    Performance, Processing, SizeHint, Sort, WordTally,
+    Case, Count, ExcludeWords, Filters, Format, Formatting, Io, MinChars, MinCount, MinValue,
+    Options, Performance, Processing, SizeHint, Sort, Tally, Word, WordTally,
 };
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
 
 struct ExpectedFields<'a> {
-    count: usize,
-    uniq_count: usize,
-    tally: Vec<(&'a str, usize)>,
+    count: Count,
+    uniq_count: Count,
+    tally: Vec<(&'a str, Count)>,
 }
 
 // Create an Arc to keep Options alive for the lifetime of tests
@@ -307,8 +307,7 @@ fn test_into_tally() {
     // Use `tally()` to get a reference to the slice.
     let tally = word_tally.tally();
 
-    let expected_tally: Box<[(Box<str>, usize)]> =
-        vec![("bye".into(), 2), ("birdy".into(), 1)].into_boxed_slice();
+    let expected_tally: Tally = vec![("bye".into(), 2), ("birdy".into(), 1)].into_boxed_slice();
 
     assert_eq!(tally, expected_tally.as_ref());
 }
@@ -319,10 +318,9 @@ fn test_iterator() {
     let options = make_shared(Options::default());
     let word_tally = WordTally::new(&input[..], &options);
 
-    let expected: Vec<(Box<str>, usize)> =
-        vec![(Box::from("double"), 2), (Box::from("trouble"), 1)];
+    let expected: Vec<(Word, Count)> = vec![(Box::from("double"), 2), (Box::from("trouble"), 1)];
 
-    let collected: Vec<(Box<str>, usize)> = (&word_tally).into_iter().cloned().collect();
+    let collected: Vec<(Word, Count)> = (&word_tally).into_iter().cloned().collect();
     assert_eq!(collected, expected);
 
     let mut iter = (&word_tally).into_iter();
@@ -337,7 +335,7 @@ fn test_iterator_for_loop() {
     let options = make_shared(Options::default());
     let word_tally = WordTally::new(&input[..], &options);
 
-    let expected: Vec<(Box<str>, usize)> = vec![(Box::from("llama"), 2), (Box::from("pajamas"), 1)];
+    let expected: Vec<(Word, Count)> = vec![(Box::from("llama"), 2), (Box::from("pajamas"), 1)];
 
     let mut collected = vec![];
     for item in &word_tally {
