@@ -43,16 +43,16 @@ impl Filters {
     ///
     /// Returns a `regex::Error` if any of the provided patterns cannot be compiled into valid regular expressions.
     pub fn new(
-        min_chars: &Option<Count>,
-        min_count: &Option<Count>,
+        min_chars: &Option<MinChars>,
+        min_count: &Option<MinCount>,
         exclude_words: Option<&Vec<String>>,
         exclude_patterns: Option<&Vec<String>>,
         include_patterns: Option<&Vec<String>>,
     ) -> Result<Self, regex::Error> {
         // Create initial filters
         let mut filters = Self {
-            min_chars: min_chars.map(MinValue::new),
-            min_count: min_count.map(MinValue::new),
+            min_chars: *min_chars,
+            min_count: *min_count,
             exclude_words: exclude_words
                 .map(|words| ExcludeWords(words.iter().map(ToString::to_string).collect())),
             exclude_patterns: None,
@@ -88,14 +88,14 @@ impl Filters {
     }
 
     /// Set minimum character requirement.
-    pub const fn with_min_chars(mut self, min_chars: Count) -> Self {
-        self.min_chars = Some(MinValue::new(min_chars));
+    pub const fn with_min_chars(mut self, min_chars: MinChars) -> Self {
+        self.min_chars = Some(min_chars);
         self
     }
 
     /// Set minimum count requirement.
-    pub const fn with_min_count(mut self, min_count: Count) -> Self {
-        self.min_count = Some(MinValue::new(min_count));
+    pub const fn with_min_count(mut self, min_count: MinCount) -> Self {
+        self.min_count = Some(min_count);
         self
     }
 
@@ -126,13 +126,13 @@ impl Filters {
     }
 
     /// Get the minimum character requirement
-    pub const fn min_chars(&self) -> &Option<MinChars> {
-        &self.min_chars
+    pub const fn min_chars(&self) -> Option<MinChars> {
+        self.min_chars
     }
 
     /// Get the minimum count requirement
-    pub const fn min_count(&self) -> &Option<MinCount> {
-        &self.min_count
+    pub const fn min_count(&self) -> Option<MinCount> {
+        self.min_count
     }
 
     /// Get the excluded words list
@@ -153,13 +153,11 @@ impl Filters {
     /// Removes words from the `tally_map` based on any word `Filters`.
     pub fn apply(&self, tally_map: &mut TallyMap, case: Case) {
         if let Some(min_count) = self.min_count() {
-            let min_count_val = *min_count.count();
-            tally_map.retain(|_, &mut count| count >= min_count_val);
+            tally_map.retain(|_, &mut count| count >= min_count);
         }
 
         if let Some(min_chars) = self.min_chars() {
-            let min_chars_val = *min_chars.count();
-            tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars_val);
+            tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars);
         }
 
         if let Some(ExcludeWords(words)) = self.exclude_words() {
@@ -177,53 +175,11 @@ impl Filters {
     }
 }
 
-/// Generic wrapper for minimum value requirements.
-#[derive(
-    Clone, Copy, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize,
-)]
-pub struct MinValue<T> {
-    pub value: T,
-}
-
-impl<T> MinValue<T> {
-    pub const fn new(value: T) -> Self {
-        Self { value }
-    }
-
-    pub const fn count(&self) -> &T {
-        &self.value
-    }
-}
-
-impl<T: Display> Display for MinValue<T> {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.count())
-    }
-}
-
-impl<T> From<T> for MinValue<T> {
-    fn from(value: T) -> Self {
-        Self { value }
-    }
-}
-
-impl<T> AsRef<T> for MinValue<T> {
-    fn as_ref(&self) -> &T {
-        self.count()
-    }
-}
-
-impl From<MinValue<Self>> for Count {
-    fn from(val: MinValue<Self>) -> Self {
-        *val.count()
-    }
-}
-
 /// Minimum number of characters a word needs to have to be tallied.
-pub type MinChars = MinValue<Count>;
+pub type MinChars = Count;
 
 /// Minimum number of times a word needs to appear to be tallied.
-pub type MinCount = MinValue<Count>;
+pub type MinCount = Count;
 
 /// A list of words that should be omitted from the tally.
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

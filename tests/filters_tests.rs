@@ -17,8 +17,8 @@ fn test_filters_new() {
     )
     .unwrap();
 
-    assert_eq!(filters.min_chars().unwrap().to_string(), "3");
-    assert_eq!(filters.min_count().unwrap().to_string(), "2");
+    assert_eq!(filters.min_chars().unwrap(), 3);
+    assert_eq!(filters.min_count().unwrap(), 2);
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_none());
     assert!(filters.include_patterns().is_none());
@@ -33,8 +33,8 @@ fn test_filters_new() {
     )
     .unwrap();
 
-    assert_eq!(filters.min_chars().unwrap().to_string(), "3");
-    assert_eq!(filters.min_count().unwrap().to_string(), "2");
+    assert_eq!(filters.min_chars().unwrap(), 3);
+    assert_eq!(filters.min_count().unwrap(), 2);
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_some());
     assert!(filters.include_patterns().is_none());
@@ -50,8 +50,8 @@ fn test_filters_new() {
     )
     .unwrap();
 
-    assert_eq!(filters.min_chars().unwrap().to_string(), "3");
-    assert_eq!(filters.min_count().unwrap().to_string(), "2");
+    assert_eq!(filters.min_chars().unwrap(), 3);
+    assert_eq!(filters.min_count().unwrap(), 2);
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_none());
     assert!(filters.include_patterns().is_some());
@@ -67,8 +67,8 @@ fn test_filters_new() {
     )
     .unwrap();
 
-    assert_eq!(filters.min_chars().unwrap().to_string(), "3");
-    assert_eq!(filters.min_count().unwrap().to_string(), "2");
+    assert_eq!(filters.min_chars().unwrap(), 3);
+    assert_eq!(filters.min_count().unwrap(), 2);
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_some());
     assert!(filters.include_patterns().is_some());
@@ -132,8 +132,8 @@ fn test_serialization_with_patterns() {
 
     let deserialized_filters: Filters = serde_json::from_str(&json).unwrap();
 
-    assert_eq!(*deserialized_filters.min_chars().unwrap().count(), 3);
-    assert_eq!(*deserialized_filters.min_count().unwrap().count(), 2);
+    assert_eq!(deserialized_filters.min_chars().unwrap(), 3);
+    assert_eq!(deserialized_filters.min_count().unwrap(), 2);
 
     let deserialized_exclude_words = deserialized_filters.exclude_words().as_ref().unwrap();
     assert_eq!(deserialized_exclude_words.len(), 2);

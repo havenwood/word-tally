@@ -56,8 +56,8 @@ impl<'v, 'a> Verbose<'v, 'a> {
             "order": self.tally.options().sort().to_string(),
             "processing": self.tally.options().processing().to_string(),
             "io": self.tally.options().io().to_string(),
-            "min-chars": self.format(*self.tally.filters().min_chars()),
-            "min-count": self.format(*self.tally.filters().min_count()),
+            "min-chars": self.format(self.tally.filters().min_chars()),
+            "min-count": self.format(self.tally.filters().min_count()),
             "exclude-words": self.format(self.tally.filters().exclude_words().clone()),
             "exclude-patterns": self.format(self.tally.filters().exclude_patterns().as_ref()),
         });
@@ -87,8 +87,8 @@ impl<'v, 'a> Verbose<'v, 'a> {
         wtr.write_record(["order", &self.tally.options().sort().to_string()])?;
         wtr.write_record(["processing", &self.tally.options().processing().to_string()])?;
         wtr.write_record(["io", &self.tally.options().io().to_string()])?;
-        wtr.write_record(["min-chars", &self.format(*self.tally.filters().min_chars())])?;
-        wtr.write_record(["min-count", &self.format(*self.tally.filters().min_count())])?;
+        wtr.write_record(["min-chars", &self.format(self.tally.filters().min_chars())])?;
+        wtr.write_record(["min-count", &self.format(self.tally.filters().min_count())])?;
         wtr.write_record([
             "exclude-words",
             &self.format(self.tally.filters().exclude_words().clone()),
@@ -131,8 +131,8 @@ impl<'v, 'a> Verbose<'v, 'a> {
 
     /// Log word tally filters.
     fn log_filters(&mut self) -> Result<()> {
-        self.write_entry("min-chars", self.format(*self.tally.filters().min_chars()))?;
-        self.write_entry("min-count", self.format(*self.tally.filters().min_count()))?;
+        self.write_entry("min-chars", self.format(self.tally.filters().min_chars()))?;
+        self.write_entry("min-count", self.format(self.tally.filters().min_count()))?;
         self.write_entry(
             "exclude-words",
             self.format(self.tally.filters().exclude_words().clone()),

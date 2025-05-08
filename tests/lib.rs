@@ -5,8 +5,8 @@ use std::sync::Arc;
 use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
-    Case, Count, ExcludeWords, Filters, Format, Formatting, Io, MinChars, MinCount, MinValue,
-    Options, Performance, Processing, SizeHint, Sort, Tally, Word, WordTally,
+    Case, Count, ExcludeWords, Filters, Format, Formatting, Io, Options, Performance, Processing,
+    SizeHint, Sort, Tally, Word, WordTally,
 };
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
@@ -455,29 +455,6 @@ fn test_combining_include_exclude_patterns() {
 
     // All other words should be excluded
     assert_eq!(result.len(), 1);
-}
-
-#[test]
-fn test_min_chars_display() {
-    let min_chars = MinValue::new(42);
-    assert_eq!(min_chars.to_string(), "42".to_string());
-}
-
-#[test]
-fn test_min_chars_from() {
-    assert_eq!(MinChars::from(42), MinValue::new(42));
-}
-
-#[test]
-fn test_min_count_display() {
-    let min_count = MinValue::new(43);
-    assert_eq!(min_count.to_string(), "43".to_string());
-}
-
-#[test]
-fn test_min_count_from() {
-    let raw = 43_usize;
-    assert_eq!(MinCount::from(raw), MinValue::new(43));
 }
 
 #[test]

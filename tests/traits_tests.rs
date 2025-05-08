@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use word_tally::{
-    Count, Format, Formatting, Input, Io, MinValue, Options, Performance, Processing, SizeHint,
-    Sort, Threads, filters::ExcludeWords,
+    Format, Formatting, Input, Io, Options, Performance, Processing, SizeHint, Sort, Threads,
+    filters::ExcludeWords,
 };
 
 #[test]
@@ -26,18 +26,6 @@ fn test_display_implementations() {
 
 #[test]
 fn test_newtype_conversions() {
-    // Test MinChars conversions
-    let min_chars = MinValue::new(5);
-    assert_eq!(*min_chars.as_ref(), 5);
-    let value: Count = min_chars.into();
-    assert_eq!(value, 5);
-
-    // Test MinCount conversions
-    let min_count = MinValue::new(10);
-    assert_eq!(*min_count.as_ref(), 10);
-    let value: Count = min_count.into();
-    assert_eq!(value, 10);
-
     // Test ExcludeWords conversions
     let words = vec!["a".to_string(), "the".to_string()];
     let exclude_words = ExcludeWords(words.clone());

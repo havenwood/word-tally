@@ -96,9 +96,7 @@ pub mod options;
 pub mod output;
 pub mod performance;
 
-pub use filters::{
-    ExcludePatterns, ExcludeWords, Filters, IncludePatterns, MinChars, MinCount, MinValue,
-};
+pub use filters::{ExcludePatterns, ExcludeWords, Filters, IncludePatterns, MinChars, MinCount};
 pub use formatting::{Case, Format, Formatting, Sort};
 pub use input::Input;
 pub use options::Options;
