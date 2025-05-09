@@ -18,7 +18,7 @@ fn test_get_options() {
         .success()
         .stderr(contains("\"case\":\"upper\""))
         .stderr(contains("\"order\":\"asc\""))
-        .stderr(contains("\"min-chars\":\"3\""));
+        .stderr(contains("\"minChars\":\"3\""));
 }
 
 #[test]
