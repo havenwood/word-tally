@@ -194,3 +194,39 @@ fn test_multiple_regexp_patterns() {
     assert!(tally_map.contains_key("Example"));
     assert!(!tally_map.contains_key("test"));
 }
+
+#[test]
+fn test_patterns_accessors() {
+    let exclude_patterns = vec![r"\d+".to_string()];
+    let include_patterns = vec![r"[a-z]+".to_string()];
+
+    let filters = Filters::default()
+        .with_exclude_patterns(&exclude_patterns)
+        .unwrap()
+        .with_include_patterns(&include_patterns)
+        .unwrap();
+
+    let exclude = filters.exclude_patterns().as_ref().unwrap();
+    let include = filters.include_patterns().as_ref().unwrap();
+
+    assert_eq!(&exclude.as_patterns()[0], r"\d+");
+    assert_eq!(&include.as_patterns()[0], r"[a-z]+");
+
+    assert!(exclude.matches("123"));
+    assert!(!exclude.matches("abc"));
+
+    assert!(include.matches("abc"));
+    assert!(!include.matches("123"));
+
+    assert_eq!(exclude.len(), 1);
+    assert!(!exclude.is_empty());
+
+    assert_eq!(include.len(), 1);
+    assert!(!include.is_empty());
+
+    let exclude_ref: &[String] = exclude.as_ref();
+    let include_ref: &[String] = include.as_ref();
+
+    assert_eq!(&exclude_ref[0], r"\d+");
+    assert_eq!(&include_ref[0], r"[a-z]+");
+}

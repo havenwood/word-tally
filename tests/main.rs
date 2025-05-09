@@ -248,6 +248,59 @@ fn verbose_with_exclude_patterns() {
 }
 
 #[test]
+fn verbose_with_json_format() {
+    let assert = word_tally()
+        .arg("-v")
+        .arg("--format=json")
+        .write_stdin("hello world")
+        .assert();
+
+    assert
+        .success()
+        .stderr(contains("\"source\":\"-\""))
+        .stderr(contains("\"totalWords\":2"))
+        .stderr(contains("\"uniqueWords\":2"))
+        .stderr(contains("\"case\":\"lower\""))
+        .stderr(contains("\"order\":\"desc\""))
+        .stderr(contains("\"processing\":\"sequential\""))
+        .stderr(contains("\"io\":\"streamed\""))
+        .stderr(contains("\"minChars\":null"))
+        .stderr(contains("\"minCount\":null"))
+        .stderr(contains("\"excludeWords\":null"))
+        .stderr(contains("\"excludePatterns\":null"))
+        .stderr(contains("\"includePatterns\":null"))
+        .stdout(contains("[[\"hello\",1],[\"world\",1]]"));
+}
+
+#[test]
+fn verbose_with_csv_format() {
+    let assert = word_tally()
+        .arg("-v")
+        .arg("--format=csv")
+        .write_stdin("hello world")
+        .assert();
+
+    assert
+        .success()
+        .stderr(contains("metric,value"))
+        .stderr(contains("source,-"))
+        .stderr(contains("total-words,2"))
+        .stderr(contains("unique-words,2"))
+        .stderr(contains("case,lower"))
+        .stderr(contains("order,desc"))
+        .stderr(contains("processing,sequential"))
+        .stderr(contains("io,streamed"))
+        .stderr(contains("min-chars,none"))
+        .stderr(contains("min-count,none"))
+        .stderr(contains("exclude-words,none"))
+        .stderr(contains("exclude-patterns,none"))
+        .stderr(contains("include-patterns,none"))
+        .stdout(contains("word,count"))
+        .stdout(contains("hello,1"))
+        .stdout(contains("world,1"));
+}
+
+#[test]
 fn format_json() {
     let assert = word_tally()
         .write_stdin("wombat wombat bat")

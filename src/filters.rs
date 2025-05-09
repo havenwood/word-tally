@@ -225,6 +225,8 @@ impl Deref for ExcludeWords {
 }
 
 /// Base struct for regex pattern filtering.
+///
+/// Contains a `Vec` of raw regexp input `String`s and their compiled `RegexSet`.
 #[derive(Clone, Debug)]
 struct Patterns {
     /// Original pattern strings
@@ -297,6 +299,14 @@ impl Patterns {
     fn matches(&self, word: &str) -> bool {
         self.regex_set.is_match(word)
     }
+
+    /// Returns a slice of the original input patterns.
+    #[allow(clippy::missing_const_for_fn)]
+    // Make this const and remove the `#allow` when `const_vec_string_slice` is fully stabilized.
+    // Requires stable `Vec::as_slice` in const contexts (tracked in rust-lang/rust#129041).
+    fn as_patterns(&self) -> &[String] {
+        &self.input_patterns
+    }
 }
 
 /// Regex patterns used to exclude matching words.
@@ -304,14 +314,29 @@ impl Patterns {
 pub struct ExcludePatterns(Patterns);
 
 impl ExcludePatterns {
-    /// Creates exclude patterns from owned pattern strings.
+    /// Creates patterns from owned pattern strings.
     pub fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
         Ok(Self(Patterns::new(input_patterns)?))
     }
 
-    /// Tests if a word matches any exclude pattern.
+    /// Tests if a word matches any pattern.
     pub fn matches(&self, word: &str) -> bool {
         self.0.matches(word)
+    }
+
+    /// Returns a slice of the original pattern strings.
+    pub fn as_patterns(&self) -> &[String] {
+        self.0.as_patterns()
+    }
+
+    /// Returns the number of patterns.
+    pub fn len(&self) -> usize {
+        self.0.input_patterns.len()
+    }
+
+    /// Returns true if there are no patterns.
+    pub fn is_empty(&self) -> bool {
+        self.0.input_patterns.is_empty()
     }
 }
 
@@ -320,6 +345,12 @@ impl<'a> TryFrom<&'a [String]> for ExcludePatterns {
 
     fn try_from(input_patterns: &'a [String]) -> Result<Self, Self::Error> {
         Ok(Self(Patterns::from_slice(input_patterns)?))
+    }
+}
+
+impl AsRef<[String]> for ExcludePatterns {
+    fn as_ref(&self) -> &[String] {
+        self.0.as_ref()
     }
 }
 
@@ -382,14 +413,29 @@ impl Display for ExcludePatterns {
 pub struct IncludePatterns(Patterns);
 
 impl IncludePatterns {
-    /// Creates include patterns from owned pattern strings.
+    /// Creates patterns from owned pattern strings.
     pub fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
         Ok(Self(Patterns::new(input_patterns)?))
     }
 
-    /// Tests if a word matches any include pattern.
+    /// Tests if a word matches any pattern.
     pub fn matches(&self, word: &str) -> bool {
         self.0.matches(word)
+    }
+
+    /// Returns a slice of the original pattern strings.
+    pub fn as_patterns(&self) -> &[String] {
+        self.0.as_patterns()
+    }
+
+    /// Returns the number of patterns.
+    pub fn len(&self) -> usize {
+        self.0.input_patterns.len()
+    }
+
+    /// Returns true if there are no patterns.
+    pub fn is_empty(&self) -> bool {
+        self.0.input_patterns.is_empty()
     }
 }
 
@@ -398,6 +444,12 @@ impl<'a> TryFrom<&'a [String]> for IncludePatterns {
 
     fn try_from(input_patterns: &'a [String]) -> Result<Self, Self::Error> {
         Ok(Self(Patterns::from_slice(input_patterns)?))
+    }
+}
+
+impl AsRef<[String]> for IncludePatterns {
+    fn as_ref(&self) -> &[String] {
+        self.0.as_ref()
     }
 }
 
