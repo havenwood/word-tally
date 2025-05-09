@@ -52,7 +52,7 @@ impl Output {
     pub fn file(path: &Path) -> Result<Self> {
         let file = File::create(path)
             .map(|file| Box::new(LineWriter::new(file)) as Writer)
-            .with_context(|| format!("Failed to create file: {:?}", path))?;
+            .with_context(|| format!("Failed to create output file: {}", path.display()))?;
         Ok(Self { writer: file })
     }
 
@@ -109,7 +109,8 @@ impl Output {
                 for (word, count) in word_data {
                     wtr.write_record([word.as_ref(), &count.to_string()])?;
                 }
-                let csv_data = String::from_utf8(wtr.into_inner()?)?;
+                let csv_data = String::from_utf8(wtr.into_inner()?)
+                    .with_context(|| "Failed to convert CSV output to UTF-8 string")?;
                 self.write_line(&csv_data)?;
             }
         }

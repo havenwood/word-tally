@@ -366,9 +366,7 @@ impl<'a> WordTally<'a> {
         let mut content = String::new();
         if let Err(err) = input.read_to_string(&mut content) {
             if options.performance().verbose() {
-                eprintln!(
-                    "Warning: Error reading input to string: {err}, falling back to empty content"
-                );
+                eprintln!("Warning: No content will be processed. Failed to read input: {err}");
             }
         }
         content

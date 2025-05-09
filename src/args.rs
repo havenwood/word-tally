@@ -93,7 +93,8 @@ impl Args {
     }
 
     pub fn get_unescaped_delimiter(&self) -> Result<String> {
-        unescape(self.get_delimiter().as_str()).with_context(|| "Failed to unescape delimiter")
+        unescape(self.get_delimiter().as_str())
+            .with_context(|| format!("Failed to unescape delimiter: {}", self.get_delimiter()))
     }
 
     const fn get_io_strategy(&self) -> Io {
@@ -120,7 +121,7 @@ impl Args {
             self.exclude.as_ref(),
             self.include.as_ref(),
         )
-        .with_context(|| "Failed to compile filter patterns")
+        .with_context(|| "Failed to compile regex filter patterns")
     }
 
     pub fn get_performance(&self, size_hint: SizeHint) -> Performance {
