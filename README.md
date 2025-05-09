@@ -168,7 +168,7 @@ cargo install word-tally
 
 ```toml
 [dependencies]
-word-tally = "0.22.0"
+word-tally = "0.23.0"
 ```
 
 ```rust
