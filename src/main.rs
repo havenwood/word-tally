@@ -1,6 +1,7 @@
 //! `word-tally` tallies and outputs the count of words from a given input.
 
 pub(crate) mod args;
+pub(crate) mod errors;
 pub(crate) mod input;
 pub(crate) mod output;
 pub(crate) mod verbose;
@@ -8,6 +9,7 @@ pub(crate) mod verbose;
 // Import formatting module from the crate
 use word_tally::formatting;
 
+use crate::errors::exit_code;
 use crate::input::Input;
 use crate::output::Output;
 use anyhow::{Context, Result};
@@ -16,7 +18,17 @@ use clap::Parser;
 use std::fs::File;
 use word_tally::{SizeHint, WordTally};
 
-fn main() -> Result<()> {
+fn main() {
+    match run() {
+        Ok(()) => std::process::exit(exit_code::SUCCESS),
+        Err(err) => {
+            eprintln!("Error: {}", err);
+            std::process::exit(exit_code(&err));
+        }
+    }
+}
+
+fn run() -> Result<()> {
     // Parse arguments and prepare an input reader.
     let args = Args::parse();
 

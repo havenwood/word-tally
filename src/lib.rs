@@ -89,6 +89,7 @@ pub type Count = usize;
 pub type Tally = Box<[(Word, Count)]>;
 type TallyMap = IndexMap<Word, Count>;
 
+pub mod errors;
 pub mod filters;
 pub mod formatting;
 pub mod input;
