@@ -58,7 +58,7 @@ impl<'v, 'a> Verbose<'v, 'a> {
             "io": self.tally.options().io().to_string(),
             "min-chars": self.format(self.tally.filters().min_chars()),
             "min-count": self.format(self.tally.filters().min_count()),
-            "exclude-words": self.format(self.tally.filters().exclude_words().clone()),
+            "exclude-words": self.format(self.tally.filters().exclude_words().as_ref()),
             "exclude-patterns": self.format(self.tally.filters().exclude_patterns().as_ref()),
         });
 
@@ -91,7 +91,7 @@ impl<'v, 'a> Verbose<'v, 'a> {
         wtr.write_record(["min-count", &self.format(self.tally.filters().min_count())])?;
         wtr.write_record([
             "exclude-words",
-            &self.format(self.tally.filters().exclude_words().clone()),
+            &self.format(self.tally.filters().exclude_words().as_ref()),
         ])?;
         wtr.write_record([
             "exclude-patterns",
@@ -135,7 +135,7 @@ impl<'v, 'a> Verbose<'v, 'a> {
         self.write_entry("min-count", self.format(self.tally.filters().min_count()))?;
         self.write_entry(
             "exclude-words",
-            self.format(self.tally.filters().exclude_words().clone()),
+            self.format(self.tally.filters().exclude_words().as_ref()),
         )?;
         self.write_entry(
             "exclude-patterns",
