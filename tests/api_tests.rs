@@ -27,7 +27,7 @@ fn test_api_streamed_sequential() {
         .with_io(Io::Streamed)
         .with_processing(Processing::Sequential);
 
-    let word_tally = WordTally::new(input, &options);
+    let word_tally = WordTally::new(input, &options).expect("Failed to create WordTally");
     verify_api_example_tally(&word_tally);
 }
 
@@ -38,7 +38,7 @@ fn test_api_buffered_sequential() {
         .with_io(Io::Buffered)
         .with_processing(Processing::Sequential);
 
-    let word_tally = WordTally::new(input, &options);
+    let word_tally = WordTally::new(input, &options).expect("Failed to create WordTally");
     verify_api_example_tally(&word_tally);
 }
 
@@ -49,7 +49,7 @@ fn test_api_streamed_parallel() {
         .with_io(Io::Streamed)
         .with_processing(Processing::Parallel);
 
-    let word_tally = WordTally::new(input, &options);
+    let word_tally = WordTally::new(input, &options).expect("Failed to create WordTally");
     verify_api_example_tally(&word_tally);
 }
 
@@ -60,7 +60,7 @@ fn test_api_buffered_parallel() {
         .with_io(Io::Buffered)
         .with_processing(Processing::Parallel);
 
-    let word_tally = WordTally::new(input, &options);
+    let word_tally = WordTally::new(input, &options).expect("Failed to create WordTally");
     verify_api_example_tally(&word_tally);
 }
 
@@ -74,7 +74,7 @@ fn test_api_memory_mapped() {
         .with_io(Io::MemoryMapped)
         .with_processing(Processing::Sequential);
 
-    let word_tally = WordTally::try_from_file(file, &options).unwrap();
+    let word_tally = WordTally::from_file(&file, &options).expect("Failed to create WordTally");
     verify_api_example_tally(&word_tally);
 
     std::fs::remove_file(temp_file).unwrap_or_default();
@@ -90,7 +90,7 @@ fn test_api_memory_mapped_parallel() {
         .with_io(Io::MemoryMapped)
         .with_processing(Processing::Parallel);
 
-    let word_tally = WordTally::try_from_file(file, &options).unwrap();
+    let word_tally = WordTally::from_file(&file, &options).expect("Failed to create WordTally");
     verify_api_example_tally(&word_tally);
 
     std::fs::remove_file(temp_file).unwrap_or_default();
@@ -128,10 +128,14 @@ fn test_api_comprehensive_example() {
 
     // Each combination should produce the same result
     let count_checks = [
-        WordTally::new(Cursor::new(text), &options_streamed_seq),
-        WordTally::new(Cursor::new(text), &options_buffered_seq),
-        WordTally::new(Cursor::new(text), &options_streamed_par),
-        WordTally::new(Cursor::new(text), &options_buffered_par),
+        WordTally::new(Cursor::new(text), &options_streamed_seq)
+            .expect("Failed with streamed sequential"),
+        WordTally::new(Cursor::new(text), &options_buffered_seq)
+            .expect("Failed with buffered sequential"),
+        WordTally::new(Cursor::new(text), &options_streamed_par)
+            .expect("Failed with streamed parallel"),
+        WordTally::new(Cursor::new(text), &options_buffered_par)
+            .expect("Failed with buffered parallel"),
     ];
 
     // All strategies should produce the same results
@@ -162,7 +166,8 @@ fn test_api_comprehensive_example() {
             .with_io(Io::MemoryMapped)
             .with_processing(Processing::Sequential),
     );
-    let mmap_seq = WordTally::try_from_file(file1, &options_mmap_seq).unwrap();
+    let mmap_seq = WordTally::from_file(&file1, &options_mmap_seq)
+        .expect("Failed to create WordTally with memory mapping");
 
     let file2 = File::open(&temp_file).unwrap();
     let options_mmap_par = Arc::new(
@@ -170,7 +175,8 @@ fn test_api_comprehensive_example() {
             .with_io(Io::MemoryMapped)
             .with_processing(Processing::Parallel),
     );
-    let mmap_par = WordTally::try_from_file(file2, &options_mmap_par).unwrap();
+    let mmap_par = WordTally::from_file(&file2, &options_mmap_par)
+        .expect("Failed to create WordTally with memory mapping");
 
     assert_eq!(
         mmap_seq.count(),

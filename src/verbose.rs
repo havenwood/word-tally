@@ -303,7 +303,7 @@ mod tests {
     #[test]
     fn test_handle_verbose_output_ok() {
         let options = word_tally::Options::default();
-        let tally = WordTally::new(b"test".as_ref(), &options);
+        let tally = WordTally::new(b"test".as_ref(), &options).expect("Failed to create WordTally");
 
         let result = handle_verbose_output(&tally, Format::Text, " ", "-");
         assert!(result.is_ok());
@@ -340,7 +340,7 @@ mod tests {
     #[test]
     fn test_json_serialization() {
         let options = word_tally::Options::default();
-        let tally = WordTally::new(b"test".as_ref(), &options);
+        let tally = WordTally::new(b"test".as_ref(), &options).expect("Failed to create WordTally");
         let mut output = Output::stderr();
         let verbose = Verbose::new(&mut output, &tally, " ", "-");
 
@@ -360,7 +360,7 @@ mod tests {
     #[test]
     fn test_build_csv_data() {
         let options = word_tally::Options::default();
-        let tally = WordTally::new(b"test".as_ref(), &options);
+        let tally = WordTally::new(b"test".as_ref(), &options).expect("Failed to create WordTally");
         let mut output = Output::stderr();
         let verbose = Verbose::new(&mut output, &tally, " ", "-");
 

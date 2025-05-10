@@ -117,7 +117,7 @@ pub enum SizeHint {
     None,
 
     /// Size hint in bytes
-    Bytes(u64),
+    Bytes(usize),
 }
 
 impl Default for SizeHint {
@@ -135,13 +135,13 @@ impl Display for SizeHint {
     }
 }
 
-impl From<Option<u64>> for SizeHint {
-    fn from(opt: Option<u64>) -> Self {
+impl From<Option<usize>> for SizeHint {
+    fn from(opt: Option<usize>) -> Self {
         opt.map_or(Self::None, Self::Bytes)
     }
 }
 
-impl From<SizeHint> for Option<u64> {
+impl From<SizeHint> for Option<usize> {
     fn from(hint: SizeHint) -> Self {
         match hint {
             SizeHint::Bytes(size) => Some(size),
@@ -171,7 +171,7 @@ pub struct Performance {
     unique_word_density: u8,
 
     /// Size of chunks for parallel processing (in bytes)
-    chunk_size: u32,
+    chunk_size: usize,
 
     /// I/O strategy (streamed, buffered, or memory-mapped)
     io: Io,
@@ -196,7 +196,7 @@ pub struct Performance {
 const DEFAULT_CAPACITY: usize = 1024;
 const DEFAULT_UNIQUENESS_RATIO: u8 = 10;
 const DEFAULT_WORD_DENSITY: u8 = 15;
-const DEFAULT_CHUNK_SIZE: u32 = 65_536; // 64KB
+const DEFAULT_CHUNK_SIZE: usize = 65_536; // 64KB
 const DEFAULT_RESERVE_THRESHOLD: usize = 1000;
 
 /// Environment variable names for configuration
@@ -223,7 +223,7 @@ pub struct PerformanceConfig {
     pub unique_word_density: u8,
 
     /// Size of chunks for parallel processing (in bytes)
-    pub chunk_size: u32,
+    pub chunk_size: usize,
 
     /// I/O strategy (streamed, buffered, or memory-mapped)
     pub io: Io,
@@ -412,7 +412,7 @@ impl Performance {
     }
 
     /// Set the chunk size for this configuration
-    pub const fn with_chunk_size(mut self, size: u32) -> Self {
+    pub const fn with_chunk_size(mut self, size: usize) -> Self {
         self.chunk_size = size;
         self
     }
@@ -469,7 +469,7 @@ impl Performance {
     }
 
     /// Get the chunk size for parallel processing
-    pub const fn chunk_size(&self) -> u32 {
+    pub const fn chunk_size(&self) -> usize {
         self.chunk_size
     }
 
@@ -510,7 +510,7 @@ impl Performance {
         match self.size_hint {
             SizeHint::None => base_threshold,
             SizeHint::Bytes(size) => {
-                let estimated_capacity = (size / self.uniqueness_ratio as u64) as usize;
+                let estimated_capacity = size / self.uniqueness_ratio as usize;
                 base_threshold.max(estimated_capacity / 10)
             }
         }
@@ -520,12 +520,12 @@ impl Performance {
     pub const fn estimate_capacity(&self) -> usize {
         match self.size_hint {
             SizeHint::None => self.default_capacity,
-            SizeHint::Bytes(size) => (size / self.uniqueness_ratio as u64) as usize,
+            SizeHint::Bytes(size) => size / self.uniqueness_ratio as usize,
         }
     }
 
-    /// Estimate thread-local map capacity for parallel processing
-    pub fn estimate_thread_local_capacity(&self) -> usize {
+    /// Choose a reasonable number of threads for parallel processing
+    pub fn thread_count(&self) -> usize {
         let threads = match self.threads {
             Threads::All => rayon::current_num_threads(),
             Threads::Count(n) => n as usize,

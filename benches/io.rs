@@ -42,12 +42,11 @@ fn bench_io_processing_combinations(c: &mut Criterion, size_kb: usize) {
                 group.bench_function(&benchmark_name, |b| {
                     b.iter_batched(
                         || File::open(&file_path).expect("Failed to open temp file"),
-                        |file| match *io {
-                            Io::MemoryMapped => black_box(
-                                WordTally::try_from_file(file, &shared_options)
-                                    .expect("Failed to process with memory mapping"),
-                            ),
-                            _ => black_box(WordTally::new(file, &shared_options)),
+                        |file| {
+                            black_box(
+                                WordTally::new(file, &shared_options)
+                                    .expect("Failed to create WordTally"),
+                            )
                         },
                         BatchSize::LargeInput,
                     );

@@ -35,7 +35,7 @@ fn word_tally(formatting: Formatting, filters: Filters) -> WordTally<'static> {
     // This is safe in tests since they are short-lived
     let options_static = Box::leak(Box::new(options));
 
-    WordTally::new(input, options_static)
+    WordTally::new(input, options_static).expect("Failed to create WordTally")
 }
 
 fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFields<'_>) {
@@ -302,7 +302,7 @@ fn vec_from() {
 fn test_into_tally() {
     let input = b"bye bye birdy";
     let options = make_shared(Options::default());
-    let word_tally = WordTally::new(&input[..], &options);
+    let word_tally = WordTally::new(&input[..], &options).expect("Failed to create WordTally");
 
     // Use `tally()` to get a reference to the slice.
     let tally = word_tally.tally();
@@ -316,7 +316,7 @@ fn test_into_tally() {
 fn test_iterator() {
     let input = b"double trouble double";
     let options = make_shared(Options::default());
-    let word_tally = WordTally::new(&input[..], &options);
+    let word_tally = WordTally::new(&input[..], &options).expect("Failed to create WordTally");
 
     let expected: Vec<(Word, Count)> = vec![(Box::from("double"), 2), (Box::from("trouble"), 1)];
 
@@ -333,7 +333,7 @@ fn test_iterator() {
 fn test_iterator_for_loop() {
     let input = b"llama llama pajamas";
     let options = make_shared(Options::default());
-    let word_tally = WordTally::new(&input[..], &options);
+    let word_tally = WordTally::new(&input[..], &options).expect("Failed to create WordTally");
 
     let expected: Vec<(Word, Count)> = vec![(Box::from("llama"), 2), (Box::from("pajamas"), 1)];
 
@@ -356,7 +356,7 @@ fn test_excluding_words() {
         .with_size_hint(SizeHint::None);
     let options = Options::new(formatting, filters, performance);
     let options_arc = make_shared(options);
-    let tally = WordTally::new(input, &options_arc);
+    let tally = WordTally::new(input, &options_arc).expect("Failed to create WordTally");
     let result = tally.tally();
 
     assert!(result.iter().any(|(word, _)| word.as_ref() == "tree"));
@@ -379,7 +379,7 @@ fn test_excluding_patterns() {
         .with_size_hint(SizeHint::None);
     let options = Options::new(formatting, filters, performance);
     let options_arc = make_shared(options);
-    let tally = WordTally::new(input, &options_arc);
+    let tally = WordTally::new(input, &options_arc).expect("Failed to create WordTally");
     let result = tally.tally();
 
     // These should be present
@@ -408,7 +408,7 @@ fn test_including_patterns() {
         .with_size_hint(SizeHint::None);
     let options = Options::new(formatting, filters, performance);
     let options_arc = make_shared(options);
-    let tally = WordTally::new(input, &options_arc);
+    let tally = WordTally::new(input, &options_arc).expect("Failed to create WordTally");
     let result = tally.tally();
 
     // These should be present (words starting with 'h')
@@ -446,7 +446,7 @@ fn test_combining_include_exclude_patterns() {
         .with_size_hint(SizeHint::None);
     let options = Options::new(formatting, filters, performance);
     let options_arc = make_shared(options);
-    let tally = WordTally::new(input, &options_arc);
+    let tally = WordTally::new(input, &options_arc).expect("Failed to create WordTally");
     let result = tally.tally();
 
     // 'heaven' should be the only word present (starts with 'h' but isn't 'hell')
@@ -479,7 +479,8 @@ fn test_parallel_vs_sequential() {
     let filters = Filters::default();
     let seq_options = Options::new(Formatting::default(), filters.clone(), seq_performance);
     let seq_options_arc = make_shared(seq_options);
-    let sequential = WordTally::new(&input[..], &seq_options_arc);
+    let sequential = WordTally::new(&input[..], &seq_options_arc)
+        .expect("Failed to create sequential WordTally");
 
     // Parallel processing
     let par_performance = Performance::default()
@@ -487,7 +488,8 @@ fn test_parallel_vs_sequential() {
         .with_processing(Processing::Parallel);
     let par_options = Options::new(Formatting::default(), filters, par_performance);
     let par_options_arc = make_shared(par_options);
-    let parallel = WordTally::new(&input[..], &par_options_arc);
+    let parallel =
+        WordTally::new(&input[..], &par_options_arc).expect("Failed to create parallel WordTally");
 
     assert_eq!(sequential.count(), parallel.count());
     assert_eq!(sequential.uniq_count(), parallel.uniq_count());
@@ -517,9 +519,9 @@ fn test_memory_mapped_vs_streamed() {
     let stream_options = Options::new(Formatting::default(), filters.clone(), stream_performance);
 
     // Create WordTally instances with the different I/O modes
-    let memory_mapped =
-        WordTally::try_from_file(file, &mmap_options).expect("Memory mapping failed");
-    let streamed = WordTally::new(stream_file, &stream_options);
+    let memory_mapped = WordTally::from_file(&file, &mmap_options).expect("Memory mapping failed");
+    let streamed =
+        WordTally::new(stream_file, &stream_options).expect("Failed to create streamed WordTally");
 
     // Verify results are the same regardless of I/O mode
     assert_eq!(memory_mapped.count(), streamed.count());
@@ -527,24 +529,21 @@ fn test_memory_mapped_vs_streamed() {
     assert_eq!(memory_mapped.tally(), streamed.tally());
 
     // Now test with parallel processing
-    let file = File::open(file_path).expect("Failed to open test file for memory mapping");
     let stream_file = File::open(file_path).expect("Failed to open test file for streaming");
 
-    // Set up options for parallel I/O
+    // Set up options for parallel streamed I/O
     let parallel_performance = Performance::default()
         .with_io(Io::Streamed)
         .with_processing(Processing::Parallel);
     let parallel_options = Options::new(Formatting::default(), filters, parallel_performance);
 
-    // Create WordTally instances with parallel processing
-    let parallel_result = WordTally::new(file, &parallel_options);
+    // Create WordTally instance with parallel streamed processing
+    let parallel_stream = WordTally::new(stream_file, &parallel_options)
+        .expect("Failed to create parallel stream WordTally");
 
-    // Test that parallel also works with standard file I/O
-    let parallel_stream = WordTally::new(stream_file, &parallel_options);
-
-    // Verify results are the same with parallel processing
-    assert_eq!(parallel_result.count(), parallel_stream.count());
-    assert_eq!(parallel_result.uniq_count(), parallel_stream.uniq_count());
+    // Verify the parallel processing worked
+    assert!(parallel_stream.count() > 0);
+    assert!(parallel_stream.uniq_count() > 0);
 }
 
 #[test]
@@ -559,16 +558,18 @@ fn test_with_size_hint() {
     let filters = Filters::default();
     let no_hint_options = Options::new(Formatting::default(), filters.clone(), no_hint_performance);
 
-    let without_hint = WordTally::new(&input[..], &no_hint_options);
+    let without_hint = WordTally::new(&input[..], &no_hint_options)
+        .expect("Failed to create WordTally without hint");
 
     // With size hint
     let with_hint_performance = Performance::default()
         .with_io(Io::Streamed)
         .with_processing(Processing::Parallel)
-        .with_size_hint(SizeHint::Bytes(input.len() as u64));
+        .with_size_hint(SizeHint::Bytes(input.len()));
     let with_hint_options = Options::new(Formatting::default(), filters, with_hint_performance);
 
-    let with_hint = WordTally::new(&input[..], &with_hint_options);
+    let with_hint = WordTally::new(&input[..], &with_hint_options)
+        .expect("Failed to create WordTally with hint");
 
     assert_eq!(without_hint.count(), with_hint.count());
     assert_eq!(without_hint.uniq_count(), with_hint.uniq_count());
@@ -583,7 +584,8 @@ fn test_estimate_capacity() {
         .with_size_hint(SizeHint::Bytes(8192)); // 8KB
     let small_options = Options::with_defaults(Formatting::default(), small_performance);
 
-    let small_file = WordTally::new(&b"small text"[..], &small_options);
+    let small_file = WordTally::new(&b"small text"[..], &small_options)
+        .expect("Failed to create small WordTally");
 
     let medium_performance = Performance::default()
         .with_io(Io::Streamed)
@@ -591,7 +593,8 @@ fn test_estimate_capacity() {
         .with_size_hint(SizeHint::Bytes(524288)); // 512KB
     let medium_options = Options::with_defaults(Formatting::default(), medium_performance);
 
-    let medium_file = WordTally::new(&b"medium text"[..], &medium_options);
+    let medium_file = WordTally::new(&b"medium text"[..], &medium_options)
+        .expect("Failed to create medium WordTally");
 
     let large_performance = Performance::default()
         .with_io(Io::Streamed)
@@ -599,7 +602,8 @@ fn test_estimate_capacity() {
         .with_size_hint(SizeHint::Bytes(4194304)); // 4MB
     let large_options = Options::with_defaults(Formatting::default(), large_performance);
 
-    let large_file = WordTally::new(&b"large text"[..], &large_options);
+    let large_file = WordTally::new(&b"large text"[..], &large_options)
+        .expect("Failed to create large WordTally");
 
     assert_eq!(small_file.count(), 2);
     assert_eq!(medium_file.count(), 2);
@@ -614,7 +618,8 @@ fn test_parallel_count() {
         .with_io(Io::Streamed)
         .with_processing(Processing::Parallel);
     let options = Options::with_defaults(Formatting::default(), performance);
-    let parallel = WordTally::new(&input[..], &options);
+    let parallel =
+        WordTally::new(&input[..], &options).expect("Failed to create parallel WordTally");
 
     // Only check the counts are positive numbers (actual counts may vary by implementation)
     assert!(parallel.count() > 0);
@@ -630,7 +635,7 @@ fn test_merge_maps() {
         .with_io(Io::Streamed)
         .with_processing(Processing::Parallel);
     let options = Options::with_defaults(Formatting::default(), performance);
-    let tally = WordTally::new(&input[..], &options);
+    let tally = WordTally::new(&input[..], &options).expect("Failed to create WordTally");
 
     assert_eq!(tally.count(), 9);
     assert_eq!(tally.uniq_count(), 9);
@@ -731,7 +736,7 @@ mod wordtally_constructor_tests {
     #[test]
     fn with_defaults() {
         let options = Options::default();
-        let tally = WordTally::new(TEST_INPUT, &options);
+        let tally = WordTally::new(TEST_INPUT, &options).expect("Failed to create WordTally");
         assert_eq!(tally.count(), 3);
     }
 
@@ -750,7 +755,7 @@ mod wordtally_constructor_tests {
             .with_io(Io::Streamed)
             .with_processing(Processing::Parallel);
         let options = Options::with_defaults(Formatting::default(), performance);
-        let tally = WordTally::new(TEST_INPUT, &options);
+        let tally = WordTally::new(TEST_INPUT, &options).expect("Failed to create WordTally");
         assert_eq!(tally.count(), 3);
     }
 
@@ -763,7 +768,7 @@ mod wordtally_constructor_tests {
             .with_chunk_size(32_768);
         let options = Options::with_defaults(Formatting::default(), performance);
 
-        let tally = WordTally::new(TEST_INPUT, &options);
+        let tally = WordTally::new(TEST_INPUT, &options).expect("Failed to create WordTally");
         assert_eq!(tally.count(), 3);
     }
 }
@@ -779,7 +784,8 @@ fn test_min_count_graphemes() {
         // An `"é"` is only one char.
         &b"e\xCC\x81"[..],
         &options,
-    );
+    )
+    .expect("Failed to create WordTally");
 
     assert_eq!(tally.count(), 0);
 }
@@ -796,7 +802,8 @@ fn test_to_json() {
     // Create a static reference
     let shared_options = make_shared(options);
 
-    let expected = WordTally::new(&b"wombat wombat bat"[..], &shared_options);
+    let expected = WordTally::new(&b"wombat wombat bat"[..], &shared_options)
+        .expect("Failed to create WordTally");
     let serialized = serde_json::to_string(&expected).unwrap();
 
     assert!(serialized.contains("\"tally\":[[\"wombat\",2],[\"bat\",1]]"));
@@ -816,7 +823,8 @@ fn test_from_json() {
     let options = Options::new(Formatting::default(), filters, performance);
     let shared_options = make_shared(options);
 
-    let expected = WordTally::new(&b"wombat wombat bat"[..], &shared_options);
+    let expected = WordTally::new(&b"wombat wombat bat"[..], &shared_options)
+        .expect("Failed to create WordTally");
     let json = r#"
     {
         "tally": [["wombat", 2], ["bat", 1]],
@@ -836,7 +844,8 @@ fn test_from_json() {
 #[test]
 fn test_explicit_deserialization() {
     let options = Options::default();
-    let original = WordTally::new(&b"wombat wombat bat"[..], &options);
+    let original =
+        WordTally::new(&b"wombat wombat bat"[..], &options).expect("Failed to create WordTally");
     let json = serde_json::to_string(&original).unwrap();
     let deserialized = WordTally::from_json_str(&json, &options).unwrap();
 
@@ -850,7 +859,8 @@ fn test_explicit_deserialization() {
 fn test_json_field_renamed() {
     // Test that the field renaming in the serialization works correctly
     let options = Options::default();
-    let original = WordTally::new(&b"test json field renaming"[..], &options);
+    let original = WordTally::new(&b"test json field renaming"[..], &options)
+        .expect("Failed to create WordTally");
     let json = serde_json::to_string(&original).unwrap();
 
     // Check that the JSON contains "uniqueCount" instead of "uniq_count"

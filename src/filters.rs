@@ -1,9 +1,9 @@
 use crate::{Case, Count, TallyMap};
+use bstr::ByteSlice;
 use core::fmt::{self, Display, Formatter};
 use core::ops::Deref;
 use regex::RegexSet;
 use std::collections::HashSet;
-use unicode_segmentation::UnicodeSegmentation;
 
 use serde::{Deserialize, Serialize};
 
@@ -176,7 +176,7 @@ impl Filters {
         }
 
         if let Some(min_chars) = self.min_chars() {
-            tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars);
+            tally_map.retain(|word, _| word.as_bytes().graphemes().count() >= min_chars);
         }
 
         if let Some(ExcludeWords(words)) = self.exclude_words() {

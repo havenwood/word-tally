@@ -44,17 +44,17 @@ fn run() -> Result<()> {
         Input::File(path) => {
             let file =
                 File::open(path).with_context(|| format!("Failed to read from {}", source))?;
-            // Use try_from_file only for memory-mapped I/O, otherwise use new()
+
+            // Use from_file for memory-mapped I/O, otherwise regular new
             if matches!(options.io(), word_tally::Io::MemoryMapped) {
-                WordTally::try_from_file(file, &options)?
+                WordTally::from_file(&file, &options)?
             } else {
-                WordTally::new(file, &options)
+                WordTally::new(file, &options)?
             }
         }
         Input::Stdin => {
-            // For stdin, use the standard new method with a reader
             let reader = input.get_reader(&source)?;
-            WordTally::new(reader, &options)
+            WordTally::new(reader, &options)?
         }
     };
 

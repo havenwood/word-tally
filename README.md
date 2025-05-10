@@ -102,39 +102,13 @@ word-tally --format=json README.md | jq -r 'map(.[0] + " ") | join(" ")' | wordc
 word-tally supports various I/O modes and parallel processing:
 
 ```sh
-output | word-tally # `--io=streamed` is the default I/O strategy
-
-word-tally -Istreamed file.txt # `-I` is a short form alias for `--io`
-
+output | word-tally # `--io=streamed` from stdin
+word-tally file.txt # `--io=streamed` from file
 word-tally --io=streamed --parallel large-file.txt
-
 word-tally --io=mmap --parallel large-file.txt
-
 word-tally --io=mmap file.txt
-
 word-tally --io=buffered file.txt
 ```
-
-#### Performance Considerations
-
-Synthetic enchmarks with semi-realistic data suggest these strategies based on file size:
-
-| File Size | Best for Speed | Best for Memory | Balanced Approach |
-|-----------|----------------|-----------------|-------------------|
-| Small (<1MB) | Sequential + Memory-mapped | Sequential + Streamed | Sequential + Streamed |
-| Medium (1-80MB) | Sequential + Memory-mapped | Sequential + Streamed | Sequential + Memory-mapped |
-| Large (>80MB) | Parallel + Memory-mapped | Parallel + Streamed | Parallel + Memory-mapped |
-| Very Large (>1GB) | Parallel + Buffered | Parallel + Streamed | Parallel + Streamed |
-
-Anecdotal insights:
-
-- The inflection point where parallel processing becomes faster for me is around 80MB
-- At this point, parallel processing may be several times faster than sequential
-- For pipes and non-seekable sources, streaming I/O is required
-- Memory-mapped I/O provides excellent performance but requires a seekable file
-- Sequential streaming processing remains memory-efficient for files under 80MB
-
-Performance can be further tuned through environment variables (detailed below).
 
 ### Environment Variables
 
@@ -175,24 +149,21 @@ word-tally = "0.23.0"
 use std::fs::File;
 use word_tally::{Io, Options, Processing, WordTally};
 
-fn main() -> std::io::Result<()> {
-    // Create a word tally with default options (Streamed I/O, Sequential processing)
+fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Basic usage with default options
     let file = File::open("document.txt")?;
-    let word_tally = WordTally::new(file, &Options::default());
+    let word_tally = WordTally::new(&file, &Options::default())?;
 
-    // Or customize I/O and processing strategies
-    let file = File::open("large-document.txt")?;
+    // For large files, use memory-mapped I/O with parallel processing
+    let large_file = File::open("large-document.txt")?;
     let options = Options::default()
-        .with_io(Io::MemoryMapped)  // Use memory-mapped I/O for better performance with large files
-        .with_processing(Processing::Parallel); // Use parallel processing for multi-core efficiency
+        .with_io(Io::MemoryMapped)
+        .with_processing(Processing::Parallel);
+    let word_tally = WordTally::from_file(&large_file, &options)?;
 
-    // For memory-mapped I/O, use try_from_file to handle potential errors
-    let word_tally = WordTally::try_from_file(file, &options).expect("Failed to process file");
-
-    // Print basic statistics
     println!("Words: {} total, {} unique", word_tally.count(), word_tally.uniq_count());
 
-    // Print the top 5 words and the count of times each appear
+    // Print the most frequent words
     for (word, count) in word_tally.tally().iter().take(5) {
         println!("{}: {}", word, count);
     }

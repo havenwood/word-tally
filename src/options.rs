@@ -221,7 +221,7 @@ impl Options {
     }
 
     /// Set chunk size for parallel processing
-    pub const fn with_chunk_size(mut self, size: u32) -> Self {
+    pub const fn with_chunk_size(mut self, size: usize) -> Self {
         self.performance = self.performance.with_chunk_size(size);
         self
     }
