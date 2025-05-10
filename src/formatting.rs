@@ -1,7 +1,8 @@
-use crate::{Word, WordTally};
+use crate::{Processing, Word, WordTally};
 use clap::ValueEnum;
 use core::cmp::Reverse;
 use core::fmt::{self, Display, Formatter};
+use rayon::slice::ParallelSliceMut;
 
 use serde::{Deserialize, Serialize};
 
@@ -198,11 +199,23 @@ impl Display for Sort {
 
 impl Sort {
     /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
+    /// When `Parallel` processing is enabled, sorts in parallel.
     pub fn apply(&self, w: &mut WordTally<'_>) {
-        match self {
-            Self::Desc => w.tally.sort_unstable_by_key(|&(_, count)| Reverse(count)),
-            Self::Asc => w.tally.sort_unstable_by_key(|&(_, count)| count),
-            Self::Unsorted => (),
+        match (self, w.options().processing()) {
+            // No sorting
+            (Self::Unsorted, _) => {}
+
+            // Parallel stable sorting
+            (Self::Desc, Processing::Parallel) => {
+                w.tally.par_sort_by_key(|&(_, count)| Reverse(count))
+            }
+            (Self::Asc, Processing::Parallel) => w.tally.par_sort_by_key(|&(_, count)| count),
+
+            // Sequential stable sorting
+            (Self::Desc, Processing::Sequential) => {
+                w.tally.sort_by_key(|&(_, count)| Reverse(count))
+            }
+            (Self::Asc, Processing::Sequential) => w.tally.sort_by_key(|&(_, count)| count),
         }
     }
 }
