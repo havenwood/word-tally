@@ -1,8 +1,7 @@
 //! Core benchmarks for sorting and filtering strategies.
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use std::io::Cursor;
-use word_tally::{Filters, Options, Processing, Sort};
+use word_tally::{Filters, Input, Io, Options, Processing, Sort};
 
 #[path = "common.rs"]
 pub mod common;
@@ -27,7 +26,12 @@ fn bench_sorting_strategies(c: &mut Criterion) {
                 b,
                 text_sample.clone(),
                 &shared_options,
-                Cursor::new,
+                |text| {
+                    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+                    std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
+                    let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
+                    (temp_file, input)
+                },
             );
         });
     }
@@ -63,7 +67,12 @@ fn bench_filtering_strategies(c: &mut Criterion) {
                 b,
                 text_sample.clone(),
                 &shared_options,
-                Cursor::new,
+                |text| {
+                    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+                    std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
+                    let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
+                    (temp_file, input)
+                },
             );
         });
     }

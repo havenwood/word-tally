@@ -3,7 +3,7 @@
 //! `WordTally` tallies the occurrences of words in text sources. It operates by streaming
 //! input line by line, eliminating the need to load entire files or streams into memory.
 //!
-//! Word boundaries are determined using the [`bstr`](https://docs.rs/bstr/)
+//! Word boundaries are determined using the [`unicode-segmentation`](https://docs.rs/unicode-segmentation/)
 //! crate, which implements the [Unicode Standard Annex #29](https://unicode.org/reports/tr29/)
 //! specification for text segmentation across languages.
 //!
@@ -11,20 +11,41 @@
 //! in parallel mode, the input is processed in discrete chunks across available CPU cores,
 //! maintaining memory efficiency while improving processing speed for larger inputs.
 //!
+//! ## Module structure
+//!
+//! The `WordTally` library is organized into these modules:
+//! - `args.rs`: CLI argument parsing and command-line interface
+//! - `case.rs`: Text case normalization utilities
+//! - `errors.rs`: Error types and handling
+//! - `filters.rs`: Word filtering mechanisms
+//! - `input.rs`: Input source management strategies
+//! - `io.rs`: I/O operations implementation
+//! - `lib.rs`: Core library functionality and API
+//! - `main.rs`: CLI entry point and execution
+//! - `options.rs`: Configuration and processing options
+//! - `output.rs`: Output formatting and display
+//! - `patterns.rs`: Regular expression and pattern matching
+//! - `performance.rs`: Optimization and benchmarking
+//! - `processing.rs`: Text processing algorithms
+//! - `serialization.rs`: Data serialization for exports
+//! - `sort.rs`: Word frequency sorting strategies
+//! - `verbose.rs`: Logging and diagnostic information
+//!
 //! # Options
 //!
 //! The [`Options`] struct provides a unified interface for configuring all aspects of word tallying:
 //!
 //! ```
-//! use word_tally::{Options, WordTally};
+//! use word_tally::{Options, WordTally, Input, Io, Processing};
 //! use anyhow::Result;
-//! use std::io::Cursor;
 //!
 //! # fn example() -> Result<()> {
 //! // Use default options
 //! let options = Options::default();
-//! let input = Cursor::new("The quick brown fox jumps over the lazy dog");
-//! let words = WordTally::new(input, &options)?;
+//! let file_path = std::path::Path::new("example.txt");
+//! let input = Input::new(file_path, Io::Buffered)?;
+//! let words = WordTally::new(&input, &options)?;
+//! assert_eq!(words.count(), 9);
 //! # Ok(())
 //! # }
 //! ```
@@ -36,6 +57,7 @@
 //! * [`Case`]: Normalize word case (`Original`, `Lower`, or `Upper`)
 //! * [`Sort`]: Order results by frequency (`Unsorted`, `Desc`, or `Asc`)
 //! * [`Format`]: Specify output format (`Text`, `CSV`, `JSON`)
+//! * [`Serialization`]: Configure output details like format and delimiters
 //!
 //! ## Filters
 //!
@@ -53,20 +75,19 @@
 //! * [`Processing`]: Choose between sequential or parallel processing
 //! * [`Io`]: Control the input method (streamed, buffered, or memory-mapped)
 //! * [`Threads`]: Control the thread pool size for parallel execution
-//! * [`SizeHint`]: Tune collection capacity pre-allocation
+//! * [`Performance`]: Configure performance settings
 //!
 //! ## Output
 //!
 //! Output the results:
 //!
-//! * [`Output`]: Generate formatted output based on the specified format in `Formatting`
+//! * [`Output`]: Generate formatted output based on the specified format in `Serialization`
 //!
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Case, Filters, Format, Io, Options, Processing, Tally, WordTally};
+//! use word_tally::{Case, Filters, Format, Options, Processing, Tally, WordTally, Input, Io};
 //! use anyhow::Result;
-//! use std::io::Cursor;
 //!
 //! # fn example() -> Result<()> {
 //! // Create options with case normalization, output format, and other settings
@@ -76,42 +97,56 @@
 //!     .with_filters(Filters::default().with_min_chars(3))
 //!     .with_processing(Processing::Parallel);
 //!
-//! let input = Cursor::new("Cinquedea");
-//! let words = WordTally::new(input, &options)?;
+//! let file_path = std::path::Path::new("example_word.txt");
+//! let input = Input::new(file_path, Io::Buffered)?;
+//! let words = WordTally::new(&input, &options)?;
 //! let expected_tally: Tally = [("cinquedea".into(), 1)].into();
 //!
 //! assert_eq!(words.into_tally(), expected_tally);
 //! # Ok(())
 //! # }
 //! ```
+use std::io::{BufRead, Read};
+use std::mem;
+use std::str;
+use std::sync::Arc;
+
 use anyhow::{Context, Result};
-use bstr::{ByteSlice, io::BufReadExt};
 use indexmap::IndexMap;
 use memmap2::Mmap;
 use rayon::prelude::*;
-use serde::{Deserialize, Serialize};
-use std::fs::File;
-use std::io::{BufReader, Read};
+use serde::{self, Deserialize, Serialize};
+use unicode_segmentation::UnicodeSegmentation;
 
-pub type Word = Box<str>;
 pub type Count = usize;
+pub type Word = Box<str>;
 pub type Tally = Box<[(Word, Count)]>;
-type TallyMap = IndexMap<Word, Count>;
+pub type TallyMap = IndexMap<Word, Count>;
 
+pub mod case;
 pub mod errors;
 pub mod filters;
-pub mod formatting;
 pub mod input;
+pub mod io;
 pub mod options;
 pub mod output;
+pub mod patterns;
 pub mod performance;
+pub mod processing;
+pub mod serialization;
+pub mod sort;
 
-pub use filters::{ExcludePatterns, ExcludeWords, Filters, IncludePatterns, MinChars, MinCount};
-pub use formatting::{Case, Format, Formatting, Sort};
-pub use input::Input;
+pub use case::Case;
+pub use filters::{ExcludeWords, Filters, MinChars, MinCount};
+pub use input::{Input, InputReader};
+pub use io::Io;
 pub use options::Options;
 pub use output::Output;
-pub use performance::{Io, Performance, Processing, SizeHint, Threads};
+pub use patterns::{ExcludePatterns, IncludePatterns};
+pub use performance::Performance;
+pub use processing::{Processing, SizeHint, Threads};
+pub use serialization::{Format, Serialization};
+pub use sort::Sort;
 
 // Shared OnceLock for default Options
 static DEFAULT_OPTIONS: std::sync::OnceLock<Options> = std::sync::OnceLock::new();
@@ -130,7 +165,7 @@ pub struct WordTally<'a> {
     /// Ordered pairs of words and the count of times they appear.
     tally: Tally,
 
-    /// Options for tallying, including formatting, filters, and performance settings.
+    /// All of the options specified for how to tally.
     options: &'a Options,
 
     /// The sum of all words tallied.
@@ -209,112 +244,58 @@ impl<'i> IntoIterator for &'i WordTally<'_> {
 
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
 impl<'a> WordTally<'a> {
-    /// Constructs a `WordTally` from any input source that implements `Read`.
+    /// Constructs a `WordTally` from an input source with options.
     ///
-    /// This constructor handles `streamed` and `buffered` I/O strategies according
-    /// to the provided options and properly propagates any errors that may occur.
-    ///
-    /// For `memory-mapped` I/O, use the `from_file()` method which takes a `File` reference.
+    /// This constructor handles all I/O strategies (streamed, buffered, and memory-mapped)
+    /// according to the provided options and propagates any errors that may occur.
     ///
     /// # Errors
     ///
-    /// This function will return an error if:
-    /// - Memory-mapped I/O is requested (use `from_file()` instead)
+    /// The constructor will return an error if:
     /// - The input contains invalid UTF-8
     /// - An I/O error occurs while reading from the source
+    /// - Memory mapping fails when used with a non-File source
+    /// - Memory-mapped I/O with parallel processing is requested without an Input::Mmap
     ///
     /// # Examples
+    ///
+    /// ```
+    /// use word_tally::{Options, WordTally, Input, Io, Processing};
+    /// use anyhow::Result;
+    ///
+    /// # fn example() -> Result<()> {
+    /// let options = Options::default();
+    /// let input = Input::new("document.txt", Io::Streamed)?;
+    /// let word_tally = WordTally::new(&input, &options)?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// For easier testing with string or in-memory data:
     ///
     /// ```
     /// use word_tally::{Options, WordTally};
+    /// use anyhow::Result;
     /// use std::io::Cursor;
-    /// use anyhow::Result;
     ///
     /// # fn example() -> Result<()> {
-    /// // Basic usage with any Read input
     /// let options = Options::default();
-    /// let input = Cursor::new("The quick brown fox");
-    /// let word_tally = WordTally::new(input, &options)?;
+    /// let input = Cursor::new("The quick brown fox jumps over the lazy dog");
+    /// let words = WordTally::from_reader(input, &options)?;
+    /// assert_eq!(words.count(), 9);
     /// # Ok(())
     /// # }
     /// ```
-    pub fn new<T: Read>(input: T, options: &'a Options) -> Result<Self> {
-        Self::init_thread_pool_if_parallel(options);
-
-        let tally_map = match (options.io(), options.processing()) {
-            // Memory-mapped I/O requires a `File` rather than implementing `Read`
-            (Io::MemoryMapped, _) => {
-                return Err(anyhow::anyhow!(
-                    "Memory-mapped I/O requires a file input. Use a file path instead of stdin."
-                ));
-            }
-
-            // Streamed I/O
-            (Io::Streamed, Processing::Sequential) => Self::count_streamed(input, options)?,
-            (Io::Streamed, Processing::Parallel) => Self::count_streamed_parallel(input, options)?,
-
-            // Buffered I/O
-            (Io::Buffered, Processing::Sequential) => Self::count_buffered(input, options)?,
-            (Io::Buffered, Processing::Parallel) => Self::count_buffered_parallel(input, options)?,
-        };
-
-        Ok(Self::from_tally_map(tally_map, options))
-    }
-
-    /// Creates a `WordTally` from a `File` reference.
-    ///
-    /// Works with all I/O strategies (memory-mapped, streamed, and buffered) using
-    /// a `File` input. For non-`File` inputs, use the `new()` method instead.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if:
-    /// - The file contains invalid UTF-8
-    /// - An I/O error occurs while reading from the file
-    /// - Memory mapping fails (when using `Io::MemoryMapped`)
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use word_tally::{Options, WordTally, Io, Processing};
-    /// use std::fs::File;
-    /// use anyhow::Result;
-    ///
-    /// # fn example() -> Result<()> {
-    /// // Using memory-mapped I/O with a File
-    /// let options = Options::default()
-    ///     .with_io(Io::MemoryMapped)
-    ///     .with_processing(Processing::Parallel);
-    /// let file = File::open("large-file.txt")?;
-    /// let word_tally = WordTally::from_file(&file, &options)?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn from_file(file: &File, options: &'a Options) -> Result<Self> {
-        Self::init_thread_pool_if_parallel(options);
-
-        let tally_map = match (options.io(), options.processing()) {
-            // Memory-mapped I/O requires a `File`
-            (Io::MemoryMapped, Processing::Sequential) => Self::count_mmap(file, options)?,
-            (Io::MemoryMapped, Processing::Parallel) => Self::count_mmap_parallel(file, options)?,
-
-            // Streamed I/O also works with `new()`
-            (Io::Streamed, Processing::Sequential) => Self::count_streamed(file, options)?,
-            (Io::Streamed, Processing::Parallel) => Self::count_streamed_parallel(file, options)?,
-
-            // Buffered I/O also works with `new()`
-            (Io::Buffered, Processing::Sequential) => Self::count_buffered(file, options)?,
-            (Io::Buffered, Processing::Parallel) => Self::count_buffered_parallel(file, options)?,
-        };
-
-        Ok(Self::from_tally_map(tally_map, options))
-    }
-
-    /// Create a thread pool if `Processing::Parallel`.
-    fn init_thread_pool_if_parallel(options: &Options) {
+    pub fn new(input: &Input, options: &'a Options) -> Result<Self> {
+        // Initialize thread pool if parallel processing
         if matches!(options.processing(), Processing::Parallel) {
             options.performance().init_thread_pool();
         }
+
+        // Generate the tally map from the input
+        let tally_map = Self::tally_map_from(input, options)?;
+
+        Ok(Self::from_tally_map(tally_map, options))
     }
 
     /// Creates a `WordTally` instance from `TallyMap` and `Options`.
@@ -368,6 +349,57 @@ impl<'a> WordTally<'a> {
         Ok(Self::from_deserialized_data(data, options))
     }
 
+    /// Constructs a `WordTally` directly from any `Read` implementation.
+    ///
+    /// This constructor is useful for testing or working with in-memory data.
+    /// It uses the I/O strategy specified in the options.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The input contains invalid UTF-8
+    /// - An I/O error occurs while reading from the source
+    /// - Memory-mapped I/O is requested (this method only supports streamed or buffered I/O)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use word_tally::{Options, WordTally};
+    /// use anyhow::Result;
+    /// use std::io::Cursor;
+    ///
+    /// # fn example() -> Result<()> {
+    /// let options = Options::default();
+    /// let input = Cursor::new("The quick brown fox");
+    /// let words = WordTally::from_reader(input, &options)?;
+    /// assert_eq!(words.count(), 4);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn from_reader<R: Read + Send + Sync>(mut reader: R, options: &'a Options) -> Result<Self> {
+        // Initialize thread pool if parallel processing
+        if matches!(options.processing(), Processing::Parallel) {
+            options.performance().init_thread_pool();
+        }
+
+        // Memory-mapped I/O doesn't work with generic readers
+        if matches!(options.io(), Io::MemoryMapped) {
+            anyhow::bail!(
+                "Memory-mapped I/O is not supported with from_reader(). Use streamed or buffered I/O instead."
+            );
+        }
+
+        // Create a bytes input from the reader content
+        let mut bytes = Vec::new();
+        reader
+            .read_to_end(&mut bytes)
+            .context("Failed to read from provided reader")?;
+        let input = Input::from_bytes(bytes);
+
+        let tally_map = Self::tally_map_from(&input, options)?;
+        Ok(Self::from_tally_map(tally_map, options))
+    }
+
     /// Gets the `tally` field.
     pub fn tally(&self) -> &[(Word, Count)] {
         &self.tally
@@ -376,11 +408,6 @@ impl<'a> WordTally<'a> {
     /// Gets a reference to the `options`.
     pub const fn options(&self) -> &Options {
         self.options
-    }
-
-    /// Gets the `filters` from the `options`.
-    pub const fn filters(&self) -> &Filters {
-        self.options.filters()
     }
 
     /// Gets the `uniq_count` field.
@@ -403,180 +430,290 @@ impl<'a> WordTally<'a> {
         sort.apply(self);
     }
 
+    /// Creates a `TallyMap` from an input reader and options.
+    fn tally_map_from(input: &Input, options: &Options) -> Result<TallyMap> {
+        match (options.processing(), options.io()) {
+            // Sequential processing
+            (Processing::Sequential, Io::Streamed | Io::MemoryMapped) => {
+                Self::streamed_count(input, options)
+            }
+            (Processing::Sequential, Io::Buffered | Io::Bytes) => {
+                Self::buffered_count(input, options)
+            }
+
+            // Parallel processing
+            (Processing::Parallel, Io::MemoryMapped) => {
+                let Input::Mmap(mmap_arc, _) = input else {
+                    unreachable!("This will only be called with `Input::Mmap(Arc<Mmap>, PathBuf)`.")
+                };
+                Self::par_mmap_count(mmap_arc, options)
+            }
+            (Processing::Parallel, Io::Streamed) => Self::par_streamed_count(input, options),
+            (Processing::Parallel, Io::Buffered | Io::Bytes) => {
+                Self::par_buffered_count(input, options)
+            }
+        }
+    }
+
     //
-    // Sequential I/O strategies
+    // Sequential I/O
     //
 
-    /// Sequential implementation for streamed word tallying using bstr's BufReadExt
-    fn count_streamed<T: Read>(input: T, options: &Options) -> Result<TallyMap> {
-        let mut reader = BufReader::new(input);
-        let mut tally = TallyMap::with_capacity(options.performance().estimate_capacity());
+    /// Sequential implementation for streamed word tallying
+    fn streamed_count(input: &Input, options: &Options) -> Result<TallyMap> {
+        let reader = input::InputReader::new(input).context("Failed to create reader for input")?;
+        let perf = options.performance();
+        let mut tally = TallyMap::with_capacity(perf.default_tally_map_capacity());
         let case = options.case();
 
-        // Process lines one at a time without allocating new strings per line
-        reader
-            .for_byte_line(|line| {
-                Self::count_words(&mut tally, line, case);
-
-                Ok(true)
-            })
-            .context("Error reading input stream")?;
+        reader.lines().try_for_each(|try_line| {
+            let line = try_line.context("Error reading input stream")?;
+            Self::count_words(&mut tally, &line, case);
+            Ok::<_, anyhow::Error>(())
+        })?;
 
         Ok(tally)
     }
 
-    /// Sequential implementation for reading the input entirely into memory
-    fn count_buffered<T: Read>(input: T, options: &Options) -> Result<TallyMap> {
-        let content = Self::buffer_input(input)?;
+    /// Sequential implementation for buffered word tallying
+    fn buffered_count(input: &Input, options: &Options) -> Result<TallyMap> {
+        let buffered_input = Self::buffer_input(input, options.performance())?;
 
-        Ok(Self::process_sequential_content(&content, options))
-    }
-
-    /// Memory-mapping uses OS virtual memory for efficient file access
-    fn count_mmap(file: &File, options: &Options) -> Result<TallyMap> {
-        // Note: All memory-mapping require `unsafe` as per `memmap2` crate design
-        let mmap = unsafe { Mmap::map(file).context("Failed to memory map the file")? };
-        let content =
-            std::str::from_utf8(&mmap).context("Memory-mapped file contains invalid UTF-8")?;
-
-        Ok(Self::process_sequential_content(content, options))
+        Ok(Self::process_sequential_content(&buffered_input, options))
     }
 
     //
-    // Parallel I/O strategies
+    // Parallel I/O
     //
 
     /// Parallel implementation for streamed processing
-    fn count_streamed_parallel<T: Read>(input: T, options: &Options) -> Result<TallyMap> {
-        let mut reader = BufReader::new(input);
+    fn par_streamed_count(input: &Input, options: &Options) -> Result<TallyMap> {
         let perf = options.performance();
         let case = options.case();
+        let reader = input::InputReader::new(input).context("Failed to create reader for input")?;
+        let mut tally = TallyMap::with_capacity(perf.default_tally_map_capacity());
+        let lines_batch_capacity = perf.lines_batch_capacity();
+        let per_thread_tally_map_capacity = perf.per_thread_tally_map_capacity();
 
-        // Calculate batch size based on performance settings
-        let batch_size = perf.chunk_size();
+        // Prepare batch container with appropriate capacity
+        let mut reusable_lines_batch = Vec::with_capacity(lines_batch_capacity);
 
-        // Initial capacity based on performance settings
-        let mut result_map = TallyMap::with_capacity(perf.estimate_capacity());
+        // Use lines iterator for cleaner syntax while keeping mem::take optimization
+        reader.lines().try_fold(
+            String::with_capacity(perf.line_buffer_capacity()),
+            |mut reusable_line_buffer, try_line| {
+                let line = try_line.context("Error reading input stream")?;
 
-        // Estimate more accurate line capacity based on average line length
-        // This helps reduce reallocations while keeping memory usage reasonable
-        let estimated_line_length = 80;
-        let estimated_lines = (batch_size / estimated_line_length).max(100);
-        let mut lines = Vec::with_capacity(estimated_lines);
-        let mut batch_bytes = 0;
-
-        // Stream the file line by line, processing in batches
-        reader
-            .for_byte_line(|line| {
                 if !line.is_empty() {
-                    // Add line to current batch
-                    lines.push(line.to_vec());
-                    batch_bytes += line.len();
+                    // Let the next line reuse the line buffer
+                    reusable_line_buffer.clear();
+                    // Move the line into the line buffer
+                    reusable_line_buffer.push_str(&line);
+                    // Add the buffer contents to the lines batch without reallocating
+                    reusable_lines_batch.push(mem::take(&mut reusable_line_buffer));
 
-                    // When batch is full, process it in parallel
-                    if batch_bytes >= batch_size {
-                        // Process batch using chunked parallel reduction
-                        let batch_result = Self::process_line_batch(&lines, case, options);
+                    // Process batch when it reaches optimal size
+                    if reusable_lines_batch.len() >= lines_batch_capacity {
+                        let batch_result = process_lines_in_parallel(
+                            &reusable_lines_batch,
+                            case,
+                            per_thread_tally_map_capacity,
+                            lines_batch_capacity,
+                        );
 
-                        // Merge batch results
-                        result_map.reserve(batch_result.len());
-                        Self::merge_counts(&mut result_map, batch_result);
+                        // Reserve space to minimize hash table resizing during merge
+                        tally.reserve(batch_result.len());
+                        Self::merge_counts(&mut tally, batch_result);
 
-                        // Reset for next batch
-                        lines.clear();
-                        batch_bytes = 0;
+                        // Let the next thread reuse the lines batch
+                        reusable_lines_batch.clear();
                     }
                 }
 
-                Ok(true)
-            })
-            .context("Error reading input stream")?;
+                Ok::<_, anyhow::Error>(reusable_line_buffer)
+            },
+        )?;
 
         // Process any remaining lines in the final batch
-        if !lines.is_empty() {
-            let batch_result = Self::process_line_batch(&lines, case, options);
-            result_map.reserve(batch_result.len());
-            Self::merge_counts(&mut result_map, batch_result);
+        if !reusable_lines_batch.is_empty() {
+            let batch_result = process_lines_in_parallel(
+                &reusable_lines_batch,
+                case,
+                per_thread_tally_map_capacity,
+                lines_batch_capacity,
+            );
+
+            // Reserve space to minimize hash table resizing during merge
+            tally.reserve(batch_result.len());
+            Self::merge_counts(&mut tally, batch_result);
         }
 
-        Ok(result_map)
+        // Parallel helper function to process a batch of lines
+        fn process_lines_in_parallel(
+            reusable_lines_batch: &[String],
+            case: Case,
+            capacity: usize,
+            lines_batch_capacity: usize,
+        ) -> TallyMap {
+            use rayon::prelude::*;
+
+            reusable_lines_batch
+                .par_iter()
+                .with_min_len(lines_batch_capacity)
+                .fold(
+                    || TallyMap::with_capacity(capacity),
+                    |mut tally, line| {
+                        WordTally::count_words(&mut tally, line, case);
+                        tally
+                    },
+                )
+                .reduce(
+                    || TallyMap::with_capacity(capacity),
+                    |mut a, b| {
+                        // Optimize merging by always merging the smaller map into the larger one
+                        if a.len() < b.len() {
+                            let mut merged = b;
+                            merged.reserve(a.len());
+                            WordTally::merge_counts(&mut merged, a);
+                            merged
+                        } else {
+                            a.reserve(b.len());
+                            WordTally::merge_counts(&mut a, b);
+                            a
+                        }
+                    },
+                )
+        }
+
+        Ok(tally)
+    }
+
+    /// Parallel implementation for memory-mapped word tallying
+    fn par_mmap_count(mmap: &Arc<Mmap>, options: &Options) -> Result<TallyMap> {
+        let perf = options.performance();
+        let case = options.case();
+
+        // This provides a view into the content rather than copying
+        let content = str::from_utf8(mmap).context("Memory-mapped file contains invalid UTF-8")?;
+
+        let chunk_size = perf.chunk_size();
+        let total_size = content.len();
+        let num_chunks = total_size.div_ceil(chunk_size);
+
+        // Calculate chunk boundaries that align with newlines to avoid splitting words
+        let mut chunk_boundaries = Vec::with_capacity(num_chunks + 1);
+        chunk_boundaries.push(0);
+
+        let mut pos = chunk_size.min(total_size);
+        while pos < total_size {
+            while pos < total_size && !content.is_char_boundary(pos) {
+                pos += 1;
+            }
+
+            // Partition chunks by newlines 'till the end
+            if pos < total_size {
+                if let Some(nl_pos) = content[pos..].find('\n') {
+                    chunk_boundaries.push(pos + nl_pos + 1);
+                } else {
+                    break;
+                }
+            } else {
+                break;
+            }
+
+            pos += chunk_size;
+            pos = pos.min(total_size);
+        }
+
+        chunk_boundaries.push(total_size);
+
+        // Process chunks in parallel and merge the results
+        let tally = (0..chunk_boundaries.len() - 1)
+            .collect::<Vec<_>>()
+            .par_iter()
+            .map(|&i| {
+                let start = chunk_boundaries[i];
+                let end = chunk_boundaries[i + 1];
+                let chunk = &content[start..end];
+
+                let mut local_tally = TallyMap::with_capacity(perf.per_thread_tally_map_capacity());
+
+                for line in chunk.lines() {
+                    Self::count_words(&mut local_tally, line, case);
+                }
+
+                local_tally
+            })
+            .reduce(
+                || TallyMap::with_capacity(perf.default_tally_map_capacity()),
+                |mut a, b| {
+                    // Optimize merging by always merging the smaller map into the larger one
+                    if a.len() < b.len() {
+                        let mut merged = b;
+                        merged.reserve(a.len());
+                        Self::merge_counts(&mut merged, a);
+                        merged
+                    } else {
+                        a.reserve(b.len());
+                        Self::merge_counts(&mut a, b);
+                        a
+                    }
+                },
+            );
+
+        Ok(tally)
     }
 
     /// Parallel implementation for buffered word tallying
-    fn count_buffered_parallel<T: Read>(input: T, options: &Options) -> Result<TallyMap> {
-        let content = Self::buffer_input(input)?;
+    fn par_buffered_count(input: &Input, options: &Options) -> Result<TallyMap> {
         let perf = options.performance();
+        let buffered_input = Self::buffer_input(input, perf)?;
         let case = options.case();
 
-        // Use `par_bridge` for better memory efficiency without collecting to `Vec`
-        let tally = content
-            .lines()
-            .par_bridge()
+        let tally = buffered_input
+            .par_lines()
             .fold(
-                || TallyMap::with_capacity(perf.thread_count()),
-                |mut map, line| {
-                    Self::count_words(&mut map, line.as_bytes(), case);
-                    map
+                || TallyMap::with_capacity(perf.per_thread_tally_map_capacity()),
+                |mut tally, line| {
+                    Self::count_words(&mut tally, line, case);
+                    tally
                 },
             )
             .reduce(
-                || TallyMap::with_capacity(perf.estimate_capacity()),
-                Self::merge_tally_maps,
-            );
-
-        Ok(tally)
-    }
-
-    /// Parallel implementation for memory-mapped file processing
-    fn count_mmap_parallel(file: &File, options: &Options) -> Result<TallyMap> {
-        // Memory-mapping uses OS virtual memory for efficient file access
-        // Note: All memory-mapping require `unsafe` as per `memmap2` crate design
-        let mmap = unsafe { Mmap::map(file).context("Failed to memory map the file")? };
-        let content =
-            std::str::from_utf8(&mmap).context("Memory-mapped file contains invalid UTF-8")?;
-        let perf = options.performance();
-        let case = options.case();
-
-        // Use `par_bridge` for better memory efficiency without collecting to `Vec`
-        let tally = content
-            .lines()
-            .par_bridge()
-            .fold(
-                || TallyMap::with_capacity(perf.thread_count()),
-                |mut map, line| {
-                    Self::count_words(&mut map, line.as_bytes(), case);
-                    map
+                || TallyMap::with_capacity(perf.default_tally_map_capacity()),
+                |mut a, b| {
+                    // Optimize by merging smaller map into larger
+                    if a.len() < b.len() {
+                        let mut merged = b;
+                        merged.reserve(a.len());
+                        Self::merge_counts(&mut merged, a);
+                        merged
+                    } else {
+                        a.reserve(b.len());
+                        Self::merge_counts(&mut a, b);
+                        a
+                    }
                 },
-            )
-            .reduce(
-                || TallyMap::with_capacity(perf.estimate_capacity()),
-                Self::merge_tally_maps,
             );
 
         Ok(tally)
     }
 
     //
-    // Count processing helpers
+    // Helpers
     //
 
-    /// Process batch of lines in parallel
-    fn process_line_batch(lines: &[Vec<u8>], case: Case, options: &Options) -> TallyMap {
-        Self::parallel_reduce_chunked(
-            lines,
-            |map, chunk| {
-                for line in chunk {
-                    Self::count_words(map, line, case);
-                }
-            },
-            options,
-        )
-    }
+    /// Reads from input into a String
+    fn buffer_input(input: &Input, performance: &Performance) -> Result<String> {
+        let capacity = performance.content_buffer_capacity();
+        let mut content = String::with_capacity(capacity);
 
-    /// Reads from input into a String, propagating any errors
-    fn buffer_input<T: Read>(mut input: T) -> Result<String> {
-        let mut content = String::new();
-        input
+        // Create a reader for this input
+        let mut reader =
+            input::InputReader::new(input).context("Failed to create reader for input")?;
+
+        // Read from the input into the string
+        reader
             .read_to_string(&mut content)
             .context("Failed to read input into buffer")?;
 
@@ -584,70 +721,30 @@ impl<'a> WordTally<'a> {
     }
 
     /// Counts words in a byte slice and adds them to the tally map
-    fn count_words(tally: &mut TallyMap, bytes: &[u8], case: Case) {
-        bytes.words().for_each(|word| {
+    fn count_words(tally: &mut TallyMap, line: &str, case: Case) {
+        for word in line.unicode_words() {
             let normalized = case.normalize(word);
             *tally.entry(normalized).or_insert(0) += 1;
-        });
+        }
     }
 
-    /// Helper function to process content sequentially line by line
     fn process_sequential_content(content: &str, options: &Options) -> TallyMap {
-        let mut tally = TallyMap::with_capacity(options.performance().estimate_capacity());
+        let capacity = options
+            .performance()
+            .tally_map_capacity_for_content(content.len());
+        let mut tally = TallyMap::with_capacity(capacity);
         let case = options.case();
 
-        // Process lines one at a time without allocating new strings per line
-        content
-            .as_bytes()
-            .for_byte_line(|line| {
-                Self::count_words(&mut tally, line, case);
-                Ok(true)
-            })
-            .expect("Error processing line");
+        for line in content.lines() {
+            Self::count_words(&mut tally, line, case);
+        }
 
         tally
     }
 
-    /// Merges maps by combining word counts
     fn merge_counts(dest: &mut TallyMap, source: TallyMap) {
         for (word, count) in source {
             *dest.entry(word).or_insert(0) += count;
         }
-    }
-
-    /// Merge maps efficiently by merging smaller into larger
-    fn merge_tally_maps(mut left: TallyMap, mut right: TallyMap) -> TallyMap {
-        if left.len() < right.len() {
-            std::mem::swap(&mut left, &mut right);
-        }
-
-        left.reserve(right.len());
-        Self::merge_counts(&mut left, right);
-        left
-    }
-
-    /// Process data in parallel chunks with balanced workload distribution
-    fn parallel_reduce_chunked<I, F>(items: &[I], chunk_fn: F, options: &Options) -> TallyMap
-    where
-        I: Sync,
-        F: Fn(&mut TallyMap, &[I]) + Sync + Send,
-    {
-        let perf = options.performance();
-        let num_threads = rayon::current_num_threads();
-        let chunk_size = (items.len() / num_threads).max(1);
-
-        items
-            .par_chunks(chunk_size)
-            .fold(
-                || TallyMap::with_capacity(perf.thread_count()),
-                |mut local_map, chunk| {
-                    chunk_fn(&mut local_map, chunk);
-                    local_map
-                },
-            )
-            .reduce(
-                || TallyMap::with_capacity(perf.estimate_capacity()),
-                Self::merge_tally_maps,
-            )
     }
 }

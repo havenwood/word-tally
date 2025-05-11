@@ -18,6 +18,13 @@ pub mod exit_code {
     pub const CONFIG: i32 = 78;
 }
 
+/// Helper function to check if an error is one of multiple types
+fn is_error_any_of<T: std::fmt::Debug + std::fmt::Display + Send + Sync + 'static>(
+    err: &Error,
+) -> bool {
+    err.downcast_ref::<T>().is_some()
+}
+
 pub fn exit_code(err: &Error) -> i32 {
     if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
         return match clap_err.kind() {
@@ -35,16 +42,18 @@ pub fn exit_code(err: &Error) -> i32 {
         };
     }
 
-    if err.downcast_ref::<regex::Error>().is_some()
-        || err.downcast_ref::<serde_json::Error>().is_some()
-        || err.downcast_ref::<csv::Error>().is_some()
-        || err.downcast_ref::<std::str::Utf8Error>().is_some()
-        || err.downcast_ref::<std::string::FromUtf8Error>().is_some()
+    // Data errors
+    if is_error_any_of::<regex::Error>(err)
+        || is_error_any_of::<serde_json::Error>(err)
+        || is_error_any_of::<csv::Error>(err)
+        || is_error_any_of::<std::str::Utf8Error>(err)
+        || is_error_any_of::<std::string::FromUtf8Error>(err)
     {
         return exit_code::DATAERR;
     }
 
-    if err.downcast_ref::<unescaper::Error>().is_some() {
+    // Configuration errors
+    if is_error_any_of::<unescaper::Error>(err) {
         return exit_code::CONFIG;
     }
 

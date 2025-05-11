@@ -1,7 +1,7 @@
 use std::path::PathBuf;
+use word_tally::serialization::{Format, Serialization};
 use word_tally::{
-    Format, Formatting, Input, Io, Options, Performance, Processing, SizeHint, Sort, Threads,
-    filters::ExcludeWords,
+    Input, Io, Options, Performance, Processing, SizeHint, Threads, filters::ExcludeWords,
 };
 
 #[test]
@@ -44,8 +44,8 @@ fn test_thread_conversions() {
 
 #[test]
 fn test_ordering_traits() {
-    let fmt1 = Formatting::new(Default::default(), Sort::Desc, Format::Text);
-    let fmt2 = Formatting::new(Default::default(), Sort::Asc, Format::Text);
+    let fmt1 = Serialization::with_format(Format::Text);
+    let fmt2 = Serialization::with_format(Format::Json);
     assert!(fmt1 < fmt2);
 
     // Test Performance ordering
@@ -116,6 +116,6 @@ fn test_input_display() {
 #[test]
 fn test_const_format_fn() {
     let options = Options::default();
-    let format = options.format();
-    assert_eq!(format, word_tally::Format::Text);
+    let format = options.serialization().format();
+    assert_eq!(format, word_tally::serialization::Format::Text);
 }

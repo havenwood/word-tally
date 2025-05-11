@@ -1,37 +1,26 @@
-use word_tally::{Io, Performance, Processing, SizeHint, Threads};
+use word_tally::{Performance, SizeHint, Threads};
 
 #[test]
 fn test_parse_env_var_indirectly() {
     let size_hint = SizeHint::Bytes(100_000);
 
-    let performance = Performance::default()
-        .with_processing(Processing::Parallel)
-        .with_size_hint(size_hint);
+    let performance = Performance::default().with_size_hint(size_hint);
 
-    assert_eq!(performance.estimate_capacity(), 10_000); // 100_000 / 10 (default uniqueness ratio)
+    assert_eq!(performance.tally_map_capacity(), 1940); // (100_000 / 1024 * 200) / 10 = 1940 (with integer division)
 }
 
 #[test]
 fn test_parallel_mode_configuration() {
     let perf_sequential = Performance::default();
-    assert_eq!(perf_sequential.processing(), Processing::Sequential);
-    assert_eq!(perf_sequential.io(), Io::Streamed);
     assert_eq!(perf_sequential.chunk_size(), 65_536); // Default value (64KB)
-
-    // Switching to parallel should retain the configuration
-    let perf_parallel = perf_sequential.with_processing(Processing::Parallel);
-    assert_eq!(perf_parallel.processing(), Processing::Parallel);
-    assert_eq!(perf_parallel.chunk_size(), 65_536);
 
     // Test explicit configuration
     let perf_configured = Performance::default()
         .with_chunk_size(32_768)
-        .with_word_density(20)
-        .with_processing(Processing::Parallel)
-        .with_io(Io::MemoryMapped);
+        .with_words_per_kb(20);
 
     assert_eq!(perf_configured.chunk_size(), 32_768);
-    assert_eq!(perf_configured.unique_word_density(), 20);
+    assert_eq!(perf_configured.words_per_kb(), 20);
 }
 
 #[test]
@@ -54,13 +43,13 @@ fn test_size_hint_methods() {
     // Test different size hints
     let no_hint_perf = Performance::default();
     assert_eq!(no_hint_perf.size_hint(), SizeHint::None);
-    assert_eq!(no_hint_perf.estimate_capacity(), 1024); // Default capacity
+    assert_eq!(no_hint_perf.tally_map_capacity(), 16384); // Default capacity
 
     // Test with size hint
     let size_hint = SizeHint::Bytes(100_000);
     let with_hint = Performance::default().with_size_hint(size_hint);
-    assert_eq!(with_hint.estimate_capacity(), 10_000); // 100_000 / 10
+    assert_eq!(with_hint.tally_map_capacity(), 1940); // (100_000 / 1024 * 200) / 10 = 1953 (rounded)
 
-    // Test chunk capacity estimation with new formula: (chunk_size * word_density) / 10 + 10
-    assert_eq!(with_hint.estimate_chunk_capacity(1000), 1510); // (1000 * 15) / 10 + 10
+    // Test chunk capacity estimation - chunk_size / 1024 * words_per_kb
+    assert_eq!(with_hint.text_chunk_capacity(), 12800); // 65_536 / 1024 * 200 = 12800 (integer division)
 }

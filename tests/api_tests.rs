@@ -1,7 +1,5 @@
-use std::fs::File;
-use std::io::Cursor;
-use std::sync::Arc;
-use word_tally::{Count, Io, Options, Processing, WordTally};
+use std::io::Write;
+use word_tally::{Count, Input, Io, Options, Processing, WordTally};
 
 const API_EXAMPLE_TEXT: &str = "The quick brown fox jumps over the lazy dog";
 const EXPECTED_API_WORD_COUNT: Count = 9;
@@ -22,123 +20,168 @@ fn verify_api_example_tally(tally: &WordTally<'_>) {
 
 #[test]
 fn test_api_streamed_sequential() {
-    let input = Cursor::new(API_EXAMPLE_TEXT);
     let options = Options::default()
         .with_io(Io::Streamed)
         .with_processing(Processing::Sequential);
 
-    let word_tally = WordTally::new(input, &options).expect("Failed to create WordTally");
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).unwrap();
+
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
+        .expect("Failed to create Input");
+
+    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
     verify_api_example_tally(&word_tally);
 }
 
 #[test]
 fn test_api_buffered_sequential() {
-    let input = Cursor::new(API_EXAMPLE_TEXT);
     let options = Options::default()
         .with_io(Io::Buffered)
         .with_processing(Processing::Sequential);
 
-    let word_tally = WordTally::new(input, &options).expect("Failed to create WordTally");
+    // Create a temporary file with our text
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).unwrap();
+
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
+        .expect("Failed to create Input");
+
+    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
     verify_api_example_tally(&word_tally);
 }
 
 #[test]
 fn test_api_streamed_parallel() {
-    let input = Cursor::new(API_EXAMPLE_TEXT);
     let options = Options::default()
         .with_io(Io::Streamed)
         .with_processing(Processing::Parallel);
 
-    let word_tally = WordTally::new(input, &options).expect("Failed to create WordTally");
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).unwrap();
+
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
+        .expect("Failed to create Input");
+
+    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
     verify_api_example_tally(&word_tally);
 }
 
 #[test]
 fn test_api_buffered_parallel() {
-    let input = Cursor::new(API_EXAMPLE_TEXT);
     let options = Options::default()
         .with_io(Io::Buffered)
         .with_processing(Processing::Parallel);
 
-    let word_tally = WordTally::new(input, &options).expect("Failed to create WordTally");
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).unwrap();
+
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
+        .expect("Failed to create Input");
+
+    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
     verify_api_example_tally(&word_tally);
 }
 
 #[test]
 fn test_api_memory_mapped() {
-    let temp_file = std::env::temp_dir().join("word_tally_api_mmap.txt");
-    std::fs::write(&temp_file, API_EXAMPLE_TEXT).unwrap();
+    let temp_dir = tempfile::tempdir().unwrap();
+    let file_path = temp_dir.path().join("example.txt");
+    std::fs::write(&file_path, API_EXAMPLE_TEXT).unwrap();
 
-    let file = File::open(&temp_file).unwrap();
     let options = Options::default()
         .with_io(Io::MemoryMapped)
         .with_processing(Processing::Sequential);
 
-    let word_tally = WordTally::from_file(&file, &options).expect("Failed to create WordTally");
-    verify_api_example_tally(&word_tally);
+    let input =
+        Input::new(file_path.to_str().unwrap(), Io::MemoryMapped).expect("Failed to create Input");
 
-    std::fs::remove_file(temp_file).unwrap_or_default();
+    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    verify_api_example_tally(&word_tally);
 }
 
 #[test]
 fn test_api_memory_mapped_parallel() {
-    let temp_file = std::env::temp_dir().join("word_tally_api_mmap_parallel.txt");
-    std::fs::write(&temp_file, API_EXAMPLE_TEXT).unwrap();
+    let temp_dir = tempfile::tempdir().unwrap();
+    let file_path = temp_dir.path().join("example_parallel.txt");
+    std::fs::write(&file_path, API_EXAMPLE_TEXT).unwrap();
 
-    let file = File::open(&temp_file).unwrap();
     let options = Options::default()
         .with_io(Io::MemoryMapped)
         .with_processing(Processing::Parallel);
 
-    let word_tally = WordTally::from_file(&file, &options).expect("Failed to create WordTally");
-    verify_api_example_tally(&word_tally);
+    let input =
+        Input::new(file_path.to_str().unwrap(), Io::MemoryMapped).expect("Failed to create Input");
 
-    std::fs::remove_file(temp_file).unwrap_or_default();
+    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    verify_api_example_tally(&word_tally);
 }
 
 #[test]
 fn test_api_comprehensive_example() {
-    // This test shows how to use the API with various options
-    // It demonstrates all 6 combinations of I/O and processing
     let text = "Example text for API demonstration";
+    let temp_dir = tempfile::tempdir().unwrap();
+    let file_path = temp_dir.path().join("test_example.txt");
+    std::fs::write(&file_path, text).unwrap();
+    let file_path_str = file_path.to_str().unwrap();
 
-    let options_streamed_seq = Arc::new(
-        Options::default()
-            .with_io(Io::Streamed)
-            .with_processing(Processing::Sequential),
-    );
+    let options_streamed_seq = Options::default()
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Sequential);
 
-    let options_buffered_seq = Arc::new(
-        Options::default()
-            .with_io(Io::Buffered)
-            .with_processing(Processing::Sequential),
-    );
+    let options_buffered_seq = Options::default()
+        .with_io(Io::Buffered)
+        .with_processing(Processing::Sequential);
 
-    let options_streamed_par = Arc::new(
-        Options::default()
-            .with_io(Io::Streamed)
-            .with_processing(Processing::Parallel),
-    );
+    let options_streamed_par = Options::default()
+        .with_io(Io::Streamed)
+        .with_processing(Processing::Parallel);
 
-    let options_buffered_par = Arc::new(
-        Options::default()
-            .with_io(Io::Buffered)
-            .with_processing(Processing::Parallel),
-    );
+    let options_buffered_par = Options::default()
+        .with_io(Io::Buffered)
+        .with_processing(Processing::Parallel);
 
-    // Each combination should produce the same result
+    let options_mmap_seq = Options::default()
+        .with_io(Io::MemoryMapped)
+        .with_processing(Processing::Sequential);
+
+    let options_mmap_par = Options::default()
+        .with_io(Io::MemoryMapped)
+        .with_processing(Processing::Parallel);
+
+    let input_streamed_seq = Input::new(file_path_str, Io::Streamed)
+        .expect("Failed to create streamed sequential input");
+
+    let input_buffered_seq = Input::new(file_path_str, Io::Buffered)
+        .expect("Failed to create buffered sequential input");
+
+    let input_streamed_par =
+        Input::new(file_path_str, Io::Streamed).expect("Failed to create streamed parallel input");
+
+    let input_buffered_par =
+        Input::new(file_path_str, Io::Buffered).expect("Failed to create buffered parallel input");
+
+    let input_mmap_seq = Input::new(file_path_str, Io::MemoryMapped)
+        .expect("Failed to create memory-mapped sequential input");
+
+    let input_mmap_par = Input::new(file_path_str, Io::MemoryMapped)
+        .expect("Failed to create memory-mapped parallel input");
+
     let count_checks = [
-        WordTally::new(Cursor::new(text), &options_streamed_seq)
+        WordTally::new(&input_streamed_seq, &options_streamed_seq)
             .expect("Failed with streamed sequential"),
-        WordTally::new(Cursor::new(text), &options_buffered_seq)
+        WordTally::new(&input_buffered_seq, &options_buffered_seq)
             .expect("Failed with buffered sequential"),
-        WordTally::new(Cursor::new(text), &options_streamed_par)
+        WordTally::new(&input_streamed_par, &options_streamed_par)
             .expect("Failed with streamed parallel"),
-        WordTally::new(Cursor::new(text), &options_buffered_par)
+        WordTally::new(&input_buffered_par, &options_buffered_par)
             .expect("Failed with buffered parallel"),
+        WordTally::new(&input_mmap_seq, &options_mmap_seq)
+            .expect("Failed with memory-mapped sequential"),
+        WordTally::new(&input_mmap_par, &options_mmap_par)
+            .expect("Failed with memory-mapped parallel"),
     ];
 
-    // All strategies should produce the same results
     let expected_count = count_checks[0].count();
     let expected_uniq = count_checks[0].uniq_count();
 
@@ -154,50 +197,27 @@ fn test_api_comprehensive_example() {
             "Unique count mismatch at index {idx}"
         );
     }
+}
 
-    // Test memory-mapped I/O separately since it requires a file
-    let temp_file = std::env::temp_dir().join("word_tally_api_comprehensive.txt");
-    std::fs::write(&temp_file, text).unwrap();
+#[test]
+fn test_from_bytes_api() {
+    let bytes_input = Input::from_bytes(API_EXAMPLE_TEXT);
 
-    // Memory-mapped variations
-    let file1 = File::open(&temp_file).unwrap();
-    let options_mmap_seq = Arc::new(
-        Options::default()
-            .with_io(Io::MemoryMapped)
-            .with_processing(Processing::Sequential),
-    );
-    let mmap_seq = WordTally::from_file(&file1, &options_mmap_seq)
-        .expect("Failed to create WordTally with memory mapping");
+    let options_seq = Options::default()
+        .with_io(Io::Bytes)
+        .with_processing(Processing::Sequential);
 
-    let file2 = File::open(&temp_file).unwrap();
-    let options_mmap_par = Arc::new(
-        Options::default()
-            .with_io(Io::MemoryMapped)
-            .with_processing(Processing::Parallel),
-    );
-    let mmap_par = WordTally::from_file(&file2, &options_mmap_par)
-        .expect("Failed to create WordTally with memory mapping");
+    let options_par = Options::default()
+        .with_io(Io::Bytes)
+        .with_processing(Processing::Parallel);
 
-    assert_eq!(
-        mmap_seq.count(),
-        expected_count,
-        "Memory-mapped sequential count mismatch"
-    );
-    assert_eq!(
-        mmap_seq.uniq_count(),
-        expected_uniq,
-        "Memory-mapped sequential unique count mismatch"
-    );
-    assert_eq!(
-        mmap_par.count(),
-        expected_count,
-        "Memory-mapped parallel count mismatch"
-    );
-    assert_eq!(
-        mmap_par.uniq_count(),
-        expected_uniq,
-        "Memory-mapped parallel unique count mismatch"
-    );
+    let seq_tally =
+        WordTally::new(&bytes_input, &options_seq).expect("Failed with bytes sequential");
+    let par_tally = WordTally::new(&bytes_input, &options_par).expect("Failed with bytes parallel");
 
-    std::fs::remove_file(temp_file).unwrap_or_default();
+    verify_api_example_tally(&seq_tally);
+    verify_api_example_tally(&par_tally);
+
+    assert_eq!(seq_tally.count(), par_tally.count());
+    assert_eq!(seq_tally.uniq_count(), par_tally.uniq_count());
 }

@@ -1,10 +1,8 @@
 //! Benchmarks comparing I/O strategies (Streamed, Buffered, Memory-mapped)
 //! and processing modes (Sequential, Parallel) across different file sizes.
 
-use std::fs::File;
-
 use criterion::{BatchSize, Criterion, black_box, criterion_group, criterion_main};
-use word_tally::{Io, Options, Processing, WordTally};
+use word_tally::{Input, Io, Options, Processing, WordTally};
 
 #[path = "common.rs"]
 pub mod common;
@@ -15,11 +13,15 @@ fn bench_io_processing_combinations(c: &mut Criterion, size_kb: usize) {
     // Create a test file with consistent content
     let (temp_file, file_path) = self::common::create_benchmark_file(size_kb);
 
+    // Read the file content for bytes benchmark
+    let file_content = std::fs::read(&file_path).expect("Failed to read benchmark file");
+
     // Define the benchmark test combinations
     let io_strategies = [
         (Io::Streamed, "streamed"),
         (Io::Buffered, "buffered"),
         (Io::MemoryMapped, "mmap"),
+        (Io::Bytes, "bytes"),
     ];
 
     let processing_strategies = [
@@ -39,18 +41,36 @@ fn bench_io_processing_combinations(c: &mut Criterion, size_kb: usize) {
                 let options = Options::default().with_io(*io).with_processing(*processing);
                 let shared_options = make_shared(options);
 
-                group.bench_function(&benchmark_name, |b| {
-                    b.iter_batched(
-                        || File::open(&file_path).expect("Failed to open temp file"),
-                        |file| {
-                            black_box(
-                                WordTally::new(file, &shared_options)
-                                    .expect("Failed to create WordTally"),
-                            )
-                        },
-                        BatchSize::LargeInput,
-                    );
-                });
+                if *io == Io::Bytes {
+                    // Use from_bytes for Bytes I/O mode
+                    let file_content_clone = file_content.clone();
+                    group.bench_function(&benchmark_name, |b| {
+                        b.iter_batched(
+                            || Input::from_bytes(&file_content_clone),
+                            |input| {
+                                black_box(
+                                    WordTally::new(&input, &shared_options)
+                                        .expect("Failed to create WordTally"),
+                                )
+                            },
+                            BatchSize::LargeInput,
+                        );
+                    });
+                } else {
+                    // Use Input::new for file-based I/O modes
+                    group.bench_function(&benchmark_name, |b| {
+                        b.iter_batched(
+                            || Input::new(&file_path, *io).expect("Failed to create input"),
+                            |input| {
+                                black_box(
+                                    WordTally::new(&input, &shared_options)
+                                        .expect("Failed to create WordTally"),
+                                )
+                            },
+                            BatchSize::LargeInput,
+                        );
+                    });
+                }
             }
         }
 

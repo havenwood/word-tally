@@ -3,16 +3,26 @@
 use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::PathBuf;
-use unescaper::unescape;
 
-use word_tally::formatting::{Case, Format, Formatting, Sort};
+use word_tally::Count;
+use word_tally::case::Case;
+use word_tally::filters::Filters;
+use word_tally::io::Io;
 use word_tally::options::Options;
-use word_tally::performance::{Io, Performance, Processing, SizeHint};
-use word_tally::{Count, filters::Filters};
+use word_tally::performance::Performance;
+use word_tally::processing::{Processing, SizeHint};
+use word_tally::serialization::{Format, Serialization};
+use word_tally::sort::Sort;
 
 /// A utility for tallying word frequencies in text.
-#[derive(Debug, Parser)]
-#[command(about, version)]
+#[derive(Parser, Debug)]
+#[command(
+    name = "word-tally",
+    author,
+    version,
+    about,
+    long_about = "Tally word frequencies with customizable options for sorting, filtering, and output formatting"
+)]
 pub struct Args {
     /// File path to use as input rather than stdin ("-").
     #[arg(default_value = "-", value_name = "PATH")]
@@ -27,7 +37,7 @@ pub struct Args {
     #[arg(short = 'p', long)]
     parallel: bool,
 
-    // Formatting options
+    // Output formatting options
     /// Case normalization.
     #[arg(short, long, default_value_t, value_enum, value_name = "FORMAT")]
     case: Case,
@@ -76,67 +86,82 @@ pub struct Args {
 }
 
 impl Args {
-    pub const fn get_input(&self) -> &String {
+    /// Get input file path
+    #[expect(
+        clippy::missing_const_for_fn,
+        reason = "Blocked by const limitations until Rust 1.87.0"
+    )]
+    // Make this const when `const_vec_string_slice` is fully stabilized.
+    pub fn get_input(&self) -> &str {
         &self.input
     }
 
+    /// Get output file path
     pub const fn get_output(&self) -> &Option<PathBuf> {
         &self.output
     }
 
+    /// Get verbose flag
     pub const fn is_verbose(&self) -> bool {
         self.verbose
     }
 
-    const fn get_delimiter(&self) -> &String {
-        &self.delimiter
-    }
+    /// Parse command-line arguments and convert them to word-tally `Options`.
+    pub fn get_options(&self, size_hint: SizeHint) -> Result<Options> {
+        let serialization = Serialization::new(self.format, &self.delimiter)?;
+        let filters = self.get_filters()?;
 
-    pub fn get_unescaped_delimiter(&self) -> Result<String> {
-        unescape(self.get_delimiter().as_str())
-            .with_context(|| format!("Failed to unescape delimiter: {}", self.get_delimiter()))
-    }
-
-    const fn get_io_strategy(&self) -> Io {
-        self.io
-    }
-
-    const fn get_processing_strategy(&self) -> Processing {
-        if self.parallel {
+        // Determine processing mode from the --parallel flag
+        let processing = if self.parallel {
             Processing::Parallel
         } else {
             Processing::Sequential
-        }
-    }
+        };
 
-    pub const fn get_formatting(&self) -> Formatting {
-        Formatting::new(self.case, self.sort, self.format)
-    }
-
-    pub fn get_filters(&self) -> Result<Filters> {
-        Filters::new(
-            &self.min_chars,
-            &self.min_count,
-            self.exclude_words.as_ref(),
-            self.exclude.as_ref(),
-            self.include.as_ref(),
-        )
-        .with_context(|| "Failed to compile regex filter patterns")
-    }
-
-    pub fn get_performance(&self, size_hint: SizeHint) -> Performance {
-        Performance::default()
-            .with_io(self.get_io_strategy())
-            .with_processing(self.get_processing_strategy())
+        let performance = Performance::default()
             .with_size_hint(size_hint)
-            .with_verbose(self.verbose)
+            .with_verbose(self.verbose);
+
+        // Create Options with case, sort, serialization, filters, io, processing, and performance
+        Ok(Options::new(
+            self.case,
+            self.sort,
+            serialization,
+            filters,
+            self.io,
+            processing,
+            performance,
+        ))
     }
 
-    pub fn get_options(&self, size_hint: SizeHint) -> Result<Options> {
-        let formatting = self.get_formatting();
-        let filters = self.get_filters()?;
-        let performance = self.get_performance(size_hint);
+    /// Helper to create filters from arguments
+    fn get_filters(&self) -> Result<Filters> {
+        let mut filters = Filters::default();
 
-        Ok(Options::new(formatting, filters, performance))
+        if let Some(min_chars) = self.min_chars {
+            filters = filters.with_min_chars(min_chars);
+        }
+
+        if let Some(min_count) = self.min_count {
+            filters = filters.with_min_count(min_count);
+        }
+
+        if let Some(words) = &self.exclude_words {
+            filters = filters.with_unescaped_exclude_words(words)?;
+        }
+
+        if let Some(exclude_patterns) = &self.exclude {
+            filters = filters
+                .with_exclude_patterns(exclude_patterns)
+                .with_context(|| "Failed to create exclude patterns")?;
+        }
+
+        if let Some(include_patterns) = &self.include {
+            filters = filters
+                .with_include_patterns(include_patterns)
+                .with_context(|| "Failed to create include patterns")?;
+        }
+
+        Ok(filters)
     }
 }

@@ -10,8 +10,8 @@
 //
 // Each strategy is tested to verify they all produce identical results.
 
-use std::io::Cursor;
-use word_tally::{Count, Io, Options, Processing, WordTally};
+use std::io::Write;
+use word_tally::{Count, Input, Io, Options, Performance, Processing, WordTally};
 
 // Test data that's small enough for tests but has multiple lines and words
 const TEST_TEXT: &str = "The quick brown fox
@@ -50,8 +50,14 @@ fn verify_tally(tally: &WordTally<'_>) {
 #[test]
 fn test_streamed_sequential() {
     let options = make_options(Io::Streamed, Processing::Sequential);
-    let tally =
-        WordTally::new(Cursor::new(TEST_TEXT), &options).expect("Failed to create WordTally");
+
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
+
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
+        .expect("Failed to create Input");
+
+    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
     verify_tally(&tally);
 }
@@ -59,8 +65,14 @@ fn test_streamed_sequential() {
 #[test]
 fn test_streamed_parallel() {
     let options = make_options(Io::Streamed, Processing::Parallel);
-    let tally =
-        WordTally::new(Cursor::new(TEST_TEXT), &options).expect("Failed to create WordTally");
+
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
+
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
+        .expect("Failed to create Input");
+
+    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
     verify_tally(&tally);
 }
@@ -68,8 +80,14 @@ fn test_streamed_parallel() {
 #[test]
 fn test_buffered_sequential() {
     let options = make_options(Io::Buffered, Processing::Sequential);
-    let tally =
-        WordTally::new(Cursor::new(TEST_TEXT), &options).expect("Failed to create WordTally");
+
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
+
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
+        .expect("Failed to create Input");
+
+    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
     verify_tally(&tally);
 }
@@ -77,50 +95,39 @@ fn test_buffered_sequential() {
 #[test]
 fn test_buffered_parallel() {
     let options = make_options(Io::Buffered, Processing::Parallel);
-    let tally =
-        WordTally::new(Cursor::new(TEST_TEXT), &options).expect("Failed to create WordTally");
+
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
+
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
+        .expect("Failed to create Input");
+
+    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
     verify_tally(&tally);
 }
 
 #[test]
 fn test_new_with_io_combinations() {
-    use std::io::Cursor;
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
+    let file_path = temp_file.path().to_str().unwrap();
 
-    // Test streamed and buffered I/O with both sequential and parallel processing
-    let io_strategies = [Io::Streamed, Io::Buffered];
+    let io_strategies = [Io::Streamed, Io::Buffered, Io::MemoryMapped];
     let processing_strategies = [Processing::Sequential, Processing::Parallel];
 
     for &io in &io_strategies {
         for &processing in &processing_strategies {
             let options = make_options(io, processing);
-            let tally = WordTally::new(Cursor::new(TEST_TEXT), &options)
+            let input = Input::new(file_path, io)
+                .unwrap_or_else(|_| panic!("input creation failed with {io:?}/{processing:?}"));
+
+            let tally = WordTally::new(&input, &options)
                 .unwrap_or_else(|_| panic!("new failed with {io:?}/{processing:?}"));
 
             verify_tally(&tally);
         }
     }
-
-    // Memory-mapped I/O should error with new() since it requires a File
-    let mmap_options = make_options(Io::MemoryMapped, Processing::Sequential);
-    let result = WordTally::new(Cursor::new(TEST_TEXT), &mmap_options);
-    assert!(result.is_err());
-    assert!(
-        result
-            .unwrap_err()
-            .to_string()
-            .contains("Memory-mapped I/O requires a file input. Use a file path instead of stdin.")
-    );
-
-    let mmap_parallel_options = make_options(Io::MemoryMapped, Processing::Parallel);
-    let result = WordTally::new(Cursor::new(TEST_TEXT), &mmap_parallel_options);
-    assert!(result.is_err());
-    assert!(
-        result
-            .unwrap_err()
-            .to_string()
-            .contains("Memory-mapped I/O requires a file input. Use a file path instead of stdin.")
-    );
 }
 
 // Test with a larger dataset to ensure chunking works properly in parallel mode
@@ -147,12 +154,21 @@ Nullam efficitur, mi at dapibus tincidunt, risus orci vulputate lacus, et vehicu
 // Test with a large text to ensure parallel processing works correctly
 #[test]
 fn test_parallel_processing_with_large_text() {
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    Write::write_all(&mut temp_file, LARGE_TEST_TEXT.as_bytes()).unwrap();
+    let file_path = temp_file.path().to_str().unwrap();
+
     let sequential_options = make_options(Io::Buffered, Processing::Sequential);
     let parallel_options = make_options(Io::Buffered, Processing::Parallel);
 
-    let sequential_tally = WordTally::new(Cursor::new(LARGE_TEST_TEXT), &sequential_options)
+    let sequential_input =
+        Input::new(file_path, sequential_options.io()).expect("Failed to create sequential input");
+    let parallel_input =
+        Input::new(file_path, parallel_options.io()).expect("Failed to create parallel input");
+
+    let sequential_tally = WordTally::new(&sequential_input, &sequential_options)
         .expect("Failed to create sequential WordTally");
-    let parallel_tally = WordTally::new(Cursor::new(LARGE_TEST_TEXT), &parallel_options)
+    let parallel_tally = WordTally::new(&parallel_input, &parallel_options)
         .expect("Failed to create parallel WordTally");
 
     // Both should produce identical results
@@ -174,44 +190,84 @@ fn test_parallel_processing_with_large_text() {
 // Test with file-backed memory mapped I/O
 #[test]
 fn test_memory_mapped_with_real_file() {
-    use std::env::temp_dir;
-    use std::fs::File;
-    use std::io::Write;
-
     // Create a temporary file with test data
-    let mut temp_path = temp_dir();
-    temp_path.push("word_tally_test.txt");
-
-    {
-        let mut file = File::create(&temp_path).expect("Failed to create temp file");
-        file.write_all(TEST_TEXT.as_bytes())
-            .expect("Failed to write test data");
-    }
-
-    let file = File::open(&temp_path).expect("Failed to open temp file");
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
+    let file_path = temp_file.path().to_str().unwrap();
 
     // Test sequential memory-mapped I/O
     let mmap_sequential_options = make_options(Io::MemoryMapped, Processing::Sequential);
-    let mmap_tally = WordTally::from_file(&file, &mmap_sequential_options)
+    let sequential_input = Input::new(file_path, mmap_sequential_options.io())
+        .expect("Failed to create sequential memory-mapped input");
+
+    let mmap_tally = WordTally::new(&sequential_input, &mmap_sequential_options)
         .expect("Failed to process file with memory mapping");
 
     verify_tally(&mmap_tally);
 
-    // Open the file again for parallel test
-    let file = File::open(&temp_path).expect("Failed to open temp file");
-
     // Test parallel memory-mapped I/O
     let mmap_parallel_options = make_options(Io::MemoryMapped, Processing::Parallel);
-    let mmap_parallel_tally = WordTally::from_file(&file, &mmap_parallel_options)
+    let parallel_input = Input::new(file_path, mmap_parallel_options.io())
+        .expect("Failed to create parallel memory-mapped input");
+
+    let mmap_parallel_tally = WordTally::new(&parallel_input, &mmap_parallel_options)
         .expect("Failed to process file with memory mapping");
 
     verify_tally(&mmap_parallel_tally);
-
-    // Clean up
-    std::fs::remove_file(temp_path).expect("Failed to remove temp file");
 }
 
-// Test error handling for try_from_file
+#[test]
+fn test_read_trait_with_all_io_strategies() {
+    use std::io::Read;
+    use word_tally::input::InputReader;
+
+    let temp_dir = tempfile::tempdir().unwrap();
+    let file_path = temp_dir.path().join("test_io.txt");
+    std::fs::write(&file_path, TEST_TEXT).unwrap();
+
+    let file_input = Input::new(&file_path, Io::Streamed).unwrap();
+    let mmap_input = Input::new(&file_path, Io::MemoryMapped).unwrap();
+    let bytes_input = Input::from_bytes(TEST_TEXT);
+    // Note: We'll skip stdin since it would block waiting for input
+
+    let test_cases = [file_input, mmap_input, bytes_input];
+
+    for input in &test_cases {
+        let mut reader = InputReader::new(input).expect("Failed to create reader");
+        let mut content = String::new();
+        reader
+            .read_to_string(&mut content)
+            .expect("Failed to read content");
+
+        assert_eq!(content.trim(), TEST_TEXT.trim());
+    }
+}
+
+#[test]
+fn test_bytes_input() {
+    let processing_strategies = [Processing::Sequential, Processing::Parallel];
+
+    for &processing in &processing_strategies {
+        let options = make_options(Io::Bytes, processing);
+        let input = Input::from_bytes(TEST_TEXT);
+
+        assert_eq!(input.source(), "<bytes>");
+        assert_eq!(input.size(), Some(TEST_TEXT.len()));
+
+        let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+        verify_tally(&tally);
+    }
+}
+
+#[test]
+fn test_bytes_io_with_input_new() {
+    let result = Input::new(TEST_TEXT, Io::Bytes);
+    assert!(result.is_err());
+    let err = result.unwrap_err().to_string();
+    assert!(err.contains("use `Input::from_bytes()`"));
+}
+
+// Test error handling for non-existent files
 #[test]
 fn test_nonexistent_file_handling() {
     use std::fs::File;
@@ -220,28 +276,14 @@ fn test_nonexistent_file_handling() {
     let path = PathBuf::from("/nonexistent/file/path");
     let file_result = File::open(&path);
     assert!(file_result.is_err());
-
-    if let Ok(file) = file_result {
-        let options = make_options(Io::MemoryMapped, Processing::Sequential);
-        let result = WordTally::from_file(&file, &options);
-        assert!(result.is_err());
-    }
 }
 
 #[test]
-fn test_from_file_with_all_io_strategies() {
-    use std::env::temp_dir;
-    use std::fs::File;
-    use std::io::Write;
-
-    let mut temp_path = temp_dir();
-    temp_path.push("word_tally_io_test.txt");
-
-    {
-        let mut file = File::create(&temp_path).expect("Failed to create temp file");
-        file.write_all(TEST_TEXT.as_bytes())
-            .expect("Failed to write test data");
-    }
+fn test_new_with_all_io_strategies() {
+    // Create a temporary file with test data
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
+    let file_path = temp_file.path().to_str().unwrap();
 
     // Test all combinations of I/O and processing strategies
     let io_strategies = [Io::Streamed, Io::Buffered, Io::MemoryMapped];
@@ -249,14 +291,37 @@ fn test_from_file_with_all_io_strategies() {
 
     for &io in &io_strategies {
         for &processing in &processing_strategies {
-            let file = File::open(&temp_path).expect("Failed to open temp file");
             let options = make_options(io, processing);
-            let tally = WordTally::from_file(&file, &options)
-                .unwrap_or_else(|_| panic!("from_file failed with {io:?}/{processing:?}"));
+            let input = Input::new(file_path, io)
+                .unwrap_or_else(|_| panic!("input creation failed with {io:?}/{processing:?}"));
+
+            let tally = WordTally::new(&input, &options)
+                .unwrap_or_else(|_| panic!("new() failed with {io:?}/{processing:?}"));
 
             verify_tally(&tally);
         }
     }
+}
 
-    std::fs::remove_file(temp_path).expect("Failed to remove temp file");
+#[test]
+fn test_utf8_boundary_handling() {
+    let test_text = "æ æ æ æ";
+
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    Write::write_all(&mut temp_file, test_text.as_bytes()).unwrap();
+    let file_path = temp_file.path().to_str().unwrap();
+
+    // Use a small chunk size directly in the performance settings
+    let small_chunk_size = 32;
+    let performance = Performance::default().with_chunk_size(small_chunk_size);
+
+    let options = Options::default()
+        .with_io(Io::MemoryMapped)
+        .with_processing(Processing::Parallel)
+        .with_performance(performance);
+
+    let input = Input::new(file_path, options.io()).expect("Failed to create input");
+    let tally = WordTally::new(&input, &options).expect("WordTally creation failed");
+
+    assert!(tally.tally().iter().map(|(word, _)| word).any(|word| word == &"æ".into()), "Missing 'æ' in results");
 }

@@ -1,20 +1,24 @@
+//! Filtering words based on length, frequency, patterns and exclusion lists.
+
+use crate::patterns::{ExcludePatterns, IncludePatterns, InputPatterns};
 use crate::{Case, Count, TallyMap};
-use bstr::ByteSlice;
+
+use anyhow::{Context, Result};
 use core::fmt::{self, Display, Formatter};
 use core::ops::Deref;
-use regex::RegexSet;
-use std::collections::HashSet;
-
 use serde::{Deserialize, Serialize};
-
-/// Collection of regex pattern strings.
-type InputPatterns = Vec<String>;
+use std::collections::HashSet;
+use unescaper::unescape;
+use unicode_segmentation::UnicodeSegmentation;
 
 /// Minimum number of characters a word needs to have to be tallied.
 pub type MinChars = Count;
 
 /// Minimum number of times a word needs to appear to be tallied.
 pub type MinCount = Count;
+
+/// Collection of words to be excluded from the tally.
+pub type ExcludeWordsList = Vec<String>;
 
 /// Filters for which words should be tallied.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -40,13 +44,38 @@ pub struct Filters {
 impl Filters {
     /// Constructs a new `Filters` instance with the specified filters.
     ///
-    /// # Arguments
+    /// # Examples
     ///
-    /// * `min_chars` - Minimum characters per word
-    /// * `min_count` - Minimum occurrences required
-    /// * `exclude_words` - Words to exclude
-    /// * `exclude_patterns` - Regex patterns to exclude
-    /// * `include_patterns` - Regex patterns to include
+    /// ```
+    /// use word_tally::{Case, Filters, WordTally, Options, Input, Io, Processing};
+    /// use word_tally::patterns::InputPatterns;
+    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+    /// // Sample text with various words
+    /// let text = "My life closed twice before its close; \
+    ///             It yet remains to see";
+    ///
+    /// // Create minimal filters with just min_chars (no include patterns needed)
+    /// let filters = Filters::default()
+    ///     .with_min_chars(4);
+    ///
+    /// // Create input directly from text bytes
+    /// let input = Input::from_bytes(text);
+    /// let options = Options::default().with_filters(filters);
+    /// let words = WordTally::new(&input, &options)?;
+    ///
+    /// let tally = words.tally();
+    ///
+    /// // Verify words with 'o' and 4+ chars are included
+    /// assert!(tally.iter().any(|(word, _)| word.as_ref() == "life"));
+    /// assert!(tally.iter().any(|(word, _)| word.as_ref() == "before"));
+    /// assert!(tally.iter().any(|(word, _)| word.as_ref() == "close"));
+    ///
+    /// // Verify short words are excluded
+    /// assert!(!tally.iter().any(|(word, _)| word.as_ref() == "my"));
+    /// assert!(!tally.iter().any(|(word, _)| word.as_ref() == "it"));
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     ///
@@ -54,9 +83,9 @@ impl Filters {
     pub fn new(
         min_chars: &Option<MinChars>,
         min_count: &Option<MinCount>,
-        exclude_words: Option<&Vec<String>>,
-        exclude_patterns: Option<&Vec<String>>,
-        include_patterns: Option<&Vec<String>>,
+        exclude_words: Option<&ExcludeWordsList>,
+        exclude_patterns: Option<&InputPatterns>,
+        include_patterns: Option<&InputPatterns>,
     ) -> Result<Self, regex::Error> {
         // Create initial filters
         let mut filters = Self {
@@ -80,18 +109,16 @@ impl Filters {
         Ok(filters)
     }
 
-    /// Constructs an empty `Filters` instance.
-    pub const fn empty() -> Self {
-        Self {
-            min_chars: None,
-            min_count: None,
-            exclude_words: None,
-            exclude_patterns: None,
-            include_patterns: None,
-        }
-    }
-
     /// Set minimum character requirement.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use word_tally::Filters;
+    ///
+    /// let filters = Filters::default().with_min_chars(3);
+    /// assert_eq!(filters.min_chars(), Some(3));
+    /// ```
     pub const fn with_min_chars(mut self, min_chars: MinChars) -> Self {
         self.min_chars = Some(min_chars);
         self
@@ -104,9 +131,17 @@ impl Filters {
     }
 
     /// Set words to exclude.
-    pub fn with_exclude_words(mut self, words: Vec<String>) -> Self {
+    pub fn with_exclude_words(mut self, words: ExcludeWordsList) -> Self {
         self.exclude_words = Some(ExcludeWords(words));
         self
+    }
+
+    /// Set words to exclude, unescaping them first.
+    pub fn with_unescaped_exclude_words(mut self, words: &[String]) -> Result<Self> {
+        let unescaped_words = Self::format_exclude_words(words)?;
+        self.exclude_words = Some(ExcludeWords(unescaped_words));
+
+        Ok(self)
     }
 
     /// Helper method to set patterns on filters
@@ -127,7 +162,10 @@ impl Filters {
     }
 
     /// Sets patterns to exclude words that match.
-    pub fn with_exclude_patterns(self, input_patterns: &[String]) -> Result<Self, regex::Error> {
+    pub fn with_exclude_patterns(
+        self,
+        input_patterns: &InputPatterns,
+    ) -> Result<Self, regex::Error> {
         self.with_patterns(
             input_patterns,
             |s, p| s.exclude_patterns = p,
@@ -136,7 +174,10 @@ impl Filters {
     }
 
     /// Sets patterns to include only words that match.
-    pub fn with_include_patterns(self, input_patterns: &[String]) -> Result<Self, regex::Error> {
+    pub fn with_include_patterns(
+        self,
+        input_patterns: &InputPatterns,
+    ) -> Result<Self, regex::Error> {
         self.with_patterns(
             input_patterns,
             |s, p| s.include_patterns = p,
@@ -176,7 +217,7 @@ impl Filters {
         }
 
         if let Some(min_chars) = self.min_chars() {
-            tally_map.retain(|word, _| word.as_bytes().graphemes().count() >= min_chars);
+            tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars);
         }
 
         if let Some(ExcludeWords(words)) = self.exclude_words() {
@@ -192,11 +233,19 @@ impl Filters {
             tally_map.retain(|word, _| input_patterns.matches(word));
         }
     }
+
+    /// Helper function to unescape a list of words
+    fn format_exclude_words(words: &[String]) -> Result<ExcludeWordsList> {
+        words
+            .iter()
+            .map(|w| unescape(w).with_context(|| format!("Failed to unescape: {w}")))
+            .collect()
+    }
 }
 
 /// A list of words that should be omitted from the tally.
 #[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct ExcludeWords(pub Vec<String>);
+pub struct ExcludeWords(pub ExcludeWordsList);
 
 impl Display for ExcludeWords {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -204,305 +253,22 @@ impl Display for ExcludeWords {
     }
 }
 
-impl From<Vec<String>> for ExcludeWords {
-    fn from(raw: Vec<String>) -> Self {
+impl From<ExcludeWordsList> for ExcludeWords {
+    fn from(raw: ExcludeWordsList) -> Self {
         Self(raw)
     }
 }
 
-impl AsRef<Vec<String>> for ExcludeWords {
-    fn as_ref(&self) -> &Vec<String> {
+impl AsRef<ExcludeWordsList> for ExcludeWords {
+    fn as_ref(&self) -> &ExcludeWordsList {
         &self.0
     }
 }
 
 impl Deref for ExcludeWords {
-    type Target = Vec<String>;
+    type Target = ExcludeWordsList;
 
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-
-/// Base struct for regex pattern filtering.
-///
-/// Contains a `Vec` of raw regexp input `String`s and their compiled `RegexSet`.
-#[derive(Clone, Debug)]
-struct Patterns {
-    /// Original pattern strings
-    input_patterns: InputPatterns,
-    /// Compiled regex set for matching
-    regex_set: RegexSet,
-}
-
-impl Default for Patterns {
-    fn default() -> Self {
-        // Use an empty patterns array and empty RegexSet
-        Self::new(Vec::new()).expect("Default creation with empty vec should never fail")
-    }
-}
-
-impl PartialEq for Patterns {
-    fn eq(&self, other: &Self) -> bool {
-        self.input_patterns == other.input_patterns
-    }
-}
-
-impl Eq for Patterns {}
-
-impl PartialOrd for Patterns {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for Patterns {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.input_patterns.cmp(&other.input_patterns)
-    }
-}
-
-impl std::hash::Hash for Patterns {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.input_patterns.hash(state);
-    }
-}
-
-impl Display for Patterns {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.input_patterns.join(","))
-    }
-}
-
-impl AsRef<[String]> for Patterns {
-    fn as_ref(&self) -> &[String] {
-        &self.input_patterns
-    }
-}
-
-impl Patterns {
-    /// Creates a pattern set and compiles the RegexSet.
-    fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
-        let regex_set = RegexSet::new(&input_patterns)?;
-        Ok(Self {
-            regex_set,
-            input_patterns,
-        })
-    }
-
-    /// Creates a pattern set from a slice of strings.
-    fn from_slice(input_patterns: &[String]) -> Result<Self, regex::Error> {
-        Self::new(input_patterns.to_vec())
-    }
-
-    /// Checks if a word matches any pattern in the RegexSet.
-    fn matches(&self, word: &str) -> bool {
-        self.regex_set.is_match(word)
-    }
-
-    /// Returns a slice of the original input patterns.
-    #[allow(clippy::missing_const_for_fn)]
-    // Make this const and remove the `#allow` when `const_vec_string_slice` is fully stabilized.
-    // Requires stable `Vec::as_slice` in const contexts (tracked in rust-lang/rust#129041).
-    fn as_patterns(&self) -> &[String] {
-        &self.input_patterns
-    }
-}
-
-/// Regex patterns used to exclude matching words.
-#[derive(Clone, Debug, Default)]
-pub struct ExcludePatterns(Patterns);
-
-impl ExcludePatterns {
-    /// Creates patterns from owned pattern strings.
-    pub fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
-        Ok(Self(Patterns::new(input_patterns)?))
-    }
-
-    /// Tests if a word matches any pattern.
-    pub fn matches(&self, word: &str) -> bool {
-        self.0.matches(word)
-    }
-
-    /// Returns a slice of the original pattern strings.
-    pub fn as_patterns(&self) -> &[String] {
-        self.0.as_patterns()
-    }
-
-    /// Returns the number of patterns.
-    pub fn len(&self) -> usize {
-        self.0.input_patterns.len()
-    }
-
-    /// Returns true if there are no patterns.
-    pub fn is_empty(&self) -> bool {
-        self.0.input_patterns.is_empty()
-    }
-}
-
-impl<'a> TryFrom<&'a [String]> for ExcludePatterns {
-    type Error = regex::Error;
-
-    fn try_from(input_patterns: &'a [String]) -> Result<Self, Self::Error> {
-        Ok(Self(Patterns::from_slice(input_patterns)?))
-    }
-}
-
-impl AsRef<[String]> for ExcludePatterns {
-    fn as_ref(&self) -> &[String] {
-        self.0.as_ref()
-    }
-}
-
-impl Serialize for ExcludePatterns {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.0.input_patterns.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for ExcludePatterns {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::Error;
-        let input_patterns: InputPatterns = Vec::deserialize(deserializer)?;
-
-        Self::new(input_patterns)
-            .map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
-    }
-}
-
-impl PartialEq for ExcludePatterns {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl Eq for ExcludePatterns {}
-
-impl PartialOrd for ExcludePatterns {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for ExcludePatterns {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.0.cmp(&other.0)
-    }
-}
-
-impl std::hash::Hash for ExcludePatterns {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
-    }
-}
-
-impl Display for ExcludePatterns {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
-    }
-}
-
-/// Regex patterns used to include only matching words.
-#[derive(Clone, Debug, Default)]
-pub struct IncludePatterns(Patterns);
-
-impl IncludePatterns {
-    /// Creates patterns from owned pattern strings.
-    pub fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
-        Ok(Self(Patterns::new(input_patterns)?))
-    }
-
-    /// Tests if a word matches any pattern.
-    pub fn matches(&self, word: &str) -> bool {
-        self.0.matches(word)
-    }
-
-    /// Returns a slice of the original pattern strings.
-    pub fn as_patterns(&self) -> &[String] {
-        self.0.as_patterns()
-    }
-
-    /// Returns the number of patterns.
-    pub fn len(&self) -> usize {
-        self.0.input_patterns.len()
-    }
-
-    /// Returns true if there are no patterns.
-    pub fn is_empty(&self) -> bool {
-        self.0.input_patterns.is_empty()
-    }
-}
-
-impl<'a> TryFrom<&'a [String]> for IncludePatterns {
-    type Error = regex::Error;
-
-    fn try_from(input_patterns: &'a [String]) -> Result<Self, Self::Error> {
-        Ok(Self(Patterns::from_slice(input_patterns)?))
-    }
-}
-
-impl AsRef<[String]> for IncludePatterns {
-    fn as_ref(&self) -> &[String] {
-        self.0.as_ref()
-    }
-}
-
-impl Serialize for IncludePatterns {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.0.input_patterns.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for IncludePatterns {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        use serde::de::Error;
-        let input_patterns: InputPatterns = Vec::deserialize(deserializer)?;
-
-        Self::new(input_patterns)
-            .map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
-    }
-}
-
-impl PartialEq for IncludePatterns {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl Eq for IncludePatterns {}
-
-impl PartialOrd for IncludePatterns {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for IncludePatterns {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        self.0.cmp(&other.0)
-    }
-}
-
-impl std::hash::Hash for IncludePatterns {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-        self.0.hash(state);
-    }
-}
-
-impl Display for IncludePatterns {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        self.0.fmt(f)
     }
 }

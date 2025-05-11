@@ -5,24 +5,15 @@
 //!
 //! # Structure
 //!
-//! Options are organized into three components:
+//! Core configuration components:
 //!
-//! 1. **Formatting** ([`Formatting`]): Controls text normalization and presentation
-//!    - [`Case`]: Word case handling (original, lowercase, uppercase)
-//!    - [`Sort`]: Result ordering (unsorted, ascending, descending)
-//!    - [`Format`]: Output format (text, CSV, JSON)
-//!
-//! 2. **Filters** ([`Filters`]): Determines which words appear in results
-//!    - Length filters: Minimum character count
-//!    - Frequency filters: Occurrence thresholds
-//!    - Pattern matching: Regular expression filters
-//!    - Word lists: Explicit exclusions
-//!
-//! 3. **Performance** ([`Performance`]): Optimizes processing efficiency
-//!    - [`Processing`]: Processing mode (sequential, parallel)
-//!    - [`Io`]: I/O method (streamed, buffered, memory-mapped)
-//!    - [`Threads`]: Thread pool configuration
-//!    - [`SizeHint`]: Collection allocation tuning
+//! - **Case** ([`Case`]): Word case handling (original, lowercase, uppercase)
+//! - **Sort** ([`Sort`]): Result ordering (unsorted, ascending, descending)
+//! - **Serialization** ([`Serialization`]): Output format (text, CSV, JSON) and delimiter
+//! - **Filters** ([`Filters`]): Word length, frequency, patterns, and exclusion filters
+//! - **Io** ([`Io`]): I/O strategy (streamed, buffered, memory-mapped)
+//! - **Processing** ([`Processing`]): Processing mode (sequential, parallel)
+//! - **Performance** ([`Performance`]): Thread pool, memory allocation, and chunk size tuning
 //!
 //! # Usage
 //!
@@ -31,6 +22,7 @@
 //!
 //! // Default options
 //! let options = Options::default();
+//! assert_eq!(options.case(), Case::Lower);
 //!
 //! // With specific settings
 //! let options = Options::default()
@@ -38,6 +30,7 @@
 //!     .with_format(Format::Json)
 //!     .with_processing(Processing::Parallel)
 //!     .with_io(Io::MemoryMapped);
+//! assert_eq!(options.io(), Io::MemoryMapped);
 //! ```
 //!
 //! # Environment Variables
@@ -49,9 +42,14 @@
 //! - `WORD_TALLY_UNIQUENESS_RATIO`: Capacity estimation (default: 10)
 //! - `WORD_TALLY_WORD_DENSITY`: Per-chunk map capacity (default: 15)
 
+use crate::case::Case;
 use crate::filters::Filters;
-use crate::formatting::{Case, Format, Formatting, Sort};
-use crate::performance::{Io, Performance, Processing, SizeHint, Threads};
+use crate::io::Io;
+use crate::performance::Performance;
+use crate::processing::{Processing, SizeHint, Threads};
+use crate::serialization::Format;
+use crate::serialization::Serialization;
+use crate::sort::Sort;
 use core::fmt;
 use serde::{Deserialize, Serialize};
 
@@ -60,91 +58,101 @@ use serde::{Deserialize, Serialize};
 /// `Options` consolidates all configuration aspects of word tallying into a single structure.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
 pub struct Options {
-    /// Formatting configuration (case normalization, sorting, output format)
-    formatting: Formatting,
+    /// Case handling strategy (original, lower, upper)
+    case: Case,
+
+    /// Sort order for results (unsorted, ascending, descending)
+    sort: Sort,
+
+    /// Serialization configuration (output format, delimiter)
+    serialization: Serialization,
 
     /// Filter settings (word length, frequency, patterns, exclusions)
     filters: Filters,
 
-    /// Performance configuration (I/O strategy, processing mode, threads, memory allocation)
+    /// I/O strategy (streamed, buffered, memory-mapped)
+    io: Io,
+
+    /// Processing strategy (sequential, parallel)
+    processing: Processing,
+
+    /// Performance tuning configuration (threads, memory allocation, chunk size)
     performance: Performance,
 }
 
 impl Options {
-    /// Creates a new `Options` with custom formatting, filters, and performance configurations.
+    /// Creates a new `Options` with custom case, sort, serializer, filters, and performance configurations.
     ///
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{Options, Formatting, Filters, Performance, Case, Format, Io, Processing};
-    ///
-    /// // Customization using component structs
-    /// let options = Options::new(
-    ///     Formatting::default().with_case_setting(Case::Lower),
-    ///     Filters::default().with_min_chars(3),
-    ///     Performance::default().with_processing(Processing::Parallel)
-    /// );
+    /// use word_tally::{Options, Serialization, Filters, Performance, Case, Format, Io, Processing, Sort};
     ///
     /// // Default configuration
     /// let options = Options::default();
+    /// assert_eq!(options.processing(), Processing::Sequential);
     ///
     /// // Targeted customization with builder methods
     /// let options = Options::default()
     ///     .with_case(Case::Lower)
     ///     .with_format(Format::Json);
+    /// assert_eq!(options.serialization().format(), Format::Json);
     /// ```
-    ///
-    /// # Tests
-    ///
-    /// ```
-    /// use word_tally::{Options, Formatting, Filters, Performance, Case, Format, Processing};
-    ///
-    /// // Verify examples work correctly
-    /// let custom_options = Options::new(
-    ///     Formatting::default().with_case_setting(Case::Lower),
-    ///     Filters::default().with_min_chars(3),
-    ///     Performance::default().with_processing(Processing::Parallel)
-    /// );
-    ///
-    /// let default_options = Options::default();
-    ///
-    /// let builder_options = Options::default()
-    ///     .with_case(Case::Lower)
-    ///     .with_format(Format::Json);
-    ///
-    /// assert_eq!(custom_options.formatting().case(), Case::Lower);
-    /// assert!(custom_options.filters().min_chars().is_some());
-    /// assert_eq!(custom_options.processing(), Processing::Parallel);
-    ///
-    /// assert_eq!(builder_options.formatting().case(), Case::Lower);
-    /// assert_eq!(builder_options.formatting().format(), Format::Json);
-    /// ```
-    pub const fn new(formatting: Formatting, filters: Filters, performance: Performance) -> Self {
+    pub const fn new(
+        case: Case,
+        sort: Sort,
+        serialization: Serialization,
+        filters: Filters,
+        io: Io,
+        processing: Processing,
+        performance: Performance,
+    ) -> Self {
         Self {
-            formatting,
+            case,
+            sort,
+            serialization,
             filters,
+            io,
+            processing,
             performance,
         }
     }
 
     /// Create a new Options instance with default filters
-    pub fn with_defaults(formatting: Formatting, performance: Performance) -> Self {
-        Self::new(formatting, Filters::default(), performance)
+    pub fn with_defaults(
+        case: Case,
+        sort: Sort,
+        serialization: Serialization,
+        io: Io,
+        processing: Processing,
+        performance: Performance,
+    ) -> Self {
+        Self::new(
+            case,
+            sort,
+            serialization,
+            Filters::default(),
+            io,
+            processing,
+            performance,
+        )
     }
 
-    /// Create Options with default Filters and Performance
-    pub fn from_formatting(formatting: Formatting) -> Self {
-        Self::with_defaults(formatting, Performance::default())
+    /// Set case handling strategy
+    pub const fn with_case(mut self, case: Case) -> Self {
+        self.case = case;
+        self
     }
 
-    /// Create Options with default Formatting and Filters
-    pub fn from_performance(performance: Performance) -> Self {
-        Self::with_defaults(Formatting::default(), performance)
+    /// Set sort order
+    pub const fn with_sort(mut self, sort: Sort) -> Self {
+        self.sort = sort;
+        self
     }
 
-    /// Set formatting options while preserving other options
-    pub const fn with_formatting(mut self, formatting: Formatting) -> Self {
-        self.formatting = formatting;
+    /// Set serialization options while preserving other options
+    pub fn with_serialization(mut self, serialization: Serialization) -> Self {
+        self.serialization = serialization;
         self
     }
 
@@ -160,33 +168,29 @@ impl Options {
         self
     }
 
-    /// Set case normalization option
-    pub const fn with_case(mut self, case: Case) -> Self {
-        self.formatting = self.formatting.with_case_setting(case);
-        self
-    }
-
-    /// Set sort order option
-    pub const fn with_sort(mut self, sort: Sort) -> Self {
-        self.formatting = self.formatting.with_sort_setting(sort);
-        self
-    }
-
     /// Set output format while preserving other options
-    pub const fn with_format(mut self, format: Format) -> Self {
-        self.formatting = self.formatting.with_format_setting(format);
+    pub fn with_format(mut self, format: Format) -> Self {
+        self.serialization = self.serialization.with_format_setting(format);
+        self
+    }
+
+    /// Set delimiter for text output
+    pub fn with_delimiter(mut self, delimiter: String) -> Self {
+        let mut serialization = self.serialization;
+        serialization.delimiter = delimiter;
+        self.serialization = serialization;
         self
     }
 
     /// Set I/O strategy
     pub const fn with_io(mut self, io: Io) -> Self {
-        self.performance = self.performance.with_io(io);
+        self.io = io;
         self
     }
 
     /// Set processing strategy
     pub const fn with_processing(mut self, processing: Processing) -> Self {
-        self.performance = self.performance.with_processing(processing);
+        self.processing = processing;
         self
     }
 
@@ -202,9 +206,9 @@ impl Options {
         self
     }
 
-    /// Set default capacity for collections
+    /// Set default capacity for TallyMap
     pub const fn with_capacity(mut self, capacity: usize) -> Self {
-        self.performance = self.performance.with_capacity(capacity);
+        self.performance = self.performance.with_tally_map_capacity(capacity);
         self
     }
 
@@ -214,9 +218,9 @@ impl Options {
         self
     }
 
-    /// Set word density for chunk capacity estimation
-    pub const fn with_word_density(mut self, density: u8) -> Self {
-        self.performance = self.performance.with_word_density(density);
+    /// Set words-per-kilobyte for capacity estimation
+    pub const fn with_words_per_kb(mut self, words_per_kb: u8) -> Self {
+        self.performance = self.performance.with_words_per_kb(words_per_kb);
         self
     }
 
@@ -226,9 +230,19 @@ impl Options {
         self
     }
 
-    /// Get a reference to the formatting options
-    pub const fn formatting(&self) -> &Formatting {
-        &self.formatting
+    /// Get the case normalization setting
+    pub const fn case(&self) -> Case {
+        self.case
+    }
+
+    /// Get the word sorting setting
+    pub const fn sort(&self) -> Sort {
+        self.sort
+    }
+
+    /// Get a reference to the serialization options
+    pub const fn serialization(&self) -> &Serialization {
+        &self.serialization
     }
 
     /// Get a reference to the filters
@@ -241,49 +255,14 @@ impl Options {
         &self.performance
     }
 
-    /// Get the case setting from formatting options
-    pub const fn case(&self) -> Case {
-        self.formatting.case()
-    }
-
-    /// Get the sort setting from formatting options
-    pub const fn sort(&self) -> Sort {
-        self.formatting.sort()
-    }
-
-    /// Get the format setting from formatting options
-    pub const fn format(&self) -> Format {
-        self.formatting.format()
-    }
-
-    /// Get the I/O strategy from performance options
+    /// Get the I/O strategy
     pub const fn io(&self) -> Io {
-        self.performance.io()
+        self.io
     }
 
-    /// Get the processing strategy from performance options
+    /// Get the processing strategy
     pub const fn processing(&self) -> Processing {
-        self.performance.processing()
-    }
-
-    /// Get the threads setting from performance options
-    pub const fn threads(&self) -> Threads {
-        self.performance.threads()
-    }
-
-    /// Get the size hint from performance options
-    pub const fn size_hint(&self) -> SizeHint {
-        self.performance.size_hint()
-    }
-
-    /// Estimate capacity using performance configuration
-    pub const fn estimate_capacity(&self) -> usize {
-        self.performance.estimate_capacity()
-    }
-
-    /// Estimate chunk capacity using performance configuration
-    pub const fn estimate_chunk_capacity(&self, chunk_size: usize) -> usize {
-        self.performance.estimate_chunk_capacity(chunk_size)
+        self.processing
     }
 }
 
@@ -291,42 +270,15 @@ impl fmt::Display for Options {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Options {{ formatting: {}, filters: {:?}, processing: {:?}, io: {:?} }}",
-            self.formatting,
-            self.filters,
-            self.performance.processing(),
-            self.performance.io()
+            "Options {{ case: {}, sort: {}, serialization: {}, filters: {:?}, processing: {}, io: {} }}",
+            self.case, self.sort, self.serialization, self.filters, self.processing, self.io
         )
     }
 }
 
-impl From<(Formatting, Filters, Performance)> for Options {
-    fn from((formatting, filters, performance): (Formatting, Filters, Performance)) -> Self {
-        Self::new(formatting, filters, performance)
-    }
-}
-
-impl From<(Formatting, Performance)> for Options {
-    fn from((formatting, performance): (Formatting, Performance)) -> Self {
-        Self::with_defaults(formatting, performance)
-    }
-}
-
-impl From<Formatting> for Options {
-    fn from(formatting: Formatting) -> Self {
-        Self::with_defaults(formatting, Performance::default())
-    }
-}
-
-impl From<Performance> for Options {
-    fn from(performance: Performance) -> Self {
-        Self::with_defaults(Formatting::default(), performance)
-    }
-}
-
-impl AsRef<Formatting> for Options {
-    fn as_ref(&self) -> &Formatting {
-        &self.formatting
+impl AsRef<Serialization> for Options {
+    fn as_ref(&self) -> &Serialization {
+        &self.serialization
     }
 }
 

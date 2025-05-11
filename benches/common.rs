@@ -1,6 +1,6 @@
 //! Common utilities for benchmarking word-tally.
 
-use std::io::{Cursor, Write};
+use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
@@ -10,7 +10,7 @@ use fake::Fake;
 use fake::faker::lorem::en::Words;
 use tempfile::NamedTempFile;
 
-use word_tally::{Options, WordTally};
+use word_tally::{Input, Options, WordTally};
 
 /// Generate text with random words for benchmarking
 pub fn generate_sample_text(lines: usize, words_per_line: std::ops::Range<usize>) -> String {
@@ -55,11 +55,15 @@ pub fn bench_word_tally_with_string<F>(
     options: &Arc<Options>,
     setup_fn: F,
 ) where
-    F: Fn(String) -> Cursor<String>,
+    F: Fn(String) -> (NamedTempFile, Input),
 {
     b.iter_batched(
         || setup_fn(text.clone()),
-        |input| black_box(WordTally::new(input, options)),
+        |(temp_file, input)| {
+            // Keep temp_file alive within the closure
+            let _ = &temp_file;
+            black_box(WordTally::new(&input, options))
+        },
         BatchSize::LargeInput,
     );
 }

@@ -1,9 +1,7 @@
 //! Benchmarks comparing sequential vs parallel processing strategies.
 
-use std::io::Cursor;
-
 use criterion::{Criterion, criterion_group, criterion_main};
-use word_tally::{Filters, Options, Processing};
+use word_tally::{Filters, Input, Io, Options, Processing};
 
 #[path = "common.rs"]
 pub mod common;
@@ -34,7 +32,12 @@ fn bench_processing_comparison(c: &mut Criterion) {
                 b,
                 small_text_sample.clone(),
                 &shared_options,
-                Cursor::new,
+                |text| {
+                    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+                    std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
+                    let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
+                    (temp_file, input)
+                },
             );
         });
     }
@@ -49,7 +52,12 @@ fn bench_processing_comparison(c: &mut Criterion) {
                 b,
                 medium_text_sample.clone(),
                 &shared_options,
-                Cursor::new,
+                |text| {
+                    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+                    std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
+                    let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
+                    (temp_file, input)
+                },
             );
         });
     }
@@ -71,7 +79,12 @@ fn bench_regex_patterns(c: &mut Criterion) {
             b,
             text_sample.clone(),
             &make_shared(base_options.clone()),
-            Cursor::new,
+            |text| {
+                let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+                std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
+                let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
+                (temp_file, input)
+            },
         );
     });
 
@@ -93,7 +106,12 @@ fn bench_regex_patterns(c: &mut Criterion) {
             b,
             text_sample.clone(),
             &make_shared(few_patterns_options.clone()),
-            Cursor::new,
+            |text| {
+                let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+                std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
+                let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
+                (temp_file, input)
+            },
         );
     });
 
@@ -121,7 +139,12 @@ fn bench_regex_patterns(c: &mut Criterion) {
             b,
             text_sample.clone(),
             &make_shared(many_patterns_options.clone()),
-            Cursor::new,
+            |text| {
+                let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+                std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
+                let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
+                (temp_file, input)
+            },
         );
     });
 

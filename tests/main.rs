@@ -67,7 +67,7 @@ fn verbose_with_input() {
 }
 
 #[test]
-fn output() {
+fn output_longhand() {
     let assert = word_tally()
         .write_stdin("wombat")
         .arg("--output=test.txt")
@@ -78,9 +78,29 @@ fn output() {
 }
 
 #[test]
-fn delimiter() {
+fn output_shorthand() {
+    let assert = word_tally()
+        .write_stdin("wombat")
+        .arg("-o=test2.txt")
+        .assert();
+    assert.success().stdout("");
+    assert_eq!("wombat 1\n", fs::read_to_string("test2.txt").unwrap());
+    fs::remove_file("test2.txt").unwrap();
+}
+
+#[test]
+fn delimiter_shorthand() {
     let assert = word_tally().write_stdin("wombat").arg("-d\t").assert();
     assert.success().stdout("wombat\t1\n");
+}
+
+#[test]
+fn delimiter_longhand() {
+    let assert = word_tally()
+        .write_stdin("wombat")
+        .arg("--delimiter=,")
+        .assert();
+    assert.success().stdout("wombat,1\n");
 }
 
 #[test]
@@ -369,6 +389,16 @@ fn stdin_with_parallel() {
         .stdout(contains("goodbye 1"))
         .stdout(contains("universe 1"))
         .stdout(contains("again 1"));
+}
+
+#[test]
+fn stdin_with_parallel_shorthand() {
+    // Test the -p shorthand flag
+    let assert = word_tally().write_stdin("hello world").arg("-p").assert();
+    assert
+        .success()
+        .stdout(contains("hello 1"))
+        .stdout(contains("world 1"));
 }
 
 #[test]
