@@ -56,7 +56,7 @@ use serde::{Deserialize, Serialize};
 /// Unified configuration for word tallying operations.
 ///
 /// `Options` consolidates all configuration aspects of word tallying into a single structure.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default, Hash)]
 pub struct Options {
     /// Case handling strategy (original, lower, upper)
     case: Case,

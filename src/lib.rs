@@ -107,7 +107,7 @@
 //! # }
 //! ```
 
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::io::{BufRead, Read};
 use std::mem;
 use std::str;
@@ -153,7 +153,7 @@ pub use sort::Sort;
 /// A shared `OnceLock` for default `Options`.
 static DEFAULT_OPTIONS: std::sync::OnceLock<Options> = std::sync::OnceLock::new();
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, Hash, PartialEq, Eq)]
 #[non_exhaustive]
 /// A tally of word frequencies and counts, along with processing options.
 pub struct WordTally<'a> {
@@ -168,15 +168,6 @@ pub struct WordTally<'a> {
 
     /// The sum of uniq words tallied.
     uniq_count: Count,
-}
-
-/// The hash of a `WordTally` does not include its `Options`.
-impl Hash for WordTally<'_> {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.tally.hash(state);
-        self.count.hash(state);
-        self.uniq_count.hash(state);
-    }
 }
 
 /// A default `WordTally` is empty with default `Options`.
@@ -458,7 +449,9 @@ impl<'a> WordTally<'a> {
     ///
     /// Streams one line at a time, avoiding needing to always hold the entire input in memory.
     fn streamed_count(input: &Input, options: &Options) -> Result<TallyMap> {
-        let reader = input.reader().context("Failed to create reader for input")?;
+        let reader = input
+            .reader()
+            .context("Failed to create reader for input")?;
         let mut tally = TallyMap::with_capacity(options.performance().default_tally_map_capacity());
 
         reader.lines().try_for_each(|try_line| {
@@ -501,7 +494,9 @@ impl<'a> WordTally<'a> {
     fn par_streamed_count(input: &Input, options: &Options) -> Result<TallyMap> {
         let perf = options.performance();
         let case = options.case();
-        let reader = input.reader().context("Failed to create reader for input")?;
+        let reader = input
+            .reader()
+            .context("Failed to create reader for input")?;
         let mut tally = TallyMap::with_capacity(perf.default_tally_map_capacity());
         let lines_batch_capacity = perf.lines_batch_capacity();
         let per_thread_tally_map_capacity = perf.per_thread_tally_map_capacity();
@@ -739,7 +734,9 @@ impl<'a> WordTally<'a> {
         let mut content = String::with_capacity(capacity);
 
         // Create a reader from the input
-        let mut reader = input.reader().context("Failed to create reader for input")?;
+        let mut reader = input
+            .reader()
+            .context("Failed to create reader for input")?;
 
         // Read from the input into the presized buffer
         reader

@@ -21,7 +21,7 @@ pub type MinCount = Count;
 pub type ExcludeWordsList = Vec<String>;
 
 /// Filters for which words should be tallied.
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
 pub struct Filters {
     /// Minimum characters required for a word.
     min_chars: Option<MinChars>,
