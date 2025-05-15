@@ -71,6 +71,15 @@ fn test_wordtally_deserialize() {
     // Create a simple JSON representation of a WordTally
     let json = r#"{
         "tally": [["hello", 5], ["world", 3]],
+        "options": {
+            "case": "Lower",
+            "sort": "Desc", 
+            "serialization": {"format": "Text", "delimiter": " "},
+            "filters": {"min_chars": null, "min_count": null, "exclude_words": [], "exclude_patterns": [], "include_patterns": []},
+            "io": "Streamed",
+            "processing": "Sequential",
+            "performance": {"default_capacity": 16384, "uniqueness_ratio": 10, "words_per_kb": 200, "chunk_size": 65536, "size_hint": "None", "threads": "All", "verbose": false}
+        },
         "count": 8,
         "uniqueCount": 2
     }"#;

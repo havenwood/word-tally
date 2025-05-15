@@ -198,32 +198,33 @@ impl Serialize for WordTally<'_> {
     }
 }
 
-/// Intermediate deserialization structure to handle `WordTally` lifetime constraint.
-///
-/// This is used by `from_deserialized_data()` to to deserialize data for `from_json_str()`
-/// and `from_json_reader()`.
-#[derive(Deserialize)]
-struct WordTallyData {
-    tally: Tally,
-    count: Count,
-    #[serde(rename = "uniqueCount")]
-    uniq_count: Count,
-}
-
 /// Deserialize into a `WordTally` from JSON.
 ///
-/// Warning: Does not properly deserialize `Options`. Instead, it uses a default `Options`.
+/// Warning: To avoid `Options` issues with deserialization & lifetimes, we deserialize `Options`
+/// by leaking the allocation to get a static reference.
 impl<'de> Deserialize<'de> for WordTally<'_> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        let data = WordTallyData::deserialize(deserializer)?;
-        let options = DEFAULT_OPTIONS.get_or_init(Options::default);
+        #[derive(Deserialize)]
+        struct Fields {
+            tally: Tally,
+            options: Options,
+            count: Count,
+            #[serde(rename = "uniqueCount")]
+            uniq_count: Count,
+        }
+
+        // Deserialize into the helper struct
+        let data = Fields::deserialize(deserializer)?;
+
+        // Leak the `Options` to obtain a reference with static lifetime for `WordTally`
+        let options_ref: &'static Options = Box::leak(Box::new(data.options));
 
         Ok(Self {
             tally: data.tally,
-            options,
+            options: options_ref,
             count: data.count,
             uniq_count: data.uniq_count,
         })
@@ -302,37 +303,6 @@ impl<'a> WordTally<'a> {
         instance.sort(options.sort());
 
         instance
-    }
-
-    /// Deserializes a `WordTally` from a JSON string.
-    ///
-    /// Returns an error if the JSON string contains invalid syntax or missing required fields.
-    pub fn from_json_str(json_str: &str, options: &'a Options) -> Result<Self> {
-        let data: WordTallyData = serde_json::from_str(json_str)
-            .context("Failed to deserialize WordTally from JSON string")?;
-
-        Ok(Self::from_deserialized_data(data, options))
-    }
-
-    /// Deserializes a `WordTally` from a JSON reader.
-    ///
-    /// Returns an error if the JSON contains invalid syntax, missing required fields,
-    /// or if an I/O error occurs while reading.
-    pub fn from_json_reader<R: Read>(reader: R, options: &'a Options) -> Result<Self> {
-        let data: WordTallyData = serde_json::from_reader(reader)
-            .context("Failed to deserialize WordTally from reader")?;
-
-        Ok(Self::from_deserialized_data(data, options))
-    }
-
-    /// A helper to create a `WordTally` from deserialized data.
-    fn from_deserialized_data(data: WordTallyData, options: &'a Options) -> Self {
-        Self {
-            tally: data.tally,
-            options,
-            count: data.count,
-            uniq_count: data.uniq_count,
-        }
     }
 
     /// Constructs a `WordTally` directly from any `Read` implementation.

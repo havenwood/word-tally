@@ -1069,7 +1069,6 @@ fn test_to_json() {
 
 #[test]
 fn test_from_json() {
-    // Create temporary file
     let input_text = b"wombat wombat bat";
     let mut temp_file = tempfile::NamedTempFile::new().unwrap();
     std::io::Write::write_all(&mut temp_file, input_text).unwrap();
@@ -1084,31 +1083,23 @@ fn test_from_json() {
         Processing::Sequential,
         Performance::default(),
     );
-    let shared_options = make_shared(options);
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), shared_options.io())
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
         .expect("Failed to create Input");
 
-    let expected = WordTally::new(&input, &shared_options).expect("Failed to create WordTally");
-    let json = r#"
-    {
-        "tally": [["wombat", 2], ["bat", 1]],
-        "options": {
-            "formatting": {"case": "Lower", "sort": "Desc"},
-            "filters": {"min_chars": null, "min_count": null, "exclude_words": null}
-        },
-        "count": 3,
-        "uniqueCount": 2
-    }
-    "#;
+    let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let json = serde_json::to_string(&original).unwrap();
+    let deserialized: WordTally<'_> = serde_json::from_str(&json).unwrap();
 
-    let deserialized = WordTally::from_json_str(json, &shared_options).unwrap();
-    assert_eq!(deserialized, expected);
+    assert_eq!(deserialized.count(), original.count());
+    assert_eq!(deserialized.uniq_count(), original.uniq_count());
+    assert_eq!(deserialized.tally(), original.tally());
+    assert_eq!(deserialized.options().case(), original.options().case());
+    assert_eq!(deserialized.options().sort(), original.options().sort());
 }
 
 #[test]
-fn test_explicit_deserialization() {
-    // Create temporary file
+fn test_deserialization_with_serde() {
     let input_text = b"wombat wombat bat";
     let mut temp_file = tempfile::NamedTempFile::new().unwrap();
     std::io::Write::write_all(&mut temp_file, input_text).unwrap();
@@ -1119,12 +1110,16 @@ fn test_explicit_deserialization() {
 
     let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
     let json = serde_json::to_string(&original).unwrap();
-    let deserialized = WordTally::from_json_str(&json, &options).unwrap();
+    let deserialized: WordTally<'_> = serde_json::from_str(&json).unwrap();
 
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
     assert_eq!(deserialized.tally(), original.tally());
-    assert!(std::ptr::eq(deserialized.options(), &options));
+
+    // Options should be functionally equivalent but not the same instance
+    assert_eq!(deserialized.options().case(), original.options().case());
+    assert_eq!(deserialized.options().sort(), original.options().sort());
+    assert!(!std::ptr::eq(deserialized.options(), original.options()));
 }
 
 #[test]
@@ -1149,56 +1144,43 @@ fn test_json_field_renamed() {
 
 #[test]
 fn test_json_field_camel_case_deserialization() {
-    // Test that camelCase field names are used in serialization and deserialization
-    let options = make_shared(Options::default());
+    let input_text = b"test";
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
 
-    // JSON with camelCase field names
-    let json = r#"
-    {
-        "tally": [["test", 1]],
-        "options": {
-            "formatting": {"case": "Lower", "sort": "Desc"},
-            "filters": {}
-        },
-        "count": 1,
-        "uniqueCount": 1
-    }
-    "#;
+    let options = Options::default();
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
+        .expect("Failed to create Input");
 
-    // Should deserialize correctly
-    let deserialized = WordTally::from_json_str(json, &options).unwrap();
+    let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let serialized = serde_json::to_string(&original).unwrap();
 
-    assert_eq!(deserialized.count(), 1);
-    assert_eq!(deserialized.uniq_count(), 1);
-
-    // Serialize and verify it uses camelCase
-    let serialized = serde_json::to_string(&deserialized).unwrap();
-    assert!(serialized.contains("\"uniqueCount\":1"));
+    assert!(serialized.contains("\"uniqueCount\":"));
     assert!(!serialized.contains("\"uniq_count\":"));
+
+    let deserialized: WordTally<'_> = serde_json::from_str(&serialized).unwrap();
+    assert_eq!(deserialized.count(), original.count());
+    assert_eq!(deserialized.uniq_count(), original.uniq_count());
 }
 
 #[test]
 fn test_error_handling_invalid_json() {
-    let options = Options::default();
-
     // Invalid JSON syntax
     let invalid_json = r#"
     {
         "tally": [["test", 1]],
         "count": 1,
-        "uniq_count": 1,
+        "uniqueCount": 1,
         this is invalid
     }
     "#;
 
-    let result = WordTally::from_json_str(invalid_json, &options);
+    let result: Result<WordTally<'_>, _> = serde_json::from_str(invalid_json);
     assert!(result.is_err());
 }
 
 #[test]
 fn test_error_handling_missing_fields() {
-    let options = Options::default();
-
     // Missing required fields
     let missing_fields_json = r#"
     {
@@ -1206,6 +1188,6 @@ fn test_error_handling_missing_fields() {
     }
     "#;
 
-    let result = WordTally::from_json_str(missing_fields_json, &options);
+    let result: Result<WordTally<'_>, _> = serde_json::from_str(missing_fields_json);
     assert!(result.is_err());
 }
