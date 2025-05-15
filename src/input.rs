@@ -206,6 +206,11 @@ impl Input {
         Self::Bytes(Arc::from(bytes.as_ref()))
     }
 
+    /// A helper to get an `InputReader` from this input.
+    pub fn reader(&self) -> io::Result<InputReader> {
+        InputReader::new(self)
+    }
+
     /// Returns the file name of the input or `"-"` for stdin.
     pub fn source(&self) -> String {
         match self {

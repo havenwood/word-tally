@@ -219,7 +219,6 @@ fn test_memory_mapped_with_real_file() {
 #[test]
 fn test_read_trait_with_all_io_strategies() {
     use std::io::Read;
-    use word_tally::input::InputReader;
 
     let temp_dir = tempfile::tempdir().unwrap();
     let file_path = temp_dir.path().join("test_io.txt");
@@ -233,7 +232,7 @@ fn test_read_trait_with_all_io_strategies() {
     let test_cases = [file_input, mmap_input, bytes_input];
 
     for input in &test_cases {
-        let mut reader = InputReader::new(input).expect("Failed to create reader");
+        let mut reader = input.reader().expect("Failed to create reader");
         let mut content = String::new();
         reader
             .read_to_string(&mut content)

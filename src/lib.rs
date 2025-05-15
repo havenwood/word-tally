@@ -458,7 +458,7 @@ impl<'a> WordTally<'a> {
     ///
     /// Streams one line at a time, avoiding needing to always hold the entire input in memory.
     fn streamed_count(input: &Input, options: &Options) -> Result<TallyMap> {
-        let reader = input::InputReader::new(input).context("Failed to create reader for input")?;
+        let reader = input.reader().context("Failed to create reader for input")?;
         let mut tally = TallyMap::with_capacity(options.performance().default_tally_map_capacity());
 
         reader.lines().try_for_each(|try_line| {
@@ -501,7 +501,7 @@ impl<'a> WordTally<'a> {
     fn par_streamed_count(input: &Input, options: &Options) -> Result<TallyMap> {
         let perf = options.performance();
         let case = options.case();
-        let reader = input::InputReader::new(input).context("Failed to create reader for input")?;
+        let reader = input.reader().context("Failed to create reader for input")?;
         let mut tally = TallyMap::with_capacity(perf.default_tally_map_capacity());
         let lines_batch_capacity = perf.lines_batch_capacity();
         let per_thread_tally_map_capacity = perf.per_thread_tally_map_capacity();
@@ -739,7 +739,7 @@ impl<'a> WordTally<'a> {
         let mut content = String::with_capacity(capacity);
 
         // Create a reader from the input
-        let mut reader = InputReader::new(input).context("Failed to create reader for input")?;
+        let mut reader = input.reader().context("Failed to create reader for input")?;
 
         // Read from the input into the presized buffer
         reader
