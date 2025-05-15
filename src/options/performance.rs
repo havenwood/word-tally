@@ -13,7 +13,7 @@ pub struct Performance {
     /// Ratio used to estimate number of unique words based on input size
     uniqueness_ratio: u8,
 
-    /// Words per kilobyte of text
+    /// Words-per-KB of text
     words_per_kb: u8,
 
     /// Size of chunks for parallel processing (in bytes)
@@ -52,7 +52,7 @@ pub struct PerformanceConfig {
     /// Ratio used to estimate number of unique words based on input size
     pub uniqueness_ratio: u8,
 
-    /// Words per kilobyte of text
+    /// Words-per-KB of text
     pub words_per_kb: u8,
 
     /// Size of chunks for parallel processing (in bytes)
@@ -167,7 +167,7 @@ impl Performance {
         self
     }
 
-    /// Set the words per kilobyte for this configuration
+    /// Set the words-per-KB for this configuration
     pub const fn with_words_per_kb(mut self, words_per_kb: u8) -> Self {
         self.words_per_kb = words_per_kb;
         self
@@ -207,7 +207,7 @@ impl Performance {
         self.uniqueness_ratio
     }
 
-    /// Get the words per kilobyte used for chunk capacity estimation
+    /// Get the words-per-KB used for chunk capacity estimation
     pub const fn words_per_kb(&self) -> u8 {
         self.words_per_kb
     }
@@ -243,7 +243,7 @@ impl Performance {
     /// Calculate `TallyMap` capacity based on input size
     ///
     /// Determines the optimal initial capacity for the `TallyMap`:
-    /// - With size hint: Calculates based on input size, words per KB, and uniqueness ratio
+    /// - With size hint: Calculates based on input size, words-per-KB, and uniqueness ratio
     /// - Without size hint: Uses the default tally map capacity
     pub const fn tally_map_capacity(&self) -> usize {
         match self.size_hint {
@@ -275,7 +275,7 @@ impl Performance {
     ///
     /// Estimates how many words might be in a chunk of text based on:
     /// - The chunk size in bytes
-    /// - The words per KB value
+    /// - The words-per-KB value
     pub const fn text_chunk_capacity(&self) -> usize {
         // Convert chunk size to KB and multiply by words per KB
         (self.chunk_size / 1024) * self.words_per_kb as usize
@@ -284,7 +284,7 @@ impl Performance {
     /// Calculate capacity for a `TallyMap` based on content length
     ///
     /// Estimates the number of unique words that might be in a text of given length:
-    /// - Calculates total words based on words per KB ratio
+    /// - Calculates total words based on words-per-KB ratio
     /// - Divides by uniqueness ratio to get estimated unique words
     pub const fn tally_map_capacity_for_content(&self, content_length: usize) -> usize {
         // Convert to KB first to avoid potential integer overflow or underflow
@@ -293,11 +293,25 @@ impl Performance {
         estimated_words / self.uniqueness_ratio as usize
     }
 
+    /// Calculate tally map capacity for buffered input
+    ///
+    /// Uses words-per-KB and uniqueness ratio to estimate capacity needs:
+    /// - Converts content size to KB
+    /// - Estimates total words based on words-per-KB ratio
+    /// - Estimates unique words using uniqueness ratio
+    pub const fn tally_map_capacity_for_buffered(&self, content_size: usize) -> usize {
+        // Calculate words estimate using KB size
+        let kb_size = content_size / 1024;
+        let total_words_estimate = kb_size * self.words_per_kb as usize;
+
+        total_words_estimate / self.uniqueness_ratio as usize
+    }
+
     /// Calculate capacity for a `TallyMap` based on line count
     ///
     /// Estimates the number of unique words based on:
     /// - Line count and average characters per line
-    /// - Words-per-KB and uniqueness ratios
+    /// - Words-per-KB and uniqueness ratio
     pub const fn tally_map_capacity_for_lines(
         &self,
         line_count: usize,
@@ -368,9 +382,34 @@ impl Performance {
         init_thread_pool(self.threads, self.verbose)
     }
 
-    /// Calculate optimal capacity for lines batch in parallel processing
-    pub fn lines_batch_capacity(&self) -> usize {
+    /// The number of estimated lines in the chunk
+    pub fn estimated_lines_per_chunk(&self) -> usize {
         (self.chunk_size() / CHARS_PER_LINE).max(128)
+    }
+
+    /// Calculate per-thread capacity for parallel buffered processing
+    ///
+    /// Given a buffered input with known line count, estimates the capacity
+    /// for each thread's `TallyMap` based on:
+    /// - Number of lines in the buffer
+    /// - Average bytes per line
+    /// - Number of threads in the pool
+    pub fn tally_map_capacity_for_buffered_lines(
+        &self,
+        content_length: usize,
+        lines_count: usize,
+    ) -> usize {
+        if lines_count == 0 {
+            return self.default_capacity;
+        }
+
+        let avg_line_length = content_length / lines_count;
+
+        // Estimate lines per thread
+        let num_threads = self.estimate_thread_pool_size();
+        let lines_per_thread = lines_count.div_ceil(num_threads);
+
+        self.tally_map_capacity_for_content(lines_per_thread * avg_line_length)
     }
 }
 
