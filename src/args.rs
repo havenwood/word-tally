@@ -16,7 +16,7 @@ use word_tally::options::{
 use word_tally::{Count, Options};
 
 /// A utility for tallying word frequencies in text.
-#[derive(Clone, Debug, Parser)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Parser)]
 #[command(
     name = "word-tally",
     author,
