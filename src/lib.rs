@@ -589,6 +589,19 @@ impl<'a> WordTally<'a> {
     }
 
     /// Parallel implementation for memory-mapped word tallying
+    ///
+    /// Uses a two-pass approach for parallel processing with mmap:
+    /// - First pass: Scans sequentially to find newline and chunk boundary positions
+    /// - Second pass: Processes each chunk in parallel, slicing on boundaries
+    ///
+    /// This approach has some benefits:
+    /// - Memory mapping gives direct file content access with OS-managed paging
+    /// - The first pass "warms" the page cache for the second
+    /// - Predetermining boundaries simplifies the parallel processing implementation
+    ///
+    /// An alternative single-pass approach could begin processing chunks during
+    /// boundary detection and not store chunk indices, but would need more complex
+    /// thread coordination.
     fn par_mmap_count(mmap: &Arc<Mmap>, options: &Options) -> Result<TallyMap> {
         let perf = options.performance();
         let case = options.case();
@@ -606,18 +619,22 @@ impl<'a> WordTally<'a> {
 
         let mut pos = chunk_size.min(total_size);
         while pos < total_size {
+            // Ensure we're at a valid UTF-8 character boundary
             while pos < total_size && !content.is_char_boundary(pos) {
                 pos += 1;
             }
 
-            // Partition chunks by newlines 'till the end
+            // Find the next newline after current position to ensure chunks end at line breaks
             if pos < total_size {
+                // Finding `\n` and not `\r\n` is okay since `\r` wont be a grapheme
                 if let Some(nl_pos) = content[pos..].find('\n') {
                     chunk_boundaries.push(pos + nl_pos + 1);
                 } else {
+                    // EOF without a trailing newline
                     break;
                 }
             } else {
+                // EOF with a trailing newline
                 break;
             }
 
@@ -628,16 +645,17 @@ impl<'a> WordTally<'a> {
         chunk_boundaries.push(total_size);
 
         // Process chunks in parallel and merge the results
+        // Each chunk is a range of bytes from `start` to `end` boundary that contains complete lines
         let tally = (0..chunk_boundaries.len() - 1)
-            .collect::<Vec<_>>()
-            .par_iter()
-            .map(|&i| {
+            .into_par_iter()
+            .map(|i| {
                 let start = chunk_boundaries[i];
                 let end = chunk_boundaries[i + 1];
                 let chunk = &content[start..end];
 
                 let mut local_tally = TallyMap::with_capacity(perf.per_thread_tally_map_capacity());
 
+                // Process each line in this chunk with `unicode_words()` via `count_words()`
                 for line in chunk.lines() {
                     Self::count_words(&mut local_tally, line, case);
                 }

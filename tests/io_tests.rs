@@ -323,5 +323,12 @@ fn test_utf8_boundary_handling() {
     let input = Input::new(file_path, options.io()).expect("Failed to create input");
     let tally = WordTally::new(&input, &options).expect("WordTally creation failed");
 
-    assert!(tally.tally().iter().map(|(word, _)| word).any(|word| word == &"æ".into()), "Missing 'æ' in results");
+    assert!(
+        tally
+            .tally()
+            .iter()
+            .map(|(word, _)| word)
+            .any(|word| word == &"æ".into()),
+        "Missing 'æ' in results"
+    );
 }
