@@ -84,10 +84,7 @@ impl Patterns {
     }
 
     /// Returns a slice of the original input patterns.
-    #[expect(
-        clippy::missing_const_for_fn,
-        reason = "Blocked by const limitations until Rust 1.87.0"
-    )]
+    #[allow(clippy::missing_const_for_fn)]
     // Make this const when `const_vec_string_slice` is fully stabilized.
     // Requires stable `Vec::as_slice` in const contexts (tracked in rust-lang/rust#129041).
     fn as_patterns(&self) -> &[String] {
@@ -143,12 +140,12 @@ impl ExcludePatterns {
     }
 
     /// Returns the number of patterns.
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.0.input_patterns.len()
     }
 
     /// Returns true if there are no patterns.
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.0.input_patterns.is_empty()
     }
 }
@@ -272,12 +269,12 @@ impl IncludePatterns {
     }
 
     /// Returns the number of patterns.
-    pub fn len(&self) -> usize {
+    pub const fn len(&self) -> usize {
         self.0.input_patterns.len()
     }
 
     /// Returns true if there are no patterns.
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.0.input_patterns.is_empty()
     }
 }

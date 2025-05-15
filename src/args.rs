@@ -88,10 +88,7 @@ pub struct Args {
 
 impl Args {
     /// Get input file path
-    #[expect(
-        clippy::missing_const_for_fn,
-        reason = "Blocked by const limitations until Rust 1.87.0"
-    )]
+    #[allow(clippy::missing_const_for_fn)]
     // Make this const when `const_vec_string_slice` is fully stabilized.
     pub fn get_input(&self) -> &str {
         &self.input

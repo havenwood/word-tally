@@ -134,7 +134,7 @@ impl Serialization {
     }
 
     /// Get the delimiter
-    pub const fn delimiter(&self) -> &String {
+    pub fn delimiter(&self) -> &str {
         &self.delimiter
     }
 }
