@@ -106,6 +106,8 @@
 //! # Ok(())
 //! # }
 //! ```
+
+use std::hash::{Hash, Hasher};
 use std::io::{BufRead, Read};
 use std::mem;
 use std::str;
@@ -148,19 +150,12 @@ pub use processing::{Processing, SizeHint, Threads};
 pub use serialization::{Format, Serialization};
 pub use sort::Sort;
 
-// Shared OnceLock for default Options
+/// A shared `OnceLock` for default `Options`.
 static DEFAULT_OPTIONS: std::sync::OnceLock<Options> = std::sync::OnceLock::new();
-
-#[derive(Deserialize)]
-struct WordTallyData {
-    tally: Tally,
-    count: Count,
-    #[serde(rename = "uniqueCount")]
-    uniq_count: Count,
-}
 
 #[derive(Debug, PartialEq, Eq)]
 #[non_exhaustive]
+/// A tally of word frequencies and counts, along with processing options.
 pub struct WordTally<'a> {
     /// Ordered pairs of words and the count of times they appear.
     tally: Tally,
@@ -175,14 +170,16 @@ pub struct WordTally<'a> {
     uniq_count: Count,
 }
 
-impl std::hash::Hash for WordTally<'_> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+/// The hash of a `WordTally` does not include its `Options`.
+impl Hash for WordTally<'_> {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         self.tally.hash(state);
         self.count.hash(state);
         self.uniq_count.hash(state);
     }
 }
 
+/// A default `WordTally` is empty with default `Options`.
 impl Default for WordTally<'static> {
     fn default() -> Self {
         Self {
@@ -194,6 +191,7 @@ impl Default for WordTally<'static> {
     }
 }
 
+/// Serializes all fields of a `WordTally` to JSON.
 impl Serialize for WordTally<'_> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -209,6 +207,21 @@ impl Serialize for WordTally<'_> {
     }
 }
 
+/// Intermediate deserialization structure to handle `WordTally` lifetime constraint.
+///
+/// This is used by `from_deserialized_data()` to to deserialize data for `from_json_str()`
+/// and `from_json_reader()`.
+#[derive(Deserialize)]
+struct WordTallyData {
+    tally: Tally,
+    count: Count,
+    #[serde(rename = "uniqueCount")]
+    uniq_count: Count,
+}
+
+/// Deserialize into a `WordTally` from JSON.
+///
+/// Warning: Does not properly deserialize `Options`. Instead, it uses a default `Options`.
 impl<'de> Deserialize<'de> for WordTally<'_> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -244,18 +257,16 @@ impl<'i> IntoIterator for &'i WordTally<'_> {
 
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
 impl<'a> WordTally<'a> {
-    /// Constructs a `WordTally` from an input source with options.
+    /// Constructs a `WordTally` from an input source and tallying options.
     ///
-    /// This constructor handles all I/O strategies (streamed, buffered, and memory-mapped)
-    /// according to the provided options and propagates any errors that may occur.
+    /// This constructor handles all I/O strategies (streamed, buffered and memory-mapped).
     ///
     /// # Errors
     ///
-    /// The constructor will return an error if:
+    /// An error will be returned if:
     /// - The input contains invalid UTF-8
     /// - An I/O error occurs while reading from the source
-    /// - Memory mapping fails when used with a non-File source
-    /// - Memory-mapped I/O with parallel processing is requested without an Input::Mmap
+    /// - Memory mapping fails (piped input will always fail)
     ///
     /// # Examples
     ///
@@ -267,22 +278,6 @@ impl<'a> WordTally<'a> {
     /// let options = Options::default();
     /// let input = Input::new("document.txt", Io::Streamed)?;
     /// let word_tally = WordTally::new(&input, &options)?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    ///
-    /// For easier testing with string or in-memory data:
-    ///
-    /// ```
-    /// use word_tally::{Options, WordTally};
-    /// use anyhow::Result;
-    /// use std::io::Cursor;
-    ///
-    /// # fn example() -> Result<()> {
-    /// let options = Options::default();
-    /// let input = Cursor::new("The quick brown fox jumps over the lazy dog");
-    /// let words = WordTally::from_reader(input, &options)?;
-    /// assert_eq!(words.count(), 9);
     /// # Ok(())
     /// # }
     /// ```
@@ -298,7 +293,7 @@ impl<'a> WordTally<'a> {
         Ok(Self::from_tally_map(tally_map, options))
     }
 
-    /// Creates a `WordTally` instance from `TallyMap` and `Options`.
+    /// Creates a `WordTally` instance from a `TallyMap` and `Options`.
     fn from_tally_map(mut tally_map: TallyMap, options: &'a Options) -> Self {
         options.filters().apply(&mut tally_map, options.case());
 
@@ -316,16 +311,6 @@ impl<'a> WordTally<'a> {
         instance.sort(options.sort());
 
         instance
-    }
-
-    /// Create `WordTally` from deserialized data
-    fn from_deserialized_data(data: WordTallyData, options: &'a Options) -> Self {
-        Self {
-            tally: data.tally,
-            options,
-            count: data.count,
-            uniq_count: data.uniq_count,
-        }
     }
 
     /// Deserializes a `WordTally` from a JSON string.
@@ -347,6 +332,16 @@ impl<'a> WordTally<'a> {
             .context("Failed to deserialize WordTally from reader")?;
 
         Ok(Self::from_deserialized_data(data, options))
+    }
+
+    /// A helper to create a `WordTally` from deserialized data.
+    fn from_deserialized_data(data: WordTallyData, options: &'a Options) -> Self {
+        Self {
+            tally: data.tally,
+            options,
+            count: data.count,
+            uniq_count: data.uniq_count,
+        }
     }
 
     /// Constructs a `WordTally` directly from any `Read` implementation.
@@ -459,34 +454,50 @@ impl<'a> WordTally<'a> {
     // Sequential I/O
     //
 
-    /// Sequential implementation for streamed word tallying
+    /// Sequential streamed word tallying.
+    ///
+    /// Streams one line at a time, avoiding needing to always hold the entire input in memory.
     fn streamed_count(input: &Input, options: &Options) -> Result<TallyMap> {
         let reader = input::InputReader::new(input).context("Failed to create reader for input")?;
-        let perf = options.performance();
-        let mut tally = TallyMap::with_capacity(perf.default_tally_map_capacity());
-        let case = options.case();
+        let mut tally = TallyMap::with_capacity(options.performance().default_tally_map_capacity());
 
         reader.lines().try_for_each(|try_line| {
             let line = try_line.context("Error reading input stream")?;
-            Self::count_words(&mut tally, &line, case);
+            Self::count_words(&mut tally, &line, options.case());
+
             Ok::<_, anyhow::Error>(())
         })?;
 
         Ok(tally)
     }
 
-    /// Sequential implementation for buffered word tallying
+    /// Sequential buffered word tallying.
+    ///
+    /// Reads the entire input into memory before processing sequentially.
     fn buffered_count(input: &Input, options: &Options) -> Result<TallyMap> {
         let buffered_input = Self::buffer_input(input, options.performance())?;
 
-        Ok(Self::process_sequential_content(&buffered_input, options))
+        let capacity = options
+            .performance()
+            .tally_map_capacity_for_content(buffered_input.len());
+        let mut tally = TallyMap::with_capacity(capacity);
+        let case = options.case();
+
+        for line in buffered_input.lines() {
+            Self::count_words(&mut tally, line, case);
+        }
+
+        Ok(tally)
     }
 
     //
     // Parallel I/O
     //
 
-    /// Parallel implementation for streamed processing
+    /// Parallel streamed word tallying.
+    ///
+    /// Streams batches of lines, processing the batches in parallel. Avoids always needing to
+    /// hold the entire input in memory.
     fn par_streamed_count(input: &Input, options: &Options) -> Result<TallyMap> {
         let perf = options.performance();
         let case = options.case();
@@ -588,7 +599,7 @@ impl<'a> WordTally<'a> {
         Ok(tally)
     }
 
-    /// Parallel implementation for memory-mapped word tallying
+    /// Parallel memory-mapped word tallying.
     ///
     /// Uses a two-pass approach for parallel processing with mmap:
     /// - First pass: Scans sequentially to find newline and chunk boundary positions
@@ -597,7 +608,7 @@ impl<'a> WordTally<'a> {
     /// This approach has some benefits:
     /// - Memory mapping gives direct file content access with OS-managed paging
     /// - The first pass "warms" the page cache for the second
-    /// - Predetermining boundaries simplifies the parallel processing implementation
+    /// - Predetermined boundaries simplify the parallel processing implementation
     ///
     /// An alternative single-pass approach could begin processing chunks during
     /// boundary detection and not store chunk indices, but would need more complex
@@ -665,7 +676,7 @@ impl<'a> WordTally<'a> {
             .reduce(
                 || TallyMap::with_capacity(perf.default_tally_map_capacity()),
                 |mut a, b| {
-                    // Optimize merging by always merging the smaller map into the larger one
+                    // Merge the smaller map into the larger one
                     if a.len() < b.len() {
                         let mut merged = b;
                         merged.reserve(a.len());
@@ -682,25 +693,26 @@ impl<'a> WordTally<'a> {
         Ok(tally)
     }
 
-    /// Parallel implementation for buffered word tallying
+    /// Parallel buffered word tallying.
+    ///
+    /// Reads the entire input into memory before processing in parallel.
     fn par_buffered_count(input: &Input, options: &Options) -> Result<TallyMap> {
         let perf = options.performance();
         let buffered_input = Self::buffer_input(input, perf)?;
-        let case = options.case();
 
         let tally = buffered_input
             .par_lines()
             .fold(
                 || TallyMap::with_capacity(perf.per_thread_tally_map_capacity()),
                 |mut tally, line| {
-                    Self::count_words(&mut tally, line, case);
+                    Self::count_words(&mut tally, line, options.case());
                     tally
                 },
             )
             .reduce(
                 || TallyMap::with_capacity(perf.default_tally_map_capacity()),
                 |mut a, b| {
-                    // Optimize by merging smaller map into larger
+                    // Merge the smaller map into the larger
                     if a.len() < b.len() {
                         let mut merged = b;
                         merged.reserve(a.len());
@@ -721,16 +733,15 @@ impl<'a> WordTally<'a> {
     // Helpers
     //
 
-    /// Reads from input into a String
+    /// Reads from the `Input` into a `String`.
     fn buffer_input(input: &Input, performance: &Performance) -> Result<String> {
         let capacity = performance.content_buffer_capacity();
         let mut content = String::with_capacity(capacity);
 
-        // Create a reader for this input
-        let mut reader =
-            input::InputReader::new(input).context("Failed to create reader for input")?;
+        // Create a reader from the input
+        let mut reader = InputReader::new(input).context("Failed to create reader for input")?;
 
-        // Read from the input into the string
+        // Read from the input into the presized buffer
         reader
             .read_to_string(&mut content)
             .context("Failed to read input into buffer")?;
@@ -738,7 +749,7 @@ impl<'a> WordTally<'a> {
         Ok(content)
     }
 
-    /// Counts words in a byte slice and adds them to the tally map
+    /// Counts words in a byte slice and adds them to the tally map.
     fn count_words(tally: &mut TallyMap, line: &str, case: Case) {
         for word in line.unicode_words() {
             let normalized = case.normalize(word);
@@ -746,20 +757,7 @@ impl<'a> WordTally<'a> {
         }
     }
 
-    fn process_sequential_content(content: &str, options: &Options) -> TallyMap {
-        let capacity = options
-            .performance()
-            .tally_map_capacity_for_content(content.len());
-        let mut tally = TallyMap::with_capacity(capacity);
-        let case = options.case();
-
-        for line in content.lines() {
-            Self::count_words(&mut tally, line, case);
-        }
-
-        tally
-    }
-
+    /// Merging two subtallies, combining their counts.
     fn merge_counts(dest: &mut TallyMap, source: TallyMap) {
         for (word, count) in source {
             *dest.entry(word).or_insert(0) += count;
