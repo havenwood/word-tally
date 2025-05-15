@@ -1,5 +1,5 @@
 use word_tally::Filters;
-use word_tally::filters::ExcludeWordsList;
+use word_tally::options::filters::ExcludeWordsList;
 use word_tally::patterns::InputPatterns;
 
 #[test]

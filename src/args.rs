@@ -4,15 +4,16 @@ use anyhow::{Context, Result};
 use clap::Parser;
 use std::path::PathBuf;
 
-use word_tally::Count;
-use word_tally::case::Case;
-use word_tally::filters::Filters;
-use word_tally::io::Io;
-use word_tally::options::Options;
-use word_tally::performance::Performance;
-use word_tally::processing::{Processing, SizeHint};
-use word_tally::serialization::{Format, Serialization};
-use word_tally::sort::Sort;
+use word_tally::options::{
+    case::Case,
+    filters::Filters,
+    io::Io,
+    performance::Performance,
+    processing::{Processing, SizeHint},
+    serialization::{Format, Serialization},
+    sort::Sort,
+};
+use word_tally::{Count, Options};
 
 /// A utility for tallying word frequencies in text.
 #[derive(Clone, Debug, Parser)]

@@ -1,5 +1,4 @@
-use word_tally::serialization::Format;
-use word_tally::{Case, Options};
+use word_tally::{Case, Format, Options};
 
 #[test]
 fn test_options_format_default() {

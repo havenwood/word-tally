@@ -3,10 +3,9 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use word_tally::input::Input;
 use word_tally::output::Output;
-use word_tally::serialization::{Format, Serialization};
 use word_tally::{
-    Case, Count, ExcludeWords, Filters, Io, Options, Performance, Processing, SizeHint, Sort,
-    Tally, Word, WordTally,
+    Case, Count, ExcludeWords, Filters, Format, Io, Options, Performance, Processing,
+    Serialization, SizeHint, Sort, Tally, Word, WordTally,
 };
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";

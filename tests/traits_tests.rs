@@ -1,8 +1,12 @@
 use std::path::PathBuf;
-use word_tally::serialization::{Format, Serialization};
-use word_tally::{
-    Input, Io, Options, Performance, Processing, SizeHint, Threads, filters::ExcludeWords,
+use word_tally::options::{
+    filters::ExcludeWords,
+    io::Io,
+    performance::Performance,
+    processing::{Processing, SizeHint, Threads},
+    serialization::{Format, Serialization},
 };
+use word_tally::{Input, Options};
 
 #[test]
 fn test_display_implementations() {
@@ -126,5 +130,5 @@ fn test_input_display() {
 fn test_const_format_fn() {
     let options = Options::default();
     let format = options.serialization().format();
-    assert_eq!(format, word_tally::serialization::Format::Text);
+    assert_eq!(format, Format::Text);
 }

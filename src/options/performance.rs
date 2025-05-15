@@ -1,6 +1,6 @@
 //! Configuration for word tallying performance.
 
-use crate::processing::{SizeHint, Threads, init_thread_pool, parse_threads_from_env};
+use crate::options::processing::{SizeHint, Threads, init_thread_pool, parse_threads_from_env};
 use core::fmt;
 use serde::{Deserialize, Serialize};
 

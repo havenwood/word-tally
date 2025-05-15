@@ -1,6 +1,7 @@
 //! Sorting options for word tallying results.
 
-use crate::{Processing, WordTally};
+use crate::WordTally;
+use crate::options::processing::Processing;
 use clap::ValueEnum;
 use core::cmp::Reverse;
 use core::fmt::{self, Display, Formatter};

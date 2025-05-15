@@ -1,6 +1,6 @@
 //! Write trait abstractions for stdout and file serialization.
 
-use crate::serialization::Format;
+use crate::options::serialization::Format;
 use anyhow::{Context, Result};
 use std::fmt::{self, Debug, Formatter};
 use std::fs::File;

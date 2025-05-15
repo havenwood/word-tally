@@ -18,7 +18,7 @@ fn calc_per_thread_capacity(total_capacity: usize) -> usize {
 
 #[test]
 fn test_capacity_allocation() {
-    use word_tally::performance::TALLY_MAP_CAPACITY;
+    use word_tally::options::performance::TALLY_MAP_CAPACITY;
 
     // Create options with parallel processing
     let options = Arc::new(Options::default().with_processing(Processing::Parallel));

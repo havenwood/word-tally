@@ -107,11 +107,12 @@
 //! # }
 //! ```
 
-use std::hash::Hash;
-use std::io::{BufRead, Read};
-use std::mem;
-use std::str;
-use std::sync::Arc;
+use std::{
+    hash::Hash,
+    io::{BufRead, Read},
+    mem, str,
+    sync::Arc,
+};
 
 use anyhow::{Context, Result};
 use indexmap::IndexMap;
@@ -120,35 +121,30 @@ use rayon::prelude::*;
 use serde::{self, Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 
+pub mod errors;
+pub mod input;
+pub mod options;
+pub mod output;
+pub mod patterns;
+
+pub use input::{Input, InputReader};
+pub use options::{
+    Options,
+    case::Case,
+    filters::{ExcludeWords, Filters, MinChars, MinCount},
+    io::Io,
+    performance::Performance,
+    processing::{Processing, SizeHint, Threads},
+    serialization::{Format, Serialization},
+    sort::Sort,
+};
+pub use output::Output;
+pub use patterns::{ExcludePatterns, IncludePatterns};
+
 pub type Count = usize;
 pub type Word = Box<str>;
 pub type Tally = Box<[(Word, Count)]>;
 pub type TallyMap = IndexMap<Word, Count>;
-
-pub mod case;
-pub mod errors;
-pub mod filters;
-pub mod input;
-pub mod io;
-pub mod options;
-pub mod output;
-pub mod patterns;
-pub mod performance;
-pub mod processing;
-pub mod serialization;
-pub mod sort;
-
-pub use case::Case;
-pub use filters::{ExcludeWords, Filters, MinChars, MinCount};
-pub use input::{Input, InputReader};
-pub use io::Io;
-pub use options::Options;
-pub use output::Output;
-pub use patterns::{ExcludePatterns, IncludePatterns};
-pub use performance::Performance;
-pub use processing::{Processing, SizeHint, Threads};
-pub use serialization::{Format, Serialization};
-pub use sort::Sort;
 
 /// A shared `OnceLock` for default `Options`.
 static DEFAULT_OPTIONS: std::sync::OnceLock<Options> = std::sync::OnceLock::new();

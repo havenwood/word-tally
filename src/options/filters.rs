@@ -1,7 +1,8 @@
 //! Filtering words based on length, frequency, patterns and exclusion lists.
 
+use crate::options::case::Case;
 use crate::patterns::{ExcludePatterns, IncludePatterns, InputPatterns};
-use crate::{Case, Count, TallyMap};
+use crate::{Count, TallyMap};
 
 use anyhow::{Context, Result};
 use core::fmt::{self, Display, Formatter};

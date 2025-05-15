@@ -42,14 +42,22 @@
 //! - `WORD_TALLY_UNIQUENESS_RATIO`: Capacity estimation (default: 10)
 //! - `WORD_TALLY_WORD_DENSITY`: Per-chunk map capacity (default: 15)
 
-use crate::case::Case;
-use crate::filters::Filters;
-use crate::io::Io;
-use crate::performance::Performance;
-use crate::processing::{Processing, SizeHint, Threads};
-use crate::serialization::Format;
-use crate::serialization::Serialization;
-use crate::sort::Sort;
+pub mod case;
+pub mod filters;
+pub mod io;
+pub mod performance;
+pub mod processing;
+pub mod serialization;
+pub mod sort;
+
+use self::case::Case;
+use self::filters::Filters;
+use self::io::Io;
+use self::performance::Performance;
+use self::processing::{Processing, SizeHint, Threads};
+use self::serialization::Format;
+use self::serialization::Serialization;
+use self::sort::Sort;
 use core::fmt;
 use serde::{Deserialize, Serialize};
 

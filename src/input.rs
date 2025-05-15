@@ -1,6 +1,6 @@
 //! Read trait abstractions for files, stdin or memory-mapped I/O.
 
-use crate::io::Io;
+use crate::options::io::Io;
 use anyhow::{Context, Result};
 use memmap2::Mmap;
 use std::fs::{self, File};

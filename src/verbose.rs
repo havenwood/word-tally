@@ -4,9 +4,8 @@ use crate::output::Output;
 use anyhow::{Context, Result};
 use serde::Serialize;
 use std::fmt::{Debug, Display};
-use word_tally::serialization::Format;
 use word_tally::{
-    Case, Count, ExcludePatterns, ExcludeWords, IncludePatterns, Io, MinChars, MinCount,
+    Case, Count, ExcludePatterns, ExcludeWords, Format, IncludePatterns, Io, MinChars, MinCount,
     Processing, Sort, WordTally,
 };
 
