@@ -15,7 +15,7 @@ use word_tally::serialization::{Format, Serialization};
 use word_tally::sort::Sort;
 
 /// A utility for tallying word frequencies in text.
-#[derive(Parser, Debug)]
+#[derive(Clone, Debug, Parser)]
 #[command(
     name = "word-tally",
     author,

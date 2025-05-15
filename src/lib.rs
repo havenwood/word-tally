@@ -153,7 +153,7 @@ pub use sort::Sort;
 /// A shared `OnceLock` for default `Options`.
 static DEFAULT_OPTIONS: std::sync::OnceLock<Options> = std::sync::OnceLock::new();
 
-#[derive(Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq)]
 #[non_exhaustive]
 /// A tally of word frequencies and counts, along with processing options.
 pub struct WordTally<'a> {
