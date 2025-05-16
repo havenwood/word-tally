@@ -1,7 +1,7 @@
 //! Filtering words based on length, frequency, patterns and exclusion lists.
 
 use crate::options::case::Case;
-use crate::patterns::{ExcludePatterns, IncludePatterns, InputPatterns};
+use crate::options::patterns::{ExcludePatterns, IncludePatterns, InputPatterns};
 use crate::{Count, TallyMap};
 
 use anyhow::{Context, Result};
@@ -49,7 +49,7 @@ impl Filters {
     ///
     /// ```
     /// use word_tally::{Case, Filters, WordTally, Options, Input, Io, Processing};
-    /// use word_tally::patterns::InputPatterns;
+    /// use word_tally::options::patterns::InputPatterns;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// // Sample text with various words
     /// let text = "My life closed twice before its close; \

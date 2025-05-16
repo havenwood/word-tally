@@ -127,9 +127,9 @@ pub mod errors;
 pub mod input;
 pub mod options;
 pub mod output;
-pub mod patterns;
 
 pub use input::{Input, InputReader};
+pub use options::patterns::{ExcludePatterns, IncludePatterns, InputPatterns};
 pub use options::{
     Options,
     case::Case,
@@ -141,7 +141,6 @@ pub use options::{
     sort::Sort,
 };
 pub use output::Output;
-pub use patterns::{ExcludePatterns, IncludePatterns};
 
 pub type Count = usize;
 pub type Word = Box<str>;

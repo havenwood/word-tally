@@ -1,6 +1,6 @@
 use word_tally::Filters;
+use word_tally::InputPatterns;
 use word_tally::options::filters::ExcludeWordsList;
-use word_tally::patterns::InputPatterns;
 
 #[test]
 fn test_filters_new() {

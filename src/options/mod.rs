@@ -45,6 +45,7 @@
 pub mod case;
 pub mod filters;
 pub mod io;
+pub mod patterns;
 pub mod performance;
 pub mod processing;
 pub mod serialization;
