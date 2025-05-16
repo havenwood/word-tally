@@ -302,57 +302,6 @@ impl<'a> WordTally<'a> {
         instance
     }
 
-    /// Constructs a `WordTally` directly from any `Read` implementation.
-    ///
-    /// This constructor is useful for testing or working with in-memory data.
-    /// It uses the I/O strategy specified in the options.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - The input contains invalid UTF-8
-    /// - An I/O error occurs while reading from the source
-    /// - Memory-mapped I/O is requested (this method only supports streamed or buffered I/O)
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use word_tally::{Options, WordTally};
-    /// use anyhow::Result;
-    /// use std::io::Cursor;
-    ///
-    /// # fn example() -> Result<()> {
-    /// let options = Options::default();
-    /// let input = Cursor::new("The quick brown fox");
-    /// let words = WordTally::from_reader(input, &options)?;
-    /// assert_eq!(words.count(), 4);
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn from_reader<R: Read + Send + Sync>(mut reader: R, options: &'a Options) -> Result<Self> {
-        // Initialize thread pool if parallel processing
-        if matches!(options.processing(), Processing::Parallel) {
-            options.performance().init_thread_pool();
-        }
-
-        // Memory-mapped I/O doesn't work with generic readers
-        if matches!(options.io(), Io::MemoryMapped) {
-            anyhow::bail!(
-                "Memory-mapped I/O is not supported with from_reader(). Use streamed or buffered I/O instead."
-            );
-        }
-
-        // Create a bytes input from the reader content
-        let mut bytes = Vec::new();
-        reader
-            .read_to_end(&mut bytes)
-            .context("Failed to read from provided reader")?;
-        let input = Input::from_bytes(bytes);
-
-        let tally_map = Self::tally_map_from(&input, options)?;
-        Ok(Self::from_tally_map(tally_map, options))
-    }
-
     /// Gets the `tally` field.
     pub fn tally(&self) -> &[(Word, Count)] {
         &self.tally
