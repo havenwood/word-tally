@@ -239,7 +239,7 @@ impl Filters {
     fn format_exclude_words(words: &[String]) -> Result<ExcludeWordsList> {
         words
             .iter()
-            .map(|w| unescape(w).with_context(|| format!("Failed to unescape: {w}")))
+            .map(|w| unescape(w).with_context(|| format!("failed to unescape: {w}")))
             .collect()
     }
 }

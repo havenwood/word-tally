@@ -149,13 +149,13 @@ impl Args {
         if let Some(exclude_patterns) = &self.exclude {
             filters = filters
                 .with_exclude_patterns(exclude_patterns)
-                .with_context(|| "Failed to create exclude patterns")?;
+                .context("failed to create exclude patterns")?;
         }
 
         if let Some(include_patterns) = &self.include {
             filters = filters
                 .with_include_patterns(include_patterns)
-                .with_context(|| "Failed to create include patterns")?;
+                .context("failed to create include patterns")?;
         }
 
         Ok(filters)

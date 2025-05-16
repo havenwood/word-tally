@@ -111,6 +111,7 @@
 use std::{
     hash::Hash,
     io::{BufRead, Read},
+    path::Path,
     str,
     sync::Arc,
 };
@@ -345,10 +346,10 @@ impl<'a> WordTally<'a> {
 
             // Parallel processing
             (Processing::Parallel, Io::MemoryMapped) => {
-                let Input::Mmap(mmap_arc, _) = input else {
+                let Input::Mmap(mmap_arc, path) = input else {
                     unreachable!("This will only be called with `Input::Mmap(Arc<Mmap>, PathBuf)`.")
                 };
-                Self::par_mmap_count(mmap_arc, options)
+                Self::par_mmap_count(mmap_arc, path, options)
             }
             (Processing::Parallel, Io::Streamed) => Self::par_streamed_count(input, options),
             (Processing::Parallel, Io::Buffered | Io::Bytes) => {
@@ -367,15 +368,20 @@ impl<'a> WordTally<'a> {
     fn streamed_count(input: &Input, options: &Options) -> Result<TallyMap> {
         let reader = input
             .reader()
-            .context("Failed to create reader for input")?;
+            .with_context(|| format!("failed to create reader for input: {}", input))?;
         let mut tally = TallyMap::with_capacity(options.performance().capacity(input.size()));
 
-        reader.lines().try_for_each(|try_line| {
-            let line = try_line.context("Error reading input stream")?;
-            Self::count_words(&mut tally, &line, options.case());
+        reader
+            .lines()
+            .enumerate()
+            .try_for_each(|(line_num, try_line)| {
+                let line = try_line.with_context(|| {
+                    format!("failed to read line {} from: {}", line_num + 1, input)
+                })?;
+                Self::count_words(&mut tally, &line, options.case());
 
-            Ok::<_, anyhow::Error>(())
-        })?;
+                Ok::<_, anyhow::Error>(())
+            })?;
 
         Ok(tally)
     }
@@ -408,7 +414,7 @@ impl<'a> WordTally<'a> {
         let case = options.case();
         let reader = input
             .reader()
-            .context("Failed to create reader for input")?;
+            .with_context(|| format!("failed to create reader for input: {}", input))?;
         let estimated_lines_per_chunk = perf.lines_per_chunk();
         let mut tally = TallyMap::with_capacity(perf.capacity(input.size()));
 
@@ -446,26 +452,33 @@ impl<'a> WordTally<'a> {
         let mut batch_of_lines = Vec::with_capacity(estimated_lines_per_chunk);
         let mut accumulated_bytes = 0;
 
-        reader.lines().try_for_each(|try_line| {
-            let line = try_line.context("Error reading input stream")?;
+        reader
+            .lines()
+            .enumerate()
+            .try_for_each(|(line_num, try_line)| {
+                let line = try_line.with_context(|| {
+                    format!("failed to read line {} from: {}", line_num + 1, input)
+                })?;
 
-            // Track memory used by this line
-            accumulated_bytes += line.len();
-            batch_of_lines.push(line);
+                // Track memory used by this line
+                accumulated_bytes += line.len();
+                batch_of_lines.push(line);
 
-            // Process batch when it reaches target memory threshold
-            if accumulated_bytes >= perf.chunk_size {
-                // Last batch's size rather than estimation to better match input pattern
-                let current_batch_size = batch_of_lines.len();
-                // Swap out the full batch for an empty one, reusing the previous capacity
-                let full_batch_of_lines =
-                    std::mem::replace(&mut batch_of_lines, Vec::with_capacity(current_batch_size));
-                process_batch(full_batch_of_lines);
-                accumulated_bytes = 0;
-            }
+                // Process batch when it reaches target memory threshold
+                if accumulated_bytes >= perf.chunk_size {
+                    // Last batch's size rather than estimation to better match input pattern
+                    let current_batch_size = batch_of_lines.len();
+                    // Swap out the full batch for an empty one, reusing the previous capacity
+                    let full_batch_of_lines = std::mem::replace(
+                        &mut batch_of_lines,
+                        Vec::with_capacity(current_batch_size),
+                    );
+                    process_batch(full_batch_of_lines);
+                    accumulated_bytes = 0;
+                }
 
-            Ok::<_, anyhow::Error>(())
-        })?;
+                Ok::<_, anyhow::Error>(())
+            })?;
 
         // Process any remaining lines in the final batch
         if !batch_of_lines.is_empty() {
@@ -485,13 +498,24 @@ impl<'a> WordTally<'a> {
     /// An alternative single-pass approach could begin processing chunks during
     /// boundary detection and not store chunk indices, but would need more complex
     /// thread coordination.
-    fn par_mmap_count(mmap: &Arc<Mmap>, options: &Options) -> Result<TallyMap> {
+    fn par_mmap_count(mmap: &Arc<Mmap>, path: &Path, options: &Options) -> Result<TallyMap> {
         let perf = options.performance();
         let case = options.case();
         let chunk_size = perf.chunk_size;
 
         // This provides a view into the content rather than copying
-        let content = str::from_utf8(mmap).context("Memory-mapped file contains invalid UTF-8")?;
+        let content = match str::from_utf8(mmap) {
+            Ok(content) => content,
+            Err(e) => {
+                return Err(e).with_context(|| {
+                    format!(
+                        "invalid UTF-8 at byte offset {} from: {}",
+                        e.valid_up_to(),
+                        path.display()
+                    )
+                });
+            }
+        };
         let total_size = content.len();
         let num_chunks = total_size.div_ceil(chunk_size);
 
@@ -577,9 +601,9 @@ impl<'a> WordTally<'a> {
         let mut buffer = String::with_capacity(buffer_capacity);
         input
             .reader()
-            .context("Failed to create reader for input")?
+            .with_context(|| format!("failed to create reader for input: {}", input))?
             .read_to_string(&mut buffer)
-            .context("Failed to read input into buffer")?;
+            .with_context(|| format!("failed to read input into buffer: {}", input))?;
 
         Ok(buffer)
     }

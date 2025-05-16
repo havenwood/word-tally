@@ -38,7 +38,7 @@ fn test_permission_denied_error() {
         .failure()
         .code(77) // Permission denied code
         .stderr(predicate::str::contains(
-            "Error: Failed to create output file:",
+            "Error: failed to create output file:",
         ));
 
     // Clean up
@@ -72,6 +72,6 @@ fn test_nonexistent_path_error() {
         .failure()
         .code(66) // No input code (also used for not found errors)
         .stderr(predicate::str::contains(
-            "Error: Failed to create output file:",
+            "Error: failed to create output file:",
         ));
 }

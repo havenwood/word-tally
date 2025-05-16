@@ -181,8 +181,9 @@ impl<'de> Deserialize<'de> for ExcludePatterns {
         use serde::de::Error;
         let input_patterns: InputPatterns = Vec::deserialize(deserializer)?;
 
-        Self::new(input_patterns)
-            .map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
+        Self::new(input_patterns).map_err(|e| {
+            D::Error::custom(format!("failed to compile exclude regex patterns: {}", e))
+        })
     }
 }
 
@@ -310,8 +311,9 @@ impl<'de> Deserialize<'de> for IncludePatterns {
         use serde::de::Error;
         let input_patterns: InputPatterns = Vec::deserialize(deserializer)?;
 
-        Self::new(input_patterns)
-            .map_err(|e| D::Error::custom(format!("Error compiling regex: {}", e)))
+        Self::new(input_patterns).map_err(|e| {
+            D::Error::custom(format!("failed to compile include regex patterns: {}", e))
+        })
     }
 }
 

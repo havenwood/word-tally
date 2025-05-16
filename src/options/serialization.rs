@@ -82,7 +82,7 @@ impl fmt::Display for Serialization {
 impl Serialization {
     /// Helper function to unescape a delimiter string
     fn format_delimiter(delimiter: &str) -> Result<String> {
-        unescape(delimiter).with_context(|| format!("Failed to unescape delimiter: {}", delimiter))
+        unescape(delimiter).with_context(|| format!("failed to unescape delimiter: {}", delimiter))
     }
 
     /// Create a new Serialize instance with specified settings

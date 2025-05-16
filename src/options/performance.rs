@@ -266,7 +266,7 @@ impl Threads {
                     .build_global()
                     .map_err(|e| {
                         anyhow::anyhow!(
-                            "Failed to configure thread pool with {} threads: {}",
+                            "failed to configure thread pool with {} threads: {}",
                             count,
                             e
                         )

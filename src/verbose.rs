@@ -188,12 +188,12 @@ impl<'v, 'a> Verbose<'v, 'a> {
     fn build_csv_data(&self) -> Result<String> {
         let mut wtr = csv::Writer::from_writer(Vec::new());
         wtr.write_record(["metric", "value"])
-            .with_context(|| "Failed to write CSV header")?;
+            .context("failed to write CSV header")?;
 
         // Helper to write records with automatic conversion to string
         let mut write_record = |name: &str, value: &dyn Display| -> Result<()> {
             wtr.write_record([name, &value.to_string()])
-                .with_context(|| format!("Failed to write CSV record for '{name}'"))
+                .with_context(|| format!("failed to write CSV record for '{name}'"))
         };
 
         // Core metrics
@@ -230,11 +230,9 @@ impl<'v, 'a> Verbose<'v, 'a> {
             &Self::format_option_str(self.include_patterns),
         )?;
 
-        let buffer = wtr
-            .into_inner()
-            .with_context(|| "Failed to extract CSV data")?;
+        let buffer = wtr.into_inner().context("failed to extract CSV data")?;
 
-        String::from_utf8(buffer).with_context(|| "Failed to convert CSV data to UTF-8")
+        String::from_utf8(buffer).context("failed to convert CSV data to UTF-8")
     }
 
     /// Log verbose details in text format.
@@ -245,7 +243,7 @@ impl<'v, 'a> Verbose<'v, 'a> {
         if self.tally.count() > 0 {
             self.output
                 .write_line("\n")
-                .with_context(|| "Failed to write newline separator")?;
+                .context("failed to write newline separator")?;
         }
 
         Ok(())
@@ -256,21 +254,21 @@ impl<'v, 'a> Verbose<'v, 'a> {
         let csv_data = self.build_csv_data()?;
         self.output
             .write_line(&csv_data)
-            .with_context(|| "Failed to write CSV data")?;
+            .context("failed to write CSV data")?;
         self.output
             .write_line("\n")
-            .with_context(|| "Failed to write trailing newline")?;
+            .context("failed to write trailing newline")?;
 
         Ok(())
     }
 
     /// Log verbose details in JSON format.
     pub fn log_json(&mut self) -> Result<()> {
-        let json = serde_json::to_string(self)
-            .with_context(|| "Failed to serialize verbose info to JSON")?;
+        let json =
+            serde_json::to_string(self).context("failed to serialize verbose info to JSON")?;
         self.output
             .write_line(&format!("{json}\n"))
-            .with_context(|| "Failed to write JSON output")?;
+            .context("failed to write JSON output")?;
 
         Ok(())
     }

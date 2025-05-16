@@ -120,7 +120,7 @@ impl InputReader {
             Input::Stdin => Ok(Self::Stdin(BufReader::new(io::stdin()))),
             Input::File(path) => {
                 let file = File::open(path).map_err(|e| {
-                    io::Error::new(e.kind(), format!("Failed to read from: {}", path.display()))
+                    io::Error::new(e.kind(), format!("failed to read from: {}", path.display()))
                 })?;
 
                 Ok(Self::File(BufReader::new(file)))
@@ -184,7 +184,7 @@ impl Input {
                 let path_buf = path_ref.to_path_buf();
                 let file = File::open(&path_buf).with_context(|| {
                     format!(
-                        "Failed to open file for memory mapping: {}",
+                        "failed to open file for memory mapping: {}",
                         path_buf.display()
                     )
                 })?;

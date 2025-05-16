@@ -54,7 +54,7 @@ impl Output {
     pub fn file(path: &Path) -> Result<Self> {
         let file = File::create(path)
             .map(|file| Box::new(LineWriter::new(file)) as Writer)
-            .with_context(|| format!("Failed to create output file: {}", path.display()))?;
+            .with_context(|| format!("failed to create output file: {}", path.display()))?;
         Ok(Self { writer: file })
     }
 
@@ -102,7 +102,7 @@ impl Output {
                         .map(|(word, count)| (word.as_ref(), count))
                         .collect::<Vec<_>>(),
                 )
-                .with_context(|| "Failed to serialize word tally to JSON")?;
+                .context("failed to serialize word tally to JSON")?;
                 self.write_line(&format!("{json}\n"))?;
             }
             Format::Csv => {
@@ -112,7 +112,7 @@ impl Output {
                     wtr.write_record([word.as_ref(), &count.to_string()])?;
                 }
                 let csv_data = String::from_utf8(wtr.into_inner()?)
-                    .with_context(|| "Failed to convert CSV output to UTF-8 string")?;
+                    .context("failed to convert CSV output to UTF-8 string")?;
                 self.write_line(&csv_data)?;
             }
         }
