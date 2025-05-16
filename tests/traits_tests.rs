@@ -1,8 +1,9 @@
 use std::path::PathBuf;
+use word_tally::Threads;
 use word_tally::options::{
     filters::ExcludeWords,
     io::Io,
-    performance::{Performance, Threads},
+    performance::Performance,
     processing::Processing,
     serialization::{Format, Serialization},
 };

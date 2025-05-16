@@ -50,15 +50,17 @@ pub mod performance;
 pub mod processing;
 pub mod serialization;
 pub mod sort;
+pub mod threads;
 
 use self::case::Case;
 use self::filters::Filters;
 use self::io::Io;
-use self::performance::{Performance, Threads};
+use self::performance::Performance;
 use self::processing::Processing;
 use self::serialization::Format;
 use self::serialization::Serialization;
 use self::sort::Sort;
+use self::threads::Threads;
 use core::fmt;
 use serde::{Deserialize, Serialize};
 

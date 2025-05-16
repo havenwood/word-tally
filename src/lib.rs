@@ -135,10 +135,11 @@ pub use options::{
     case::Case,
     filters::{ExcludeWords, Filters, MinChars, MinCount},
     io::Io,
-    performance::{Performance, Threads},
+    performance::Performance,
     processing::Processing,
     serialization::{Format, Serialization},
     sort::Sort,
+    threads::Threads,
 };
 pub use output::Output;
 
