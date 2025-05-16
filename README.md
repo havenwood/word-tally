@@ -4,7 +4,7 @@
 [![docs.rs](https://img.shields.io/docsrs/word-tally?style=for-the-badge&link=https%3A%2F%2Fdocs.rs%2Fword-tally%2Flatest%2Fword_tally%2F)](https://docs.rs/word-tally/latest/word_tally/)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/havenwood/word-tally/rust.yml?style=for-the-badge)](https://github.com/havenwood/word-tally/actions/workflows/rust.yml)
 
-Output a tally of the number of times unique unicode words appear in a source. Provides a command line and Rust library interface. I/O is streamed by default, but buffered and memory-mapped I/O are also supported to optimize for different file sizes and workloads. Memory-mapping is only supported for files with seekable file descriptors. Parallel processing can be enabled to take advantage of multiple CPU cores through parallelizing I/O processing and sorting.
+Output a tally of the number of times unique unicode words appear in a source. Provides a command line and Rust library interface. I/O is streamed by default, but buffered and memory-mapped I/O are also supported to optimize for different file sizes and workloads. Memory-mapping is only supported for files with seekable file descriptors. Optionally take advantage of multiple CPU cores through parellization of sorting, memory-mapped file I/O and word counting.
 
 ## Installation
 
@@ -40,57 +40,25 @@ Options:
 
 ## Examples
 
-### Basic usage
-
-```sh
-word-tally README.md | head -n3
-#>> word 48
-#>> tally 47
-#>> default 24
-
-echo "one two two three three three" | word-tally
-#>> three 3
-#>> two 2
-#>> one 1
-
-echo "one two two three three three" | word-tally --verbose
-#>> source -
-#>> total-words 6
-#>> unique-words 3
-#>> delimiter " "
-#>> case lower
-#>> order desc
-#>> processing sequential
-#>> io streamed
-#>> min-chars none
-#>> min-count none
-#>> exclude-words none
-#>> exclude-patterns none
-#>>
-#>> three 3
-#>> two 2
-#>> one 1
-```
-
 ### I/O & parallelization
 
-word-tally supports various combinations of I/O modes and parallel processing:
+word-tally uses sequental, streamed processing by default but supports parallel processing for memory-mapped, streamed and fully-buffered I/O. The different modes have different performance and memory usage characteristics.
 
 ```sh
-# Streamed I/O from stdin (`--io=streamed` is default unless another I/O is specified)
-output | word-tally
+# Streamed I/O from stdin (`--io=streamed` is default)
+echo "tally me" | word-tally
 
-# Streamed I/O from file
+# Streamed I/O from a file
 word-tally file.txt
 
-# Streamed I/O with parallel processing
-word-tally --parallel document.txt
+# Memory-mapped I/O with efficient parallel processing (requires a file rather than stdin)
+word-tally --io=mmap --parallel document.txt
 
 # Buffered I/O with parallel processing
 word-tally --io=buffered --parallel document.txt
 
-# Memory-mapped I/O with efficient parallel processing (requires a file rather than stdin)
-word-tally --io=mmap --parallel document.txt
+# Streamed I/O with parallel processing
+word-tally --io=streamed --parallel document.txt
 ```
 
 The `--io=mmap` memory-mapped processing mode only works with files and cannot be used with piped input. Parallel processing with memory mapping can be very efficient but mmap requires a file with a seekable file descriptor.
@@ -184,7 +152,29 @@ word-tally --include="^w.*" --include=".*o$" --exclude="^who$" file.txt
 word-tally --exclude-words="the,a,an,and,or,but" file.txt
 ```
 
-## Environment Variables
+### Verbose output
+
+```sh
+echo "fe fi fi fo fo fo" | word-tally --verbose
+#>> source -
+#>> total-words 6
+#>> unique-words 3
+#>> delimiter " "
+#>> case lower
+#>> order desc
+#>> processing sequential
+#>> io streamed
+#>> min-chars none
+#>> min-count none
+#>> exclude-words none
+#>> exclude-patterns none
+#>>
+#>> fo 3
+#>> fi 2
+#>> fe 1
+```
+
+## Environment variables
 
 The following environment variables configure various aspects of the library:
 
@@ -205,7 +195,7 @@ Parallel processing configuration:
 - `WORD_TALLY_THREADS` - Number of threads for parallel processing (default: all available cores)
 - `WORD_TALLY_CHUNK_SIZE` - Size of chunks for parallel processing in bytes (default: 65536)
 
-## Library Usage
+## Library usage
 
 ```toml
 [dependencies]
@@ -238,13 +228,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
-The library supports customization including case normalization, sorting, filtering, and I/O and processing strategies.
+The library supports case normalization, sorting, filtering and I/O and processing strategies.
 
-## Stability Notice
+## Stability notice
 
 **Pre-release level stability**: This is prerelease software. Expect breaking interface changes at MINOR version (0.x.0) bumps until there is a stable release.
 
-## Tests & Benchmarks
+## Tests & benchmarks
+
+### Tests
 
 Clone the repository.
 
