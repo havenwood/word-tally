@@ -53,8 +53,8 @@ pub mod sort;
 use self::case::Case;
 use self::filters::Filters;
 use self::io::Io;
-use self::performance::Performance;
-use self::processing::{Processing, SizeHint, Threads};
+use self::performance::{Performance, Threads};
+use self::processing::Processing;
 use self::serialization::Format;
 use self::serialization::Serialization;
 use self::sort::Sort;
@@ -202,12 +202,6 @@ impl Options {
         self
     }
 
-    /// Set size hint for capacity optimization
-    pub const fn with_size_hint(mut self, size_hint: SizeHint) -> Self {
-        self.performance = self.performance.with_size_hint(size_hint);
-        self
-    }
-
     /// Set thread count for parallel processing
     pub const fn with_threads(mut self, threads: Threads) -> Self {
         self.performance = self.performance.with_threads(threads);
@@ -216,7 +210,7 @@ impl Options {
 
     /// Set default capacity for TallyMap
     pub const fn with_capacity(mut self, capacity: usize) -> Self {
-        self.performance = self.performance.with_tally_map_capacity(capacity);
+        self.performance = self.performance.with_base_stdin_tally_capacity(capacity);
         self
     }
 

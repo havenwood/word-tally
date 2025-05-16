@@ -134,8 +134,8 @@ pub use options::{
     case::Case,
     filters::{ExcludeWords, Filters, MinChars, MinCount},
     io::Io,
-    performance::{CHARS_PER_LINE, Performance},
-    processing::{Processing, SizeHint, Threads},
+    performance::{Performance, Threads},
+    processing::Processing,
     serialization::{Format, Serialization},
     sort::Sort,
 };
@@ -273,7 +273,7 @@ impl<'a> WordTally<'a> {
     pub fn new(input: &Input, options: &'a Options) -> Result<Self> {
         // Initialize thread pool if parallel processing
         if matches!(options.processing(), Processing::Parallel) {
-            options.performance().init_thread_pool();
+            options.performance().threads.init_pool()?;
         }
 
         // Generate the tally map from the input
@@ -368,7 +368,7 @@ impl<'a> WordTally<'a> {
         let reader = input
             .reader()
             .context("Failed to create reader for input")?;
-        let mut tally = TallyMap::with_capacity(options.performance().tally_map_capacity());
+        let mut tally = TallyMap::with_capacity(options.performance().capacity(input.size()));
 
         reader.lines().try_for_each(|try_line| {
             let line = try_line.context("Error reading input stream")?;
@@ -385,15 +385,12 @@ impl<'a> WordTally<'a> {
     /// Reads the entire input into memory before processing sequentially.
     fn buffered_count(input: &Input, options: &Options) -> Result<TallyMap> {
         let perf = options.performance();
-        let buffered_input = Self::buffer_input(input, perf)?;
-
-        let capacity = perf.tally_map_capacity_for_buffered(buffered_input.len());
-        let mut tally = TallyMap::with_capacity(capacity);
         let case = options.case();
+        let content = Self::read_input_to_string(input, perf)?;
+        let capacity = perf.capacity(Some(content.len()));
+        let mut tally = TallyMap::with_capacity(capacity);
 
-        buffered_input.lines().for_each(|line| {
-            Self::count_words(&mut tally, line, case);
-        });
+        Self::count_words(&mut tally, &content, case);
 
         Ok(tally)
     }
@@ -412,8 +409,8 @@ impl<'a> WordTally<'a> {
         let reader = input
             .reader()
             .context("Failed to create reader for input")?;
-        let estimated_lines_per_chunk = perf.estimated_lines_per_chunk();
-        let mut tally = TallyMap::with_capacity(perf.tally_map_capacity());
+        let estimated_lines_per_chunk = perf.lines_per_chunk();
+        let mut tally = TallyMap::with_capacity(perf.capacity(input.size()));
 
         // Helper closure to process accumulated lines and merge into tally
         let mut process_batch = |batch: Vec<String>| {
@@ -423,7 +420,7 @@ impl<'a> WordTally<'a> {
 
             // Calculate batch size in bytes for better capacity estimation
             let batch_size_bytes = batch.iter().map(|s| s.len()).sum();
-            let batch_capacity = perf.tally_map_capacity_for_content(batch_size_bytes);
+            let batch_capacity = perf.capacity(Some(batch_size_bytes));
 
             // Process batch in parallel - let Rayon handle work distribution
             let batch_result = batch
@@ -457,7 +454,7 @@ impl<'a> WordTally<'a> {
             batch_of_lines.push(line);
 
             // Process batch when it reaches target memory threshold
-            if accumulated_bytes >= perf.chunk_size() {
+            if accumulated_bytes >= perf.chunk_size {
                 // Last batch's size rather than estimation to better match input pattern
                 let current_batch_size = batch_of_lines.len();
                 // Swap out the full batch for an empty one, reusing the previous capacity
@@ -491,7 +488,7 @@ impl<'a> WordTally<'a> {
     fn par_mmap_count(mmap: &Arc<Mmap>, options: &Options) -> Result<TallyMap> {
         let perf = options.performance();
         let case = options.case();
-        let chunk_size = perf.chunk_size();
+        let chunk_size = perf.chunk_size;
 
         // This provides a view into the content rather than copying
         let content = str::from_utf8(mmap).context("Memory-mapped file contains invalid UTF-8")?;
@@ -519,10 +516,10 @@ impl<'a> WordTally<'a> {
 
         // Calculate optimal capacities for better memory usage
         let avg_chunk_size = total_size / num_chunks.max(1);
-        let per_chunk_capacity = perf.tally_map_capacity_for_content(avg_chunk_size);
+        let per_chunk_capacity = perf.capacity(Some(avg_chunk_size));
 
         // Calculate optimal capacity for the final reduced `TallyMap`
-        let reduce_capacity = perf.tally_map_capacity();
+        let reduce_capacity = perf.capacity(Some(mmap.len()));
 
         let tally = chunk_boundaries
             .windows(2)
@@ -550,19 +547,19 @@ impl<'a> WordTally<'a> {
     fn par_buffered_count(input: &Input, options: &Options) -> Result<TallyMap> {
         let case = options.case();
         let perf = options.performance();
-        let buffered_input = Self::buffer_input(input, perf)?;
+        let content = Self::read_input_to_string(input, perf)?;
 
-        let tally = buffered_input
+        let tally = content
             .par_lines()
             .fold(
-                || TallyMap::with_capacity(perf.per_thread_tally_map_capacity()),
+                || TallyMap::with_capacity(perf.capacity_per_thread()),
                 |mut tally, line| {
                     Self::count_words(&mut tally, line, case);
                     tally
                 },
             )
             .reduce_with(Self::merge_tally_maps)
-            .unwrap_or_else(|| TallyMap::with_capacity(perf.tally_map_capacity()));
+            .unwrap_or_else(|| TallyMap::with_capacity(perf.capacity(Some(content.len()))));
 
         Ok(tally)
     }
@@ -571,22 +568,20 @@ impl<'a> WordTally<'a> {
     // Helpers
     //
 
-    /// Reads from the `Input` into a `String`.
-    fn buffer_input(input: &Input, performance: &Performance) -> Result<String> {
-        let capacity = performance.content_buffer_capacity();
-        let mut content = String::with_capacity(capacity);
+    /// Reads the entire input into a string buffer.
+    fn read_input_to_string(input: &Input, perf: &Performance) -> Result<String> {
+        // Use actual size if available; otherwise use base_stdin_size() for unknown inputs
+        let buffer_capacity = input.size().unwrap_or(perf.base_stdin_size);
 
-        // Create a reader from the input
-        let mut reader = input
+        // Read entire input into memory
+        let mut buffer = String::with_capacity(buffer_capacity);
+        input
             .reader()
-            .context("Failed to create reader for input")?;
-
-        // Read from the input into the presized buffer
-        reader
-            .read_to_string(&mut content)
+            .context("Failed to create reader for input")?
+            .read_to_string(&mut buffer)
             .context("Failed to read input into buffer")?;
 
-        Ok(content)
+        Ok(buffer)
     }
 
     /// Counts words in a byte slice and adds them to the tally map.

@@ -12,7 +12,7 @@ use crate::output::Output;
 use anyhow::Result;
 use args::Args;
 use clap::Parser;
-use word_tally::{SizeHint, WordTally};
+use word_tally::WordTally;
 
 fn main() {
     match run() {
@@ -28,10 +28,8 @@ fn run() -> Result<()> {
     // Parse arguments and prepare an input reader
     let args = Args::parse();
 
-    let initial_options = args.get_options(SizeHint::default())?;
-    let input = Input::new(args.get_input(), initial_options.io())?;
-    let size_hint = input.size().map_or_else(SizeHint::default, SizeHint::Bytes);
-    let options = args.get_options(size_hint)?;
+    let options = args.get_options()?;
+    let input = Input::new(args.get_input(), options.io())?;
 
     let source = input.source();
     let word_tally = WordTally::new(&input, &options)?;

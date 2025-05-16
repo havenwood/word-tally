@@ -2,8 +2,8 @@ use std::path::PathBuf;
 use word_tally::options::{
     filters::ExcludeWords,
     io::Io,
-    performance::Performance,
-    processing::{Processing, SizeHint, Threads},
+    performance::{Performance, Threads},
+    processing::Processing,
     serialization::{Format, Serialization},
 };
 use word_tally::{Input, Options};
@@ -20,12 +20,25 @@ fn test_display_implementations() {
     assert_eq!(format!("{}", Processing::Parallel), "parallel");
 
     // Test Threads Display
-    assert_eq!(format!("{}", Threads::All), "all");
+    // For Threads::All, expect the actual number of threads from Rayon
+    let all_threads_str = format!("{}", Threads::All);
+    assert!(
+        all_threads_str.parse::<usize>().is_ok(),
+        "Threads::All should display as a number"
+    );
     assert_eq!(format!("{}", Threads::Count(4)), "4");
 
-    // Test SizeHint Display
-    assert_eq!(format!("{}", SizeHint::None), "none");
-    assert_eq!(format!("{}", SizeHint::Bytes(1024)), "1024 bytes");
+    // Test Performance Display
+    let perf = Performance::default();
+    let display = format!("{}", perf);
+    assert!(display.contains("Performance {"));
+    assert!(display.contains("tally_capacity"));
+    assert!(display.contains("uniqueness"));
+    assert!(display.contains("words/kb"));
+    assert!(display.contains("chunk"));
+    assert!(display.contains("stdin_size"));
+    assert!(display.contains("threads"));
+    assert!(display.contains("verbose"));
 }
 
 #[test]
@@ -82,7 +95,7 @@ fn test_wordtally_deserialize() {
             "filters": {"min_chars": null, "min_count": null, "exclude_words": [], "exclude_patterns": [], "include_patterns": []},
             "io": "Streamed",
             "processing": "Sequential",
-            "performance": {"default_capacity": 16384, "uniqueness_ratio": 10, "words_per_kb": 200, "chunk_size": 65536, "size_hint": "None", "threads": "All", "verbose": false}
+            "performance": {"base_stdin_tally_capacity": 5120, "uniqueness_ratio": 10, "words_per_kb": 200, "chunk_size": 65536, "base_stdin_size": 262144, "threads": "All", "verbose": false}
         },
         "count": 8,
         "uniqueCount": 2

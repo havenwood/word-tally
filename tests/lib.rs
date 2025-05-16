@@ -5,7 +5,7 @@ use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
     Case, Count, ExcludeWords, Filters, Format, Io, Options, Performance, Processing,
-    Serialization, SizeHint, Sort, Tally, Word, WordTally,
+    Serialization, Sort, Tally, Word, WordTally,
 };
 
 const TEST_WORDS_PATH: &str = "tests/files/words.txt";
@@ -682,124 +682,29 @@ fn test_memory_mapped_vs_streamed() {
 }
 
 #[test]
-fn test_with_size_hint() {
-    let input_text = b"The quick brown fox jumps over the lazy dog.";
+fn test_capacity_calculation() {
+    // Test capacity calculation with different input sizes
+    let performance = Performance::default();
+
+    // Test with known size (file input)
+    assert_eq!(performance.capacity(Some(8192)), 160); // (8KB / 1024 * 200) / 10 = 160
+    assert_eq!(performance.capacity(Some(524288)), 10240); // (512KB / 1024 * 200) / 10
+    assert_eq!(performance.capacity(Some(4194304)), 81920); // (4MB / 1024 * 200) / 10
+
+    // Test with unknown size (stdin)
+    assert_eq!(performance.capacity(None), 5120); // default_capacity
+
+    // Test actual file processing
+    let input_text = b"test data";
     let mut temp_file = tempfile::NamedTempFile::new().unwrap();
     std::io::Write::write_all(&mut temp_file, input_text).unwrap();
-    let file_path = temp_file.path().to_str().unwrap();
 
-    // Without size hint
-    let no_hint_performance = Performance::default().with_size_hint(SizeHint::default());
-    let filters = Filters::default();
-    let no_hint_options = Options::new(
-        Case::default(),
-        Sort::default(),
-        Serialization::default(),
-        filters.clone(),
-        Io::Streamed,
-        Processing::Parallel,
-        no_hint_performance,
-    );
+    let options = Options::default();
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
+        .expect("Failed to create input");
 
-    let no_hint_input =
-        Input::new(file_path, no_hint_options.io()).expect("Failed to create input without hint");
-
-    let without_hint = WordTally::new(&no_hint_input, &no_hint_options)
-        .expect("Failed to create WordTally without hint");
-
-    // With size hint
-    let with_hint_performance =
-        Performance::default().with_size_hint(SizeHint::Bytes(input_text.len()));
-    let with_hint_options = Options::new(
-        Case::default(),
-        Sort::default(),
-        Serialization::default(),
-        filters,
-        Io::Streamed,
-        Processing::Parallel,
-        with_hint_performance,
-    );
-
-    let with_hint_input =
-        Input::new(file_path, with_hint_options.io()).expect("Failed to create input with hint");
-
-    let with_hint = WordTally::new(&with_hint_input, &with_hint_options)
-        .expect("Failed to create WordTally with hint");
-
-    assert_eq!(without_hint.count(), with_hint.count());
-    assert_eq!(without_hint.uniq_count(), with_hint.uniq_count());
-    assert_eq!(without_hint.tally(), with_hint.tally());
-}
-
-#[test]
-fn test_estimate_capacity() {
-    // Create temporary files
-    let mut small_temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut small_temp_file, b"small text").unwrap();
-    let small_path = small_temp_file.path().to_str().unwrap();
-
-    let mut medium_temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut medium_temp_file, b"medium text").unwrap();
-    let medium_path = medium_temp_file.path().to_str().unwrap();
-
-    let mut large_temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut large_temp_file, b"large text").unwrap();
-    let large_path = large_temp_file.path().to_str().unwrap();
-
-    // Small file (8KB hint)
-    let small_performance = Performance::default().with_size_hint(SizeHint::Bytes(8192)); // 8KB
-    let small_options = Options::with_defaults(
-        Case::default(),
-        Sort::default(),
-        Serialization::default(),
-        Io::Streamed,
-        Processing::Sequential,
-        small_performance,
-    );
-
-    let small_input =
-        Input::new(small_path, small_options.io()).expect("Failed to create small input");
-
-    let small_file =
-        WordTally::new(&small_input, &small_options).expect("Failed to create small WordTally");
-
-    // Medium file (512KB hint)
-    let medium_performance = Performance::default().with_size_hint(SizeHint::Bytes(524288)); // 512KB
-    let medium_options = Options::with_defaults(
-        Case::default(),
-        Sort::default(),
-        Serialization::default(),
-        Io::Streamed,
-        Processing::Sequential,
-        medium_performance,
-    );
-
-    let medium_input =
-        Input::new(medium_path, medium_options.io()).expect("Failed to create medium input");
-
-    let medium_file =
-        WordTally::new(&medium_input, &medium_options).expect("Failed to create medium WordTally");
-
-    // Large file (4MB hint)
-    let large_performance = Performance::default().with_size_hint(SizeHint::Bytes(4194304)); // 4MB
-    let large_options = Options::with_defaults(
-        Case::default(),
-        Sort::default(),
-        Serialization::default(),
-        Io::Streamed,
-        Processing::Sequential,
-        large_performance,
-    );
-
-    let large_input =
-        Input::new(large_path, large_options.io()).expect("Failed to create large input");
-
-    let large_file =
-        WordTally::new(&large_input, &large_options).expect("Failed to create large WordTally");
-
-    assert_eq!(small_file.count(), 2);
-    assert_eq!(medium_file.count(), 2);
-    assert_eq!(large_file.count(), 2);
+    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    assert_eq!(tally.count(), 2);
 }
 
 #[test]
@@ -886,40 +791,24 @@ mod performance_tests {
     #[test]
     fn default_values() {
         let performance = Performance::default();
-        assert_eq!(performance.tally_map_capacity(), 16384);
-        assert_eq!(performance.uniqueness_ratio(), 10);
-        assert_eq!(performance.words_per_kb(), 200);
-        assert_eq!(performance.chunk_size(), 65_536);
+        assert_eq!(performance.capacity(None), 5120);
+        assert_eq!(performance.uniqueness_ratio, 10);
+        assert_eq!(performance.words_per_kb, 200);
+        assert_eq!(performance.chunk_size, 65_536);
     }
 
     #[test]
     fn builder_methods() {
         let performance = Performance::default()
-            .with_tally_map_capacity(2048)
+            .with_base_stdin_tally_capacity(2048)
             .with_uniqueness_ratio(5)
             .with_words_per_kb(20)
             .with_chunk_size(32_768);
 
-        assert_eq!(performance.tally_map_capacity(), 2048);
-        assert_eq!(performance.uniqueness_ratio(), 5);
-        assert_eq!(performance.words_per_kb(), 20);
-        assert_eq!(performance.chunk_size(), 32_768);
-    }
-
-    #[test]
-    fn estimate_capacity() {
-        let performance = Performance::default();
-
-        // Default when no size hint
-        assert_eq!(performance.tally_map_capacity(), 16384);
-
-        // (Size hint / 1024 * words_per_kb) / uniqueness ratio (10)
-        assert_eq!(
-            performance
-                .with_size_hint(SizeHint::Bytes(8192))
-                .tally_map_capacity(),
-            160 // (8192 / 1024 * 200) / 10 = 160
-        );
+        assert_eq!(performance.capacity(None), 2048);
+        assert_eq!(performance.uniqueness_ratio, 5);
+        assert_eq!(performance.words_per_kb, 20);
+        assert_eq!(performance.chunk_size, 32_768);
     }
 }
 

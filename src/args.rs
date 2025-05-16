@@ -9,7 +9,7 @@ use word_tally::options::{
     filters::Filters,
     io::Io,
     performance::Performance,
-    processing::{Processing, SizeHint},
+    processing::Processing,
     serialization::{Format, Serialization},
     sort::Sort,
 };
@@ -105,7 +105,7 @@ impl Args {
     }
 
     /// Parse command-line arguments and convert them to word-tally `Options`.
-    pub fn get_options(&self, size_hint: SizeHint) -> Result<Options> {
+    pub fn get_options(&self) -> Result<Options> {
         let serialization = Serialization::new(self.format, &self.delimiter)?;
         let filters = self.get_filters()?;
 
@@ -116,9 +116,7 @@ impl Args {
             Processing::Sequential
         };
 
-        let performance = Performance::default()
-            .with_size_hint(size_hint)
-            .with_verbose(self.verbose);
+        let performance = Performance::from_env().with_verbose(self.verbose);
 
         // Create Options with case, sort, serialization, filters, io, processing, and performance
         Ok(Options::new(

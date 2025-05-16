@@ -18,23 +18,23 @@ fn calc_per_thread_capacity(total_capacity: usize) -> usize {
 
 #[test]
 fn test_capacity_allocation() {
-    use word_tally::options::performance::TALLY_MAP_CAPACITY;
+    use word_tally::options::performance::BASE_STDIN_TALLY_CAPACITY;
 
     // Create options with parallel processing
     let options = Arc::new(Options::default().with_processing(Processing::Parallel));
     let perf = options.performance();
 
     // Get the capacity values
-    let base_capacity = perf.tally_map_capacity();
-    println!("TallyMap capacity constant: {}", TALLY_MAP_CAPACITY);
+    let base_capacity = perf.capacity(None);
+    println!("TallyMap capacity constant: {}", BASE_STDIN_TALLY_CAPACITY);
     println!("Estimated tally map capacity: {}", base_capacity);
 
     // Test thread-local map capacity calculation
-    let thread_local_capacity = perf.per_thread_tally_map_capacity();
+    let thread_local_capacity = perf.capacity_per_thread();
     println!("Thread local map capacity: {}", thread_local_capacity);
 
     // Create maps with both capacities
-    let main_map = TallyMap::with_capacity(TALLY_MAP_CAPACITY);
+    let main_map = TallyMap::with_capacity(BASE_STDIN_TALLY_CAPACITY);
     let thread_local_map = TallyMap::with_capacity(thread_local_capacity);
 
     println!(
@@ -46,17 +46,31 @@ fn test_capacity_allocation() {
     // Calculate ideal thread-local capacity
     let num_threads = get_thread_count();
     println!("Number of threads: {}", num_threads);
-    let calculated_thread_capacity = calc_per_thread_capacity(TALLY_MAP_CAPACITY);
+    let calculated_thread_capacity = calc_per_thread_capacity(BASE_STDIN_TALLY_CAPACITY);
     println!(
         "Calculated per-thread capacity: {}",
         calculated_thread_capacity
     );
 
-    // Verify thread_local_capacity matches calculated value
-    assert_eq!(
-        thread_local_capacity, calculated_thread_capacity,
-        "Thread-local capacity should match calculated value"
+    // Verify thread_local_capacity has the expected minimum of 1024
+    // The actual implementation has a minimum capacity of 1024
+    assert!(
+        thread_local_capacity >= 1024,
+        "Thread-local capacity should be at least 1024"
     );
+
+    // The calculated value might be lower than the actual implementation's minimum
+    if calculated_thread_capacity < 1024 {
+        assert_eq!(
+            thread_local_capacity, 1024,
+            "Thread-local capacity should be the minimum value of 1024"
+        );
+    } else {
+        assert_eq!(
+            thread_local_capacity, calculated_thread_capacity,
+            "Thread-local capacity should match calculated value"
+        );
+    }
 
     // Now simulate map growth with different capacities
     println!("\n--- Simulating map growth ---");
@@ -68,7 +82,7 @@ fn test_capacity_allocation() {
 
     // Compare with using full capacity
     let start_time = Instant::now();
-    perform_word_counting_simulation(TALLY_MAP_CAPACITY, "Full capacity");
+    perform_word_counting_simulation(BASE_STDIN_TALLY_CAPACITY, "Full capacity");
     let full_capacity_elapsed = start_time.elapsed();
 
     println!(
