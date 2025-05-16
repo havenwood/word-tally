@@ -7,9 +7,6 @@ use serde::{Deserialize, Serialize};
 /// # Performance tuning configuration parameters
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Performance {
-    /// Base stdin capacity for `TallyMap` (`IndexMap`) when no size hint is available
-    pub base_stdin_tally_capacity: usize,
-
     /// Ratio used to estimate number of unique words based on input size
     pub uniqueness_ratio: u8,
 
@@ -29,13 +26,9 @@ pub struct Performance {
     pub verbose: bool,
 }
 
-/// Default configuration value for export
-pub const BASE_STDIN_TALLY_CAPACITY: usize = 5120; // ~5k unique words
-
 impl Default for Performance {
     fn default() -> Self {
         Self {
-            base_stdin_tally_capacity: BASE_STDIN_TALLY_CAPACITY,
             uniqueness_ratio: Self::UNIQUENESS_RATIO,
             words_per_kb: Self::WORDS_PER_KB,
             chunk_size: Self::CHUNK_SIZE,
@@ -73,14 +66,8 @@ impl Performance {
         *CONFIG.get_or_init(|| {
             let base_stdin_size =
                 Self::parse_env_var(Self::ENV_STDIN_BUFFER_SIZE, Self::BASE_STDIN_SIZE);
-            let stdin_capacity = Self::calculate_capacity_static(
-                base_stdin_size,
-                Self::WORDS_PER_KB,
-                Self::UNIQUENESS_RATIO,
-            );
 
             Self {
-                base_stdin_tally_capacity: stdin_capacity,
                 uniqueness_ratio: Self::parse_env_var(
                     Self::ENV_UNIQUENESS_RATIO,
                     Self::UNIQUENESS_RATIO,
@@ -97,12 +84,6 @@ impl Performance {
     /// Set the base stdin size for unknown-sized inputs
     pub const fn with_base_stdin_size(mut self, size: usize) -> Self {
         self.base_stdin_size = size;
-        self
-    }
-
-    /// Create a new configuration with custom base stdin tally capacity setting
-    pub const fn with_base_stdin_tally_capacity(mut self, capacity: usize) -> Self {
-        self.base_stdin_tally_capacity = capacity;
         self
     }
 
@@ -155,9 +136,14 @@ impl Performance {
     /// Estimated capacity based on input size
     pub const fn capacity(&self, input_size: Option<usize>) -> usize {
         match input_size {
-            None => self.base_stdin_tally_capacity,
+            None => Self::base_stdin_tally_capacity(),
             Some(size) => self.calculate_capacity(size),
         }
+    }
+
+    /// Default configuration value for export
+    pub const fn base_stdin_tally_capacity() -> usize {
+        Self::BASE_STDIN_SIZE / 1024 * Self::WORDS_PER_KB as usize / Self::UNIQUENESS_RATIO as usize
     }
 
     /// Estimated lines per chunk based on chunk size and average line length
@@ -169,12 +155,12 @@ impl Performance {
     /// Capacity for each thread in parallel processing
     pub fn capacity_per_thread(&self) -> usize {
         let thread_count = self.threads.count();
-        let per_thread = self.base_stdin_tally_capacity / thread_count;
+        let per_thread = Self::base_stdin_tally_capacity() / thread_count;
 
         // Give each thread a reasonable minimum capacity, but don't exceed total
         per_thread
             .max(Self::MIN_THREAD_CAPACITY)
-            .min(self.base_stdin_tally_capacity)
+            .min(Self::base_stdin_tally_capacity())
     }
 
     //
@@ -218,7 +204,7 @@ impl fmt::Display for Performance {
         write!(
             f,
             "Performance {{ tally_capacity: {}, uniqueness: {}, words/kb: {}, chunk: {}, stdin_size: {}, threads: {}, verbose: {} }}",
-            self.base_stdin_tally_capacity,
+            Self::base_stdin_tally_capacity(),
             self.uniqueness_ratio,
             self.words_per_kb,
             self.chunk_size,

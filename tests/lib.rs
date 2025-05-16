@@ -800,12 +800,11 @@ mod performance_tests {
     #[test]
     fn builder_methods() {
         let performance = Performance::default()
-            .with_base_stdin_tally_capacity(2048)
             .with_uniqueness_ratio(5)
             .with_words_per_kb(20)
             .with_chunk_size(32_768);
 
-        assert_eq!(performance.capacity(None), 2048);
+        assert_eq!(performance.capacity(None), 5120);
         assert_eq!(performance.uniqueness_ratio, 5);
         assert_eq!(performance.words_per_kb, 20);
         assert_eq!(performance.chunk_size, 32_768);

@@ -40,7 +40,7 @@ fn test_thread_configuration() {
 fn test_size_hint_methods() {
     // Test different size hints
     let no_hint_perf = Performance::default();
-    assert_eq!(no_hint_perf.capacity(None), 5120); // Default capacity based on BASE_STDIN_TALLY_CAPACITY
+    assert_eq!(no_hint_perf.capacity(None), 5120); // Default capacity based on Performance::base_stdin_tally_capacity()
 
     // Test with size hint
     let with_hint = Performance::default();

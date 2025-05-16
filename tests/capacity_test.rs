@@ -18,7 +18,7 @@ fn calc_per_thread_capacity(total_capacity: usize) -> usize {
 
 #[test]
 fn test_capacity_allocation() {
-    use word_tally::options::performance::BASE_STDIN_TALLY_CAPACITY;
+    use word_tally::options::performance::Performance;
 
     // Create options with parallel processing
     let options = Arc::new(Options::default().with_processing(Processing::Parallel));
@@ -26,7 +26,10 @@ fn test_capacity_allocation() {
 
     // Get the capacity values
     let base_capacity = perf.capacity(None);
-    println!("TallyMap capacity constant: {}", BASE_STDIN_TALLY_CAPACITY);
+    println!(
+        "TallyMap capacity constant: {}",
+        Performance::base_stdin_tally_capacity()
+    );
     println!("Estimated tally map capacity: {}", base_capacity);
 
     // Test thread-local map capacity calculation
@@ -34,7 +37,7 @@ fn test_capacity_allocation() {
     println!("Thread local map capacity: {}", thread_local_capacity);
 
     // Create maps with both capacities
-    let main_map = TallyMap::with_capacity(BASE_STDIN_TALLY_CAPACITY);
+    let main_map = TallyMap::with_capacity(Performance::base_stdin_tally_capacity());
     let thread_local_map = TallyMap::with_capacity(thread_local_capacity);
 
     println!(
@@ -46,7 +49,8 @@ fn test_capacity_allocation() {
     // Calculate ideal thread-local capacity
     let num_threads = get_thread_count();
     println!("Number of threads: {}", num_threads);
-    let calculated_thread_capacity = calc_per_thread_capacity(BASE_STDIN_TALLY_CAPACITY);
+    let calculated_thread_capacity =
+        calc_per_thread_capacity(Performance::base_stdin_tally_capacity());
     println!(
         "Calculated per-thread capacity: {}",
         calculated_thread_capacity
@@ -82,7 +86,7 @@ fn test_capacity_allocation() {
 
     // Compare with using full capacity
     let start_time = Instant::now();
-    perform_word_counting_simulation(BASE_STDIN_TALLY_CAPACITY, "Full capacity");
+    perform_word_counting_simulation(Performance::base_stdin_tally_capacity(), "Full capacity");
     let full_capacity_elapsed = start_time.elapsed();
 
     println!(

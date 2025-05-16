@@ -211,12 +211,6 @@ impl Options {
         self
     }
 
-    /// Set default capacity for TallyMap
-    pub const fn with_capacity(mut self, capacity: usize) -> Self {
-        self.performance = self.performance.with_base_stdin_tally_capacity(capacity);
-        self
-    }
-
     /// Set uniqueness ratio for capacity estimation
     pub const fn with_uniqueness_ratio(mut self, ratio: u8) -> Self {
         self.performance = self.performance.with_uniqueness_ratio(ratio);
