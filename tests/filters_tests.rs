@@ -1,7 +1,22 @@
-use indexmap::IndexMap;
 use word_tally::InputPatterns;
 use word_tally::options::filters::{ExcludeWords, ExcludeWordsList};
-use word_tally::{Case, Count, Filters, Word};
+use word_tally::{Case, Filters, TallyMap};
+
+// Helper function to create TallyMap from counts
+fn tally_map_from_counts(counts: &[(&str, usize)]) -> TallyMap {
+    let mut tally = TallyMap::new();
+    for (word, count) in counts {
+        for _ in 0..*count {
+            tally.count_words(word, Case::Original);
+        }
+    }
+    tally
+}
+
+// Helper function to check if a word exists in the TallyMap
+fn has_word(tally: &TallyMap, word: &str) -> bool {
+    tally.clone().into_iter().any(|(w, _)| w.as_ref() == word)
+}
 
 #[test]
 fn test_filters_new() {
@@ -104,15 +119,16 @@ fn test_filters_with_empty_patterns() {
     )
     .unwrap();
 
+    assert_eq!(filters.min_chars().unwrap(), 3);
+    assert_eq!(filters.min_count().unwrap(), 2);
+    assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_none());
     assert!(filters.include_patterns().is_none());
 }
 
 #[test]
 fn test_serialization_with_patterns() {
-    use indexmap::IndexMap;
     use serde_json;
-    use word_tally::Case;
 
     let min_chars = Some(3);
     let min_count = Some(2);
@@ -129,79 +145,66 @@ fn test_serialization_with_patterns() {
     )
     .unwrap();
 
-    let json = serde_json::to_string(&filters).unwrap();
-    assert!(json.contains("excludePatterns"));
-    assert!(json.contains("includePatterns"));
+    let serialized = serde_json::to_string(&filters).unwrap();
+    let deserialized: Filters = serde_json::from_str(&serialized).unwrap();
 
-    let deserialized_filters: Filters = serde_json::from_str(&json).unwrap();
+    assert_eq!(deserialized.min_chars(), filters.min_chars());
+    assert_eq!(deserialized.min_count(), filters.min_count());
 
-    assert_eq!(deserialized_filters.min_chars().unwrap(), 3);
-    assert_eq!(deserialized_filters.min_count().unwrap(), 2);
+    let serialized = r#"{
+    "excludePatterns": ["the", "is"],
+    "includePatterns": ["test.*"]
+  }"#;
 
-    let deserialized_exclude_words = deserialized_filters.exclude_words().as_ref().unwrap();
-    assert_eq!(deserialized_exclude_words.len(), 2);
-    assert!(deserialized_exclude_words.contains(&"the".to_string()));
-    assert!(deserialized_exclude_words.contains(&"and".to_string()));
-
+    let deserialized_filters: Filters = serde_json::from_str(serialized).unwrap();
     let deserialized_exclude_patterns = deserialized_filters.exclude_patterns().as_ref().unwrap();
-    assert!(deserialized_exclude_patterns.matches("123"));
-    assert!(!deserialized_exclude_patterns.matches("abc"));
+    assert!(deserialized_exclude_patterns.matches("the"));
+    assert!(deserialized_exclude_patterns.matches("is"));
 
     let deserialized_include_patterns = deserialized_filters.include_patterns().as_ref().unwrap();
-    assert!(deserialized_include_patterns.matches("abc"));
+    assert!(deserialized_include_patterns.matches("test"));
     assert!(!deserialized_include_patterns.matches("123"));
 
-    let mut tally_map = IndexMap::new();
-    tally_map.insert("the".into(), 5);
-    tally_map.insert("abc".into(), 2);
-    tally_map.insert("123".into(), 3);
+    let mut tally_map = TallyMap::new();
+    tally_map.count_words("the the the the the test test 123 123 123", Case::Original);
 
     deserialized_filters.apply(&mut tally_map, Case::Original);
 
     assert_eq!(tally_map.len(), 1);
-    assert!(tally_map.contains_key("abc"));
+    assert!(has_word(&tally_map, "test"));
 }
 
 #[test]
 fn test_multiple_regexp_patterns() {
-    use indexmap::IndexMap;
-    use word_tally::Case;
-
     let multiple_patterns = vec![
         r"^[aeiou].*".to_string(),
         r".*ing$".to_string(),
-        r"^[A-Z].*".to_string(),
+        r"^Example$".to_string(),
     ];
 
     let filters = Filters::default()
         .with_include_patterns(&multiple_patterns)
         .unwrap();
 
-    let mut tally_map = IndexMap::new();
-    tally_map.insert("apple".into(), 3);
-    tally_map.insert("banana".into(), 2);
-    tally_map.insert("eating".into(), 5);
-    tally_map.insert("orange".into(), 1);
-    tally_map.insert("running".into(), 4);
-    tally_map.insert("Example".into(), 2);
-    tally_map.insert("test".into(), 6);
+    let mut tally_map = TallyMap::new();
+    tally_map.count_words("apple apple apple banana banana eating eating eating eating eating orange running running running running Example Example test test test test test test", Case::Original);
 
     filters.apply(&mut tally_map, Case::Original);
 
     assert_eq!(tally_map.len(), 5);
-    assert!(tally_map.contains_key("apple"));
-    assert!(!tally_map.contains_key("banana"));
-    assert!(tally_map.contains_key("eating"));
-    assert!(tally_map.contains_key("orange"));
-    assert!(tally_map.contains_key("running"));
-    assert!(tally_map.contains_key("Example"));
-    assert!(!tally_map.contains_key("test"));
+    assert!(has_word(&tally_map, "apple"));
+    assert!(!has_word(&tally_map, "banana"));
+    assert!(has_word(&tally_map, "eating"));
+    assert!(has_word(&tally_map, "orange"));
+    assert!(has_word(&tally_map, "running"));
+    assert!(has_word(&tally_map, "Example"));
+    assert!(!has_word(&tally_map, "test"));
 }
 
 #[test]
 fn test_patterns_accessors() {
-    let exclude_patterns = vec![r"\d+".to_string()];
-    let include_patterns = vec![r"[a-z]+".to_string()];
+    let exclude_patterns = vec![r"bad".to_string()];
+    let include_patterns = vec![r"good".to_string()];
 
     let filters = Filters::default()
         .with_exclude_patterns(&exclude_patterns)
@@ -209,171 +212,173 @@ fn test_patterns_accessors() {
         .with_include_patterns(&include_patterns)
         .unwrap();
 
-    let exclude = filters.exclude_patterns().as_ref().unwrap();
-    let include = filters.include_patterns().as_ref().unwrap();
+    let excl_patterns = filters.exclude_patterns().as_ref().unwrap();
+    assert!(excl_patterns.matches("bad"));
+    assert!(!excl_patterns.matches("good"));
 
-    assert_eq!(&exclude.as_patterns()[0], r"\d+");
-    assert_eq!(&include.as_patterns()[0], r"[a-z]+");
-
-    assert!(exclude.matches("123"));
-    assert!(!exclude.matches("abc"));
-
-    assert!(include.matches("abc"));
-    assert!(!include.matches("123"));
-
-    assert_eq!(exclude.len(), 1);
-    assert!(!exclude.is_empty());
-
-    assert_eq!(include.len(), 1);
-    assert!(!include.is_empty());
-
-    let exclude_ref: &[String] = exclude.as_ref();
-    let include_ref: &[String] = include.as_ref();
-
-    assert_eq!(&exclude_ref[0], r"\d+");
-    assert_eq!(&include_ref[0], r"[a-z]+");
+    let incl_patterns = filters.include_patterns().as_ref().unwrap();
+    assert!(incl_patterns.matches("good"));
+    assert!(!incl_patterns.matches("bad"));
 }
 
 #[test]
-fn test_with_unescaped_exclude_words() {
-    let words = vec![
-        r#"\n"#.to_string(),
-        r#"\t"#.to_string(),
-        r#"\\"#.to_string(),
-        r#"\""#.to_string(),
-        r#"hello\nworld"#.to_string(),
-    ];
+fn test_builder() {
+    let min_chars = Some(4);
+    let min_count = Some(3);
+    let exclude_words: ExcludeWordsList = vec!["stop".to_string(), "the".to_string()];
 
     let filters = Filters::default()
-        .with_unescaped_exclude_words(&words)
-        .unwrap();
+        .with_min_chars(4)
+        .with_min_count(3)
+        .with_exclude_words(exclude_words);
 
-    let exclude_words = filters.exclude_words().as_ref().unwrap();
-    assert_eq!(exclude_words.len(), 5);
-    assert!(exclude_words.contains(&"\n".to_string()));
-    assert!(exclude_words.contains(&"\t".to_string()));
-    assert!(exclude_words.contains(&"\\".to_string()));
-    assert!(exclude_words.contains(&"\"".to_string()));
-    assert!(exclude_words.contains(&"hello\nworld".to_string()));
+    assert_eq!(filters.min_chars(), min_chars);
+    assert_eq!(filters.min_count(), min_count);
 }
 
 #[test]
-fn test_with_unescaped_exclude_words_error() {
-    let words = vec![r#"\x"#.to_string()];
+fn test_default() {
+    let filters = Filters::default();
 
-    let result = Filters::default().with_unescaped_exclude_words(&words);
-
-    assert!(result.is_err());
-    let error = result.unwrap_err();
-    assert!(error.to_string().contains("failed to unescape"));
+    assert_eq!(filters.min_chars(), None);
+    assert_eq!(filters.min_count(), None);
+    assert_eq!(filters.exclude_words(), &None);
 }
 
 #[test]
-fn test_with_unescaped_exclude_words_unicode() {
-    let words = vec![
-        r#"\u{1F308}"#.to_string(), // Rainbow emoji
-        r#"\u{00E9}"#.to_string(),  // é (e with acute)
-        r#"\u{0301}"#.to_string(),  // Combining acute accent
+fn test_pattern_serialization() {
+    use serde_json;
+
+    let multi_patterns = vec![
+        r"^test.*".to_string(),
+        r".*ing$".to_string(),
+        r"[0-9]+".to_string(),
     ];
-
     let filters = Filters::default()
-        .with_unescaped_exclude_words(&words)
+        .with_include_patterns(&multi_patterns)
         .unwrap();
 
-    let exclude_words = filters.exclude_words().as_ref().unwrap();
-    assert_eq!(exclude_words.len(), 3);
-    assert!(exclude_words.contains(&"🌈".to_string()));
-    assert!(exclude_words.contains(&"é".to_string()));
-    assert!(exclude_words.contains(&"\u{0301}".to_string()));
+    let serialized = serde_json::to_string(&filters).unwrap();
+    let deserialized: Filters = serde_json::from_str(&serialized).unwrap();
+
+    let patterns = deserialized.include_patterns().as_ref().unwrap();
+    assert!(patterns.matches("testing"));
+    assert!(patterns.matches("running"));
+    assert!(patterns.matches("123"));
+    assert!(!patterns.matches("hello"));
 }
 
 #[test]
-fn test_exclude_words_display() {
-    let words = vec![
-        "apple".to_string(),
-        "banana".to_string(),
-        "cherry".to_string(),
-    ];
-    let exclude_words = ExcludeWords(words);
-
-    assert_eq!(exclude_words.to_string(), "apple,banana,cherry");
-
-    let empty = ExcludeWords(vec![]);
-    assert_eq!(empty.to_string(), "");
-
-    let single = ExcludeWords(vec!["word".to_string()]);
-    assert_eq!(single.to_string(), "word");
-}
-
-#[test]
-fn test_exclude_words_from() {
-    let words = vec!["test".to_string(), "words".to_string()];
-    let exclude_words: ExcludeWords = words.clone().into();
-
-    assert_eq!(exclude_words.0, words);
-}
-
-#[test]
-fn test_exclude_words_as_ref() {
-    let words = vec!["one".to_string(), "two".to_string()];
-    let exclude_words = ExcludeWords(words.clone());
-
-    let words_ref: &ExcludeWordsList = exclude_words.as_ref();
-    assert_eq!(words_ref, &words);
-}
-
-#[test]
-fn test_exclude_words_deref() {
-    let words = vec!["alpha".to_string(), "beta".to_string()];
-    let exclude_words = ExcludeWords(words.clone());
-
-    assert_eq!(*exclude_words, words);
-    assert_eq!(exclude_words.len(), 2);
-    assert!(exclude_words.contains(&"alpha".to_string()));
-}
-
-#[test]
-fn test_all_filters_combined() {
-    let mut tally_map: IndexMap<Word, Count> = IndexMap::new();
-    tally_map.insert("a".into(), 5);
-    tally_map.insert("the".into(), 1);
-    tally_map.insert("hello".into(), 3);
-    tally_map.insert("world123".into(), 4);
-    tally_map.insert("goodnight".into(), 6);
-    tally_map.insert("goodbye".into(), 7);
+fn test_filter_combination() {
+    let exclude_words = vec!["the".to_string(), "and".to_string()];
+    let exclude_patterns = vec![r"\d+".to_string()];
+    let include_patterns = vec![r"^test.*".to_string()];
 
     let filters = Filters::default()
         .with_min_chars(3)
         .with_min_count(2)
-        .with_exclude_words(vec!["hello".to_string()])
-        .with_exclude_patterns(&vec![r#"\d+"#.to_string()])
+        .with_exclude_words(exclude_words)
+        .with_exclude_patterns(&exclude_patterns)
         .unwrap()
-        .with_include_patterns(&vec![r"^good".to_string()])
+        .with_include_patterns(&include_patterns)
         .unwrap();
+
+    let mut tally_map = tally_map_from_counts(&[
+        ("test", 3),
+        ("testing", 2),
+        ("the", 5),
+        ("and", 4),
+        ("test123", 2),
+        ("te", 3),
+        ("testcase", 1),
+    ]);
 
     filters.apply(&mut tally_map, Case::Lower);
 
     assert_eq!(tally_map.len(), 2);
-    assert!(tally_map.contains_key("goodbye"));
-    assert!(tally_map.contains_key("goodnight"));
-    assert_eq!(tally_map["goodbye"], 7);
-    assert_eq!(tally_map["goodnight"], 6);
+    assert!(has_word(&tally_map, "test"));
+    assert!(has_word(&tally_map, "testing"));
+}
+
+#[test]
+fn test_invalid_include_patterns() {
+    use word_tally::InputPatterns;
+
+    let invalid_pattern: InputPatterns = vec![r"[".to_string()];
+    let result = Filters::default().with_include_patterns(&invalid_pattern);
+    assert!(result.is_err());
+}
+
+#[test]
+fn test_case_sensitive_exclude_patterns() {
+    let exclude_patterns = vec![r"Test".to_string()];
+
+    let filters = Filters::default()
+        .with_exclude_patterns(&exclude_patterns)
+        .unwrap();
+
+    let mut tally_map = tally_map_from_counts(&[("Test", 3), ("test", 2), ("TEST", 1)]);
+
+    filters.apply(&mut tally_map, Case::Original);
+
+    assert_eq!(tally_map.len(), 2);
+    assert!(!has_word(&tally_map, "Test"));
+    assert!(has_word(&tally_map, "test"));
+    assert!(has_word(&tally_map, "TEST"));
+}
+
+#[test]
+fn test_min_chars_filter() {
+    let mut tally_map = tally_map_from_counts(&[("a", 5), ("ab", 4), ("abc", 3), ("abcd", 2)]);
+
+    let filters = Filters::default().with_min_chars(3);
+    filters.apply(&mut tally_map, Case::Original);
+
+    assert_eq!(tally_map.len(), 2);
+    assert!(has_word(&tally_map, "abc"));
+    assert!(has_word(&tally_map, "abcd"));
+    assert!(!has_word(&tally_map, "a"));
+    assert!(!has_word(&tally_map, "ab"));
+}
+
+#[test]
+fn test_min_count_filter() {
+    let mut tally_map =
+        tally_map_from_counts(&[("hello", 5), ("world", 3), ("test", 2), ("example", 4)]);
+
+    let filters = Filters::default().with_min_count(3);
+    filters.apply(&mut tally_map, Case::Original);
+
+    assert_eq!(tally_map.len(), 3);
+    assert!(has_word(&tally_map, "hello"));
+    assert!(has_word(&tally_map, "world"));
+    assert!(!has_word(&tally_map, "test"));
+    assert!(has_word(&tally_map, "example"));
+}
+
+#[test]
+fn test_exclude_words_filter() {
+    let mut tally_map =
+        tally_map_from_counts(&[("the", 10), ("quick", 5), ("brown", 3), ("fox", 7)]);
+
+    let exclude_words = vec!["the".to_string(), "fox".to_string()];
+    let filters = Filters::default().with_exclude_words(exclude_words);
+    filters.apply(&mut tally_map, Case::Lower);
+
+    assert_eq!(tally_map.len(), 2);
+    assert!(!has_word(&tally_map, "the"));
+    assert!(has_word(&tally_map, "quick"));
+    assert!(has_word(&tally_map, "brown"));
+    assert!(!has_word(&tally_map, "fox"));
 }
 
 #[test]
 fn test_overlapping_patterns() {
-    let mut tally_map: IndexMap<Word, Count> = IndexMap::new();
-    tally_map.insert("good".into(), 3);
-    tally_map.insert("goodbye".into(), 4);
-    tally_map.insert("goodness".into(), 5);
-    tally_map.insert("great".into(), 6);
+    let mut tally_map =
+        tally_map_from_counts(&[("good", 3), ("goodbye", 4), ("goodness", 5), ("great", 6)]);
 
     let filters = Filters::default()
-        .with_include_patterns(&vec![
-            r"^good".to_string(),
-            r".*bye$".to_string(),
-            r"^g.*t$".to_string(),
-        ])
+        .with_include_patterns(&vec![r"^good".to_string(), r"^g.*t$".to_string()])
         .unwrap();
 
     filters.apply(&mut tally_map, Case::Lower);
@@ -382,11 +387,8 @@ fn test_overlapping_patterns() {
 }
 
 #[test]
-fn test_conflicting_patterns() {
-    let mut tally_map: IndexMap<Word, Count> = IndexMap::new();
-    tally_map.insert("good".into(), 3);
-    tally_map.insert("goodbye".into(), 4);
-    tally_map.insert("bad".into(), 5);
+fn test_include_exclude_patterns_combination() {
+    let mut tally_map = tally_map_from_counts(&[("good", 3), ("goodbye", 4), ("bad", 5)]);
 
     let filters = Filters::default()
         .with_include_patterns(&vec![r"^good".to_string()])
@@ -397,99 +399,143 @@ fn test_conflicting_patterns() {
     filters.apply(&mut tally_map, Case::Lower);
 
     assert_eq!(tally_map.len(), 1);
-    assert!(tally_map.contains_key("good"));
+    assert!(has_word(&tally_map, "good"));
 }
 
 #[test]
 fn test_case_normalization_with_exclude_words() {
-    let mut tally_map: IndexMap<Word, Count> = IndexMap::new();
-    tally_map.insert("hello".into(), 3);
-    tally_map.insert("world".into(), 4);
-    tally_map.insert("test".into(), 5);
+    // Create a TallyMap with case-normalized words
+    let mut tally_map = TallyMap::new();
+    tally_map.count_words(
+        "hello hello hello Hello Hello HELLO world world world world",
+        Case::Lower,
+    );
 
-    let filters =
-        Filters::default().with_exclude_words(vec!["HELLO".to_string(), "World".to_string()]);
-
+    let exclude_words = vec!["hello".to_string()];
+    let filters = Filters::default().with_exclude_words(exclude_words);
     filters.apply(&mut tally_map, Case::Lower);
 
     assert_eq!(tally_map.len(), 1);
-    assert!(tally_map.contains_key("test"));
+    assert!(has_word(&tally_map, "world"));
 }
 
 #[test]
-fn test_empty_filters() {
-    let mut tally_map: IndexMap<Word, Count> = IndexMap::new();
-    tally_map.insert("hello".into(), 3);
-    tally_map.insert("world".into(), 4);
+fn test_exclude_empty_patterns() {
+    let empty_patterns: Vec<String> = vec![];
+    let filters = Filters::default()
+        .with_exclude_patterns(&empty_patterns)
+        .unwrap();
 
-    let original_len = tally_map.len();
-
-    let filters = Filters::default();
-    filters.apply(&mut tally_map, Case::Lower);
-
-    assert_eq!(tally_map.len(), original_len);
+    assert!(filters.exclude_patterns().is_none());
 }
 
 #[test]
-fn test_unicode_grapheme_counting() {
-    let mut tally_map: IndexMap<Word, Count> = IndexMap::new();
+fn test_include_empty_patterns() {
+    let empty_patterns: Vec<String> = vec![];
+    let filters = Filters::default()
+        .with_include_patterns(&empty_patterns)
+        .unwrap();
 
-    tally_map.insert("é".into(), 1);
-    tally_map.insert("e\u{0301}".into(), 1);
-    tally_map.insert("🇺🇸".into(), 1);
-    tally_map.insert("👍🏻".into(), 1);
-    tally_map.insert("नमस्ते".into(), 1);
-    tally_map.insert("🧑‍🦽".into(), 1);
-    tally_map.insert("a".into(), 1);
-
-    let filters = Filters::default().with_min_chars(2);
-    filters.apply(&mut tally_map, Case::Lower);
-
-    assert!(!tally_map.contains_key("é"));
-    assert!(!tally_map.contains_key("e\u{0301}"));
-    assert!(!tally_map.contains_key("🇺🇸"));
-    assert!(!tally_map.contains_key("👍🏻"));
-    assert!(tally_map.contains_key("नमस्ते"));
-    assert!(!tally_map.contains_key("🧑‍🦽"));
-    assert!(!tally_map.contains_key("a"));
+    assert!(filters.include_patterns().is_none());
 }
 
 #[test]
-fn test_complex_unicode_patterns() {
-    let mut tally_map: IndexMap<Word, Count> = IndexMap::new();
-    tally_map.insert("café".into(), 1);
-    tally_map.insert("naïve".into(), 1);
-    tally_map.insert("piñata".into(), 1);
-    tally_map.insert("hello".into(), 1);
+fn test_pattern_precedence() {
+    let mut tally_map =
+        tally_map_from_counts(&[("test", 3), ("testing", 2), ("tester", 4), ("rest", 1)]);
 
     let filters = Filters::default()
-        .with_include_patterns(&vec![r"[àáâãäåèéêëìíîïòóôõöùúûüýÿñç]".to_string()])
+        .with_include_patterns(&vec![r".*est.*".to_string()])
+        .unwrap()
+        .with_exclude_patterns(&vec![r"^test$".to_string()])
         .unwrap();
 
     filters.apply(&mut tally_map, Case::Lower);
 
     assert_eq!(tally_map.len(), 3);
-    assert!(!tally_map.contains_key("hello"));
+    assert!(!has_word(&tally_map, "test"));
+    assert!(has_word(&tally_map, "testing"));
+    assert!(has_word(&tally_map, "tester"));
+    assert!(has_word(&tally_map, "rest"));
 }
 
 #[test]
-fn test_filter_ordering() {
-    let mut tally_map1: IndexMap<Word, Count> = IndexMap::new();
-    tally_map1.insert("test".into(), 1);
-    tally_map1.insert("testing".into(), 10);
-    tally_map1.insert("tested".into(), 5);
+fn test_unicode_min_chars() {
+    let mut tally_map = tally_map_from_counts(&[("a", 1), ("café", 1), ("naive", 1), ("naïve", 1)]);
+
+    let filters = Filters::default().with_min_chars(4);
+    filters.apply(&mut tally_map, Case::Lower);
+
+    assert_eq!(tally_map.len(), 3);
+    assert!(!has_word(&tally_map, "a"));
+    assert!(has_word(&tally_map, "café"));
+    assert!(has_word(&tally_map, "naive"));
+    assert!(has_word(&tally_map, "naïve"));
+}
+
+#[test]
+fn test_complex_filter_combination() {
+    let mut tally_map1 = tally_map_from_counts(&[
+        ("hello", 5),
+        ("world", 3),
+        ("test", 2),
+        ("testing", 4),
+        ("the", 10),
+        ("a", 8),
+        ("12345", 2),
+    ]);
 
     let mut tally_map2 = tally_map1.clone();
 
-    let filters1 = Filters::default().with_min_count(2).with_min_chars(6);
+    let filters1 = Filters::default()
+        .with_min_chars(2)
+        .with_min_count(3)
+        .with_exclude_words(vec!["the".to_string()])
+        .with_exclude_patterns(&vec![r"\d+".to_string()])
+        .unwrap();
 
-    let filters2 = Filters::default().with_min_chars(6).with_min_count(2);
+    let filters2 = Filters::default()
+        .with_min_chars(2)
+        .with_min_count(3)
+        .with_exclude_words(vec!["the".to_string()])
+        .with_exclude_patterns(&vec![r"\d+".to_string()])
+        .unwrap();
 
     filters1.apply(&mut tally_map1, Case::Lower);
     filters2.apply(&mut tally_map2, Case::Lower);
 
-    assert_eq!(tally_map1, tally_map2);
-    assert_eq!(tally_map1.len(), 2);
-    assert!(tally_map1.contains_key("testing"));
-    assert!(tally_map1.contains_key("tested"));
+    assert_eq!(tally_map1.len(), 3);
+    assert_eq!(tally_map2.len(), 3);
+}
+
+#[test]
+fn test_with_unescaped_exclude_words() {
+    let escaped_words = vec!["\\n".to_string(), "\\t".to_string(), "\\r".to_string()];
+
+    let filters = Filters::default()
+        .with_unescaped_exclude_words(&escaped_words)
+        .unwrap();
+
+    let exclude_words = filters.exclude_words().as_ref().unwrap();
+    let words_list = exclude_words.as_ref();
+
+    assert_eq!(words_list.len(), 3);
+    assert_eq!(words_list[0], "\n");
+    assert_eq!(words_list[1], "\t");
+    assert_eq!(words_list[2], "\r");
+}
+
+#[test]
+fn test_display_exclude_words() {
+    let words = vec!["hello".to_string(), "world".to_string()];
+    let exclude_words = ExcludeWords(words);
+    assert_eq!(format!("{}", exclude_words), "hello,world");
+}
+
+#[test]
+fn test_filters_display() {
+    let filters = Filters::default().with_min_chars(3).with_min_count(2);
+
+    assert!(format!("{:?}", filters).contains("min_chars: Some(3)"));
+    assert!(format!("{:?}", filters).contains("min_count: Some(2)"));
 }

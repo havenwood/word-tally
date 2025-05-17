@@ -20,6 +20,7 @@ This directory contains all tests for the word-tally project.
   - `tally_filter_tests.rs`: Pattern and word filtering
   - `tally_io_mode_tests.rs`: I/O mode comparison tests
   - `tally_iterator_tests.rs`: Iterator implementation
+  - `tally_map_tests.rs`: TallyMap data structure tests
   - `tally_serialization_tests.rs`: JSON/serde tests
   - `tally_serialization_error_tests.rs`: Serialization error handling
 
