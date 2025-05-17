@@ -116,6 +116,21 @@ impl Performance {
         self
     }
 
+    /// Get the base stdin size
+    pub const fn base_stdin_size(&self) -> usize {
+        self.base_stdin_size
+    }
+
+    /// Get the chunk size
+    pub const fn chunk_size(&self) -> usize {
+        self.chunk_size
+    }
+
+    /// Get the thread configuration
+    pub const fn threads(&self) -> Threads {
+        self.threads
+    }
+
     /// Calculate capacity based on input size in bytes
     const fn calculate_capacity(&self, size_bytes: usize) -> usize {
         Self::calculate_capacity_static(size_bytes, self.words_per_kb, self.uniqueness_ratio)
@@ -197,9 +212,9 @@ impl fmt::Display for Performance {
             Self::base_stdin_tally_capacity(),
             self.uniqueness_ratio,
             self.words_per_kb,
-            self.chunk_size,
-            self.base_stdin_size,
-            self.threads,
+            self.chunk_size(),
+            self.base_stdin_size(),
+            self.threads(),
             self.verbose
         )
     }

@@ -217,7 +217,7 @@ impl TallyMap {
                 batch_of_lines.push(line);
 
                 // Process batch when it reaches target memory threshold
-                if accumulated_bytes >= perf.chunk_size {
+                if accumulated_bytes >= perf.chunk_size() {
                     // Last batch's size rather than estimation to better match input pattern
                     let current_batch_size = batch_of_lines.len();
                     // Swap out the full batch for an empty one, reusing the previous capacity
@@ -253,7 +253,7 @@ impl TallyMap {
     fn par_mmap_count(mmap: &Arc<Mmap>, path: &Path, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
-        let chunk_size = perf.chunk_size;
+        let chunk_size = perf.chunk_size();
 
         // This provides a view into the content rather than copying
         let content = match str::from_utf8(mmap) {
@@ -340,7 +340,7 @@ impl TallyMap {
     /// Reads the entire input into a string buffer.
     fn read_input_to_string(input: &Input, perf: &Performance) -> Result<String> {
         // Use actual size if available; otherwise use base_stdin_size() for unknown inputs
-        let buffer_capacity = input.size().unwrap_or(perf.base_stdin_size);
+        let buffer_capacity = input.size().unwrap_or_else(|| perf.base_stdin_size());
 
         // Read entire input into memory
         let mut buffer = String::with_capacity(buffer_capacity);
