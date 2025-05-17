@@ -36,6 +36,7 @@ Tests for specific modules and components:
 - `filters_tests.rs`: Filter functionality tests
 - `hash_tests.rs`: Hash implementation tests
 - `input_tests.rs`: Input module tests
+- `input_reader_tests.rs`: InputReader module tests
 - `io_tests.rs`: I/O strategy tests
 - `options_tests.rs`: Options configuration tests
 - `output_tests.rs`: Output module tests

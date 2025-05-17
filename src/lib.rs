@@ -17,6 +17,7 @@
 //! - `args.rs`: CLI argument parsing and command-line interface
 //! - `exit_code.rs`: Exit code definitions and handling
 //! - `input.rs`: Input source management strategies
+//! - `input_reader.rs`: Input readers implementing Read and BufRead traits
 //! - `lib.rs`: Core library functionality and API
 //! - `main.rs`: CLI entry point and execution
 //! - `options/`: Configuration and processing options
@@ -117,11 +118,13 @@ use serde::{self, Deserialize, Serialize};
 
 pub mod exit_code;
 pub mod input;
+pub mod input_reader;
 pub mod options;
 pub mod output;
 pub mod tally_map;
 
-pub use input::{Input, InputReader};
+pub use input::Input;
+pub use input_reader::InputReader;
 pub use options::patterns::{ExcludePatterns, IncludePatterns, InputPatterns};
 pub use options::{
     Options,
