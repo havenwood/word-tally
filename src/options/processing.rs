@@ -43,3 +43,13 @@ impl Display for Processing {
         }
     }
 }
+
+impl From<bool> for Processing {
+    fn from(parallel: bool) -> Self {
+        if parallel {
+            Self::Parallel
+        } else {
+            Self::Sequential
+        }
+    }
+}

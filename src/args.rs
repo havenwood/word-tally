@@ -9,7 +9,6 @@ use word_tally::options::{
     filters::Filters,
     io::Io,
     performance::Performance,
-    processing::Processing,
     serialization::{Format, Serialization},
     sort::Sort,
 };
@@ -106,59 +105,43 @@ impl Args {
 
     /// Parse command-line arguments and convert them to word-tally `Options`.
     pub fn get_options(&self) -> Result<Options> {
-        let serialization = Serialization::new(self.format, &self.delimiter)?;
-        let filters = self.get_filters()?;
-
-        // Determine processing mode from the --parallel flag
-        let processing = if self.parallel {
-            Processing::Parallel
-        } else {
-            Processing::Sequential
-        };
-
-        let performance = Performance::from_env().with_verbose(self.verbose);
-
-        // Create Options with case, sort, serialization, filters, io, processing, and performance
-
         Ok(Options::new(
             self.case,
             self.sort,
-            serialization,
-            filters,
+            Serialization::new(self.format, &self.delimiter)?,
+            self.get_filters()?,
             self.io,
-            processing,
-            performance,
+            self.parallel.into(),
+            Performance::from_env().with_verbose(self.verbose),
         ))
     }
 
     /// Helper to create filters from arguments
     fn get_filters(&self) -> Result<Filters> {
-        let mut filters = Filters::default();
-
-        if let Some(min_chars) = self.min_chars {
-            filters = filters.with_min_chars(min_chars);
-        }
-
-        if let Some(min_count) = self.min_count {
-            filters = filters.with_min_count(min_count);
-        }
-
-        if let Some(words) = &self.exclude_words {
-            filters = filters.with_unescaped_exclude_words(words)?;
-        }
-
-        if let Some(exclude_patterns) = &self.exclude {
-            filters = filters
-                .with_exclude_patterns(exclude_patterns)
-                .context("failed to create exclude patterns")?;
-        }
-
-        if let Some(include_patterns) = &self.include {
-            filters = filters
-                .with_include_patterns(include_patterns)
-                .context("failed to create include patterns")?;
-        }
-
-        Ok(filters)
+        Ok(Filters::default())
+            .map(|f| match self.min_chars {
+                Some(min) => f.with_min_chars(min),
+                None => f,
+            })
+            .map(|f| match self.min_count {
+                Some(min) => f.with_min_count(min),
+                None => f,
+            })
+            .and_then(|f| match &self.exclude_words {
+                Some(words) => f.with_unescaped_exclude_words(words),
+                None => Ok(f),
+            })
+            .and_then(|f| match &self.exclude {
+                Some(patterns) => f
+                    .with_exclude_patterns(patterns)
+                    .context("failed to create exclude patterns"),
+                None => Ok(f),
+            })
+            .and_then(|f| match &self.include {
+                Some(patterns) => f
+                    .with_include_patterns(patterns)
+                    .context("failed to create include patterns"),
+                None => Ok(f),
+            })
     }
 }
