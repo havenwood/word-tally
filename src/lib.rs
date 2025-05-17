@@ -15,7 +15,7 @@
 //!
 //! The `WordTally` library is organized into these modules:
 //! - `args.rs`: CLI argument parsing and command-line interface
-//! - `errors.rs`: Error types and handling
+//! - `exit_code.rs`: Exit code definitions and handling
 //! - `input.rs`: Input source management strategies
 //! - `lib.rs`: Core library functionality and API
 //! - `main.rs`: CLI entry point and execution
@@ -123,7 +123,7 @@ use rayon::prelude::*;
 use serde::{self, Deserialize, Serialize};
 use unicode_segmentation::UnicodeSegmentation;
 
-pub mod errors;
+pub mod exit_code;
 pub mod input;
 pub mod options;
 pub mod output;

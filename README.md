@@ -194,6 +194,18 @@ Parallel processing configuration:
 - `WORD_TALLY_THREADS` - Number of threads for parallel processing (default: all available cores)
 - `WORD_TALLY_CHUNK_SIZE` - Size of chunks for parallel processing in bytes (default: 65536)
 
+## Exit codes
+
+`word-tally` uses standard unix exit codes to indicate success or the types of failure:
+
+- `0`: Success
+- `1`: General error
+- `64`: Command line usage error
+- `65`: Data format error
+- `66`: Cannot open input
+- `69`: Service unavailable
+- `74`: I/O error
+
 ## Library usage
 
 ```toml
