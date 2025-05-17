@@ -62,18 +62,47 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
             .collect();
         assert_eq!(expected_set, actual_set);
     } else {
-        let expected_vec: Vec<(Box<str>, Count)> = fields
-            .tally
-            .iter()
-            .map(|(word, count)| (Box::from(*word), *count))
-            .collect();
-        let actual_vec: Vec<(Box<str>, Count)> = word_tally
-            .tally()
+        let actual_tally = word_tally.tally();
+
+        let expected_counts: Vec<Count> = fields.tally.iter().map(|&(_, count)| count).collect();
+        let actual_counts: Vec<Count> = actual_tally
             .iter()
             .take(fields.tally.len())
-            .map(|(word, count)| (word.clone(), *count))
+            .map(|(_, count)| *count)
             .collect();
-        assert_eq!(actual_vec, expected_vec);
+
+        assert_eq!(expected_counts, actual_counts);
+
+        let mut expected_by_count: std::collections::HashMap<Count, Vec<&str>> =
+            std::collections::HashMap::new();
+        for &(word, count) in &fields.tally {
+            expected_by_count.entry(count).or_default().push(word);
+        }
+
+        let mut actual_by_count: std::collections::HashMap<Count, Vec<Box<str>>> =
+            std::collections::HashMap::new();
+        for (word, count) in actual_tally.iter() {
+            actual_by_count
+                .entry(*count)
+                .or_default()
+                .push(word.clone());
+        }
+
+        for (count, expected_words) in expected_by_count {
+            if let Some(actual_words) = actual_by_count.get(&count) {
+                let actual_set: std::collections::HashSet<&str> =
+                    actual_words.iter().map(|w| w.as_ref()).collect();
+                for expected_word in expected_words {
+                    assert!(
+                        actual_set.contains(expected_word),
+                        "Expected word '{}' not found at count {}. Actual words: {:?}",
+                        expected_word,
+                        count,
+                        actual_words
+                    );
+                }
+            }
+        }
     }
 }
 

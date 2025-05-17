@@ -1,6 +1,7 @@
-//! Map for tallying word counts using the indexmap crate to preserve insertion order.
+//! A collection for tallying word counts using `HashMap`.
 
 use std::{
+    collections::HashMap,
     io::{BufRead, Read},
     path::Path,
     str,
@@ -8,7 +9,6 @@ use std::{
 };
 
 use anyhow::{Context, Result};
-use indexmap::IndexMap;
 use memmap2::Mmap;
 use rayon::prelude::*;
 use unicode_segmentation::UnicodeSegmentation;
@@ -19,10 +19,10 @@ use crate::options::processing::Processing;
 use crate::options::{Options, performance::Performance};
 use crate::{Count, Input, Word};
 
-/// Map for tracking word counts while preserving insertion order.
+/// Map for tracking word counts with non-deterministic iteration order.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct TallyMap {
-    inner: IndexMap<Word, Count>,
+    inner: HashMap<Word, Count>,
 }
 
 impl TallyMap {
@@ -34,7 +34,7 @@ impl TallyMap {
     /// Creates a new `TallyMap` with the specified capacity.
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            inner: IndexMap::with_capacity(capacity),
+            inner: HashMap::with_capacity(capacity),
         }
     }
 
@@ -66,43 +66,30 @@ impl TallyMap {
         self.inner.retain(f);
     }
 
-    /// Consumes the map and returns a boxed slice of (Word, Count) pairs.
-    pub fn into_tally(self) -> Box<[(Word, Count)]> {
-        self.inner.into_iter().collect()
-    }
-
-    /// Counts words in a byte slice and adds them to the tally map.
-    pub fn count_words(&mut self, content: &str, case: Case) {
+    /// Extends the tally map with word counts from a string slice.
+    pub fn extend_from_str(&mut self, content: &str, case: Case) {
         for word in content.unicode_words() {
             let normalized = case.normalize(word);
             *self.inner.entry(normalized).or_insert(0) += 1;
         }
     }
 
-    /// Merging two subtallies, combining their counts.
-    pub(crate) fn merge_counts(&mut self, source: Self) {
-        for (word, count) in source.inner {
-            *self.inner.entry(word).or_insert(0) += count;
-        }
-    }
-
     /// Merge two tally maps, always merging the smaller into the larger.
     ///
     /// Returns the merged map containing the combined counts from both input maps.
-    pub(crate) fn merge_tally_maps(mut a: Self, b: Self) -> Self {
-        if a.len() < b.len() {
-            let mut merged = b;
-            merged.reserve(a.len());
-            merged.merge_counts(a);
+    pub(crate) fn merge(mut self, other: Self) -> Self {
+        // Always merge the smaller map into the larger for better performance
+        if self.len() < other.len() {
+            let mut merged = other;
+            merged.extend(self);
             merged
         } else {
-            a.reserve(b.len());
-            a.merge_counts(b);
-            a
+            self.extend(other);
+            self
         }
     }
 
-    /// Creates a `TallyMap` from an input source and options.
+    /// Creates a `TallyMap` from an `input` source and `options`.
     pub fn from_input(input: &Input, options: &Options) -> Result<Self> {
         match (options.processing(), options.io()) {
             // Sequential processing
@@ -147,7 +134,7 @@ impl TallyMap {
                 let line = try_line.with_context(|| {
                     format!("failed to read line {} from: {}", line_num + 1, input)
                 })?;
-                tally.count_words(&line, options.case());
+                tally.extend_from_str(&line, options.case());
 
                 Ok::<_, anyhow::Error>(())
             })?;
@@ -165,7 +152,7 @@ impl TallyMap {
         let capacity = perf.capacity(Some(content.len()));
         let mut tally = Self::with_capacity(capacity);
 
-        tally.count_words(&content, case);
+        tally.extend_from_str(&content, case);
 
         Ok(tally)
     }
@@ -204,18 +191,14 @@ impl TallyMap {
                 .map(|chunk| {
                     let mut local_tally = Self::with_capacity(batch_capacity);
                     for line in chunk {
-                        local_tally.count_words(line, case);
+                        local_tally.extend_from_str(line, case);
                     }
                     local_tally
                 })
-                .reduce(
-                    || Self::with_capacity(batch_capacity),
-                    Self::merge_tally_maps,
-                );
+                .reduce(|| Self::with_capacity(batch_capacity), Self::merge);
 
-            // Reserve space to minimize hash table resizing during merge
-            tally.reserve(batch_result.len());
-            tally.merge_counts(batch_result);
+            // Extend tally with batch results (reserve is handled in extend)
+            tally.extend(batch_result);
         };
 
         let mut batch_of_lines = Vec::with_capacity(estimated_lines_per_chunk);
@@ -321,15 +304,12 @@ impl TallyMap {
                 let chunk = &content[window[0]..window[1]];
                 let mut local_tally = Self::with_capacity(per_chunk_capacity);
 
-                // Count words directly from chunks, without heed for newlines
-                local_tally.count_words(chunk, case);
+                // Extract words from chunks, without heed for newlines
+                local_tally.extend_from_str(chunk, case);
 
                 local_tally
             })
-            .reduce(
-                || Self::with_capacity(reduce_capacity),
-                Self::merge_tally_maps,
-            );
+            .reduce(|| Self::with_capacity(reduce_capacity), Self::merge);
 
         Ok(tally)
     }
@@ -347,19 +327,15 @@ impl TallyMap {
             .fold(
                 || Self::with_capacity(perf.capacity_per_thread()),
                 |mut tally, line| {
-                    tally.count_words(line, case);
+                    tally.extend_from_str(line, case);
                     tally
                 },
             )
-            .reduce_with(Self::merge_tally_maps)
+            .reduce_with(Self::merge)
             .unwrap_or_else(|| Self::with_capacity(perf.capacity(Some(content.len()))));
 
         Ok(tally)
     }
-
-    //
-    // Helpers
-    //
 
     /// Reads the entire input into a string buffer.
     fn read_input_to_string(input: &Input, perf: &Performance) -> Result<String> {
@@ -380,7 +356,7 @@ impl TallyMap {
 
 impl IntoIterator for TallyMap {
     type Item = (Word, Count);
-    type IntoIter = indexmap::map::IntoIter<Word, Count>;
+    type IntoIter = std::collections::hash_map::IntoIter<Word, Count>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.inner.into_iter()
@@ -390,7 +366,19 @@ impl IntoIterator for TallyMap {
 impl FromIterator<(Word, Count)> for TallyMap {
     fn from_iter<I: IntoIterator<Item = (Word, Count)>>(iter: I) -> Self {
         Self {
-            inner: IndexMap::from_iter(iter),
+            inner: HashMap::from_iter(iter),
+        }
+    }
+}
+
+impl Extend<(Word, Count)> for TallyMap {
+    fn extend<T: IntoIterator<Item = (Word, Count)>>(&mut self, tally: T) {
+        let iter = tally.into_iter();
+        let (lower_bound, _) = iter.size_hint();
+        self.inner.reserve(lower_bound);
+
+        for (word, count) in iter {
+            *self.inner.entry(word).or_insert(0) += count;
         }
     }
 }

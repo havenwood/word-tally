@@ -33,21 +33,23 @@ fn test_into_tally() {
     // Use `tally()` to get a reference to the slice.
     let tally = word_tally.tally();
 
-    let expected_tally: word_tally::Tally = vec![
-        ("the".into(), 2),
-        ("hope".into(), 1),
-        ("is".into(), 1),
-        ("thing".into(), 1),
-        ("with".into(), 1),
-        ("feathers".into(), 1),
-        ("that".into(), 1),
-        ("perches".into(), 1),
-        ("in".into(), 1),
-        ("soul".into(), 1),
-    ]
-    .into_boxed_slice();
+    let mut expected_counts = std::collections::HashMap::new();
+    expected_counts.insert("the", 2);
+    expected_counts.insert("hope", 1);
+    expected_counts.insert("is", 1);
+    expected_counts.insert("thing", 1);
+    expected_counts.insert("with", 1);
+    expected_counts.insert("feathers", 1);
+    expected_counts.insert("that", 1);
+    expected_counts.insert("perches", 1);
+    expected_counts.insert("in", 1);
+    expected_counts.insert("soul", 1);
 
-    assert_eq!(tally, expected_tally.as_ref());
+    assert_eq!(tally.len(), expected_counts.len());
+    for (word, count) in tally {
+        let expected_count = expected_counts.get(word.as_ref()).expect("Unexpected word");
+        assert_eq!(count, expected_count);
+    }
 }
 
 #[test]

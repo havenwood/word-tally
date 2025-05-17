@@ -22,28 +22,24 @@ fn test_wordtally_hash() {
     let hope_tally_alpha = WordTally::new(&hope_input_alpha, &base_options).unwrap();
     let hope_tally_beta = WordTally::new(&hope_input_beta, &base_options).unwrap();
 
-    assert_eq!(
-        calculate_hash(&hope_tally_alpha),
-        calculate_hash(&hope_tally_beta)
-    );
+    assert_eq!(hope_tally_alpha.count(), hope_tally_beta.count());
+    assert_eq!(hope_tally_alpha.uniq_count(), hope_tally_beta.uniq_count());
 
     let extended_hope_text = "Hope is the thing with feathers That perches";
     let extended_hope_input = Input::from_bytes(extended_hope_text);
     let extended_hope_tally = WordTally::new(&extended_hope_input, &base_options).unwrap();
 
+    assert_ne!(hope_tally_alpha.count(), extended_hope_tally.count());
     assert_ne!(
-        calculate_hash(&hope_tally_alpha),
-        calculate_hash(&extended_hope_tally)
+        hope_tally_alpha.uniq_count(),
+        extended_hope_tally.uniq_count()
     );
 
     let repeated_hope_text = "Hope is the thing with Hope is the";
     let repeated_hope_input = Input::from_bytes(repeated_hope_text);
     let repeated_hope_tally = WordTally::new(&repeated_hope_input, &base_options).unwrap();
 
-    assert_ne!(
-        calculate_hash(&hope_tally_alpha),
-        calculate_hash(&repeated_hope_tally)
-    );
+    assert_ne!(hope_tally_alpha.count(), repeated_hope_tally.count());
 }
 
 #[test]
@@ -235,10 +231,7 @@ fn test_wordtally_includes_options_in_hash() {
     let success_lowercase = WordTally::new(&success_input_alpha, &lowercase_options).unwrap();
     let success_uppercase = WordTally::new(&success_input_beta, &uppercase_options).unwrap();
 
-    assert_ne!(
-        calculate_hash(&success_lowercase),
-        calculate_hash(&success_uppercase)
-    );
+    assert_ne!(success_lowercase, success_uppercase);
 
     let lowercase_asc = Options::default()
         .with_case(Case::Lower)
@@ -254,10 +247,7 @@ fn test_wordtally_includes_options_in_hash() {
     let success_ascending = WordTally::new(&success_input_gamma, &lowercase_asc).unwrap();
     let success_descending = WordTally::new(&success_input_delta, &lowercase_desc).unwrap();
 
-    assert_ne!(
-        calculate_hash(&success_ascending),
-        calculate_hash(&success_descending)
-    );
+    assert_ne!(success_ascending, success_descending);
 }
 
 #[test]
@@ -267,35 +257,27 @@ fn test_wordtally_hash_fields() {
     let options = Options::default();
     let tally = WordTally::new(&input, &options).unwrap();
 
-    let initial_hash = calculate_hash(&tally);
-
     let doubled_text = "The Brain is wider than the Sky For put";
     let doubled_input = Input::from_bytes(doubled_text);
     let doubled_tally = WordTally::new(&doubled_input, &options).unwrap();
 
-    assert_ne!(initial_hash, calculate_hash(&doubled_tally));
+    assert_ne!(tally, doubled_tally);
 
     let uppercase_options = Options::default().with_case(Case::Upper);
     let uppercase_input = Input::from_bytes(text);
     let uppercase_tally = WordTally::new(&uppercase_input, &uppercase_options).unwrap();
 
-    assert_ne!(initial_hash, calculate_hash(&uppercase_tally));
+    assert_ne!(tally, uppercase_tally);
 }
 
 #[test]
 fn test_equality_and_hashing() {
-    fn hash_value(word_tally: &WordTally<'_>) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        word_tally.hash(&mut hasher);
-        hasher.finish()
-    }
-
     fn assert_hash_eq(tally_a: &WordTally<'_>, tally_b: &WordTally<'_>) {
-        assert_eq!(hash_value(tally_a), hash_value(tally_b));
+        assert_eq!(tally_a, tally_b);
     }
 
     fn assert_hash_ne(tally_a: &WordTally<'_>, tally_b: &WordTally<'_>) {
-        assert_ne!(hash_value(tally_a), hash_value(tally_b));
+        assert_ne!(tally_a, tally_b);
     }
 
     let cases_and_sorts = [

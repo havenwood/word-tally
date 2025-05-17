@@ -53,7 +53,7 @@ impl Display for Sort {
 
 impl Sort {
     /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
-    /// Unstable sort with `Rayon` when `Parallel` processing is enabled.
+    /// Uses unstable sort for both sequential and parallel processing.
     pub fn apply(&self, w: &mut WordTally<'_>) {
         match (self, w.options().processing()) {
             // No sorting
@@ -67,11 +67,13 @@ impl Sort {
                 w.tally.par_sort_unstable_by_key(|&(_, count)| count)
             }
 
-            // Sequential stable sorting
+            // Sequential unstable sorting
             (Self::Desc, Processing::Sequential) => {
-                w.tally.sort_by_key(|&(_, count)| Reverse(count))
+                w.tally.sort_unstable_by_key(|&(_, count)| Reverse(count))
             }
-            (Self::Asc, Processing::Sequential) => w.tally.sort_by_key(|&(_, count)| count),
+            (Self::Asc, Processing::Sequential) => {
+                w.tally.sort_unstable_by_key(|&(_, count)| count)
+            }
         }
     }
 }

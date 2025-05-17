@@ -296,7 +296,7 @@ fn verbose_with_json_format() {
         .stderr(contains("\"excludeWords\":null"))
         .stderr(contains("\"excludePatterns\":null"))
         .stderr(contains("\"includePatterns\":null"))
-        .stdout(contains("[[\"hope\",1],[\"forever\",1]]"));
+        .stdout(contains("[\"hope\",1]").and(contains("[\"forever\",1]")));
 }
 
 #[test]

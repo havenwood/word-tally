@@ -3,7 +3,7 @@ use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
     Case, Count, ExcludeWords, Filters, Format, Io, Options, Performance, Processing,
-    Serialization, Sort, Tally, Word, WordTally,
+    Serialization, Sort, Word, WordTally,
 };
 
 fn make_shared<T>(value: T) -> Arc<T> {
@@ -289,7 +289,10 @@ fn test_into_tally() {
     // Use `tally()` to get a reference to the slice.
     let tally = word_tally.tally();
 
-    let expected_tally: Tally = vec![
+    let mut tally_vec: Vec<_> = tally.to_vec();
+    tally_vec.sort_by_key(|(word, _): &(Word, Count)| word.clone());
+
+    let mut expected_tally = vec![
         ("the".into(), 2),
         ("hope".into(), 1),
         ("is".into(), 1),
@@ -300,10 +303,10 @@ fn test_into_tally() {
         ("perches".into(), 1),
         ("in".into(), 1),
         ("soul".into(), 1),
-    ]
-    .into_boxed_slice();
+    ];
+    expected_tally.sort_by_key(|(word, _): &(Word, Count)| word.clone());
 
-    assert_eq!(tally, expected_tally.as_ref());
+    assert_eq!(tally_vec, expected_tally);
 }
 
 #[test]
@@ -567,7 +570,14 @@ fn test_parallel_vs_sequential() {
 
     assert_eq!(sequential.count(), parallel.count());
     assert_eq!(sequential.uniq_count(), parallel.uniq_count());
-    assert_eq!(sequential.tally(), parallel.tally());
+
+    let mut seq_tally: Vec<_> = sequential.tally().to_vec();
+    seq_tally.sort_by_key(|(word, _): &(Word, Count)| word.clone());
+
+    let mut par_tally: Vec<_> = parallel.tally().to_vec();
+    par_tally.sort_by_key(|(word, _): &(Word, Count)| word.clone());
+
+    assert_eq!(seq_tally, par_tally);
 }
 
 #[test]

@@ -68,7 +68,14 @@ fn test_parallel_vs_sequential() {
 
     assert_eq!(sequential.count(), parallel.count());
     assert_eq!(sequential.uniq_count(), parallel.uniq_count());
-    assert_eq!(sequential.tally(), parallel.tally());
+
+    let mut seq_tally: Vec<_> = sequential.tally().to_vec();
+    seq_tally.sort_by_key(|(word, _): &(Box<str>, usize)| word.clone());
+
+    let mut par_tally: Vec<_> = parallel.tally().to_vec();
+    par_tally.sort_by_key(|(word, _): &(Box<str>, usize)| word.clone());
+
+    assert_eq!(seq_tally, par_tally);
 }
 
 #[test]
@@ -117,7 +124,14 @@ fn test_memory_mapped_vs_streamed() {
     // Verify results are the same regardless of I/O mode
     assert_eq!(memory_mapped.count(), streamed.count());
     assert_eq!(memory_mapped.uniq_count(), streamed.uniq_count());
-    assert_eq!(memory_mapped.tally(), streamed.tally());
+
+    let mut mmap_tally: Vec<_> = memory_mapped.tally().to_vec();
+    mmap_tally.sort_by_key(|(word, _): &(Box<str>, usize)| word.clone());
+
+    let mut stream_tally: Vec<_> = streamed.tally().to_vec();
+    stream_tally.sort_by_key(|(word, _): &(Box<str>, usize)| word.clone());
+
+    assert_eq!(mmap_tally, stream_tally);
 
     // Now test with parallel processing
     let parallel_performance = word_tally::Performance::default();

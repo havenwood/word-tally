@@ -1,4 +1,5 @@
 use assert_cmd::Command;
+use predicates::prelude::*;
 
 fn word_tally() -> Command {
     Command::cargo_bin("word-tally").unwrap()
@@ -11,7 +12,12 @@ fn exclude_patterns() {
         .write_stdin("truth tomorrow sublime narrow")
         .assert()
         .success()
-        .stdout("sublime 1\nnarrow 1\n");
+        .stdout(
+            predicate::str::contains("sublime 1")
+                .and(predicate::str::contains("narrow 1"))
+                .and(predicate::str::contains("truth").not())
+                .and(predicate::str::contains("tomorrow").not()),
+        );
 }
 
 #[test]
@@ -21,7 +27,12 @@ fn include_patterns() {
         .write_stdin("truth tomorrow sublime narrow")
         .assert()
         .success()
-        .stdout("truth 1\ntomorrow 1\n");
+        .stdout(
+            predicate::str::contains("truth 1")
+                .and(predicate::str::contains("tomorrow 1"))
+                .and(predicate::str::contains("sublime").not())
+                .and(predicate::str::contains("narrow").not()),
+        );
 }
 
 #[test]
@@ -32,7 +43,12 @@ fn multiple_exclude_patterns() {
         .write_stdin("angel beauty certain delight")
         .assert()
         .success()
-        .stdout("certain 1\ndelight 1\n");
+        .stdout(
+            predicate::str::contains("certain 1")
+                .and(predicate::str::contains("delight 1"))
+                .and(predicate::str::contains("angel").not())
+                .and(predicate::str::contains("beauty").not()),
+        );
 }
 
 #[test]
@@ -43,7 +59,12 @@ fn multiple_include_patterns() {
         .write_stdin("angel beauty certain delight")
         .assert()
         .success()
-        .stdout("angel 1\nbeauty 1\n");
+        .stdout(
+            predicate::str::contains("angel 1")
+                .and(predicate::str::contains("beauty 1"))
+                .and(predicate::str::contains("certain").not())
+                .and(predicate::str::contains("delight").not()),
+        );
 }
 
 #[test]
@@ -54,7 +75,13 @@ fn combine_exclusions() {
         .write_stdin("hope soul angel beauty certain")
         .assert()
         .success()
-        .stdout("beauty 1\ncertain 1\n");
+        .stdout(
+            predicate::str::contains("beauty 1")
+                .and(predicate::str::contains("certain 1"))
+                .and(predicate::str::contains("hope").not())
+                .and(predicate::str::contains("soul").not())
+                .and(predicate::str::contains("angel").not()),
+        );
 }
 
 #[test]
@@ -64,5 +91,11 @@ fn exclude_words_list() {
         .write_stdin("the narrow certain fame but a hope")
         .assert()
         .success()
-        .stdout("narrow 1\ncertain 1\nfame 1\nhope 1\n");
+        .stdout(
+            predicate::str::contains("narrow 1").and(
+                predicate::str::contains("certain 1")
+                    .and(predicate::str::contains("fame 1"))
+                    .and(predicate::str::contains("hope 1")),
+            ),
+        );
 }

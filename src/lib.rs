@@ -284,7 +284,7 @@ impl<'a> WordTally<'a> {
         options.filters().apply(&mut tally_map, options.case());
 
         let count = tally_map.values().sum();
-        let tally = tally_map.into_tally();
+        let tally: Tally = tally_map.into_iter().collect();
         let uniq_count = tally.len();
 
         let mut instance = Self {
