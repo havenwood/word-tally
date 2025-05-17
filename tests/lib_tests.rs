@@ -1,5 +1,3 @@
-use std::hash::{DefaultHasher, Hash, Hasher};
-use std::path::PathBuf;
 use std::sync::Arc;
 use word_tally::input::Input;
 use word_tally::output::Output;
@@ -8,7 +6,9 @@ use word_tally::{
     Serialization, Sort, Tally, Word, WordTally,
 };
 
-const TEST_WORDS_PATH: &str = "tests/files/words.txt";
+fn make_shared<T>(value: T) -> Arc<T> {
+    Arc::new(value)
+}
 
 struct ExpectedFields<'a> {
     count: Count,
@@ -16,9 +16,18 @@ struct ExpectedFields<'a> {
     tally: Vec<(&'a str, Count)>,
 }
 
-// Create an Arc to keep Options alive for the lifetime of tests
-fn make_shared<T>(value: T) -> Arc<T> {
-    Arc::new(value)
+fn create_test_data_file() -> tempfile::NamedTempFile {
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    // Using content that matches expected test data structure
+    let content = b"d\n\
+                    123 123 123 123 123\n\
+                    a A *** A C D 123 123\n\
+                    b b b B B B B 123\n\
+                    d C d d d D D D D\n\
+                    c D c c c c c c C C C C C C\n\
+                    123\n";
+    std::io::Write::write_all(&mut temp_file, content).unwrap();
+    temp_file
 }
 
 fn word_tally(
@@ -27,7 +36,8 @@ fn word_tally(
     serialization: Serialization,
     filters: Filters,
 ) -> WordTally<'static> {
-    let file_path = TEST_WORDS_PATH;
+    let test_file = Box::leak(Box::new(create_test_data_file()));
+    let file_path = test_file.path().to_str().unwrap();
 
     let options = Options::new(
         case,
@@ -39,12 +49,10 @@ fn word_tally(
         Performance::default(),
     );
 
-    // For tests only: create a 'static reference using Box::leak
-    // This is safe in tests since they are short-lived
     let options_static = Box::leak(Box::new(options));
 
-    let input = Input::new(file_path, options_static.io())
-        .expect("Expected test words file (`files/words.txt`) to be readable.");
+    let input =
+        Input::new(file_path, options_static.io()).expect("Failed to create input from test file");
 
     WordTally::new(&input, options_static).expect("Failed to create WordTally")
 }
@@ -243,54 +251,6 @@ fn original_case_asc_order() {
             ],
         },
     );
-}
-
-#[test]
-fn equality_and_hashing() {
-    fn hash_value(word_tally: &WordTally<'_>) -> u64 {
-        let mut hasher = DefaultHasher::new();
-        word_tally.hash(&mut hasher);
-        hasher.finish()
-    }
-
-    fn assert_hash_eq(tally_a: &WordTally<'_>, tally_b: &WordTally<'_>) {
-        assert_eq!(hash_value(tally_a), hash_value(tally_b));
-    }
-
-    fn assert_hash_ne(tally_a: &WordTally<'_>, tally_b: &WordTally<'_>) {
-        assert_ne!(hash_value(tally_a), hash_value(tally_b));
-    }
-
-    let cases_and_sorts = [
-        (Case::Original, Sort::Asc),
-        (Case::Original, Sort::Desc),
-        (Case::Upper, Sort::Asc),
-        (Case::Upper, Sort::Desc),
-        (Case::Lower, Sort::Asc),
-        (Case::Lower, Sort::Desc),
-    ];
-
-    let tallies: Vec<WordTally<'static>> = cases_and_sorts
-        .iter()
-        .map(|&(case, sort)| {
-            let serializer = Serialization::with_format(Format::Text);
-            word_tally(case, sort, serializer, Filters::default())
-        })
-        .collect();
-
-    for tally in &tallies {
-        assert_eq!(tally, tally);
-        assert_hash_eq(tally, tally);
-    }
-
-    for (i, tally_a) in tallies.iter().enumerate() {
-        for (j, tally_b) in tallies.iter().enumerate() {
-            if i != j {
-                assert_ne!(tally_a, tally_b);
-                assert_hash_ne(tally_a, tally_b);
-            }
-        }
-    }
 }
 
 #[test]
@@ -549,7 +509,8 @@ fn test_combining_include_exclude_patterns() {
 
 #[test]
 fn test_input_size() {
-    let file_input = Input::File(PathBuf::from(TEST_WORDS_PATH));
+    let temp_file = create_test_data_file();
+    let file_input = Input::File(temp_file.path().to_path_buf());
     let size = file_input.size();
     assert!(size.is_some());
     assert!(size.unwrap() > 0);
@@ -560,7 +521,7 @@ fn test_input_size() {
 
 #[test]
 fn test_parallel_vs_sequential() {
-    let input_text = b"The quick brown fox jumps over the lazy dog. The fox was quick.";
+    let input_text = b"I taste a liquor never brewed. I taste a liquor.";
     let mut temp_file = tempfile::NamedTempFile::new().unwrap();
     std::io::Write::write_all(&mut temp_file, input_text).unwrap();
     let file_path = temp_file.path().to_str().unwrap();
@@ -612,7 +573,8 @@ fn test_parallel_vs_sequential() {
 #[test]
 fn test_memory_mapped_vs_streamed() {
     // Use the test file
-    let file_path = TEST_WORDS_PATH;
+    let test_file = create_test_data_file();
+    let file_path = test_file.path().to_str().unwrap();
 
     // Set up options for memory-mapped I/O (sequential)
     let mmap_performance = Performance::default();
@@ -679,32 +641,6 @@ fn test_memory_mapped_vs_streamed() {
     // Verify the parallel processing worked
     assert!(parallel_stream.count() > 0);
     assert!(parallel_stream.uniq_count() > 0);
-}
-
-#[test]
-fn test_capacity_calculation() {
-    // Test capacity calculation with different input sizes
-    let performance = Performance::default();
-
-    // Test with known size (file input)
-    assert_eq!(performance.capacity(Some(8192)), 160); // (8KB / 1024 * 200) / 10 = 160
-    assert_eq!(performance.capacity(Some(524288)), 10240); // (512KB / 1024 * 200) / 10
-    assert_eq!(performance.capacity(Some(4194304)), 81920); // (4MB / 1024 * 200) / 10
-
-    // Test with unknown size (stdin)
-    assert_eq!(performance.capacity(None), 5120); // default_capacity
-
-    // Test actual file processing
-    let input_text = b"test data";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
-
-    let options = Options::default();
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create input");
-
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
-    assert_eq!(tally.count(), 2);
 }
 
 #[test]
@@ -781,33 +717,6 @@ mod serialization_tests {
     fn with_delimiter() {
         let delim = Serialization::with_delimiter("::").unwrap();
         assert_eq!(delim.delimiter(), "::");
-    }
-}
-
-// Tests for Performance struct
-mod performance_tests {
-    use super::*;
-
-    #[test]
-    fn default_values() {
-        let performance = Performance::default();
-        assert_eq!(performance.capacity(None), 5120);
-        assert_eq!(performance.uniqueness_ratio, 10);
-        assert_eq!(performance.words_per_kb, 200);
-        assert_eq!(performance.chunk_size, 65_536);
-    }
-
-    #[test]
-    fn builder_methods() {
-        let performance = Performance::default()
-            .with_uniqueness_ratio(5)
-            .with_words_per_kb(20)
-            .with_chunk_size(32_768);
-
-        assert_eq!(performance.capacity(None), 5120);
-        assert_eq!(performance.uniqueness_ratio, 5);
-        assert_eq!(performance.words_per_kb, 20);
-        assert_eq!(performance.chunk_size, 32_768);
     }
 }
 
@@ -1048,33 +957,4 @@ fn test_json_field_camel_case_deserialization() {
     let deserialized: WordTally<'_> = serde_json::from_str(&serialized).unwrap();
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
-}
-
-#[test]
-fn test_error_handling_invalid_json() {
-    // Invalid JSON syntax
-    let invalid_json = r#"
-    {
-        "tally": [["test", 1]],
-        "count": 1,
-        "uniqueCount": 1,
-        this is invalid
-    }
-    "#;
-
-    let result: Result<WordTally<'_>, _> = serde_json::from_str(invalid_json);
-    assert!(result.is_err());
-}
-
-#[test]
-fn test_error_handling_missing_fields() {
-    // Missing required fields
-    let missing_fields_json = r#"
-    {
-        "tally": [["test", 1]]
-    }
-    "#;
-
-    let result: Result<WordTally<'_>, _> = serde_json::from_str(missing_fields_json);
-    assert!(result.is_err());
 }

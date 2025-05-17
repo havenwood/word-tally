@@ -1,4 +1,4 @@
-//! Common utilities for benchmarking word-tally.
+//! Shared benchmark utilities.
 
 use std::io::Write;
 use std::path::PathBuf;
@@ -10,9 +10,9 @@ use fake::Fake;
 use fake::faker::lorem::en::Words;
 use tempfile::NamedTempFile;
 
-use word_tally::{Input, Options, WordTally};
+use word_tally::{Input, Io, Options, WordTally};
 
-/// Generate text with random words for benchmarking
+/// Generate random text for benchmarks
 pub fn generate_sample_text(lines: usize, words_per_line: std::ops::Range<usize>) -> String {
     (0..lines)
         .map(|_| {
@@ -24,22 +24,22 @@ pub fn generate_sample_text(lines: usize, words_per_line: std::ops::Range<usize>
         .join("\n")
 }
 
-/// Small text sample (approximately 300 lines, ~30KB)
+/// Small text sample (~30KB)
 pub fn small_text() -> String {
     generate_sample_text(300, 5..12)
 }
 
-/// Medium text sample (approximately 800 lines, ~100KB)
+/// Medium text sample (~100KB)
 pub fn medium_text() -> String {
     generate_sample_text(800, 8..15)
 }
 
-/// Wrap a value in an Arc for shared ownership
+/// Wrap value in Arc for sharing
 pub fn make_shared<T>(value: T) -> Arc<T> {
     Arc::new(value)
 }
 
-/// Create a standard criterion configuration
+/// Standard Criterion configuration
 pub fn standard_criterion_config() -> Criterion {
     Criterion::default()
         .configure_from_args()
@@ -48,7 +48,7 @@ pub fn standard_criterion_config() -> Criterion {
         .warm_up_time(Duration::from_secs(3))
 }
 
-/// Helper function to run a WordTally benchmark with string input
+/// Benchmark WordTally with string input
 pub fn bench_word_tally_with_string<F>(
     b: &mut criterion::Bencher<'_>,
     text: String,
@@ -68,8 +68,7 @@ pub fn bench_word_tally_with_string<F>(
     );
 }
 
-/// Create a standardized file for benchmarking with consistent word distribution
-/// and a predictable size in kilobytes
+/// Create benchmark file of specified size in KB
 pub fn create_benchmark_file(size_kb: usize) -> (NamedTempFile, PathBuf) {
     let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
 
@@ -89,10 +88,18 @@ pub fn create_benchmark_file(size_kb: usize) -> (NamedTempFile, PathBuf) {
     (temp_file, path)
 }
 
-/// Helper function to create a benchmark group with a standard name format
+/// Create named benchmark group
 pub fn create_bench_group<'a>(
     c: &'a mut Criterion,
     name: &str,
 ) -> criterion::BenchmarkGroup<'a, WallTime> {
     c.benchmark_group(name)
+}
+
+/// Create temp file and input from text
+pub fn create_temp_input(text: String) -> (NamedTempFile, Input) {
+    let mut temp_file = NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
+    let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
+    (temp_file, input)
 }

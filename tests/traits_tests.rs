@@ -91,7 +91,7 @@ fn test_wordtally_deserialize() {
         "tally": [["hello", 5], ["world", 3]],
         "options": {
             "case": "Lower",
-            "sort": "Desc", 
+            "sort": "Desc",
             "serialization": {"format": "Text", "delimiter": " "},
             "filters": {"min_chars": null, "min_count": null, "exclude_words": [], "exclude_patterns": [], "include_patterns": []},
             "io": "Streamed",

@@ -8,6 +8,7 @@ Benchmarks for measuring word-tally performance across different strategies.
 - `core.rs` - Benchmarks for sorting and filtering strategies
 - `io.rs` - I/O and processing strategy benchmarks (Streamed, Buffered, Memory-mapped)
 - `features.rs` - Processing strategy benchmarks (Sequential vs Parallel)
+- `fixtures/` - Test data files for benchmarking
 
 ## What's Being Benchmarked
 
@@ -22,6 +23,7 @@ Benchmarks for measuring word-tally performance across different strategies.
 
 ### Features Benchmarks
 - **Processing comparison**: Sequential vs Parallel processing for different text sizes
+- **Regex patterns**: Performance with no patterns, few patterns, and many patterns
 - **Text sizes**: Small (~30KB) and Medium (~100KB) samples
 
 ## Running Benchmarks
@@ -31,16 +33,17 @@ Benchmarks for measuring word-tally performance across different strategies.
 cargo bench
 
 # Run specific benchmark groups
-cargo bench --bench core    # Sorting and filtering benchmarks
-cargo bench --bench io      # I/O and processing strategy benchmarks
+cargo bench --bench core     # Sorting and filtering benchmarks
+cargo bench --bench io       # I/O and processing strategy benchmarks
 cargo bench --bench features # Processing strategy benchmarks
 
-# Run specific benchmark tests
-cargo bench --bench io -- size_10kb      # Only 10KB file benchmarks
-cargo bench --bench io -- size_75kb      # Only 75KB file benchmarks
-cargo bench --bench core -- sorting      # Only sorting benchmarks
-cargo bench --bench core -- filtering    # Only filtering benchmarks
-cargo bench --bench features -- processing # Processing strategy benchmarks
+# Run specific benchmark tests by group name
+cargo bench -- core/sorting_strategies
+cargo bench -- core/filtering_strategies
+cargo bench -- features/processing_comparison
+cargo bench -- features/regex_patterns
+cargo bench -- io_strategies/file_size_10kb
+cargo bench -- io_strategies/file_size_75kb
 ```
 
 ## Benchmark Generation

@@ -1,4 +1,4 @@
-use word_tally::{Case, MinChars, Sort, Processing, Io};
+use word_tally::{Case, Io, MinChars, Processing, Sort};
 
 #[test]
 fn test_format_enum_as_string() {
@@ -20,7 +20,10 @@ fn test_format_enum_as_string() {
 fn test_format_option() {
     // Test formatting of options
     let some_min_chars: Option<MinChars> = Some(3);
-    assert_eq!(some_min_chars.as_ref().map(|v| v.to_string()), Some("3".to_string()));
+    assert_eq!(
+        some_min_chars.as_ref().map(|v| v.to_string()),
+        Some("3".to_string())
+    );
 
     let none_min_chars: Option<MinChars> = None;
     assert_eq!(none_min_chars.as_ref().map(|v| v.to_string()), None);

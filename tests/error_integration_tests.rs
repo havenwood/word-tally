@@ -1,7 +1,10 @@
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs::{self, File};
-use tempfile::TempDir;
+use std::io::Write;
+use std::sync::Arc;
+use tempfile::{NamedTempFile, TempDir};
+use word_tally::{Input, Io, Options, WordTally};
 
 #[test]
 fn test_permission_denied_error() {
@@ -74,4 +77,52 @@ fn test_nonexistent_path_error() {
         .stderr(predicate::str::contains(
             "Error: failed to create output file:",
         ));
+}
+
+fn make_shared<T>(value: T) -> Arc<T> {
+    Arc::new(value)
+}
+
+#[test]
+fn test_new_invalid_utf8_error() {
+    let invalid_utf8 = vec![0xFF, 0xFE, 0xFD, 0x80, 0x81];
+    let mut temp_file = NamedTempFile::new().unwrap();
+    temp_file.write_all(&invalid_utf8).unwrap();
+
+    let options = make_shared(Options::default());
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io()).unwrap();
+
+    let result = WordTally::new(&input, &options);
+    assert!(result.is_err());
+
+    let error = result.unwrap_err();
+    let error_msg = error.to_string();
+    assert!(!error_msg.is_empty());
+}
+
+#[test]
+#[ignore] // This test hangs waiting for stdin, so we ignore it during regular test runs
+fn test_memory_mapping_stdin_error() {
+    let options = Options::default().with_io(Io::MemoryMapped);
+    let options = make_shared(options);
+
+    // Create stdin input
+    let result = {
+        // Create an Input that uses stdin
+        let input = Input::default();
+        WordTally::new(&input, &options)
+    };
+
+    // At this point, we should either have an error (if memory mapping stdin is not supported)
+    // or success (if it is supported but with no input, giving count 0)
+    assert!(result.is_err() || result.as_ref().unwrap().count() == 0);
+
+    if let Err(error) = result {
+        let error_msg = error.to_string().to_lowercase();
+        assert!(
+            error_msg.contains("stdin")
+                || error_msg.contains("memory")
+                || error_msg.contains("map")
+        );
+    }
 }

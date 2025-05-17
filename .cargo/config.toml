@@ -1,0 +1,13 @@
+[alias]
+test-all = "test --workspace --all-features"
+test-quick = "test --lib"
+test-integration = "test --test '*'"
+test-verbose = "test -- --nocapture"
+test-single = "test -- --test-threads=1"
+test-release = "test --release"
+
+[target.'cfg(all())']
+rustflags = ["-D", "warnings"]
+
+[env]
+RUST_BACKTRACE = "1"

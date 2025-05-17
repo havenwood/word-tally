@@ -1,9 +1,9 @@
 use std::io::Write;
 use word_tally::{Count, Input, Io, Options, Processing, WordTally};
 
-const API_EXAMPLE_TEXT: &str = "The quick brown fox jumps over the lazy dog";
-const EXPECTED_API_WORD_COUNT: Count = 9;
-const EXPECTED_API_UNIQ_COUNT: Count = 8;
+const API_EXAMPLE_TEXT: &str = "I taste a liquor never brewed";
+const EXPECTED_API_WORD_COUNT: Count = 6;
+const EXPECTED_API_UNIQ_COUNT: Count = 6;
 
 fn verify_api_example_tally(tally: &WordTally<'_>) {
     assert_eq!(

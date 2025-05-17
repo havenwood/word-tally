@@ -2,6 +2,7 @@ use assert_cmd::Command;
 use predicates::prelude::PredicateBooleanExt;
 use predicates::str::{self, contains};
 use std::fs;
+
 fn word_tally() -> Command {
     Command::cargo_bin("word-tally").unwrap()
 }
@@ -15,6 +16,12 @@ fn version() {
 #[test]
 fn help() {
     let assert = word_tally().arg("-h").assert();
+    assert.success().stdout(str::contains("\nUsage"));
+}
+
+#[test]
+fn help_long() {
+    let assert = word_tally().arg("--help").assert();
     assert.success().stdout(str::contains("\nUsage"));
 }
 
@@ -49,82 +56,82 @@ fn verbose_with_min_count() {
 fn verbose_with_exclude_words() {
     let assert = word_tally()
         .arg("-v")
-        .arg("--exclude-words=wombat,trees")
+        .arg("--exclude-words=narrow,certain")
         .assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nprocessing sequential\nio streamed\nmin-chars none\nmin-count none\nexclude-words wombat,trees\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nprocessing sequential\nio streamed\nmin-chars none\nmin-count none\nexclude-words narrow,certain\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 
 #[test]
 fn verbose_with_input() {
-    let assert = word_tally().write_stdin("wombat").arg("-v").assert();
+    let assert = word_tally().write_stdin("narrow").arg("-v").assert();
     assert
         .success()
         .stderr("source -\ntotal-words 1\nunique-words 1\ndelimiter \" \"\ncase lower\norder desc\nprocessing sequential\nio streamed\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n\n")
-        .stdout("wombat 1\n");
+        .stdout("narrow 1\n");
 }
 
 #[test]
 fn output_longhand() {
     let assert = word_tally()
-        .write_stdin("wombat")
+        .write_stdin("narrow")
         .arg("--output=test.txt")
         .assert();
     assert.success().stdout("");
-    assert_eq!("wombat 1\n", fs::read_to_string("test.txt").unwrap());
+    assert_eq!("narrow 1\n", fs::read_to_string("test.txt").unwrap());
     fs::remove_file("test.txt").unwrap();
 }
 
 #[test]
 fn output_shorthand() {
     let assert = word_tally()
-        .write_stdin("wombat")
+        .write_stdin("narrow")
         .arg("-o=test2.txt")
         .assert();
     assert.success().stdout("");
-    assert_eq!("wombat 1\n", fs::read_to_string("test2.txt").unwrap());
+    assert_eq!("narrow 1\n", fs::read_to_string("test2.txt").unwrap());
     fs::remove_file("test2.txt").unwrap();
 }
 
 #[test]
 fn delimiter_shorthand() {
-    let assert = word_tally().write_stdin("wombat").arg("-d\t").assert();
-    assert.success().stdout("wombat\t1\n");
+    let assert = word_tally().write_stdin("narrow").arg("-d\t").assert();
+    assert.success().stdout("narrow\t1\n");
 }
 
 #[test]
 fn delimiter_longhand() {
     let assert = word_tally()
-        .write_stdin("wombat")
+        .write_stdin("narrow")
         .arg("--delimiter=,")
         .assert();
-    assert.success().stdout("wombat,1\n");
+    assert.success().stdout("narrow,1\n");
 }
 
 #[test]
 fn case_default() {
-    let assert = word_tally().write_stdin("wOmBaT TrEeS trees").assert();
-    assert.success().stdout("trees 2\nwombat 1\n");
+    let assert = word_tally().write_stdin("nArRoW CeRtAiN certain").assert();
+    assert.success().stdout("certain 2\nnarrow 1\n");
 }
 
 #[test]
 fn case_upper() {
     let assert = word_tally()
-        .write_stdin("wOmBaT TrEeS wombat")
+        .write_stdin("nArRoW CeRtAiN narrow")
         .arg("--case=upper")
         .assert();
-    assert.success().stdout("WOMBAT 2\nTREES 1\n");
+    assert.success().stdout("NARROW 2\nCERTAIN 1\n");
 }
 
 #[test]
 fn case_original() {
     let assert = word_tally()
-        .write_stdin("wombat wOmBaT wombat wOmBaT wombat TrEeS")
+        .write_stdin("narrow nArRoW narrow nArRoW narrow CeRtAiN")
         .arg("--case=original")
         .assert();
-    assert.success().stdout("wombat 3\nwOmBaT 2\nTrEeS 1\n");
+    assert.success().stdout("narrow 3\nnArRoW 2\nCeRtAiN 1\n");
 }
 
 #[test]
@@ -150,109 +157,109 @@ fn no_words() {
 
 #[test]
 fn test_discard_words() {
-    let input = "The tree that would grow to heaven must send its roots to hell.";
+    let input = "Hope is the thing with feathers that perches in the soul.";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
-        .arg("--exclude-words=heaven,hell")
+        .arg("--exclude-words=feathers,soul")
         .assert()
         .success()
-        .stdout(contains("tree").and(contains("heaven").not().and(contains("hell").not())));
+        .stdout(contains("hope").and(contains("feathers").not().and(contains("soul").not())));
 }
 
 #[test]
 fn test_exclude_patterns() {
-    let input = "The tree that would grow to heaven must send its roots to hell.";
+    let input = "I dwell in possibility - a fairer house than prose.";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
         .arg("--exclude=^h.*") // Exclude words starting with 'h'
-        .arg("--exclude=^t.*$") // Exclude words ending with 't'
+        .arg("--exclude=.*t$") // Exclude words ending with 't'
         .assert()
         .success()
-        .stdout(contains("must"))
-        .stdout(contains("send"))
-        .stdout(contains("roots"))
-        .stdout(contains("heaven").not())
-        .stdout(contains("hell").not())
-        .stdout(contains("the").not())
-        .stdout(contains("tree").not())
-        .stdout(contains("that").not())
-        .stdout(contains("to").not());
+        .stdout(contains("dwell"))
+        .stdout(contains("possibility"))
+        .stdout(contains("a"))
+        .stdout(contains("fairer"))
+        .stdout(contains("prose"))
+        .stdout(contains("house").not())
+        .stdout(contains("than"))
+        .stdout(contains("i"));
 }
 
 #[test]
 fn test_multiple_exclude_patterns() {
-    let input = "apple banana carrot dog elephant fox grape";
+    let input = "success fame sunset wild nobody moon immortal";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
-        .arg("--exclude=^a.*") // Exclude words starting with 'a'
+        .arg("--exclude=^s.*") // Exclude words starting with 's'
         .arg("--exclude=.*g$") // Exclude words ending with 'g'
-        .arg("--exclude=c.*t") // Exclude words starting with 'c' and ending with 't'
+        .arg("--exclude=c.*t") // Exclude words containing 'c' and 't'
         .assert()
         .success()
-        .stdout(contains("banana"))
-        .stdout(contains("elephant"))
-        .stdout(contains("fox"))
-        .stdout(contains("apple").not())
-        .stdout(contains("dog").not())
-        .stdout(contains("carrot").not());
+        .stdout(contains("fame"))
+        .stdout(contains("wild"))
+        .stdout(contains("nobody"))
+        .stdout(contains("moon"))
+        .stdout(contains("immortal"))
+        .stdout(contains("success").not())
+        .stdout(contains("sunset").not());
 }
 
 #[test]
 fn test_include_patterns() {
-    let input = "apple banana carrot dog elephant fox grape";
+    let input = "nobody knows tomorrow certain immortal narrow sublime";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
-        .arg("--include=^[ab].*") // Include words starting with 'a' or 'b'
+        .arg("--include=^[nt].*") // Include words starting with 'n' or 't'
         .assert()
         .success()
-        .stdout(contains("apple"))
-        .stdout(contains("banana"))
-        .stdout(contains("carrot").not())
-        .stdout(contains("dog").not())
-        .stdout(contains("elephant").not())
-        .stdout(contains("fox").not())
-        .stdout(contains("grape").not());
+        .stdout(contains("nobody"))
+        .stdout(contains("tomorrow"))
+        .stdout(contains("narrow"))
+        .stdout(contains("knows").not())
+        .stdout(contains("certain").not())
+        .stdout(contains("immortal").not())
+        .stdout(contains("sublime").not());
 }
 
 #[test]
 fn test_multiple_include_patterns() {
-    let input = "apple banana carrot dog elephant fox grape";
+    let input = "beauty finite infinite fame certain forever sublime";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
-        .arg("--include=^a.*") // Include words starting with 'a'
+        .arg("--include=^f.*") // Include words starting with 'f'
         .arg("--include=.*e$") // Include words ending with 'e'
         .assert()
         .success()
-        .stdout(contains("apple"))
-        .stdout(contains("grape"))
-        .stdout(contains("banana").not())
-        .stdout(contains("carrot").not())
-        .stdout(contains("dog").not())
-        .stdout(contains("elephant").not())
-        .stdout(contains("fox").not());
+        .stdout(contains("finite"))
+        .stdout(contains("fame"))
+        .stdout(contains("forever"))
+        .stdout(contains("infinite"))
+        .stdout(contains("sublime"))
+        .stdout(contains("beauty").not())
+        .stdout(contains("certain").not());
 }
 
 #[test]
 fn test_combine_exclusions() {
-    let input = "The tree that would grow to heaven must send its roots to hell.";
+    let input = "Tell all the truth but tell it slant - success in circuit lies.";
     let mut cmd = Command::cargo_bin("word-tally").unwrap();
     cmd.write_stdin(input)
-        .arg("--exclude-words=must,send")
-        .arg("--exclude=^h.*")
-        .arg("--exclude=^t.*$")
+        .arg("--exclude-words=tell,lies")
+        .arg("--exclude=^s.*")
+        .arg("--exclude=.*t$")
         .assert()
         .success()
-        .stdout(contains("grow"))
-        .stdout(contains("its"))
-        .stdout(contains("roots"))
-        .stdout(contains("heaven").not())
-        .stdout(contains("hell").not())
-        .stdout(contains("the").not())
-        .stdout(contains("tree").not())
-        .stdout(contains("that").not())
-        .stdout(contains("to").not())
-        .stdout(contains("must").not())
-        .stdout(contains("send").not());
+        .stdout(contains("all"))
+        .stdout(contains("the"))
+        .stdout(contains("truth"))
+        .stdout(contains("in"))
+        .stdout(contains("but").not())
+        .stdout(contains("it").not())
+        .stdout(contains("circuit").not())
+        .stdout(contains("slant").not())
+        .stdout(contains("success").not())
+        .stdout(contains("tell").not())
+        .stdout(contains("lies").not());
 }
 
 #[test]
@@ -272,7 +279,7 @@ fn verbose_with_json_format() {
     let assert = word_tally()
         .arg("-v")
         .arg("--format=json")
-        .write_stdin("hello world")
+        .write_stdin("hope forever")
         .assert();
 
     assert
@@ -289,7 +296,7 @@ fn verbose_with_json_format() {
         .stderr(contains("\"excludeWords\":null"))
         .stderr(contains("\"excludePatterns\":null"))
         .stderr(contains("\"includePatterns\":null"))
-        .stdout(contains("[[\"hello\",1],[\"world\",1]]"));
+        .stdout(contains("[[\"hope\",1],[\"forever\",1]]"));
 }
 
 #[test]
@@ -297,7 +304,7 @@ fn verbose_with_csv_format() {
     let assert = word_tally()
         .arg("-v")
         .arg("--format=csv")
-        .write_stdin("hello world")
+        .write_stdin("hope forever")
         .assert();
 
     assert
@@ -316,32 +323,32 @@ fn verbose_with_csv_format() {
         .stderr(contains("exclude-patterns,none"))
         .stderr(contains("include-patterns,none"))
         .stdout(contains("word,count"))
-        .stdout(contains("hello,1"))
-        .stdout(contains("world,1"));
+        .stdout(contains("forever,1"))
+        .stdout(contains("hope,1"));
 }
 
 #[test]
 fn format_json() {
     let assert = word_tally()
-        .write_stdin("wombat wombat bat")
+        .write_stdin("narrow narrow fame")
         .arg("--format=json")
         .assert();
     assert
         .success()
-        .stdout(contains("[\"wombat\",2]").and(contains("[\"bat\",1]")));
+        .stdout(contains("[\"narrow\",2]").and(contains("[\"fame\",1]")));
 }
 
 #[test]
 fn format_csv() {
     let assert = word_tally()
-        .write_stdin("wombat wombat bat")
+        .write_stdin("narrow narrow fame")
         .arg("--format=csv")
         .assert();
     assert
         .success()
         .stdout(contains("word,count"))
-        .stdout(contains("wombat,2"))
-        .stdout(contains("bat,1"));
+        .stdout(contains("narrow,2"))
+        .stdout(contains("fame,1"));
 }
 
 #[test]
@@ -352,53 +359,53 @@ fn csv_escaping() {
     // which handles commas and quotes automatically
 
     let assert = word_tally()
-        .write_stdin("hello there \"quoted\" word")
+        .write_stdin("narrow certain \"sublime\" hope")
         .arg("--format=csv")
         .assert();
 
     assert
         .success()
         .stdout(str::starts_with("word,count\n"))
-        .stdout(contains("hello,1"))
-        .stdout(contains("there,1"))
-        .stdout(contains("quoted,1"))
-        .stdout(contains("word,1"));
+        .stdout(contains("narrow,1"))
+        .stdout(contains("certain,1"))
+        .stdout(contains("sublime,1"))
+        .stdout(contains("hope,1"));
 }
 
 #[test]
 fn stdin_with_parallel() {
     // Test with a small input
     let assert = word_tally()
-        .write_stdin("hello world")
+        .write_stdin("hope forever")
         .arg("--parallel")
         .assert();
     assert
         .success()
-        .stdout(contains("hello 1"))
-        .stdout(contains("world 1"));
+        .stdout(contains("hope 1"))
+        .stdout(contains("forever 1"));
 
     // Test with a multi-line input
     let assert = word_tally()
-        .write_stdin("hello world\ngoodbye universe\nhello again")
+        .write_stdin("hope forever\ninfinite beauty\nhope sublime")
         .arg("--parallel")
         .assert();
     assert
         .success()
-        .stdout(contains("hello 2"))
-        .stdout(contains("world 1"))
-        .stdout(contains("goodbye 1"))
-        .stdout(contains("universe 1"))
-        .stdout(contains("again 1"));
+        .stdout(contains("hope 2"))
+        .stdout(contains("forever 1"))
+        .stdout(contains("infinite 1"))
+        .stdout(contains("beauty 1"))
+        .stdout(contains("sublime 1"));
 }
 
 #[test]
 fn stdin_with_parallel_shorthand() {
     // Test the -p shorthand flag
-    let assert = word_tally().write_stdin("hello world").arg("-p").assert();
+    let assert = word_tally().write_stdin("hope forever").arg("-p").assert();
     assert
         .success()
-        .stdout(contains("hello 1"))
-        .stdout(contains("world 1"));
+        .stdout(contains("hope 1"))
+        .stdout(contains("forever 1"));
 }
 
 #[test]
@@ -406,33 +413,33 @@ fn parallel_with_env_vars() {
     let assert = word_tally()
         .env("WORD_TALLY_CHUNK_SIZE", "4096")
         .env("WORD_TALLY_THREADS", "2")
-        .write_stdin("test environment variables with CLI")
+        .write_stdin("hope infinite beauty forever sublime")
         .arg("--parallel")
         .assert();
 
     assert
         .success()
-        .stdout(contains("test 1"))
-        .stdout(contains("environment 1"))
-        .stdout(contains("variables 1"))
-        .stdout(contains("with 1"))
-        .stdout(contains("cli 1"));
+        .stdout(contains("hope 1"))
+        .stdout(contains("infinite 1"))
+        .stdout(contains("beauty 1"))
+        .stdout(contains("forever 1"))
+        .stdout(contains("sublime 1"));
 }
 
 #[test]
 fn parallel_with_large_chunk() {
     let assert = word_tally()
         .env("WORD_TALLY_CHUNK_SIZE", "65536")
-        .write_stdin("test with very large chunk size")
+        .write_stdin("truth beauty certain narrow sublime forever")
         .arg("--parallel")
         .assert();
 
     assert
         .success()
-        .stdout(contains("test 1"))
-        .stdout(contains("with 1"))
-        .stdout(contains("very 1"))
-        .stdout(contains("large 1"))
-        .stdout(contains("chunk 1"))
-        .stdout(contains("size 1"));
+        .stdout(contains("truth 1"))
+        .stdout(contains("beauty 1"))
+        .stdout(contains("certain 1"))
+        .stdout(contains("narrow 1"))
+        .stdout(contains("sublime 1"))
+        .stdout(contains("forever 1"));
 }

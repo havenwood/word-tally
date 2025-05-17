@@ -1,7 +1,9 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-use word_tally::{Case, Filters, Format, Input, Io, Options, Processing, Sort, Tally, WordTally};
+use word_tally::{
+    Case, Filters, Format, Input, Io, Options, Processing, Serialization, Sort, Tally, WordTally,
+};
 
 fn calculate_hash<T: Hash>(value: &T) -> u64 {
     let mut hasher = DefaultHasher::new();
@@ -278,4 +280,73 @@ fn test_wordtally_hash_fields() {
     let uppercase_tally = WordTally::new(&uppercase_input, &uppercase_options).unwrap();
 
     assert_ne!(initial_hash, calculate_hash(&uppercase_tally));
+}
+
+#[test]
+fn test_equality_and_hashing() {
+    fn hash_value(word_tally: &WordTally<'_>) -> u64 {
+        let mut hasher = DefaultHasher::new();
+        word_tally.hash(&mut hasher);
+        hasher.finish()
+    }
+
+    fn assert_hash_eq(tally_a: &WordTally<'_>, tally_b: &WordTally<'_>) {
+        assert_eq!(hash_value(tally_a), hash_value(tally_b));
+    }
+
+    fn assert_hash_ne(tally_a: &WordTally<'_>, tally_b: &WordTally<'_>) {
+        assert_ne!(hash_value(tally_a), hash_value(tally_b));
+    }
+
+    let cases_and_sorts = [
+        (Case::Original, Sort::Asc),
+        (Case::Original, Sort::Desc),
+        (Case::Upper, Sort::Asc),
+        (Case::Upper, Sort::Desc),
+        (Case::Lower, Sort::Asc),
+        (Case::Lower, Sort::Desc),
+    ];
+
+    // Create a test file
+    let test_text = b"test text for hashing";
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, test_text).unwrap();
+    let file_path = temp_file.path().to_str().unwrap();
+
+    let tallies: Vec<WordTally<'static>> = cases_and_sorts
+        .iter()
+        .map(|&(case, sort)| {
+            let serializer = Serialization::with_format(Format::Text);
+            let filters = Filters::default();
+            let options = Options::new(
+                case,
+                sort,
+                serializer,
+                filters,
+                Io::Streamed,
+                Processing::Sequential,
+                word_tally::Performance::default(),
+            );
+            // For tests only: create a 'static reference using Box::leak
+            let options_static = Box::leak(Box::new(options));
+
+            let input = Input::new(file_path, options_static.io()).expect("Failed to create Input");
+
+            WordTally::new(&input, options_static).expect("Failed to create WordTally")
+        })
+        .collect();
+
+    for tally in &tallies {
+        assert_eq!(tally, tally);
+        assert_hash_eq(tally, tally);
+    }
+
+    for (i, tally_a) in tallies.iter().enumerate() {
+        for (j, tally_b) in tallies.iter().enumerate() {
+            if i != j {
+                assert_ne!(tally_a, tally_b);
+                assert_hash_ne(tally_a, tally_b);
+            }
+        }
+    }
 }

@@ -1,15 +1,17 @@
 //! Core benchmarks for sorting and filtering strategies.
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use word_tally::{Filters, Input, Io, Options, Processing, Sort};
+use word_tally::{Filters, Options, Processing, Sort};
 
 #[path = "common.rs"]
 pub mod common;
-use self::common::{create_bench_group, make_shared, small_text, standard_criterion_config};
+use self::common::{
+    create_bench_group, create_temp_input, make_shared, small_text, standard_criterion_config,
+};
 
-/// Benchmark different sorting strategies
+/// Benchmark sorting strategies
 fn bench_sorting_strategies(c: &mut Criterion) {
-    let mut group = create_bench_group(c, "sorting");
+    let mut group = create_bench_group(c, "core/sorting_strategies");
     let text_sample = small_text();
 
     let sort_options = [(Sort::Unsorted, "unsorted"), (Sort::Desc, "descending")];
@@ -21,17 +23,12 @@ fn bench_sorting_strategies(c: &mut Criterion) {
 
         let shared_options = make_shared(options);
 
-        group.bench_function(format!("sequential_{}", sort_name), |b| {
+        group.bench_function(*sort_name, |b| {
             self::common::bench_word_tally_with_string(
                 b,
                 text_sample.clone(),
                 &shared_options,
-                |text| {
-                    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-                    std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
-                    let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
-                    (temp_file, input)
-                },
+                create_temp_input,
             );
         });
     }
@@ -39,9 +36,9 @@ fn bench_sorting_strategies(c: &mut Criterion) {
     group.finish();
 }
 
-/// Benchmark different filtering strategies
+/// Benchmark filtering strategies
 fn bench_filtering_strategies(c: &mut Criterion) {
-    let mut group = create_bench_group(c, "filtering");
+    let mut group = create_bench_group(c, "core/filtering_strategies");
     let text_sample = small_text();
 
     let min_count_filter = Filters::default().with_min_count(2);
@@ -50,9 +47,9 @@ fn bench_filtering_strategies(c: &mut Criterion) {
 
     let filters = [
         (Filters::default(), "none"),
-        (min_count_filter, "min_count"),
-        (min_chars_filter, "min_chars"),
-        (combined_filter, "combined"),
+        (min_count_filter, "min_count_2"),
+        (min_chars_filter, "min_chars_3"),
+        (combined_filter, "min_count_2_chars_3"),
     ];
 
     for (filter, filter_name) in &filters {
@@ -62,17 +59,12 @@ fn bench_filtering_strategies(c: &mut Criterion) {
 
         let shared_options = make_shared(options);
 
-        group.bench_function(format!("sequential_{}", filter_name), |b| {
+        group.bench_function(*filter_name, |b| {
             self::common::bench_word_tally_with_string(
                 b,
                 text_sample.clone(),
                 &shared_options,
-                |text| {
-                    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-                    std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
-                    let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
-                    (temp_file, input)
-                },
+                create_temp_input,
             );
         });
     }

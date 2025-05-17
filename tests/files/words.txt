@@ -1,7 +1,0 @@
-d
-123 123 123 123 123
-a A *** A C D 123 123
-b b b B B B B 123
-d C d d d D D D D
-c D c c c c c c C C C C C C
-123

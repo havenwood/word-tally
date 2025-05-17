@@ -1,36 +1,18 @@
-// Tests for the I/O and Processing strategy implementation
-//
-// This test file specifically tests all 6 combinations of I/O and processing strategies:
-// - Streamed + Sequential
-// - Streamed + Parallel
-// - Buffered + Sequential
-// - Buffered + Parallel
-// - MemoryMapped + Sequential
-// - MemoryMapped + Parallel
-//
-// Each strategy is tested to verify they all produce identical results.
-
 use std::io::Write;
 use word_tally::{Count, Input, Io, Options, Performance, Processing, WordTally};
 
-// Test data that's small enough for tests but has multiple lines and words
 const TEST_TEXT: &str = "The quick brown fox
 jumps over the lazy dog
 Pack my box with five dozen liquor jugs";
 
-// Unique words (note: "the" appears twice)
 const EXPECTED_WORD_COUNT: Count = 16;
-// Total words including duplicates
 const EXPECTED_TOTAL_COUNT: Count = 17;
 
-// Helper to create options with specific I/O and processing strategy
 fn make_options(io: Io, processing: Processing) -> Options {
     Options::default().with_io(io).with_processing(processing)
 }
 
-// Helper to verify tally results
 fn verify_tally(tally: &WordTally<'_>) {
-    // Print words on failure for debugging purposes
     if tally.count() != EXPECTED_TOTAL_COUNT || tally.uniq_count() != EXPECTED_WORD_COUNT {
         println!("Words found: {:?}", tally.tally());
     }
@@ -130,7 +112,6 @@ fn test_new_with_io_combinations() {
     }
 }
 
-// Test with a larger dataset to ensure chunking works properly in parallel mode
 const LARGE_TEST_TEXT: &str = "
 Lorem ipsum dolor sit amet, consectetur adipiscing elit.
 Suspendisse sodales felis in arcu scelerisque, at finibus ante fermentum.
@@ -151,7 +132,6 @@ Vivamus eget elit a tortor convallis ultrices.
 Nullam efficitur, mi at dapibus tincidunt, risus orci vulputate lacus, et vehicula lorem nunc vel dui.
 ";
 
-// Test with a large text to ensure parallel processing works correctly
 #[test]
 fn test_parallel_processing_with_large_text() {
     let mut temp_file = tempfile::NamedTempFile::new().unwrap();
@@ -171,31 +151,24 @@ fn test_parallel_processing_with_large_text() {
     let parallel_tally = WordTally::new(&parallel_input, &parallel_options)
         .expect("Failed to create parallel WordTally");
 
-    // Both should produce identical results
     assert_eq!(sequential_tally.count(), parallel_tally.count());
     assert_eq!(sequential_tally.uniq_count(), parallel_tally.uniq_count());
 
-    // Check that tallies contain the same words with the same counts
-    // but don't require exact same order due to parallel sorting being unstable
     let sequential_words: Vec<_> = sequential_tally.tally().to_vec();
     let parallel_words: Vec<_> = parallel_tally.tally().to_vec();
 
-    // Convert to HashMaps for content comparison rather than order comparison
     let seq_map: std::collections::HashMap<_, _> = sequential_words.into_iter().collect();
     let par_map: std::collections::HashMap<_, _> = parallel_words.into_iter().collect();
 
     assert_eq!(seq_map, par_map);
 }
 
-// Test with file-backed memory mapped I/O
 #[test]
 fn test_memory_mapped_with_real_file() {
-    // Create a temporary file with test data
     let mut temp_file = tempfile::NamedTempFile::new().unwrap();
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
     let file_path = temp_file.path().to_str().unwrap();
 
-    // Test sequential memory-mapped I/O
     let mmap_sequential_options = make_options(Io::MemoryMapped, Processing::Sequential);
     let sequential_input = Input::new(file_path, mmap_sequential_options.io())
         .expect("Failed to create sequential memory-mapped input");
@@ -205,7 +178,6 @@ fn test_memory_mapped_with_real_file() {
 
     verify_tally(&mmap_tally);
 
-    // Test parallel memory-mapped I/O
     let mmap_parallel_options = make_options(Io::MemoryMapped, Processing::Parallel);
     let parallel_input = Input::new(file_path, mmap_parallel_options.io())
         .expect("Failed to create parallel memory-mapped input");
@@ -227,7 +199,6 @@ fn test_read_trait_with_all_io_strategies() {
     let file_input = Input::new(&file_path, Io::Streamed).unwrap();
     let mmap_input = Input::new(&file_path, Io::MemoryMapped).unwrap();
     let bytes_input = Input::from_bytes(TEST_TEXT);
-    // Note: We'll skip stdin since it would block waiting for input
 
     let test_cases = [file_input, mmap_input, bytes_input];
 
@@ -266,7 +237,6 @@ fn test_bytes_io_with_input_new() {
     assert!(err.contains("use `Input::from_bytes()`"));
 }
 
-// Test error handling for non-existent files
 #[test]
 fn test_nonexistent_file_handling() {
     use std::fs::File;
@@ -279,12 +249,10 @@ fn test_nonexistent_file_handling() {
 
 #[test]
 fn test_new_with_all_io_strategies() {
-    // Create a temporary file with test data
     let mut temp_file = tempfile::NamedTempFile::new().unwrap();
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
     let file_path = temp_file.path().to_str().unwrap();
 
-    // Test all combinations of I/O and processing strategies
     let io_strategies = [Io::Streamed, Io::Buffered, Io::MemoryMapped];
     let processing_strategies = [Processing::Sequential, Processing::Parallel];
 
@@ -310,7 +278,6 @@ fn test_utf8_boundary_handling() {
     Write::write_all(&mut temp_file, test_text.as_bytes()).unwrap();
     let file_path = temp_file.path().to_str().unwrap();
 
-    // Use a small chunk size directly in the performance settings
     let small_chunk_size = 32;
     let performance = Performance::default().with_chunk_size(small_chunk_size);
 
@@ -330,4 +297,176 @@ fn test_utf8_boundary_handling() {
             .any(|word| word == &"æ".into()),
         "Missing 'æ' in results"
     );
+}
+
+//
+// Unit tests for Io enum traits and methods
+//
+
+#[test]
+fn test_io_default() {
+    assert_eq!(Io::default(), Io::Streamed);
+}
+
+#[test]
+fn test_io_display_all_variants() {
+    assert_eq!(Io::Streamed.to_string(), "streamed");
+    assert_eq!(Io::Buffered.to_string(), "buffered");
+    assert_eq!(Io::MemoryMapped.to_string(), "memory-mapped");
+    assert_eq!(Io::Bytes.to_string(), "bytes");
+}
+
+#[test]
+fn test_io_traits_partial_eq() {
+    assert_eq!(Io::Streamed, Io::Streamed);
+    assert_ne!(Io::Streamed, Io::Buffered);
+    assert_ne!(Io::Buffered, Io::MemoryMapped);
+    assert_ne!(Io::MemoryMapped, Io::Bytes);
+}
+
+#[test]
+fn test_io_traits_ordering() {
+    use std::cmp::Ordering;
+
+    // Test PartialOrd and Ord
+    assert!(Io::MemoryMapped < Io::Streamed);
+    assert!(Io::Streamed < Io::Buffered);
+    assert!(Io::Buffered < Io::Bytes);
+
+    assert_eq!(Io::Streamed.cmp(&Io::Streamed), Ordering::Equal);
+    assert_eq!(Io::MemoryMapped.cmp(&Io::Streamed), Ordering::Less);
+    assert_eq!(Io::Bytes.cmp(&Io::Buffered), Ordering::Greater);
+}
+
+#[test]
+fn test_io_traits_hash() {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+
+    fn calculate_hash<T: Hash>(t: &T) -> u64 {
+        let mut s = DefaultHasher::new();
+        t.hash(&mut s);
+        s.finish()
+    }
+
+    // Same values should have same hash
+    assert_eq!(calculate_hash(&Io::Streamed), calculate_hash(&Io::Streamed));
+
+    // Different values should (likely) have different hashes
+    assert_ne!(calculate_hash(&Io::Streamed), calculate_hash(&Io::Buffered));
+}
+
+#[test]
+fn test_io_traits_clone_copy() {
+    let io1 = Io::MemoryMapped;
+    let io2 = io1; // Copy trait
+    let io3 = io1; // Clone trait
+
+    assert_eq!(io1, io2);
+    assert_eq!(io1, io3);
+    assert_eq!(io2, io3);
+}
+
+#[test]
+fn test_io_serialization() {
+    // Test Serialize
+    let io = Io::MemoryMapped;
+    let serialized = serde_json::to_string(&io).unwrap();
+    assert_eq!(serialized, "\"MemoryMapped\"");
+
+    // Test Deserialize
+    let deserialized: Io = serde_json::from_str("\"Buffered\"").unwrap();
+    assert_eq!(deserialized, Io::Buffered);
+
+    // Test roundtrip
+    let original = Io::Bytes;
+    let json = serde_json::to_string(&original).unwrap();
+    let roundtrip: Io = serde_json::from_str(&json).unwrap();
+    assert_eq!(original, roundtrip);
+}
+
+#[test]
+fn test_parse_io_from_env() {
+    use word_tally::options::io::{ENV_IO, parse_io_from_env};
+
+    // Test with no environment variable (should return default)
+    unsafe {
+        std::env::remove_var(ENV_IO);
+    }
+    assert_eq!(parse_io_from_env(), Io::default());
+
+    // Test case-insensitive parsing
+    unsafe {
+        std::env::set_var(ENV_IO, "STREAMED");
+    }
+    assert_eq!(parse_io_from_env(), Io::Streamed);
+
+    unsafe {
+        std::env::set_var(ENV_IO, "buffered");
+    }
+    assert_eq!(parse_io_from_env(), Io::Buffered);
+
+    unsafe {
+        std::env::set_var(ENV_IO, "Memory-Mapped");
+    }
+    assert_eq!(parse_io_from_env(), Io::MemoryMapped);
+
+    // Test mmap alias
+    unsafe {
+        std::env::set_var(ENV_IO, "mmap");
+    }
+    assert_eq!(parse_io_from_env(), Io::MemoryMapped);
+
+    unsafe {
+        std::env::set_var(ENV_IO, "MMAP");
+    }
+    assert_eq!(parse_io_from_env(), Io::MemoryMapped);
+
+    // Test invalid values (should return default)
+    unsafe {
+        std::env::set_var(ENV_IO, "invalid");
+    }
+    assert_eq!(parse_io_from_env(), Io::default());
+
+    unsafe {
+        std::env::set_var(ENV_IO, "");
+    }
+    assert_eq!(parse_io_from_env(), Io::default());
+
+    // Clean up
+    unsafe {
+        std::env::remove_var(ENV_IO);
+    }
+}
+
+#[test]
+fn test_env_io_constant() {
+    use word_tally::options::io::ENV_IO;
+
+    assert_eq!(ENV_IO, "WORD_TALLY_IO");
+}
+
+#[test]
+fn test_io_exhaustive_matching() {
+    // This test ensures all variants are covered
+    let test_io = |io: Io| match io {
+        Io::MemoryMapped => "mmap",
+        Io::Streamed => "stream",
+        Io::Buffered => "buffer",
+        Io::Bytes => "bytes",
+    };
+
+    assert_eq!(test_io(Io::MemoryMapped), "mmap");
+    assert_eq!(test_io(Io::Streamed), "stream");
+    assert_eq!(test_io(Io::Buffered), "buffer");
+    assert_eq!(test_io(Io::Bytes), "bytes");
+}
+
+#[test]
+fn test_io_debug_format() {
+    // Test Debug trait
+    assert_eq!(format!("{:?}", Io::Streamed), "Streamed");
+    assert_eq!(format!("{:?}", Io::Buffered), "Buffered");
+    assert_eq!(format!("{:?}", Io::MemoryMapped), "MemoryMapped");
+    assert_eq!(format!("{:?}", Io::Bytes), "Bytes");
 }

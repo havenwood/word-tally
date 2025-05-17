@@ -1,90 +1,60 @@
-//! Benchmarks comparing sequential vs parallel processing strategies.
+//! Processing strategy benchmarks.
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use word_tally::{Filters, Input, Io, Options, Processing};
+use word_tally::{Filters, Options, Processing};
 
 #[path = "common.rs"]
 pub mod common;
 use self::common::{
-    create_bench_group, make_shared, medium_text, small_text, standard_criterion_config,
+    create_bench_group, create_temp_input, make_shared, medium_text, small_text,
+    standard_criterion_config,
 };
 
-/// Benchmark comparing sequential vs parallel processing strategies for different text sizes
+/// Benchmark sequential vs parallel processing
 fn bench_processing_comparison(c: &mut Criterion) {
-    let mut group = create_bench_group(c, "processing");
+    let mut group = create_bench_group(c, "features/processing_comparison");
 
     let processing_strategies = [
         (Processing::Sequential, "sequential"),
         (Processing::Parallel, "parallel"),
     ];
 
-    // Prepare text samples
-    let small_text_sample = small_text();
-    let medium_text_sample = medium_text();
+    let text_samples = [("small", small_text()), ("medium", medium_text())];
 
-    // Small text benchmark (measures processing overhead)
-    for (processing, name) in &processing_strategies {
-        let options = Options::default().with_processing(*processing);
-        let shared_options = make_shared(options);
+    for (size_name, text_sample) in &text_samples {
+        for (processing, proc_name) in &processing_strategies {
+            let options = Options::default().with_processing(*processing);
+            let shared_options = make_shared(options);
 
-        group.bench_function(format!("small_{}", name), |b| {
-            self::common::bench_word_tally_with_string(
-                b,
-                small_text_sample.clone(),
-                &shared_options,
-                |text| {
-                    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-                    std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
-                    let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
-                    (temp_file, input)
-                },
-            );
-        });
-    }
-
-    // Medium text benchmark (better shows parallel benefits)
-    for (processing, name) in &processing_strategies {
-        let options = Options::default().with_processing(*processing);
-        let shared_options = make_shared(options);
-
-        group.bench_function(format!("medium_{}", name), |b| {
-            self::common::bench_word_tally_with_string(
-                b,
-                medium_text_sample.clone(),
-                &shared_options,
-                |text| {
-                    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-                    std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
-                    let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
-                    (temp_file, input)
-                },
-            );
-        });
+            group.bench_function(format!("{}_{}", size_name, proc_name), |b| {
+                self::common::bench_word_tally_with_string(
+                    b,
+                    text_sample.clone(),
+                    &shared_options,
+                    create_temp_input,
+                );
+            });
+        }
     }
 
     group.finish();
 }
 
-/// Benchmark regex pattern performance
+/// Benchmark regex patterns
 fn bench_regex_patterns(c: &mut Criterion) {
-    let mut group = create_bench_group(c, "regex_patterns");
+    let mut group = create_bench_group(c, "features/regex_patterns");
     let text_sample = medium_text();
 
     let base_options = Options::default()
         .with_processing(Processing::Parallel)
         .with_filters(Filters::default());
 
-    group.bench_function("no_patterns", |b| {
+    group.bench_function("patterns_0", |b| {
         self::common::bench_word_tally_with_string(
             b,
             text_sample.clone(),
             &make_shared(base_options.clone()),
-            |text| {
-                let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-                std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
-                let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
-                (temp_file, input)
-            },
+            create_temp_input,
         );
     });
 
@@ -101,17 +71,12 @@ fn bench_regex_patterns(c: &mut Criterion) {
             .unwrap(),
     );
 
-    group.bench_function("few_patterns", |b| {
+    group.bench_function("patterns_4", |b| {
         self::common::bench_word_tally_with_string(
             b,
             text_sample.clone(),
             &make_shared(few_patterns_options.clone()),
-            |text| {
-                let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-                std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
-                let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
-                (temp_file, input)
-            },
+            create_temp_input,
         );
     });
 
@@ -134,17 +99,12 @@ fn bench_regex_patterns(c: &mut Criterion) {
             .unwrap(),
     );
 
-    group.bench_function("many_patterns", |b| {
+    group.bench_function("patterns_10", |b| {
         self::common::bench_word_tally_with_string(
             b,
             text_sample.clone(),
             &make_shared(many_patterns_options.clone()),
-            |text| {
-                let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-                std::io::Write::write_all(&mut temp_file, text.as_bytes()).unwrap();
-                let input = Input::new(temp_file.path(), Io::Buffered).unwrap();
-                (temp_file, input)
-            },
+            create_temp_input,
         );
     });
 

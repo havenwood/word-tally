@@ -1,0 +1,269 @@
+use std::io::{BufRead, Read};
+use tempfile::NamedTempFile;
+use word_tally::{Input, Io};
+
+#[test]
+fn test_input_reader_mmap_basic() {
+    let test_data = b"Hello, world! This is a test.";
+    let mut temp_file = NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, test_data).unwrap();
+
+    let input = Input::new(temp_file.path(), Io::MemoryMapped).unwrap();
+    let mut reader = input.reader().unwrap();
+
+    let mut buffer = Vec::new();
+    reader.read_to_end(&mut buffer).unwrap();
+
+    assert_eq!(buffer, test_data);
+}
+
+#[test]
+fn test_input_reader_mmap_position_tracking() {
+    let test_data = b"Hello, world!";
+    let mut temp_file = NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, test_data).unwrap();
+
+    let input = Input::new(temp_file.path(), Io::MemoryMapped).unwrap();
+    let mut reader = input.reader().unwrap();
+
+    let mut buffer = [0u8; 5];
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 5);
+    assert_eq!(&buffer, b"Hello");
+
+    let mut buffer = [0u8; 7];
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 7);
+    assert_eq!(&buffer, b", world");
+
+    let mut buffer = [0u8; 10];
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 1);
+    assert_eq!(buffer[0], b'!');
+
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 0);
+}
+
+#[test]
+fn test_input_reader_mmap_empty_file() {
+    let temp_file = NamedTempFile::new().unwrap();
+
+    let input = Input::new(temp_file.path(), Io::MemoryMapped).unwrap();
+    let mut reader = input.reader().unwrap();
+
+    let mut buffer = [0u8; 10];
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 0);
+}
+
+#[test]
+fn test_input_reader_mmap_thread_safety() {
+    let test_data = b"Thread-safe memory mapping test";
+    let mut temp_file = NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, test_data).unwrap();
+
+    let input = Input::new(temp_file.path(), Io::MemoryMapped).unwrap();
+    let thread_input = input.clone();
+
+    std::thread::spawn(move || {
+        let mut reader = thread_input.reader().unwrap();
+        let mut buffer = Vec::new();
+        reader.read_to_end(&mut buffer).unwrap();
+        assert_eq!(buffer, test_data);
+    })
+    .join()
+    .unwrap();
+
+    let mut reader = input.reader().unwrap();
+    let mut buffer = Vec::new();
+    reader.read_to_end(&mut buffer).unwrap();
+    assert_eq!(buffer, test_data);
+}
+
+#[test]
+#[allow(clippy::redundant_clone)]
+// Need separate inputs for independent readers
+fn test_input_reader_clone() {
+    let test_data = b"Clone test data";
+    let mut temp_file = NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, test_data).unwrap();
+
+    let input = Input::new(temp_file.path(), Io::MemoryMapped).unwrap();
+    let input2 = input.clone();
+
+    let mut reader1 = input.reader().unwrap();
+    let mut reader2 = input2.reader().unwrap();
+
+    let mut buffer1 = Vec::new();
+    let mut buffer2 = Vec::new();
+
+    reader1.read_to_end(&mut buffer1).unwrap();
+    reader2.read_to_end(&mut buffer2).unwrap();
+
+    assert_eq!(buffer1, test_data);
+    assert_eq!(buffer2, test_data);
+}
+
+#[test]
+fn test_input_reader_zero_byte_read() {
+    let test_data = b"test data";
+    let mut temp_file = NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, test_data).unwrap();
+
+    let input = Input::new(temp_file.path(), Io::MemoryMapped).unwrap();
+    let mut reader = input.reader().unwrap();
+
+    let mut buffer = [0u8; 0];
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 0);
+
+    let mut normal_buffer = [0u8; 4];
+    let bytes_read = reader.read(&mut normal_buffer).unwrap();
+    assert_eq!(bytes_read, 4);
+    assert_eq!(&normal_buffer, b"test");
+}
+
+#[test]
+fn test_input_reader_multiple_eof_reads() {
+    let test_data = b"EOF";
+    let mut temp_file = NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, test_data).unwrap();
+
+    let input = Input::new(temp_file.path(), Io::MemoryMapped).unwrap();
+    let mut reader = input.reader().unwrap();
+
+    let mut buffer = Vec::new();
+    reader.read_to_end(&mut buffer).unwrap();
+    assert_eq!(buffer, test_data);
+
+    let mut buffer = [0u8; 10];
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 0);
+
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 0);
+}
+
+#[test]
+fn test_input_reader_bytes_basic() {
+    let test_data = b"BytesReader test data";
+    let input = Input::from_bytes(test_data);
+    let mut reader = input.reader().unwrap();
+
+    let mut buffer = Vec::new();
+    reader.read_to_end(&mut buffer).unwrap();
+
+    assert_eq!(buffer, test_data);
+}
+
+#[test]
+fn test_input_reader_bytes_position_tracking() {
+    let test_data = b"Bytes test";
+    let input = Input::from_bytes(test_data);
+    let mut reader = input.reader().unwrap();
+
+    let mut buffer = [0u8; 5];
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 5);
+    assert_eq!(&buffer, b"Bytes");
+
+    let mut buffer = [0u8; 5];
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 5);
+    assert_eq!(&buffer, b" test");
+
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 0);
+}
+
+#[test]
+fn test_input_reader_bytes_thread_safety() {
+    let test_data = b"Thread-safe bytes test";
+    let input = Input::from_bytes(test_data);
+    let thread_input = input.clone();
+
+    std::thread::spawn(move || {
+        let mut reader = thread_input.reader().unwrap();
+        let mut buffer = Vec::new();
+        reader.read_to_end(&mut buffer).unwrap();
+        assert_eq!(buffer, test_data);
+    })
+    .join()
+    .unwrap();
+
+    let mut reader = input.reader().unwrap();
+    let mut buffer = Vec::new();
+    reader.read_to_end(&mut buffer).unwrap();
+    assert_eq!(buffer, test_data);
+}
+
+#[test]
+fn test_input_reader_bytes_empty() {
+    let input = Input::from_bytes([]);
+    let mut reader = input.reader().unwrap();
+
+    let mut buffer = [0u8; 10];
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 0);
+}
+
+#[test]
+fn test_input_reader_bufread_impl() {
+    let test_data = b"Line one\nLine two\nLine three";
+    let input = Input::from_bytes(test_data);
+    let reader = input.reader().unwrap();
+
+    let lines: Vec<String> = reader.lines().map(|r| r.unwrap()).collect();
+    assert_eq!(lines.len(), 3);
+    assert_eq!(lines[0], "Line one");
+    assert_eq!(lines[1], "Line two");
+    assert_eq!(lines[2], "Line three");
+}
+
+#[test]
+fn test_input_reader_bufread_fill_buf() {
+    let test_data = b"Buffer test";
+    let input = Input::from_bytes(test_data);
+    let mut reader = input.reader().unwrap();
+
+    let buf = reader.fill_buf().unwrap();
+    assert!(!buf.is_empty());
+    assert_eq!(&buf[0..6], b"Buffer");
+
+    reader.consume(7);
+    let buf = reader.fill_buf().unwrap();
+    assert_eq!(buf, b"test");
+
+    reader.consume(4);
+    let buf = reader.fill_buf().unwrap();
+    assert_eq!(buf.len(), 0);
+}
+
+#[test]
+fn test_input_reader_stdin() {
+    let input = Input::default();
+    assert!(matches!(input, Input::Stdin));
+    assert_eq!(input.source(), "-");
+    assert_eq!(input.size(), None);
+}
+
+#[test]
+fn test_input_reader_file() {
+    let test_data = b"File test data";
+    let mut temp_file = NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, test_data).unwrap();
+
+    let input = Input::new(temp_file.path(), Io::Streamed).unwrap();
+
+    let filename = temp_file.path().file_name().unwrap().to_str().unwrap();
+    assert!(input.source().contains(filename));
+
+    let size = input.size();
+    assert_eq!(size, Some(test_data.len()));
+
+    let mut reader = input.reader().unwrap();
+    let mut buffer = Vec::new();
+    reader.read_to_end(&mut buffer).unwrap();
+    assert_eq!(buffer, test_data);
+}

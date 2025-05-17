@@ -53,7 +53,6 @@ impl Performance {
     const ENV_CHUNK_SIZE: &str = "WORD_TALLY_CHUNK_SIZE";
     const ENV_UNIQUENESS_RATIO: &str = "WORD_TALLY_UNIQUENESS_RATIO";
     const ENV_WORDS_PER_KB: &str = "WORD_TALLY_WORDS_PER_KB";
-    const ENV_VERBOSE: &str = "WORD_TALLY_VERBOSE";
     const ENV_THREADS: &str = "WORD_TALLY_THREADS";
 
     /// Create performance configuration from environment variables if present
@@ -76,7 +75,7 @@ impl Performance {
                 chunk_size: Self::parse_env_var(Self::ENV_CHUNK_SIZE, Self::CHUNK_SIZE),
                 base_stdin_size,
                 threads: Self::parse_threads(),
-                verbose: Self::parse_verbose(),
+                verbose: false,
             }
         })
     }
@@ -173,15 +172,6 @@ impl Performance {
             .ok()
             .and_then(|value| value.parse().ok())
             .unwrap_or(default)
-    }
-
-    /// Parse verbose flag from WORD_TALLY_VERBOSE environment variable
-    /// Returns true for "1", "true", "yes", or "on"
-    fn parse_verbose() -> bool {
-        matches!(
-            std::env::var(Self::ENV_VERBOSE).ok().as_deref(),
-            Some("1" | "true" | "yes" | "on")
-        )
     }
 
     /// Parse thread count from `WORD_TALLY_THREADS` environment variable

@@ -1,0 +1,195 @@
+use std::sync::Arc;
+use word_tally::{Filters, Input, Io, Options, Processing, Serialization, WordTally};
+
+fn make_shared<T>(value: T) -> Arc<T> {
+    Arc::new(value)
+}
+
+#[test]
+fn test_input_size() {
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    let content = b"This test file replaces the hardcoded fixture";
+    std::io::Write::write_all(&mut temp_file, content).unwrap();
+
+    let file_input = Input::File(temp_file.path().to_path_buf());
+    let size = file_input.size();
+    assert!(size.is_some());
+    assert!(size.unwrap() > 0);
+
+    let stdin_input = Input::Stdin;
+    assert_eq!(stdin_input.size(), None);
+}
+
+#[test]
+fn test_parallel_vs_sequential() {
+    let input_text = b"I taste a liquor never brewed. I taste a liquor.";
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let file_path = temp_file.path().to_str().unwrap();
+
+    // Sequential processing
+    let seq_performance = word_tally::Performance::default();
+    let filters = Filters::default();
+    let seq_options = Options::new(
+        word_tally::Case::default(),
+        word_tally::Sort::default(),
+        Serialization::default(),
+        filters.clone(),
+        Io::Streamed,
+        Processing::Sequential,
+        seq_performance,
+    );
+    let seq_options_arc = make_shared(seq_options);
+
+    let seq_input =
+        Input::new(file_path, seq_options_arc.io()).expect("Failed to create sequential input");
+
+    let sequential = WordTally::new(&seq_input, &seq_options_arc)
+        .expect("Failed to create sequential WordTally");
+
+    // Parallel processing
+    let par_performance = word_tally::Performance::default();
+    let par_options = Options::new(
+        word_tally::Case::default(),
+        word_tally::Sort::default(),
+        Serialization::default(),
+        filters,
+        Io::Streamed,
+        Processing::Parallel,
+        par_performance,
+    );
+    let par_options_arc = make_shared(par_options);
+
+    let par_input =
+        Input::new(file_path, par_options_arc.io()).expect("Failed to create parallel input");
+
+    let parallel =
+        WordTally::new(&par_input, &par_options_arc).expect("Failed to create parallel WordTally");
+
+    assert_eq!(sequential.count(), parallel.count());
+    assert_eq!(sequential.uniq_count(), parallel.uniq_count());
+    assert_eq!(sequential.tally(), parallel.tally());
+}
+
+#[test]
+fn test_memory_mapped_vs_streamed() {
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    let content = b"Quantum leapt circumference imperceptible enigma quantum enigma";
+    std::io::Write::write_all(&mut temp_file, content).unwrap();
+    let file_path = temp_file.path().to_str().unwrap();
+
+    // Set up options for memory-mapped I/O (sequential)
+    let mmap_performance = word_tally::Performance::default();
+    let filters = Filters::default();
+    let mmap_options = Options::new(
+        word_tally::Case::default(),
+        word_tally::Sort::default(),
+        Serialization::default(),
+        filters.clone(),
+        Io::MemoryMapped,
+        Processing::Sequential,
+        mmap_performance,
+    );
+
+    // Set up options for streaming I/O (sequential)
+    let stream_performance = word_tally::Performance::default();
+    let stream_options = Options::new(
+        word_tally::Case::default(),
+        word_tally::Sort::default(),
+        Serialization::default(),
+        filters.clone(),
+        Io::Streamed,
+        Processing::Sequential,
+        stream_performance,
+    );
+
+    // Create inputs with the different I/O modes
+    let mmap_input =
+        Input::new(file_path, mmap_options.io()).expect("Failed to create memory-mapped input");
+    let stream_input =
+        Input::new(file_path, stream_options.io()).expect("Failed to create streamed input");
+
+    // Create WordTally instances with the different I/O modes
+    let memory_mapped = WordTally::new(&mmap_input, &mmap_options).expect("Memory mapping failed");
+    let streamed = WordTally::new(&stream_input, &stream_options)
+        .expect("Failed to create streamed WordTally");
+
+    // Verify results are the same regardless of I/O mode
+    assert_eq!(memory_mapped.count(), streamed.count());
+    assert_eq!(memory_mapped.uniq_count(), streamed.uniq_count());
+    assert_eq!(memory_mapped.tally(), streamed.tally());
+
+    // Now test with parallel processing
+    let parallel_performance = word_tally::Performance::default();
+    let parallel_options = Options::new(
+        word_tally::Case::default(),
+        word_tally::Sort::default(),
+        Serialization::default(),
+        filters,
+        Io::Streamed,
+        Processing::Parallel,
+        parallel_performance,
+    );
+
+    let parallel_input =
+        Input::new(file_path, parallel_options.io()).expect("Failed to create parallel input");
+
+    let parallel_stream = WordTally::new(&parallel_input, &parallel_options)
+        .expect("Failed to create parallel stream WordTally");
+
+    // Verify the parallel processing worked
+    assert!(parallel_stream.count() > 0);
+    assert!(parallel_stream.uniq_count() > 0);
+}
+
+#[test]
+fn test_parallel_count() {
+    // Test the parallel function works with default settings
+    let input_text = b"Test with default settings for chunk size and thread count";
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+
+    let performance = word_tally::Performance::default();
+    let options = Options::with_defaults(
+        word_tally::Case::default(),
+        word_tally::Sort::default(),
+        Serialization::default(),
+        Io::Streamed,
+        Processing::Parallel,
+        performance,
+    );
+
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
+        .expect("Failed to create Input");
+
+    let parallel = WordTally::new(&input, &options).expect("Failed to create parallel WordTally");
+
+    assert!(parallel.count() > 0);
+    assert!(parallel.uniq_count() > 0);
+    assert!(parallel.uniq_count() <= parallel.count());
+}
+
+#[test]
+fn test_merge_maps() {
+    let input_text = b"This is a test of the map merging functionality";
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+
+    let performance = word_tally::Performance::default();
+    let options = Options::with_defaults(
+        word_tally::Case::default(),
+        word_tally::Sort::default(),
+        Serialization::default(),
+        Io::Streamed,
+        Processing::Parallel,
+        performance,
+    );
+
+    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
+        .expect("Failed to create Input");
+
+    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+
+    assert_eq!(tally.count(), 9);
+    assert_eq!(tally.uniq_count(), 9);
+}

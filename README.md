@@ -182,7 +182,6 @@ I/O and processing strategy configuration:
 
 - `WORD_TALLY_IO` - I/O strategy (default: streamed, options: streamed, buffered, memory-mapped)
 - `WORD_TALLY_PROCESSING` - Processing strategy (default: sequential, options: sequential, parallel)
-- `WORD_TALLY_VERBOSE` - Enable verbose mode (default: false, options: true/1/yes/on)
 
 Memory allocation and performance:
 

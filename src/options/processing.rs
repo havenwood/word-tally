@@ -43,15 +43,3 @@ impl Display for Processing {
         }
     }
 }
-
-/// Environment variable names for configuration
-pub const ENV_PROCESSING: &str = "WORD_TALLY_PROCESSING";
-
-/// Parse `WORD_TALLY_PROCESSING` environment variable
-pub fn parse_processing_from_env() -> Processing {
-    match std::env::var(ENV_PROCESSING).ok().as_deref() {
-        Some(s) if s.eq_ignore_ascii_case("sequential") => Processing::Sequential,
-        Some(s) if s.eq_ignore_ascii_case("parallel") => Processing::Parallel,
-        _ => Processing::default(),
-    }
-}

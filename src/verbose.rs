@@ -295,4 +295,3 @@ pub fn handle_verbose_output(
 
     Ok(())
 }
-
