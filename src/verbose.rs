@@ -178,6 +178,7 @@ impl<'v, 'a> Verbose<'v, 'a> {
 
         // Write all at once
         self.output.write_line(&output)?;
+
         Ok(())
     }
 

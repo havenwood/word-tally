@@ -67,6 +67,7 @@ impl Patterns {
     /// Creates a pattern set and compiles the RegexSet.
     fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
         let regex_set = RegexSet::new(&input_patterns)?;
+
         Ok(Self {
             regex_set,
             input_patterns,

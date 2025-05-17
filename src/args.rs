@@ -119,6 +119,7 @@ impl Args {
         let performance = Performance::from_env().with_verbose(self.verbose);
 
         // Create Options with case, sort, serialization, filters, io, processing, and performance
+
         Ok(Options::new(
             self.case,
             self.sort,

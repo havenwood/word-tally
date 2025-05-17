@@ -159,6 +159,7 @@ impl Filters {
         };
 
         setter(&mut self, pattern);
+
         Ok(self)
     }
 

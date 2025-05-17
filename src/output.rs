@@ -55,6 +55,7 @@ impl Output {
         let file = File::create(path)
             .map(|file| Box::new(LineWriter::new(file)) as Writer)
             .with_context(|| format!("failed to create output file: {}", path.display()))?;
+
         Ok(Self { writer: file })
     }
 
