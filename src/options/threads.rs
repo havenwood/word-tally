@@ -1,5 +1,6 @@
 //! Thread count configuration for parallel processing.
 
+use anyhow::Context;
 use core::fmt::{self, Display, Formatter};
 use rayon::ThreadPoolBuilder;
 use serde::{Deserialize, Serialize};
@@ -39,12 +40,8 @@ impl Threads {
                 ThreadPoolBuilder::new()
                     .num_threads(count as usize)
                     .build_global()
-                    .map_err(|e| {
-                        anyhow::anyhow!(
-                            "failed to configure thread pool with {} threads: {}",
-                            count,
-                            e
-                        )
+                    .with_context(|| {
+                        format!("failed to configure thread pool with {} threads", count)
                     })?;
             }
             Self::All => {
