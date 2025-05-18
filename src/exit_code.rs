@@ -22,6 +22,7 @@ pub enum ExitCode {
 impl ExitCode {
     /// Converts an error to an appropriate exit code
     pub fn from_error(err: &Error) -> Self {
+        // Check Clap errors (during argument parsing)
         if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
             return match clap_err.kind() {
                 // Successful `--help` or `--version` display
@@ -31,6 +32,7 @@ impl ExitCode {
             };
         }
 
+        // Check I/O errors (when opening files)
         if let Some(io_err) = err.downcast_ref::<io::Error>() {
             return match io_err.kind() {
                 // No input errors
@@ -44,13 +46,13 @@ impl ExitCode {
             };
         }
 
-        // Data errors
-        if is_error_any_of::<regex::Error>(err)
-            || is_error_any_of::<serde_json::Error>(err)
-            || is_error_any_of::<csv::Error>(err)
-            || is_error_any_of::<std::str::Utf8Error>(err)
-            || is_error_any_of::<std::string::FromUtf8Error>(err)
-            || is_error_any_of::<unescaper::Error>(err)
+        // Check data errors (during processing)
+        if Self::is_error_type::<regex::Error>(err)
+            || Self::is_error_type::<serde_json::Error>(err)
+            || Self::is_error_type::<csv::Error>(err)
+            || Self::is_error_type::<std::str::Utf8Error>(err)
+            || Self::is_error_type::<std::string::FromUtf8Error>(err)
+            || Self::is_error_type::<unescaper::Error>(err)
         {
             return Self::DataError;
         }
@@ -63,15 +65,15 @@ impl ExitCode {
     pub const fn code(self) -> i32 {
         self as i32
     }
+
+    /// Helper function to check if an error is of a specific type
+    fn is_error_type<E: Display + Debug + Send + Sync + 'static>(err: &Error) -> bool {
+        err.downcast_ref::<E>().is_some()
+    }
 }
 
 impl From<ExitCode> for i32 {
     fn from(code: ExitCode) -> Self {
         code.code()
     }
-}
-
-/// Helper function to check if an error is one of multiple types
-fn is_error_any_of<T: Debug + Display + Send + Sync + 'static>(err: &Error) -> bool {
-    err.downcast_ref::<T>().is_some()
 }
