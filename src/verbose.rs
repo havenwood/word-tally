@@ -25,16 +25,9 @@ impl<T: Display> FormatOption for &Option<T> {
 }
 
 /// Handles verbose output formatting and display of word tally results.
+#[derive(Debug)]
 pub struct Verbose {
     output: Output,
-}
-
-impl Debug for Verbose {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("Verbose")
-            .field("output", &self.output)
-            .finish()
-    }
 }
 
 impl Default for Verbose {
