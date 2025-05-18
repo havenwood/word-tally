@@ -29,17 +29,17 @@ use std::env;
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ValueEnum,
 )]
 pub enum Io {
-    /// Use memory-mapped I/O for efficient file access
+    /// Use memory-mapped I/O for efficient file access.
     #[clap(name = "mmap")]
     MemoryMapped,
 
-    /// Process input line-by-line without loading entire file into memory
+    /// Process input line-by-line without loading entire file into memory.
     Streamed,
 
-    /// Read entire file into memory before processing
+    /// Read entire file into memory before processing.
     Buffered,
 
-    /// Process bytes directly from memory without file I/O
+    /// Process bytes directly from memory without file I/O.
     #[clap(skip)]
     Bytes,
 }
@@ -61,10 +61,10 @@ impl Display for Io {
     }
 }
 
-/// Environment variable name for I/O configuration
+/// Environment variable name for I/O configuration.
 pub const ENV_IO: &str = "WORD_TALLY_IO";
 
-/// Parse I/O strategy from WORD_TALLY_IO environment variable
+/// Parse I/O strategy from WORD_TALLY_IO environment variable.
 pub fn parse_io_from_env() -> Io {
     match env::var(ENV_IO).ok().as_deref() {
         Some(s) if s.eq_ignore_ascii_case("streamed") => Io::Streamed,

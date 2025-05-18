@@ -6,18 +6,18 @@ use rayon::ThreadPoolBuilder;
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, Ordering};
 
-/// Thread count configuration for parallel processing
+/// Thread count configuration for parallel processing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub enum Threads {
-    /// Use all available cores
+    /// Use all available cores.
     All,
 
-    /// Use a specific number of threads
+    /// Use a specific number of threads.
     Count(u16),
 }
 
 impl Threads {
-    /// Get the actual number of threads that will be used
+    /// Get the actual number of threads that will be used.
     pub fn count(self) -> usize {
         match self {
             Self::All => rayon::current_num_threads(),
@@ -25,7 +25,7 @@ impl Threads {
         }
     }
 
-    /// Initialize the Rayon thread pool
+    /// Initialize the Rayon thread pool.
     pub fn init_pool(self) -> anyhow::Result<()> {
         static INIT_ATTEMPTED: AtomicBool = AtomicBool::new(false);
 

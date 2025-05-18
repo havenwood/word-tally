@@ -6,7 +6,7 @@ use serde::Serialize;
 use std::fmt::{Debug, Display};
 use word_tally::{Format, WordTally};
 
-/// Helper trait for formatting optional values
+/// Helper trait for formatting optional values.
 trait FormatOption {
     fn format_option(self) -> String;
 }
@@ -46,7 +46,7 @@ impl Default for Verbose {
     }
 }
 
-/// Verbose information to be serialized
+/// Verbose information to be serialized.
 #[derive(Debug)]
 struct VerboseInfo<'verbose, 'tally> {
     tally: &'verbose WordTally<'tally>,
@@ -54,12 +54,12 @@ struct VerboseInfo<'verbose, 'tally> {
 }
 
 impl<'verbose, 'tally> VerboseInfo<'verbose, 'tally> {
-    /// Creates a new VerboseInfo instance
+    /// Creates a new `VerboseInfo` instance.
     const fn new(tally: &'verbose WordTally<'tally>, source: &'verbose str) -> Self {
         Self { tally, source }
     }
 
-    /// Convert an optional value to Some(string) or None for JSON serialization
+    /// Convert an optional value to `Some(string)` or `None` for JSON serialization.
     fn value_or_null<T: Display>(option: &Option<T>) -> Option<String> {
         option.as_ref().map(|v| v.to_string())
     }

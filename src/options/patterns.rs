@@ -14,9 +14,9 @@ pub type InputPatterns = Vec<String>;
 /// Contains a `Vec` of raw regexp input `String`s and their compiled `RegexSet`.
 #[derive(Clone, Debug)]
 struct Patterns {
-    /// Original pattern strings
+    /// Original pattern strings.
     input_patterns: InputPatterns,
-    /// Compiled regex set for matching
+    /// Compiled regex set for matching.
     regex_set: RegexSet,
 }
 
@@ -229,7 +229,7 @@ impl Display for ExcludePatterns {
 /// ```
 /// use word_tally::IncludePatterns;
 ///
-/// // Create a pattern to include only words containing vowels
+/// // Create a pattern to include only words containing vowels.
 /// let patterns = IncludePatterns::new(vec![r"[aeiou]".to_string()]).unwrap();
 ///
 /// // Test matching
@@ -247,7 +247,7 @@ impl IncludePatterns {
     /// ```
     /// use word_tally::IncludePatterns;
     ///
-    /// // Create patterns for including words with specific prefixes
+    /// // Create patterns for including words with specific prefixes.
     /// let patterns = IncludePatterns::new(vec![
     ///     r"^pre".to_string(),
     ///     r"^un".to_string()

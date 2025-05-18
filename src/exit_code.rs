@@ -20,7 +20,7 @@ pub enum ExitCode {
 }
 
 impl ExitCode {
-    /// Converts an error to an appropriate exit code
+    /// Converts an error to an appropriate exit code.
     pub fn from_error(err: &Error) -> Self {
         // Check Clap errors (during argument parsing)
         if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
@@ -61,12 +61,12 @@ impl ExitCode {
         Self::Failure
     }
 
-    /// Returns the numeric exit code value
+    /// Returns the numeric exit code value.
     pub const fn code(self) -> i32 {
         self as i32
     }
 
-    /// Helper function to check if an error is of a specific type
+    /// Helper function to check if an error is of a specific type.
     fn is_error_type<E: Display + Debug + Send + Sync + 'static>(err: &Error) -> bool {
         err.downcast_ref::<E>().is_some()
     }

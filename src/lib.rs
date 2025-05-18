@@ -193,7 +193,7 @@ impl Serialize for WordTally<'_> {
 
 /// Deserialize into a `WordTally` from JSON.
 ///
-/// Warning: To avoid `Options` issues with deserialization & lifetimes, we deserialize `Options`
+/// Warning: To avoid `Options` issues with deserialization & lifetimes, we deserialize `Options`.
 /// by leaking the allocation to get a static reference.
 impl<'de> Deserialize<'de> for WordTally<'_> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>

@@ -145,7 +145,7 @@ impl Filters {
         Ok(self)
     }
 
-    /// Helper method to set patterns on filters
+    /// Helper method to set patterns on filters.
     fn with_patterns<T>(
         mut self,
         input_patterns: &[String],
@@ -187,7 +187,7 @@ impl Filters {
         )
     }
 
-    /// Get the minimum character requirement
+    /// Get the minimum character requirement.
     pub const fn min_chars(&self) -> Option<MinChars> {
         self.min_chars
     }
@@ -202,12 +202,12 @@ impl Filters {
         &self.exclude_words
     }
 
-    /// Get the excluded patterns
+    /// Get the excluded patterns.
     pub const fn exclude_patterns(&self) -> &Option<ExcludePatterns> {
         &self.exclude_patterns
     }
 
-    /// Get the included patterns
+    /// Get the included patterns.
     pub const fn include_patterns(&self) -> &Option<IncludePatterns> {
         &self.include_patterns
     }

@@ -3,7 +3,7 @@
 use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
 
-/// Determines the processing strategy
+/// Determines the processing strategy.
 ///
 /// Performance characteristics:
 /// - **Sequential**: Single-threaded processing with less overhead.

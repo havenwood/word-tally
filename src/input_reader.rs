@@ -6,8 +6,7 @@ use std::cmp;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read};
 
-/// A wrapper that implements Read and BufRead for each input type
-/// when `read()` is called multiple times with state tracked between calls
+/// A wrapper that implements `Read` and `BufRead` for each input type.
 #[derive(Debug)]
 pub enum InputReader<'a> {
     Stdin(BufReader<io::Stdin>),
@@ -17,7 +16,7 @@ pub enum InputReader<'a> {
 }
 
 impl<'a> InputReader<'a> {
-    /// Create an `InputReader` instance from an `Input`
+    /// Create an `InputReader` instance from an `Input`.
     pub fn new(input: &'a Input) -> io::Result<Self> {
         match input {
             Input::Stdin => Ok(Self::Stdin(BufReader::new(io::stdin()))),
@@ -75,7 +74,7 @@ impl<'a> Read for InputReader<'a> {
     }
 }
 
-/// A generic reader for slice-based sources
+/// A generic reader for slice-based sources.
 #[derive(Clone, Debug)]
 pub struct SliceReader<T> {
     source: T,
@@ -84,20 +83,20 @@ pub struct SliceReader<T> {
 }
 
 impl<T> SliceReader<T> {
-    /// `BufReader`'s current buffer size
+    /// `BufReader`'s current buffer size.
     const BUFFER_SIZE: usize = 8192;
 
-    /// Check the number of bytes remaining in the source
+    /// Check the number of bytes remaining in the source.
     pub const fn remaining(&self) -> usize {
         self.len.saturating_sub(self.position)
     }
 
-    /// Check if the reader has reached the end of the source
+    /// Check if the reader has reached the end of the source.
     pub const fn is_exhausted(&self) -> bool {
         self.position >= self.len
     }
 
-    /// Update the position after consuming bytes
+    /// Update the position after consuming bytes.
     fn consume(&mut self, amt: usize) {
         self.position = cmp::min(self.position + amt, self.len);
     }
@@ -114,18 +113,18 @@ impl<T: AsRef<[u8]>> SliceReader<T> {
         }
     }
 
-    /// Get the current buffer window
+    /// Get the current buffer window.
     fn current_buffer(&self) -> &[u8] {
         let end = cmp::min(self.position + Self::BUFFER_SIZE, self.len);
         &self.source.as_ref()[self.position..end]
     }
 
-    /// Get a slice of the source data from the current position
+    /// Get a slice of the source data from the current position.
     fn get_slice(&self, amt: usize) -> &[u8] {
         &self.source.as_ref()[self.position..][..amt]
     }
 
-    /// Read data into the provided buffer, returning the number of bytes read
+    /// Read data into the provided buffer, returning the number of bytes read.
     fn read_into(&mut self, buf: &mut [u8]) -> usize {
         let amt = self.remaining().min(buf.len());
 

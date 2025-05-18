@@ -69,25 +69,25 @@ use serde::{Deserialize, Serialize};
 /// `Options` consolidates all configuration aspects of word tallying into a single structure.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default, Hash)]
 pub struct Options {
-    /// Case handling strategy (original, lower, upper)
+    /// Case handling strategy (original, lower, upper).
     case: Case,
 
-    /// Sort order for results (unsorted, ascending, descending)
+    /// Sort order for results (unsorted, ascending, descending).
     sort: Sort,
 
-    /// Serialization configuration (output format, delimiter)
+    /// Serialization configuration (output format, delimiter).
     serialization: Serialization,
 
-    /// Filter settings (word length, frequency, patterns, exclusions)
+    /// Filter settings (word length, frequency, patterns, exclusions).
     filters: Filters,
 
-    /// I/O strategy (streamed, buffered, memory-mapped)
+    /// I/O strategy (streamed, buffered, memory-mapped).
     io: Io,
 
-    /// Processing strategy (sequential, parallel)
+    /// Processing strategy (sequential, parallel).
     processing: Processing,
 
-    /// Performance tuning configuration (threads, memory allocation, chunk size)
+    /// Performance tuning configuration (threads, memory allocation, chunk size).
     performance: Performance,
 }
 
@@ -129,7 +129,7 @@ impl Options {
         }
     }
 
-    /// Create a new Options instance with default filters
+    /// Create a new Options instance with default filters.
     pub fn with_defaults(
         case: Case,
         sort: Sort,
@@ -149,43 +149,43 @@ impl Options {
         )
     }
 
-    /// Set case handling strategy
+    /// Set case handling strategy.
     pub const fn with_case(mut self, case: Case) -> Self {
         self.case = case;
         self
     }
 
-    /// Set sort order
+    /// Set sort order.
     pub const fn with_sort(mut self, sort: Sort) -> Self {
         self.sort = sort;
         self
     }
 
-    /// Set serialization options while preserving other options
+    /// Set serialization options while preserving other options.
     pub fn with_serialization(mut self, serialization: Serialization) -> Self {
         self.serialization = serialization;
         self
     }
 
-    /// Set filters while preserving other options
+    /// Set filters while preserving other options.
     pub fn with_filters(mut self, filters: Filters) -> Self {
         self.filters = filters;
         self
     }
 
-    /// Set performance configuration while preserving other options
+    /// Set performance configuration while preserving other options.
     pub const fn with_performance(mut self, performance: Performance) -> Self {
         self.performance = performance;
         self
     }
 
-    /// Set output format while preserving other options
+    /// Set output format while preserving other options.
     pub fn with_format(mut self, format: Format) -> Self {
         self.serialization = self.serialization.with_format_setting(format);
         self
     }
 
-    /// Set delimiter for text output
+    /// Set delimiter for text output.
     pub fn with_delimiter(mut self, delimiter: String) -> Self {
         let mut serialization = self.serialization;
         serialization.delimiter = delimiter;
@@ -193,73 +193,73 @@ impl Options {
         self
     }
 
-    /// Set I/O strategy
+    /// Set I/O strategy.
     pub const fn with_io(mut self, io: Io) -> Self {
         self.io = io;
         self
     }
 
-    /// Set processing strategy
+    /// Set processing strategy.
     pub const fn with_processing(mut self, processing: Processing) -> Self {
         self.processing = processing;
         self
     }
 
-    /// Set thread count for parallel processing
+    /// Set thread count for parallel processing.
     pub const fn with_threads(mut self, threads: Threads) -> Self {
         self.performance = self.performance.with_threads(threads);
         self
     }
 
-    /// Set uniqueness ratio for capacity estimation
+    /// Set uniqueness ratio for capacity estimation.
     pub const fn with_uniqueness_ratio(mut self, ratio: u16) -> Self {
         self.performance = self.performance.with_uniqueness_ratio(ratio);
         self
     }
 
-    /// Set words-per-kilobyte for capacity estimation
+    /// Set words-per-kilobyte for capacity estimation.
     pub const fn with_words_per_kb(mut self, words_per_kb: u16) -> Self {
         self.performance = self.performance.with_words_per_kb(words_per_kb);
         self
     }
 
-    /// Set chunk size for parallel processing
+    /// Set chunk size for parallel processing.
     pub const fn with_chunk_size(mut self, size: usize) -> Self {
         self.performance = self.performance.with_chunk_size(size);
         self
     }
 
-    /// Get the case normalization setting
+    /// Get the case normalization setting.
     pub const fn case(&self) -> Case {
         self.case
     }
 
-    /// Get the word sorting setting
+    /// Get the word sorting setting.
     pub const fn sort(&self) -> Sort {
         self.sort
     }
 
-    /// Get a reference to the serialization options
+    /// Get a reference to the serialization options.
     pub const fn serialization(&self) -> &Serialization {
         &self.serialization
     }
 
-    /// Get a reference to the filters
+    /// Get a reference to the filters.
     pub const fn filters(&self) -> &Filters {
         &self.filters
     }
 
-    /// Get a reference to the performance configuration
+    /// Get a reference to the performance configuration.
     pub const fn performance(&self) -> &Performance {
         &self.performance
     }
 
-    /// Get the I/O strategy
+    /// Get the I/O strategy.
     pub const fn io(&self) -> Io {
         self.io
     }
 
-    /// Get the processing strategy
+    /// Get the processing strategy.
     pub const fn processing(&self) -> Processing {
         self.processing
     }

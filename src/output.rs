@@ -25,7 +25,7 @@ impl Debug for Output {
 }
 
 impl Default for Output {
-    /// Default output is stdout
+    /// Default output is stdout.
     fn default() -> Self {
         Self::stdout()
     }

@@ -53,10 +53,10 @@ impl Display for Format {
 /// Serialization settings for word tallying.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Serialization {
-    /// Output serialization format (text, json, csv)
+    /// Output serialization format (text, json, csv).
     pub format: Format,
 
-    /// Delimiter between word and count in text output
+    /// Delimiter between word and count in text output.
     pub delimiter: String,
 }
 
@@ -80,12 +80,12 @@ impl Display for Serialization {
 }
 
 impl Serialization {
-    /// Helper function to unescape a delimiter string
+    /// Helper function to unescape a delimiter string.
     fn format_delimiter(delimiter: &str) -> Result<String> {
         unescape(delimiter).with_context(|| format!("failed to unescape delimiter: {}", delimiter))
     }
 
-    /// Create a new Serialize instance with specified settings
+    /// Create a new Serialize instance with specified settings.
     pub fn new(format: Format, delimiter: &str) -> Result<Self> {
         let formatted_delimiter = Self::format_delimiter(delimiter)?;
 
@@ -95,7 +95,7 @@ impl Serialization {
         })
     }
 
-    /// Create a Serialize with custom format
+    /// Create a Serialize with custom format.
     pub fn with_format(format: Format) -> Self {
         Self {
             format,
@@ -103,7 +103,7 @@ impl Serialization {
         }
     }
 
-    /// Create a Serialize with custom delimiter
+    /// Create a Serialize with custom delimiter.
     pub fn with_delimiter(delimiter: &str) -> Result<Self> {
         let formatted_delimiter = Self::format_delimiter(delimiter)?;
 
@@ -113,7 +113,7 @@ impl Serialization {
         })
     }
 
-    /// Set the format option and return a new instance
+    /// Set the format option and return a new instance.
     ///
     /// # Examples
     ///
@@ -128,12 +128,12 @@ impl Serialization {
         self
     }
 
-    /// Get the format setting
+    /// Get the format setting.
     pub const fn format(&self) -> Format {
         self.format
     }
 
-    /// Get the delimiter
+    /// Get the delimiter.
     pub fn delimiter(&self) -> &str {
         &self.delimiter
     }

@@ -7,25 +7,25 @@ use std::env;
 use std::str::FromStr;
 use std::sync::OnceLock;
 
-/// # Performance tuning configuration parameters
+/// Performance tuning configuration parameters.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Performance {
-    /// Ratio used to estimate number of unique words based on input size
+    /// Ratio used to estimate number of unique words based on input size.
     pub uniqueness_ratio: u16,
 
-    /// Words-per-KB of text
+    /// Words-per-KB of text.
     pub words_per_kb: u16,
 
-    /// Size of chunks for parallel processing (in bytes)
+    /// Size of chunks for parallel processing (in bytes).
     pub chunk_size: usize,
 
-    /// Base stdin size for unknown-sized inputs
+    /// Base stdin size for unknown-sized inputs.
     pub base_stdin_size: usize,
 
-    /// Thread configuration for parallel processing
+    /// Thread configuration for parallel processing.
     pub threads: Threads,
 
-    /// Option to print verbose messages
+    /// Option to print verbose messages.
     pub verbose: bool,
 }
 
@@ -43,7 +43,7 @@ impl Default for Performance {
 }
 
 impl Performance {
-    /// Default configuration constants
+    /// Default configuration constants.
     const WORDS_PER_KB: u16 = 128; // Words-per-KB estimation
     const MAX_WORDS_PER_KB: u16 = 512; // Maximum words-per-KB (one word every other byte)
     const UNIQUENESS_RATIO: u16 = 256; // 256:1 ratio saves memory (~10:1 is more reasonable for books)
@@ -52,14 +52,14 @@ impl Performance {
     const MIN_THREAD_CAPACITY: usize = 1024; // Minimum capacity per thread
     const CHARS_PER_LINE: usize = 80; // Chars-per-line estimation
 
-    /// Environment variable names for configuration
+    /// Environment variable names for configuration.
     const ENV_STDIN_BUFFER_SIZE: &str = "WORD_TALLY_STDIN_BUFFER_SIZE";
     const ENV_CHUNK_SIZE: &str = "WORD_TALLY_CHUNK_SIZE";
     const ENV_UNIQUENESS_RATIO: &str = "WORD_TALLY_UNIQUENESS_RATIO";
     const ENV_WORDS_PER_KB: &str = "WORD_TALLY_WORDS_PER_KB";
     const ENV_THREADS: &str = "WORD_TALLY_THREADS";
 
-    /// Create performance configuration from environment variables if present
+    /// Create performance configuration from environment variables if present.
     pub fn from_env() -> Self {
         // Parse environment variables only once and cache the result
         static CONFIG: OnceLock<Performance> = OnceLock::new();
@@ -83,37 +83,37 @@ impl Performance {
         })
     }
 
-    /// Set the base stdin size for unknown-sized inputs
+    /// Set the base stdin size for unknown-sized inputs.
     pub const fn with_base_stdin_size(mut self, size: usize) -> Self {
         self.base_stdin_size = size;
         self
     }
 
-    /// Set the chunk size for this configuration
+    /// Set the chunk size for this configuration.
     pub const fn with_chunk_size(mut self, size: usize) -> Self {
         self.chunk_size = size;
         self
     }
 
-    /// Set the thread count
+    /// Set the thread count.
     pub const fn with_threads(mut self, threads: Threads) -> Self {
         self.threads = threads;
         self
     }
 
-    /// Set the uniqueness ratio for this configuration
+    /// Set the uniqueness ratio for this configuration.
     pub const fn with_uniqueness_ratio(mut self, ratio: u16) -> Self {
         self.uniqueness_ratio = ratio;
         self
     }
 
-    /// Set verbose mode
+    /// Set verbose mode.
     pub const fn with_verbose(mut self, verbose: bool) -> Self {
         self.verbose = verbose;
         self
     }
 
-    /// Set the words-per-KB for this configuration
+    /// Set the words-per-KB for this configuration.
     pub const fn with_words_per_kb(mut self, words_per_kb: u16) -> Self {
         self.words_per_kb = if words_per_kb > Self::MAX_WORDS_PER_KB {
             Self::MAX_WORDS_PER_KB
@@ -123,27 +123,27 @@ impl Performance {
         self
     }
 
-    /// Get the base stdin size
+    /// Get the base stdin size.
     pub const fn base_stdin_size(&self) -> usize {
         self.base_stdin_size
     }
 
-    /// Get the chunk size
+    /// Get the chunk size.
     pub const fn chunk_size(&self) -> usize {
         self.chunk_size
     }
 
-    /// Get the thread configuration
+    /// Get the thread configuration.
     pub const fn threads(&self) -> Threads {
         self.threads
     }
 
-    /// Calculate capacity based on input size in bytes
+    /// Calculate capacity based on input size in bytes.
     const fn calculate_capacity(&self, size_bytes: usize) -> usize {
         Self::calculate_capacity_static(size_bytes, self.words_per_kb, self.uniqueness_ratio)
     }
 
-    /// Static version of capacity calculation for use in const contexts
+    /// Static version of capacity calculation for use in const contexts.
     const fn calculate_capacity_static(
         size_bytes: usize,
         words_per_kb: u16,
@@ -154,7 +154,7 @@ impl Performance {
         estimated_words / uniqueness_ratio as usize
     }
 
-    /// Estimated capacity based on input size
+    /// Estimated capacity based on input size.
     pub const fn capacity(&self, input_size: Option<usize>) -> usize {
         match input_size {
             None => Self::base_stdin_tally_capacity(),
@@ -162,18 +162,18 @@ impl Performance {
         }
     }
 
-    /// Default configuration value for export
+    /// Default configuration value for export.
     pub const fn base_stdin_tally_capacity() -> usize {
         Self::BASE_STDIN_SIZE / 1024 * Self::WORDS_PER_KB as usize / Self::UNIQUENESS_RATIO as usize
     }
 
-    /// Estimated lines per chunk based on chunk size and average line length
+    /// Estimated lines per chunk based on chunk size and average line length.
     pub const fn lines_per_chunk(&self) -> usize {
         let lines = self.chunk_size / Self::CHARS_PER_LINE;
         if lines > 128 { lines } else { 128 }
     }
 
-    /// Capacity for each thread in parallel processing
+    /// Capacity for each thread in parallel processing.
     pub fn capacity_per_thread(&self) -> usize {
         let thread_count = self.threads.count();
         let per_thread = Self::base_stdin_tally_capacity() / thread_count;
@@ -188,7 +188,7 @@ impl Performance {
     // Env-parsing helpers
     //
 
-    /// Parse numeric environment variable with fallback to default value
+    /// Parse numeric environment variable with fallback to default value.
     fn parse_env_var<T: FromStr>(name: &str, default: T) -> T {
         env::var(name)
             .ok()
@@ -196,7 +196,7 @@ impl Performance {
             .unwrap_or(default)
     }
 
-    /// Parse thread count from `WORD_TALLY_THREADS` environment variable
+    /// Parse thread count from `WORD_TALLY_THREADS` environment variable.
     fn parse_threads() -> Threads {
         env::var(Self::ENV_THREADS)
             .ok()

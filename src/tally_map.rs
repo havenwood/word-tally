@@ -160,7 +160,7 @@ impl TallyMap {
     // Parallel I/O
     //
 
-    /// Parallel streamed word tallying.
+    /// Parallel, streamed word tallying.
     ///
     /// Streams batches of lines, processing the batches in parallel. Avoids always needing to
     /// hold the entire input in memory. Uses memory-based batching for more consistent workloads.
@@ -238,12 +238,12 @@ impl TallyMap {
     /// Parallel memory-mapped word tallying.
     ///
     /// Uses a simple divide-and-conquer approach for parallel processing with mmap:
-    /// - Divides content into chunks at UTF-8 character boundaries
-    /// - Memory mapping gives direct file content access with OS-managed paging
+    /// - Divids content into chunks at UTF-8 character boundaries
+    /// - Direct memory-mapped file content access with OS-managed paging
     /// - Process full chunks without line-by-line iteration
     ///
-    /// An alternative single-pass approach could begin processing chunks during
-    /// boundary detection and not store chunk indices, but would need more complex
+    /// An alternative single-pass approach could begin processing chunks during.
+    /// boundary detection and not store chunk indices, but would need more complex.
     /// thread coordination.
     fn par_mmap_count(mmap: &Arc<Mmap>, path: &Path, options: &Options) -> Result<Self> {
         let perf = options.performance();

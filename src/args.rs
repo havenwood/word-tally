@@ -86,19 +86,19 @@ pub struct Args {
 }
 
 impl Args {
-    /// Get input file path
+    /// Get the input file path.
     #[allow(clippy::missing_const_for_fn)]
     // Make this const when `const_vec_string_slice` is fully stabilized.
     pub fn get_input(&self) -> &str {
         &self.input
     }
 
-    /// Get output file path
+    /// Get the output file path.
     pub const fn get_output(&self) -> &Option<PathBuf> {
         &self.output
     }
 
-    /// Get verbose flag
+    /// Get the verbose flag.
     pub const fn is_verbose(&self) -> bool {
         self.verbose
     }
@@ -116,7 +116,7 @@ impl Args {
         ))
     }
 
-    /// Helper to create filters from arguments
+    /// Helper to create filters from arguments.
     fn get_filters(&self) -> Result<Filters> {
         Ok(Filters::default())
             .map(|f| match self.min_chars {
