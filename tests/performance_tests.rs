@@ -6,7 +6,7 @@ use word_tally::{Performance, Threads};
 #[test]
 fn test_constants() {
     // These values are documented in the Performance struct
-    assert_eq!(Performance::base_stdin_tally_capacity(), 5120);
+    assert_eq!(Performance::base_stdin_tally_capacity(), 128);
 }
 
 // Test builder methods
@@ -41,11 +41,11 @@ fn test_lines_per_chunk() {
 fn test_capacity_per_thread() {
     // Test with single thread
     let perf = Performance::default().with_threads(Threads::Count(1));
-    assert_eq!(perf.capacity_per_thread(), 5120); // full capacity
+    assert_eq!(perf.capacity_per_thread(), 128); // full capacity
 
     // Test with multiple threads
     let perf_multi = Performance::default().with_threads(Threads::Count(10));
-    assert_eq!(perf_multi.capacity_per_thread(), 1024); // hits minimum
+    assert_eq!(perf_multi.capacity_per_thread(), 128); // hits base capacity limit
 }
 
 // Test trait implementations
@@ -110,8 +110,8 @@ fn test_environment_logic() {
     let perf = Performance::from_env();
 
     // Should get defaults when no env vars are set
-    assert_eq!(perf.uniqueness_ratio, 10);
-    assert_eq!(perf.words_per_kb, 200);
+    assert_eq!(perf.uniqueness_ratio, 256);
+    assert_eq!(perf.words_per_kb, 128);
     assert_eq!(perf.chunk_size, 65536);
     assert_eq!(perf.base_stdin_size, 256 * 1024);
     assert!(!perf.verbose);

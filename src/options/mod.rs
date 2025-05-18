@@ -212,13 +212,13 @@ impl Options {
     }
 
     /// Set uniqueness ratio for capacity estimation
-    pub const fn with_uniqueness_ratio(mut self, ratio: u8) -> Self {
+    pub const fn with_uniqueness_ratio(mut self, ratio: u16) -> Self {
         self.performance = self.performance.with_uniqueness_ratio(ratio);
         self
     }
 
     /// Set words-per-kilobyte for capacity estimation
-    pub const fn with_words_per_kb(mut self, words_per_kb: u8) -> Self {
+    pub const fn with_words_per_kb(mut self, words_per_kb: u16) -> Self {
         self.performance = self.performance.with_words_per_kb(words_per_kb);
         self
     }

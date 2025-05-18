@@ -11,10 +11,10 @@ use std::sync::OnceLock;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Performance {
     /// Ratio used to estimate number of unique words based on input size
-    pub uniqueness_ratio: u8,
+    pub uniqueness_ratio: u16,
 
     /// Words-per-KB of text
-    pub words_per_kb: u8,
+    pub words_per_kb: u16,
 
     /// Size of chunks for parallel processing (in bytes)
     pub chunk_size: usize,
@@ -44,8 +44,9 @@ impl Default for Performance {
 
 impl Performance {
     /// Default configuration constants
-    const WORDS_PER_KB: u8 = 200; // Words-per-KB estimation
-    const UNIQUENESS_RATIO: u8 = 10; // 10:1 ratio
+    const WORDS_PER_KB: u16 = 128; // Words-per-KB estimation
+    const MAX_WORDS_PER_KB: u16 = 512; // Maximum words-per-KB (one word every other byte)
+    const UNIQUENESS_RATIO: u16 = 256; // 256:1 ratio saves memory (~10:1 is more reasonable for books)
     const CHUNK_SIZE: usize = 64 * 1024; // 64KB
     const BASE_STDIN_SIZE: usize = 256 * 1024; // 256KB estimated stdin size
     const MIN_THREAD_CAPACITY: usize = 1024; // Minimum capacity per thread
@@ -72,7 +73,8 @@ impl Performance {
                     Self::ENV_UNIQUENESS_RATIO,
                     Self::UNIQUENESS_RATIO,
                 ),
-                words_per_kb: Self::parse_env_var(Self::ENV_WORDS_PER_KB, Self::WORDS_PER_KB),
+                words_per_kb: Self::parse_env_var(Self::ENV_WORDS_PER_KB, Self::WORDS_PER_KB)
+                    .min(Self::MAX_WORDS_PER_KB),
                 chunk_size: Self::parse_env_var(Self::ENV_CHUNK_SIZE, Self::CHUNK_SIZE),
                 base_stdin_size,
                 threads: Self::parse_threads(),
@@ -100,7 +102,7 @@ impl Performance {
     }
 
     /// Set the uniqueness ratio for this configuration
-    pub const fn with_uniqueness_ratio(mut self, ratio: u8) -> Self {
+    pub const fn with_uniqueness_ratio(mut self, ratio: u16) -> Self {
         self.uniqueness_ratio = ratio;
         self
     }
@@ -112,8 +114,12 @@ impl Performance {
     }
 
     /// Set the words-per-KB for this configuration
-    pub const fn with_words_per_kb(mut self, words_per_kb: u8) -> Self {
-        self.words_per_kb = words_per_kb;
+    pub const fn with_words_per_kb(mut self, words_per_kb: u16) -> Self {
+        self.words_per_kb = if words_per_kb > Self::MAX_WORDS_PER_KB {
+            Self::MAX_WORDS_PER_KB
+        } else {
+            words_per_kb
+        };
         self
     }
 
@@ -140,8 +146,8 @@ impl Performance {
     /// Static version of capacity calculation for use in const contexts
     const fn calculate_capacity_static(
         size_bytes: usize,
-        words_per_kb: u8,
-        uniqueness_ratio: u8,
+        words_per_kb: u16,
+        uniqueness_ratio: u16,
     ) -> usize {
         let kb_size = size_bytes / 1024;
         let estimated_words = kb_size * words_per_kb as usize;
