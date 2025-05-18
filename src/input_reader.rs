@@ -75,96 +75,95 @@ impl<'a> Read for InputReader<'a> {
     }
 }
 
-/// A reader that allows memory-mapped files to be used with the standard `Read` trait.
+/// A generic reader for slice-based sources
 #[derive(Clone, Debug)]
-pub struct MmapReader<'a> {
-    mmap: &'a Mmap,
+pub struct SliceReader<T> {
+    source: T,
+    len: usize,
     position: usize,
 }
 
-impl<'a> MmapReader<'a> {
-    pub const fn new(mmap: &'a Mmap) -> Self {
-        Self { mmap, position: 0 }
+impl<T> SliceReader<T> {
+    /// `BufReader`'s current buffer size
+    const BUFFER_SIZE: usize = 8192;
+
+    /// Check the number of bytes remaining in the source
+    pub const fn remaining(&self) -> usize {
+        self.len.saturating_sub(self.position)
+    }
+
+    /// Check if the reader has reached the end of the source
+    pub const fn is_exhausted(&self) -> bool {
+        self.position >= self.len
+    }
+
+    /// Update the position after consuming bytes
+    fn consume(&mut self, amt: usize) {
+        self.position = cmp::min(self.position + amt, self.len);
     }
 }
 
-/// A `BufRead` implementation for zero-copy, 8KB-buffered reading
-impl<'a> BufRead for MmapReader<'a> {
+impl<T: AsRef<[u8]>> SliceReader<T> {
+    pub fn new(source: T) -> Self {
+        let len = source.as_ref().len();
+
+        Self {
+            source,
+            len,
+            position: 0,
+        }
+    }
+
+    /// Get the current buffer window
+    fn current_buffer(&self) -> &[u8] {
+        let end = cmp::min(self.position + Self::BUFFER_SIZE, self.len);
+        &self.source.as_ref()[self.position..end]
+    }
+
+    /// Get a slice of the source data from the current position
+    fn get_slice(&self, amt: usize) -> &[u8] {
+        &self.source.as_ref()[self.position..][..amt]
+    }
+
+    /// Read data into the provided buffer, returning the number of bytes read
+    fn read_into(&mut self, buf: &mut [u8]) -> usize {
+        let amt = self.remaining().min(buf.len());
+
+        buf[..amt].copy_from_slice(self.get_slice(amt));
+        self.position += amt;
+
+        amt
+    }
+}
+
+/// A buffered-for-streaming, zero-copy reader for slice-based sources.
+impl<T: AsRef<[u8]>> BufRead for SliceReader<T> {
     fn fill_buf(&mut self) -> io::Result<&[u8]> {
-        let remaining = self.mmap.len().saturating_sub(self.position);
-        if remaining == 0 {
+        if self.is_exhausted() {
             return Ok(&[]);
         }
 
-        const BUFFER_SIZE: usize = 8192;
-        let end = cmp::min(self.position + BUFFER_SIZE, self.mmap.len());
-
-        Ok(&self.mmap[self.position..end])
+        Ok(self.current_buffer())
     }
 
     fn consume(&mut self, amt: usize) {
-        self.position = cmp::min(self.position + amt, self.mmap.len());
+        self.consume(amt);
     }
 }
 
-impl<'a> Read for MmapReader<'a> {
+/// Reads bytes by copying them from slice-based sources.
+impl<T: AsRef<[u8]>> Read for SliceReader<T> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let remaining = self.mmap.len().saturating_sub(self.position);
-        if remaining == 0 {
+        if self.is_exhausted() {
             return Ok(0);
         }
 
-        let amt = remaining.min(buf.len());
-        buf[..amt].copy_from_slice(&self.mmap[self.position..][..amt]);
-        self.position += amt;
-
-        Ok(amt)
+        Ok(self.read_into(buf))
     }
 }
 
-/// A reader that allows byte slices to be used with the standard `Read` trait.
-#[derive(Clone, Debug)]
-pub struct BytesReader<'a> {
-    bytes: &'a [u8],
-    position: usize,
-}
+/// A streaming, buffered reader for memory maps.
+pub type MmapReader<'a> = SliceReader<&'a Mmap>;
 
-impl<'a> BytesReader<'a> {
-    pub const fn new(bytes: &'a [u8]) -> Self {
-        Self { bytes, position: 0 }
-    }
-}
-
-/// A `BufRead` implementation for zero-copy, 8KB-buffered reading
-impl<'a> BufRead for BytesReader<'a> {
-    fn fill_buf(&mut self) -> io::Result<&[u8]> {
-        let remaining = self.bytes.len().saturating_sub(self.position);
-        if remaining == 0 {
-            return Ok(&[]);
-        }
-
-        const BUFFER_SIZE: usize = 8192;
-        let end = cmp::min(self.position + BUFFER_SIZE, self.bytes.len());
-
-        Ok(&self.bytes[self.position..end])
-    }
-
-    fn consume(&mut self, amt: usize) {
-        self.position = cmp::min(self.position + amt, self.bytes.len());
-    }
-}
-
-impl<'a> Read for BytesReader<'a> {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let remaining = self.bytes.len().saturating_sub(self.position);
-        if remaining == 0 {
-            return Ok(0);
-        }
-
-        let amt = remaining.min(buf.len());
-        buf[..amt].copy_from_slice(&self.bytes[self.position..][..amt]);
-        self.position += amt;
-
-        Ok(amt)
-    }
-}
+/// A streaming, buffered reader for byte slices.
+pub type BytesReader<'a> = SliceReader<&'a [u8]>;

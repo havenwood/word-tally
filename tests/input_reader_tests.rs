@@ -115,7 +115,6 @@ fn test_input_reader_file() {
 
 #[test]
 fn test_input_reader_stdin() {
-    // Creating stdin input
     let input = Input::default();
     assert!(matches!(input, Input::Stdin));
     assert!(input.reader().is_ok());
@@ -331,4 +330,124 @@ fn test_generic_io_error_message() {
                 || error_string.starts_with("failed to open file: ")
         );
     }
+}
+
+#[test]
+fn test_slice_reader_consistency() {
+    use memmap2::Mmap;
+    use std::fs::File;
+    use word_tally::input_reader::{BytesReader, MmapReader};
+
+    let data = b"The fog comes\non little cat feet.\n\nIt sits looking\nover harbor and city\non silent haunches\nand then moves on.";
+
+    // Create temporary file for mmap
+    let mut temp_file = NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, data).unwrap();
+
+    // Create mmap
+    let file = File::open(temp_file.path()).unwrap();
+    let mmap = unsafe { Mmap::map(&file).unwrap() };
+
+    // Test Read trait implementation consistency
+    let mut mmap_reader = MmapReader::new(&mmap);
+    let mut bytes_reader = BytesReader::new(data);
+
+    let mut mmap_buf = vec![0; 20];
+    let mut bytes_buf = vec![0; 20];
+
+    // Read same amount from both
+    let mmap_read = mmap_reader.read(&mut mmap_buf).unwrap();
+    let bytes_read = bytes_reader.read(&mut bytes_buf).unwrap();
+
+    assert_eq!(mmap_read, bytes_read);
+    assert_eq!(mmap_buf, bytes_buf);
+
+    // Test BufRead trait implementation consistency
+    let mmap_reader = MmapReader::new(&mmap);
+    let bytes_reader = BytesReader::new(data);
+
+    // Read lines from both
+    let mmap_lines: Vec<_> = mmap_reader.lines().collect::<std::io::Result<_>>().unwrap();
+    let bytes_lines: Vec<_> = bytes_reader
+        .lines()
+        .collect::<std::io::Result<_>>()
+        .unwrap();
+
+    assert_eq!(mmap_lines, bytes_lines);
+
+    // Test fill_buf consistency
+    let mut mmap_reader = MmapReader::new(&mmap);
+    let mut bytes_reader = BytesReader::new(data);
+
+    let mmap_fill = mmap_reader.fill_buf().unwrap();
+    let bytes_fill = bytes_reader.fill_buf().unwrap();
+
+    assert_eq!(mmap_fill, bytes_fill);
+
+    // Consume some data
+    mmap_reader.consume(10);
+    bytes_reader.consume(10);
+
+    let mmap_fill = mmap_reader.fill_buf().unwrap();
+    let bytes_fill = bytes_reader.fill_buf().unwrap();
+
+    assert_eq!(mmap_fill, bytes_fill);
+}
+
+#[test]
+fn test_slice_reader_large_buffer() {
+    use memmap2::Mmap;
+    use std::fs::File;
+    use word_tally::input_reader::{BytesReader, MmapReader};
+
+    let data = b"I heard a fly buzz when I died\n".repeat(1000);
+
+    // Create temporary file for mmap
+    let mut temp_file = NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, &data).unwrap();
+
+    // Create mmap
+    let file = File::open(temp_file.path()).unwrap();
+    let mmap = unsafe { Mmap::map(&file).unwrap() };
+
+    let mut mmap_reader = MmapReader::new(&mmap);
+    let mut bytes_reader = BytesReader::new(&data);
+
+    // Test that the 8KB buffer limit works
+    const BUFFER_SIZE: usize = 8192;
+
+    let mmap_fill = mmap_reader.fill_buf().unwrap();
+    let bytes_fill = bytes_reader.fill_buf().unwrap();
+
+    assert_eq!(mmap_fill.len(), BUFFER_SIZE);
+    assert_eq!(bytes_fill.len(), BUFFER_SIZE);
+    assert_eq!(mmap_fill, bytes_fill);
+}
+
+#[test]
+fn test_slice_reader_is_exhausted() {
+    use word_tally::input_reader::BytesReader;
+
+    let data = b"Brief is life but love is long";
+    let mut reader = BytesReader::new(data.as_ref());
+
+    // Initially not exhausted
+    assert!(!reader.is_exhausted());
+
+    // Read some data
+    let mut buffer = vec![0u8; 10];
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 10);
+    assert!(!reader.is_exhausted());
+
+    // Read the rest
+    let mut large_buffer = vec![0u8; 100];
+    let bytes_read = reader.read(&mut large_buffer).unwrap();
+    assert_eq!(bytes_read, 20); // 30 total bytes - 10 already read
+    assert!(reader.is_exhausted());
+
+    // Additional reads should still be exhausted
+    let bytes_read = reader.read(&mut buffer).unwrap();
+    assert_eq!(bytes_read, 0);
+    assert!(reader.is_exhausted());
 }
