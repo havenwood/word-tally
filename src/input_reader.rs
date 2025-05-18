@@ -5,21 +5,20 @@ use memmap2::Mmap;
 use std::cmp;
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Read};
-use std::sync::Arc;
 
 /// A wrapper that implements Read and BufRead for each input type
 /// when `read()` is called multiple times with state tracked between calls
 #[derive(Debug)]
-pub enum InputReader {
+pub enum InputReader<'a> {
     Stdin(BufReader<io::Stdin>),
     File(BufReader<File>),
-    Mmap(MmapReader),
-    Bytes(BytesReader),
+    Mmap(MmapReader<'a>),
+    Bytes(BytesReader<'a>),
 }
 
-impl InputReader {
+impl<'a> InputReader<'a> {
     /// Create an `InputReader` instance from an `Input`
-    pub fn new(input: &Input) -> io::Result<Self> {
+    pub fn new(input: &'a Input) -> io::Result<Self> {
         match input {
             Input::Stdin => Ok(Self::Stdin(BufReader::new(io::stdin()))),
             Input::File(path) => {
@@ -29,14 +28,14 @@ impl InputReader {
 
                 Ok(Self::File(BufReader::new(file)))
             }
-            Input::Mmap(mmap, _) => Ok(Self::Mmap(MmapReader::new(mmap))),
-            Input::Bytes(bytes) => Ok(Self::Bytes(BytesReader::new(bytes))),
+            Input::Mmap(mmap, _) => Ok(Self::Mmap(MmapReader::new(mmap.as_ref()))),
+            Input::Bytes(bytes) => Ok(Self::Bytes(BytesReader::new(bytes.as_ref()))),
         }
     }
 }
 
 // The `impl BufRead` provides `lines()` for an `InputReader`
-impl BufRead for InputReader {
+impl<'a> BufRead for InputReader<'a> {
     fn fill_buf(&mut self) -> io::Result<&[u8]> {
         match self {
             Self::Stdin(reader) => reader.fill_buf(),
@@ -56,7 +55,7 @@ impl BufRead for InputReader {
     }
 }
 
-impl Read for InputReader {
+impl<'a> Read for InputReader<'a> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         match self {
             Self::Stdin(reader) => reader.read(buf),
@@ -69,31 +68,30 @@ impl Read for InputReader {
 
 /// A reader that allows memory-mapped files to be used with the standard `Read` trait.
 #[derive(Clone, Debug)]
-pub struct MmapReader {
-    mmap: Arc<Mmap>,
+pub struct MmapReader<'a> {
+    mmap: &'a Mmap,
     position: usize,
 }
 
-impl MmapReader {
-    pub fn new(mmap: &Arc<Mmap>) -> Self {
-        Self {
-            mmap: Arc::clone(mmap),
-            position: 0,
-        }
+impl<'a> MmapReader<'a> {
+    pub const fn new(mmap: &'a Mmap) -> Self {
+        Self { mmap, position: 0 }
     }
 }
 
-impl BufRead for MmapReader {
+/// A `BufRead` implementation for zero-copy, but 8KB-buffered reading
+impl<'a> BufRead for MmapReader<'a> {
     fn fill_buf(&mut self) -> io::Result<&[u8]> {
         let remaining = self.mmap.len().saturating_sub(self.position);
         if remaining == 0 {
             return Ok(&[]);
         }
 
-        // Limit buffer size to 8KB, mirroring `BufReader` size
+        // Limit size to 8KB, emulating `BufReader`
         const BUFFER_SIZE: usize = 8192;
         let end = cmp::min(self.position + BUFFER_SIZE, self.mmap.len());
 
+        // Zero copy
         Ok(&self.mmap[self.position..end])
     }
 
@@ -102,7 +100,7 @@ impl BufRead for MmapReader {
     }
 }
 
-impl Read for MmapReader {
+impl<'a> Read for MmapReader<'a> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let remaining = self.mmap.len().saturating_sub(self.position);
         if remaining == 0 {
@@ -116,33 +114,32 @@ impl Read for MmapReader {
     }
 }
 
-/// A reader that provides a zero-copy for byte slices with the `Read` trait.
+/// A reader that allows byte slices to be used with the standard `Read` trait.
 #[derive(Clone, Debug)]
-pub struct BytesReader {
-    bytes: Arc<[u8]>,
+pub struct BytesReader<'a> {
+    bytes: &'a [u8],
     position: usize,
 }
 
-impl BytesReader {
-    pub fn new(bytes: &Arc<[u8]>) -> Self {
-        Self {
-            bytes: Arc::clone(bytes),
-            position: 0,
-        }
+impl<'a> BytesReader<'a> {
+    pub const fn new(bytes: &'a [u8]) -> Self {
+        Self { bytes, position: 0 }
     }
 }
 
-impl BufRead for BytesReader {
+/// A `BufRead` implementation for zero-copy, but 8KB-buffered reading
+impl<'a> BufRead for BytesReader<'a> {
     fn fill_buf(&mut self) -> io::Result<&[u8]> {
         let remaining = self.bytes.len().saturating_sub(self.position);
         if remaining == 0 {
             return Ok(&[]);
         }
 
-        // Limit buffer size to 8KB, mirroring `BufReader` size
+        // Limit size to 8KB, emulating `BufReader`
         const BUFFER_SIZE: usize = 8192;
         let end = cmp::min(self.position + BUFFER_SIZE, self.bytes.len());
 
+        // Zero copy
         Ok(&self.bytes[self.position..end])
     }
 
@@ -151,12 +148,13 @@ impl BufRead for BytesReader {
     }
 }
 
-impl Read for BytesReader {
+impl<'a> Read for BytesReader<'a> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let remaining = self.bytes.len().saturating_sub(self.position);
         if remaining == 0 {
             return Ok(0);
         }
+
         let amt = remaining.min(buf.len());
         buf[..amt].copy_from_slice(&self.bytes[self.position..][..amt]);
         self.position += amt;

@@ -237,3 +237,27 @@ fn test_bytes_reader_type() {
     // Just verify we can create the reader successfully
     assert!(matches!(reader, word_tally::InputReader::Bytes(_)));
 }
+
+#[test]
+fn test_bytes_reader_buffer_limit_8kb() {
+    // Create a large buffer (16KB) to test the 8KB limit
+    let large_data = vec![b'a'; 16 * 1024];
+    let input = Input::from_bytes(large_data);
+
+    let mut reader = input.reader().unwrap();
+
+    // fill_buf should only return 8KB at a time
+    let buffer = reader.fill_buf().unwrap();
+    assert_eq!(buffer.len(), 8192, "Buffer should be limited to 8KB");
+
+    // Consume half the buffer
+    reader.consume(4096);
+
+    // fill_buf should still return 8KB (4KB remaining from first + 4KB new)
+    let buffer = reader.fill_buf().unwrap();
+    assert_eq!(
+        buffer.len(),
+        8192,
+        "Buffer should still be 8KB after partial consume"
+    );
+}

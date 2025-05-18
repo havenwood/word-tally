@@ -16,7 +16,7 @@ pub enum Input {
     Stdin,
     File(PathBuf),
     Mmap(Arc<Mmap>, PathBuf),
-    Bytes(Arc<[u8]>),
+    Bytes(Box<[u8]>),
 }
 
 impl Input {
@@ -59,11 +59,11 @@ impl Input {
 
     /// Create an `Input` from byte data.
     pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Self {
-        Self::Bytes(Arc::from(bytes.as_ref()))
+        Self::Bytes(bytes.as_ref().into())
     }
 
     /// A helper to get an `InputReader` from this input.
-    pub fn reader(&self) -> io::Result<InputReader> {
+    pub fn reader(&self) -> io::Result<InputReader<'_>> {
         InputReader::new(self)
     }
 
