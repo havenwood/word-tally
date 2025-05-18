@@ -26,31 +26,24 @@ fn main() {
 }
 
 fn run() -> Result<()> {
-    // Parse arguments and prepare an input reader
+    // Parse arguments and prepare options and an input reader
     let args = Args::parse();
-
     let options = args.get_options()?;
     let input = Input::new(args.get_input(), options.io())?;
 
-    let source = input.source();
+    // Construct a `WordTally` instance
     let word_tally = WordTally::new(&input, &options)?;
 
-    // Process output
+    // Optional verbose output
     if args.is_verbose() {
-        verbose::handle_output(
-            &word_tally,
-            options.serialization().format(),
-            options.serialization().delimiter(),
-            &source,
-        )?;
+        let source = input.source();
+        let mut verbose = verbose::Verbose::default();
+        verbose.write_verbose_info(&word_tally, &source)?;
     }
 
+    // Primary output
     let mut output = Output::new(args.get_output())?;
-    output.write_formatted_tally(
-        word_tally.tally(),
-        options.serialization().format(),
-        options.serialization().delimiter(),
-    )?;
+    output.write_formatted_tally(&word_tally)?;
 
     Ok(())
 }

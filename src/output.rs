@@ -1,5 +1,6 @@
 //! Write trait abstractions for stdout and file serialization.
 
+use crate::WordTally;
 use crate::options::serialization::Format;
 use anyhow::{Context, Result};
 use std::fmt::{self, Debug, Formatter};
@@ -73,6 +74,13 @@ impl Output {
         }
     }
 
+    /// Creates an `Output` from a writer.
+    pub fn from_writer<W: Write + 'static>(writer: W) -> Self {
+        Self {
+            writer: Box::new(writer),
+        }
+    }
+
     /// Writes a line to the writer, handling `BrokenPipe` errors gracefully.
     pub fn write_line(&mut self, line: &str) -> Result<()> {
         Self::handle_broken_pipe(self.writer.write_all(line.as_bytes()))
@@ -84,12 +92,11 @@ impl Output {
     }
 
     /// Writes word tally data in the specified format.
-    pub fn write_formatted_tally(
-        &mut self,
-        word_data: &[(Box<str>, usize)],
-        format: Format,
-        delimiter: &str,
-    ) -> Result<()> {
+    pub fn write_formatted_tally<'a>(&mut self, word_tally: &WordTally<'a>) -> Result<()> {
+        let format = word_tally.options().serialization().format();
+        let delimiter = word_tally.options().serialization().delimiter();
+        let word_data = word_tally.tally();
+
         match format {
             Format::Text => {
                 for (word, count) in word_data {
