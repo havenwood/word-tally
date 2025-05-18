@@ -61,7 +61,7 @@ use self::serialization::Format;
 use self::serialization::Serialization;
 use self::sort::Sort;
 use self::threads::Threads;
-use core::fmt;
+use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
 
 /// Unified configuration for word tallying operations.
@@ -265,8 +265,8 @@ impl Options {
     }
 }
 
-impl fmt::Display for Options {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl Display for Options {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "Options {{ case: {}, sort: {}, serialization: {}, filters: {:?}, processing: {}, io: {} }}",

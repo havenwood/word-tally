@@ -4,6 +4,7 @@
 
 use anyhow::Error;
 use clap::error::ErrorKind as ClapErrorKind;
+use std::fmt::{Debug, Display};
 use std::io;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -71,8 +72,6 @@ impl From<ExitCode> for i32 {
 }
 
 /// Helper function to check if an error is one of multiple types
-fn is_error_any_of<T: std::fmt::Debug + std::fmt::Display + Send + Sync + 'static>(
-    err: &Error,
-) -> bool {
+fn is_error_any_of<T: Debug + Display + Send + Sync + 'static>(err: &Error) -> bool {
     err.downcast_ref::<T>().is_some()
 }

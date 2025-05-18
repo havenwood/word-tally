@@ -3,6 +3,7 @@
 use clap::ValueEnum;
 use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
+use std::env;
 
 /// Determines the I/O strategy for processing input, all either in parallel or sequentially.
 ///
@@ -65,7 +66,7 @@ pub const ENV_IO: &str = "WORD_TALLY_IO";
 
 /// Parse I/O strategy from WORD_TALLY_IO environment variable
 pub fn parse_io_from_env() -> Io {
-    match std::env::var(ENV_IO).ok().as_deref() {
+    match env::var(ENV_IO).ok().as_deref() {
         Some(s) if s.eq_ignore_ascii_case("streamed") => Io::Streamed,
         Some(s) if s.eq_ignore_ascii_case("buffered") => Io::Buffered,
         Some(s) if s.eq_ignore_ascii_case("memory-mapped") || s.eq_ignore_ascii_case("mmap") => {

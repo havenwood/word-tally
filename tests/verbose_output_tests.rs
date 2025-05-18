@@ -52,7 +52,7 @@ mod verbose_unit_tests {
         let options = Options::default().with_format(Format::Json);
         let tally = create_test_tally(&options);
 
-        // We can't directly test handle_verbose_output since it's not public
+        // We can't directly test handle_output since it's not public
         // Instead, we test through the CLI integration which uses verbose output
         // This is already covered by cli_verbose_tests.rs
 

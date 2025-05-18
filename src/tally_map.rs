@@ -1,8 +1,9 @@
 //! A collection for tallying word counts using `HashMap`.
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, hash_map},
     io::{BufRead, Read},
+    mem,
     path::Path,
     str,
     sync::Arc,
@@ -221,10 +222,8 @@ impl TallyMap {
                     // Last batch's size rather than estimation to better match input pattern
                     let current_batch_size = batch_of_lines.len();
                     // Swap out the full batch for an empty one, reusing the previous capacity
-                    let full_batch_of_lines = std::mem::replace(
-                        &mut batch_of_lines,
-                        Vec::with_capacity(current_batch_size),
-                    );
+                    let full_batch_of_lines =
+                        mem::replace(&mut batch_of_lines, Vec::with_capacity(current_batch_size));
                     process_batch(full_batch_of_lines);
                     accumulated_bytes = 0;
                 }
@@ -356,7 +355,7 @@ impl TallyMap {
 
 impl IntoIterator for TallyMap {
     type Item = (Word, Count);
-    type IntoIter = std::collections::hash_map::IntoIter<Word, Count>;
+    type IntoIter = hash_map::IntoIter<Word, Count>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.inner.into_iter()

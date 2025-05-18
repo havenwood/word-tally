@@ -69,7 +69,7 @@ impl Default for Serialization {
     }
 }
 
-impl fmt::Display for Serialization {
+impl Display for Serialization {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,

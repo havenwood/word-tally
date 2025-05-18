@@ -3,6 +3,8 @@
 use core::fmt::{self, Display, Formatter};
 use regex::RegexSet;
 use serde::{Deserialize, Serialize};
+use std::cmp::Ordering;
+use std::hash::{Hash, Hasher};
 
 /// Collection of regex pattern strings.
 pub type InputPatterns = Vec<String>;
@@ -34,19 +36,19 @@ impl PartialEq for Patterns {
 impl Eq for Patterns {}
 
 impl PartialOrd for Patterns {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for Patterns {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.input_patterns.cmp(&other.input_patterns)
     }
 }
 
-impl std::hash::Hash for Patterns {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+impl Hash for Patterns {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         self.input_patterns.hash(state);
     }
 }
@@ -197,19 +199,19 @@ impl PartialEq for ExcludePatterns {
 impl Eq for ExcludePatterns {}
 
 impl PartialOrd for ExcludePatterns {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for ExcludePatterns {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.0.cmp(&other.0)
     }
 }
 
 impl std::hash::Hash for ExcludePatterns {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
     }
 }
@@ -327,19 +329,19 @@ impl PartialEq for IncludePatterns {
 impl Eq for IncludePatterns {}
 
 impl PartialOrd for IncludePatterns {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for IncludePatterns {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         self.0.cmp(&other.0)
     }
 }
 
 impl std::hash::Hash for IncludePatterns {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
     }
 }

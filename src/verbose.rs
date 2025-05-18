@@ -279,7 +279,7 @@ impl<'v, 'a> Verbose<'v, 'a> {
 ///
 /// Outputs information about the word tally in the specified format
 /// (JSON, CSV, or plain text) to standard error.
-pub fn handle_verbose_output(
+pub fn handle_output(
     word_tally: &WordTally<'_>,
     format: Format,
     delimiter: &str,

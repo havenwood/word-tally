@@ -1,8 +1,11 @@
 //! Configuration for word tallying performance.
 
 use super::threads::Threads;
-use core::fmt;
+use core::fmt::{self, Formatter};
 use serde::{Deserialize, Serialize};
+use std::env;
+use std::str::FromStr;
+use std::sync::OnceLock;
 
 /// # Performance tuning configuration parameters
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -57,8 +60,6 @@ impl Performance {
 
     /// Create performance configuration from environment variables if present
     pub fn from_env() -> Self {
-        use std::sync::OnceLock;
-
         // Parse environment variables only once and cache the result
         static CONFIG: OnceLock<Performance> = OnceLock::new();
 
@@ -182,8 +183,8 @@ impl Performance {
     //
 
     /// Parse numeric environment variable with fallback to default value
-    fn parse_env_var<T: std::str::FromStr>(name: &str, default: T) -> T {
-        std::env::var(name)
+    fn parse_env_var<T: FromStr>(name: &str, default: T) -> T {
+        env::var(name)
             .ok()
             .and_then(|value| value.parse().ok())
             .unwrap_or(default)
@@ -191,7 +192,7 @@ impl Performance {
 
     /// Parse thread count from `WORD_TALLY_THREADS` environment variable
     fn parse_threads() -> Threads {
-        std::env::var(Self::ENV_THREADS)
+        env::var(Self::ENV_THREADS)
             .ok()
             .and_then(|val| {
                 if val.eq_ignore_ascii_case("all") {
@@ -205,7 +206,7 @@ impl Performance {
 }
 
 impl fmt::Display for Performance {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "Performance {{ tally_capacity: {}, uniqueness: {}, words/kb: {}, chunk: {}, stdin_size: {}, threads: {}, verbose: {} }}",

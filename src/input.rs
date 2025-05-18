@@ -4,6 +4,7 @@ use crate::input_reader::InputReader;
 use crate::options::io::Io;
 use anyhow::{Context, Result};
 use memmap2::Mmap;
+use std::fmt::{self, Formatter};
 use std::fs::{self, File};
 use std::io;
 use std::path::{Path, PathBuf};
@@ -104,7 +105,7 @@ impl Default for Input {
 }
 
 impl std::fmt::Display for Input {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Stdin => write!(f, "Stdin"),
             Self::File(path) => write!(f, "File({})", path.display()),

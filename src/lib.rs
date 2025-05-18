@@ -111,10 +111,10 @@
 //! # }
 //! ```
 
-use std::{hash::Hash, str};
+use std::{hash::Hash, slice, str, sync::OnceLock};
 
 use anyhow::Result;
-use serde::{self, Deserialize, Serialize};
+use serde::{self, Deserialize, Serialize, ser::SerializeStruct};
 
 pub mod exit_code;
 pub mod input;
@@ -145,7 +145,7 @@ pub type Word = Box<str>;
 pub type Tally = Box<[(Word, Count)]>;
 
 /// A shared `OnceLock` for default `Options`.
-static DEFAULT_OPTIONS: std::sync::OnceLock<Options> = std::sync::OnceLock::new();
+static DEFAULT_OPTIONS: OnceLock<Options> = OnceLock::new();
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
 #[non_exhaustive]
@@ -182,7 +182,6 @@ impl Serialize for WordTally<'_> {
     where
         S: serde::Serializer,
     {
-        use serde::ser::SerializeStruct;
         let mut state = serializer.serialize_struct("WordTally", 4)?;
         state.serialize_field("tally", &self.tally)?;
         state.serialize_field("options", &self.options)?;
@@ -235,7 +234,8 @@ impl<'a> From<WordTally<'a>> for Vec<(Word, Count)> {
 /// A `tally` can also be iterated over directly from a `WordTally`.
 impl<'i> IntoIterator for &'i WordTally<'_> {
     type Item = &'i (Word, Count);
-    type IntoIter = std::slice::Iter<'i, (Word, Count)>;
+    type IntoIter = slice::Iter<'i, (Word, Count)>;
+
     fn into_iter(self) -> Self::IntoIter {
         self.tally.iter()
     }

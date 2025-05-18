@@ -12,14 +12,15 @@ use crate::output::Output;
 use anyhow::Result;
 use args::Args;
 use clap::Parser;
+use std::process;
 use word_tally::WordTally;
 
 fn main() {
     match run() {
-        Ok(()) => std::process::exit(ExitCode::Success.into()),
+        Ok(()) => process::exit(ExitCode::Success.into()),
         Err(err) => {
             eprintln!("Error: {}", err);
-            std::process::exit(ExitCode::from_error(&err).into());
+            process::exit(ExitCode::from_error(&err).into());
         }
     }
 }
@@ -36,7 +37,7 @@ fn run() -> Result<()> {
 
     // Process output
     if args.is_verbose() {
-        crate::verbose::handle_verbose_output(
+        verbose::handle_output(
             &word_tally,
             options.serialization().format(),
             options.serialization().delimiter(),

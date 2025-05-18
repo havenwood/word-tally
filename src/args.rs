@@ -1,7 +1,7 @@
 //! Command-line argument parsing and access.
 
 use anyhow::{Context, Result};
-use clap::Parser;
+use clap::{ArgAction, Parser};
 use std::path::PathBuf;
 
 use word_tally::options::{
@@ -60,11 +60,11 @@ pub struct Args {
     exclude_words: Option<Vec<String>>,
 
     /// Include only words matching a regex pattern.
-    #[arg(short = 'i', long, value_name = "PATTERN", action = clap::ArgAction::Append)]
+    #[arg(short = 'i', long, value_name = "PATTERN", action = ArgAction::Append)]
     include: Option<Vec<String>>,
 
     /// Exclude words matching a regex pattern.
-    #[arg(short = 'x', long, value_name = "PATTERN", action = clap::ArgAction::Append)]
+    #[arg(short = 'x', long, value_name = "PATTERN", action = ArgAction::Append)]
     exclude: Option<Vec<String>>,
 
     // Output options
