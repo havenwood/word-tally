@@ -90,7 +90,11 @@ impl BufRead for MmapReader {
             return Ok(&[]);
         }
 
-        Ok(&self.mmap[self.position..])
+        // Limit buffer size to 8KB, mirroring `BufReader` size
+        const BUFFER_SIZE: usize = 8192;
+        let end = cmp::min(self.position + BUFFER_SIZE, self.mmap.len());
+
+        Ok(&self.mmap[self.position..end])
     }
 
     fn consume(&mut self, amt: usize) {
@@ -135,7 +139,11 @@ impl BufRead for BytesReader {
             return Ok(&[]);
         }
 
-        Ok(&self.bytes[self.position..])
+        // Limit buffer size to 8KB, mirroring `BufReader` size
+        const BUFFER_SIZE: usize = 8192;
+        let end = cmp::min(self.position + BUFFER_SIZE, self.bytes.len());
+
+        Ok(&self.bytes[self.position..end])
     }
 
     fn consume(&mut self, amt: usize) {
