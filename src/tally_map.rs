@@ -123,9 +123,7 @@ impl TallyMap {
     ///
     /// Streams one line at a time, avoiding needing to always hold the entire input in memory.
     fn streamed_count(input: &Input, options: &Options) -> Result<Self> {
-        let reader = input
-            .reader()
-            .with_context(|| format!("failed to create reader for input: {}", input))?;
+        let reader = input.reader()?;
         let mut tally = Self::with_capacity(options.performance().capacity(input.size()));
 
         reader
@@ -169,9 +167,7 @@ impl TallyMap {
     fn par_streamed_count(input: &Input, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
-        let reader = input
-            .reader()
-            .with_context(|| format!("failed to create reader for input: {}", input))?;
+        let reader = input.reader()?;
         let estimated_lines_per_chunk = perf.lines_per_chunk();
         let mut tally = Self::with_capacity(perf.capacity(input.size()));
 

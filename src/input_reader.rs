@@ -22,8 +22,17 @@ impl<'a> InputReader<'a> {
         match input {
             Input::Stdin => Ok(Self::Stdin(BufReader::new(io::stdin()))),
             Input::File(path) => {
-                let file = File::open(path).map_err(|e| {
-                    io::Error::new(e.kind(), format!("failed to read from: {}", path.display()))
+                let file = File::open(path).map_err(|e| match e.kind() {
+                    io::ErrorKind::NotFound => {
+                        io::Error::new(e.kind(), format!("no such file: {}", path.display()))
+                    }
+                    io::ErrorKind::PermissionDenied => {
+                        io::Error::new(e.kind(), format!("permission denied: {}", path.display()))
+                    }
+                    _ => io::Error::new(
+                        e.kind(),
+                        format!("failed to open file: {} ({})", path.display(), e),
+                    ),
                 })?;
 
                 Ok(Self::File(BufReader::new(file)))
@@ -79,7 +88,7 @@ impl<'a> MmapReader<'a> {
     }
 }
 
-/// A `BufRead` implementation for zero-copy, but 8KB-buffered reading
+/// A `BufRead` implementation for zero-copy, 8KB-buffered reading
 impl<'a> BufRead for MmapReader<'a> {
     fn fill_buf(&mut self) -> io::Result<&[u8]> {
         let remaining = self.mmap.len().saturating_sub(self.position);
@@ -87,11 +96,9 @@ impl<'a> BufRead for MmapReader<'a> {
             return Ok(&[]);
         }
 
-        // Limit size to 8KB, emulating `BufReader`
         const BUFFER_SIZE: usize = 8192;
         let end = cmp::min(self.position + BUFFER_SIZE, self.mmap.len());
 
-        // Zero copy
         Ok(&self.mmap[self.position..end])
     }
 
@@ -106,6 +113,7 @@ impl<'a> Read for MmapReader<'a> {
         if remaining == 0 {
             return Ok(0);
         }
+
         let amt = remaining.min(buf.len());
         buf[..amt].copy_from_slice(&self.mmap[self.position..][..amt]);
         self.position += amt;
@@ -127,7 +135,7 @@ impl<'a> BytesReader<'a> {
     }
 }
 
-/// A `BufRead` implementation for zero-copy, but 8KB-buffered reading
+/// A `BufRead` implementation for zero-copy, 8KB-buffered reading
 impl<'a> BufRead for BytesReader<'a> {
     fn fill_buf(&mut self) -> io::Result<&[u8]> {
         let remaining = self.bytes.len().saturating_sub(self.position);
@@ -135,11 +143,9 @@ impl<'a> BufRead for BytesReader<'a> {
             return Ok(&[]);
         }
 
-        // Limit size to 8KB, emulating `BufReader`
         const BUFFER_SIZE: usize = 8192;
         let end = cmp::min(self.position + BUFFER_SIZE, self.bytes.len());
 
-        // Zero copy
         Ok(&self.bytes[self.position..end])
     }
 

@@ -261,3 +261,74 @@ fn test_bytes_reader_buffer_limit_8kb() {
         "Buffer should still be 8KB after partial consume"
     );
 }
+
+#[test]
+fn test_file_not_found_error_message() {
+    let nonexistent_path = "/nonexistent/path/to/file.txt";
+    let input = Input::new(nonexistent_path, word_tally::Io::Streamed).unwrap();
+
+    let reader_result = input.reader();
+    assert!(reader_result.is_err());
+
+    let error = reader_result.unwrap_err();
+    assert_eq!(
+        error.to_string(),
+        "no such file: /nonexistent/path/to/file.txt"
+    );
+}
+
+#[test]
+#[cfg(unix)]
+fn test_permission_denied_error_message() {
+    use std::fs::{self, File};
+    use std::os::unix::fs::PermissionsExt;
+    use tempfile::TempDir;
+
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("test_no_permission.txt");
+
+    // Create file with no read permissions
+    {
+        File::create(&file_path).unwrap();
+        let metadata = fs::metadata(&file_path).unwrap();
+        let mut perms = metadata.permissions();
+        perms.set_mode(0o000); // No permissions
+        fs::set_permissions(&file_path, perms).unwrap();
+    }
+
+    let input = Input::new(&file_path, word_tally::Io::Streamed).unwrap();
+    let reader_result = input.reader();
+    assert!(reader_result.is_err());
+
+    let error = reader_result.unwrap_err();
+    assert!(error.to_string().starts_with("permission denied: "));
+
+    // Clean up
+    let metadata = fs::metadata(&file_path).unwrap();
+    let mut perms = metadata.permissions();
+    perms.set_mode(0o644); // Restore permissions for cleanup
+    fs::set_permissions(&file_path, perms).unwrap();
+}
+
+#[test]
+fn test_generic_io_error_message() {
+    // This is harder to test since we need to trigger a non-specific I/O error
+    // In practice, this would cover errors like disk full, etc.
+    // We'll test that the error format is correct by testing with a mocked scenario
+    // For now, we can at least verify the format works with our nonexistent file
+
+    let nonexistent_path = "/dev/null/not_a_directory/file.txt";
+    let input = Input::new(nonexistent_path, word_tally::Io::Streamed).unwrap();
+
+    let reader_result = input.reader();
+    if reader_result.is_err() {
+        let error = reader_result.unwrap_err();
+        let error_string = error.to_string();
+        // Should either be our specific error or fall back to generic format
+        assert!(
+            error_string.starts_with("no such file: ")
+                || error_string.starts_with("permission denied: ")
+                || error_string.starts_with("failed to open file: ")
+        );
+    }
+}

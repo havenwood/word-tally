@@ -99,3 +99,54 @@ fn test_new_invalid_utf8_error() {
     let error_msg = error.to_string();
     assert!(!error_msg.is_empty());
 }
+
+#[test]
+fn test_input_file_not_found_error() {
+    let assert = Command::cargo_bin("word-tally")
+        .unwrap()
+        .arg("/nonexistent/file.txt")
+        .assert();
+
+    assert.failure().stderr(predicate::str::contains(
+        "no such file: /nonexistent/file.txt",
+    ));
+}
+
+#[test]
+fn test_input_file_permission_denied_error() {
+    let temp_dir = TempDir::new().unwrap();
+    let file_path = temp_dir.path().join("no_read_permission.txt");
+
+    // Create file with no read permissions
+    {
+        File::create(&file_path).unwrap();
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            let metadata = fs::metadata(&file_path).unwrap();
+            let mut perms = metadata.permissions();
+            perms.set_mode(0o000); // No permissions
+            fs::set_permissions(&file_path, perms).unwrap();
+        }
+    }
+
+    let assert = Command::cargo_bin("word-tally")
+        .unwrap()
+        .arg(&file_path)
+        .assert();
+
+    assert.failure().stderr(predicate::str::contains(format!(
+        "permission denied: {}",
+        file_path.display()
+    )));
+
+    // Clean up
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let metadata = fs::metadata(&file_path).unwrap();
+        let mut perms = metadata.permissions();
+        perms.set_mode(0o644); // Restore permissions for cleanup
+        fs::set_permissions(&file_path, perms).unwrap();
+    }
+}
