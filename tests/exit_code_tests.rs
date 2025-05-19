@@ -1,6 +1,6 @@
 use anyhow::{Error, anyhow};
 use std::io;
-use word_tally::exit_code::ExitCode;
+use word_tally::exit_code;
 
 fn create_io_error(kind: io::ErrorKind) -> Error {
     io::Error::new(kind, "test I/O error").into()
@@ -9,25 +9,25 @@ fn create_io_error(kind: io::ErrorKind) -> Error {
 #[test]
 fn test_io_error_not_found() {
     let err = create_io_error(io::ErrorKind::NotFound);
-    assert_eq!(ExitCode::from_error(&err), ExitCode::NoInput);
+    assert_eq!(exit_code::from_error(&err), exit_code::NO_INPUT);
 }
 
 #[test]
 fn test_io_error_permission_denied() {
     let err = create_io_error(io::ErrorKind::PermissionDenied);
-    assert_eq!(ExitCode::from_error(&err), ExitCode::NoPermission);
+    assert_eq!(exit_code::from_error(&err), exit_code::NO_PERMISSION);
 }
 
 #[test]
 fn test_io_error_already_exists() {
     let err = create_io_error(io::ErrorKind::AlreadyExists);
-    assert_eq!(ExitCode::from_error(&err), ExitCode::CannotCreate);
+    assert_eq!(exit_code::from_error(&err), exit_code::CANNOT_CREATE);
 }
 
 #[test]
 fn test_io_error_other() {
     let err = create_io_error(io::ErrorKind::ConnectionRefused);
-    assert_eq!(ExitCode::from_error(&err), ExitCode::IoError);
+    assert_eq!(exit_code::from_error(&err), exit_code::IO_ERROR);
 }
 
 #[test]
@@ -36,7 +36,7 @@ fn test_utf8_error() {
     let bytes = vec![0xFF, 0xFE, 0xFD];
     let utf8_error = std::str::from_utf8(&bytes).unwrap_err();
     let err: Error = utf8_error.into();
-    assert_eq!(ExitCode::from_error(&err), ExitCode::DataError);
+    assert_eq!(exit_code::from_error(&err), exit_code::DATA_ERROR);
 }
 
 #[test]
@@ -45,7 +45,7 @@ fn test_from_utf8_error() {
     let bytes = vec![0xFF, 0xFE, 0xFD];
     let from_utf8_error = String::from_utf8(bytes).unwrap_err();
     let err: Error = from_utf8_error.into();
-    assert_eq!(ExitCode::from_error(&err), ExitCode::DataError);
+    assert_eq!(exit_code::from_error(&err), exit_code::DATA_ERROR);
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn test_from_utf8_error() {
 fn test_regex_error() {
     let regex_err = regex::Regex::new(r"[a-").unwrap_err();
     let err: Error = regex_err.into();
-    assert_eq!(ExitCode::from_error(&err), ExitCode::DataError);
+    assert_eq!(exit_code::from_error(&err), exit_code::DATA_ERROR);
 }
 
 #[test]
@@ -62,7 +62,7 @@ fn test_json_error() {
     let invalid_json = "{invalid}";
     let json_err = serde_json::from_str::<serde_json::Value>(invalid_json).unwrap_err();
     let err: Error = json_err.into();
-    assert_eq!(ExitCode::from_error(&err), ExitCode::DataError);
+    assert_eq!(exit_code::from_error(&err), exit_code::DATA_ERROR);
 }
 
 #[test]
@@ -83,7 +83,7 @@ fn test_csv_error() {
     );
     let csv_err = reader.records().next().expect("process test").unwrap_err();
     let err: Error = csv_err.into();
-    assert_eq!(ExitCode::from_error(&err), ExitCode::DataError);
+    assert_eq!(exit_code::from_error(&err), exit_code::DATA_ERROR);
 }
 
 #[test]
@@ -91,7 +91,7 @@ fn test_unescaper_error() {
     // Closing parenthesis without matching opening
     let unescaper_err = unescaper::unescape(r"\)").unwrap_err();
     let err: Error = unescaper_err.into();
-    assert_eq!(ExitCode::from_error(&err), ExitCode::DataError);
+    assert_eq!(exit_code::from_error(&err), exit_code::DATA_ERROR);
 }
 
 #[test]
@@ -106,7 +106,7 @@ fn test_clap_help() {
         .try_get_matches_from(vec!["test", "--help"])
         .unwrap_err();
     let err: Error = anyhow!(clap_err);
-    assert_eq!(ExitCode::from_error(&err), ExitCode::Success);
+    assert_eq!(exit_code::from_error(&err), exit_code::SUCCESS);
 }
 
 #[test]
@@ -116,32 +116,23 @@ fn test_clap_version() {
         .try_get_matches_from(vec!["test", "--version"])
         .unwrap_err();
     let err: Error = anyhow!(clap_err);
-    assert_eq!(ExitCode::from_error(&err), ExitCode::Success);
+    assert_eq!(exit_code::from_error(&err), exit_code::SUCCESS);
 }
 
 #[test]
 fn test_generic_error() {
     let err: Error = anyhow!("generic error");
-    assert_eq!(ExitCode::from_error(&err), ExitCode::Failure);
+    assert_eq!(exit_code::from_error(&err), exit_code::FAILURE);
 }
 
 #[test]
-fn test_exit_code_i32_conversion() {
-    assert_eq!(ExitCode::Success.code(), 0);
-    assert_eq!(ExitCode::Failure.code(), 1);
-    assert_eq!(ExitCode::Usage.code(), 64);
-    assert_eq!(ExitCode::DataError.code(), 65);
-    assert_eq!(ExitCode::NoInput.code(), 66);
-    assert_eq!(ExitCode::CannotCreate.code(), 73);
-    assert_eq!(ExitCode::IoError.code(), 74);
-    assert_eq!(ExitCode::NoPermission.code(), 77);
-}
-
-#[test]
-fn test_from_trait() {
-    let code: i32 = ExitCode::Success.into();
-    assert_eq!(code, 0);
-
-    let code: i32 = ExitCode::Usage.into();
-    assert_eq!(code, 64);
+fn test_exit_code_values() {
+    assert_eq!(exit_code::SUCCESS, 0);
+    assert_eq!(exit_code::FAILURE, 1);
+    assert_eq!(exit_code::USAGE, 64);
+    assert_eq!(exit_code::DATA_ERROR, 65);
+    assert_eq!(exit_code::NO_INPUT, 66);
+    assert_eq!(exit_code::CANNOT_CREATE, 73);
+    assert_eq!(exit_code::IO_ERROR, 74);
+    assert_eq!(exit_code::NO_PERMISSION, 77);
 }

@@ -6,7 +6,6 @@ pub(crate) mod verbose;
 pub(crate) use word_tally::input;
 pub(crate) use word_tally::output;
 
-use crate::exit_code::ExitCode;
 use crate::input::Input;
 use crate::output::Output;
 use anyhow::Result;
@@ -17,10 +16,10 @@ use word_tally::WordTally;
 
 fn main() {
     match run() {
-        Ok(()) => process::exit(ExitCode::Success.into()),
+        Ok(()) => process::exit(exit_code::SUCCESS),
         Err(err) => {
             eprintln!("Error: {}", err);
-            process::exit(ExitCode::from_error(&err).into());
+            process::exit(exit_code::from_error(&err));
         }
     }
 }
