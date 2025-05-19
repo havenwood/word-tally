@@ -120,6 +120,8 @@ impl Output {
                     self.write_chunk(&format!("{word}{delimiter}{count}\n"))
                         .context("failed to write word-count pair")?;
                 }
+
+                self.flush().context("failed to flush output")
             }
             Format::Json => {
                 let mut json_data = Vec::with_capacity(tally.len());
@@ -128,24 +130,23 @@ impl Output {
                     .context("failed to serialize word tally to JSON")?;
                 self.write_chunk(&format!("{json}\n"))
                     .context("failed to write JSON output")?;
+
+                self.flush().context("failed to flush JSON output")
             }
             Format::Csv => {
-                // The minimum CSV row size is 4 ("a,1\n")
-                let min_row_len = tally.len() * 3;
-                // The CSV header size is always 11 ("word,count\n")
-                let min_capacity = min_row_len + 11;
-                let mut wtr = csv::Writer::from_writer(Vec::with_capacity(min_capacity));
-                wtr.write_record(["word", "count"])?;
+                let mut csv_writer = csv::Writer::from_writer(&mut self.writer);
+                csv_writer
+                    .write_record(["word", "count"])
+                    .context("failed to write CSV header")?;
+
                 for (word, count) in tally {
-                    wtr.write_record([word.as_ref(), &count.to_string()])?;
+                    csv_writer
+                        .write_record([word.as_ref(), &count.to_string()])
+                        .context("failed to write CSV row")?;
                 }
-                let csv_data = String::from_utf8(wtr.into_inner()?)
-                    .context("failed to convert CSV output to UTF-8 string")?;
-                self.write_chunk(&csv_data)
-                    .context("failed to write CSV output")?;
+
+                csv_writer.flush().context("failed to flush CSV writer")
             }
         }
-
-        self.flush().context("failed to flush output")
     }
 }
