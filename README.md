@@ -15,10 +15,10 @@ cargo install word-tally
 ## Usage
 
 ```
-Usage: word-tally [OPTIONS] [PATH]
+Usage: word-tally [OPTIONS] [PATHS]...
 
 Arguments:
-  [PATH]  File path to use as input rather than stdin ("-") [default: -]
+  [PATHS]...  File paths to use as input (use "-" for stdin) [default: -]
 
 Options:
   -I, --io <STRATEGY>          I/O strategy [default: streamed] [possible values: mmap, streamed, buffered]
@@ -50,6 +50,12 @@ echo "tally me" | word-tally
 
 # Streamed I/O from a file
 word-tally file.txt
+
+# Process multiple files with aggregated word counts
+word-tally file1.txt file2.txt file3.txt
+
+# Mix stdin and files
+cat file1.txt | word-tally - file2.txt
 
 # Memory-mapped I/O with efficient parallel processing (requires a file rather than stdin)
 word-tally --io=mmap --parallel document.txt

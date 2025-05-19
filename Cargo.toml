@@ -44,6 +44,10 @@ harness = false
 name = "io"
 harness = false
 
+[[bench]]
+name = "multi_file"
+harness = false
+
 [profile.release]
 lto = true
 strip = true

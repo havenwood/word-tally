@@ -24,9 +24,9 @@ use word_tally::{Count, Options};
     long_about = "Tally word frequencies with customizable options for sorting, filtering, and output formatting"
 )]
 pub struct Args {
-    /// File path to use as input rather than stdin ("-").
-    #[arg(default_value = "-", value_name = "PATH")]
-    input: String,
+    /// File paths to use as input (use "-" for stdin).
+    #[arg(value_name = "PATHS")]
+    sources: Vec<String>,
 
     // Performance options
     /// I/O strategy.
@@ -60,11 +60,11 @@ pub struct Args {
     exclude_words: Option<Vec<String>>,
 
     /// Include only words matching a regex pattern.
-    #[arg(short = 'i', long, value_name = "PATTERN", action = ArgAction::Append)]
+    #[arg(short = 'i', long, value_name = "PATTERNS", action = ArgAction::Append)]
     include: Option<Vec<String>>,
 
     /// Exclude words matching a regex pattern.
-    #[arg(short = 'x', long, value_name = "PATTERN", action = ArgAction::Append)]
+    #[arg(short = 'x', long, value_name = "PATTERNS", action = ArgAction::Append)]
     exclude: Option<Vec<String>>,
 
     // Output options
@@ -86,11 +86,12 @@ pub struct Args {
 }
 
 impl Args {
-    /// Get the input file path.
-    #[allow(clippy::missing_const_for_fn)]
-    // Make this const when `const_vec_string_slice` is fully stabilized.
-    pub fn get_input(&self) -> &str {
-        &self.input
+    /// Get the input file paths.
+    pub fn get_sources(&self) -> Vec<&str> {
+        match self.sources.as_slice() {
+            [] => vec!["-"],
+            sources => sources.iter().map(String::as_str).collect(),
+        }
     }
 
     /// Get the output file path.

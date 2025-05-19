@@ -78,7 +78,7 @@ impl TallyMap {
     /// Merge two tally maps, always merging the smaller into the larger.
     ///
     /// Returns the merged map containing the combined counts from both input maps.
-    pub(crate) fn merge(mut self, other: Self) -> Self {
+    pub fn merge(mut self, other: Self) -> Self {
         // Always merge the smaller map into the larger for better performance
         if self.len() < other.len() {
             let mut merged = other;

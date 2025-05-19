@@ -2,6 +2,7 @@ use assert_cmd::Command;
 use predicates::prelude::PredicateBooleanExt;
 use predicates::str::{self, contains};
 use std::fs;
+use tempfile::NamedTempFile;
 
 fn word_tally() -> Command {
     Command::cargo_bin("word-tally").expect("process test")
@@ -492,4 +493,103 @@ To gather Paradise –
     }
     let mut cmd = word_tally();
     cmd.write_stdin(large_input).assert().success();
+}
+
+#[test]
+fn single_file_input() {
+    const CONTENT: &str = "narrow road narrow";
+    let temp_file = NamedTempFile::new().expect("create temp file");
+    fs::write(&temp_file, CONTENT).expect("write test file");
+
+    word_tally()
+        .arg(temp_file.path())
+        .assert()
+        .success()
+        .stdout("narrow 2\nroad 1\n");
+}
+
+#[test]
+fn multiple_file_inputs() {
+    let temp_file1 = NamedTempFile::new().expect("create temp file");
+    let temp_file2 = NamedTempFile::new().expect("create temp file");
+    fs::write(&temp_file1, "narrow road").expect("write test file");
+    fs::write(&temp_file2, "road fame").expect("write test file");
+
+    word_tally()
+        .arg(temp_file1.path())
+        .arg(temp_file2.path())
+        .assert()
+        .success()
+        .stdout(contains("road 2\n"))
+        .stdout(contains("narrow 1\n"))
+        .stdout(contains("fame 1\n"));
+}
+
+#[test]
+fn multi_file_with_mmap() {
+    let temp_file1 = NamedTempFile::new().expect("create temp file");
+    let temp_file2 = NamedTempFile::new().expect("create temp file");
+    fs::write(&temp_file1, "narrow road").expect("write test file");
+    fs::write(&temp_file2, "road fame").expect("write test file");
+
+    let output = word_tally()
+        .arg("--io=mmap")
+        .arg(temp_file1.path())
+        .arg(temp_file2.path())
+        .assert()
+        .success();
+
+    // Order may vary with mmap
+    output
+        .stdout(contains("road 2"))
+        .stdout(contains("narrow 1"))
+        .stdout(contains("fame 1"));
+}
+
+#[test]
+fn multi_file_with_parallel() {
+    let temp_file1 = NamedTempFile::new().expect("create temp file");
+    let temp_file2 = NamedTempFile::new().expect("create temp file");
+    fs::write(&temp_file1, "narrow road").expect("write test file");
+    fs::write(&temp_file2, "road fame").expect("write test file");
+
+    let output = word_tally()
+        .arg("--parallel")
+        .arg(temp_file1.path())
+        .arg(temp_file2.path())
+        .assert()
+        .success();
+
+    // Sort order is unstable with parallel processing
+    output
+        .stdout(contains("road 2"))
+        .stdout(contains("narrow 1"))
+        .stdout(contains("fame 1"));
+}
+
+#[test]
+fn empty_args_defaults_to_stdin() {
+    word_tally()
+        .write_stdin("narrow fame narrow")
+        .assert()
+        .success()
+        .stdout("narrow 2\nfame 1\n");
+}
+
+#[test]
+fn stdin_with_file_as_sources() {
+    // Create temporary file
+    let temp_file = NamedTempFile::new().expect("create temp file");
+    fs::write(&temp_file, "narrow road").expect("write test file");
+
+    // Test mixing stdin (-) with a file path
+    word_tally()
+        .arg("-")
+        .arg(temp_file.path())
+        .write_stdin("road fame")
+        .assert()
+        .success()
+        .stdout(contains("road 2\n"))
+        .stdout(contains("narrow 1\n"))
+        .stdout(contains("fame 1\n"));
 }

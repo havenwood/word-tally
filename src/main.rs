@@ -13,7 +13,7 @@ use anyhow::Result;
 use args::Args;
 use clap::Parser;
 use std::process;
-use word_tally::WordTally;
+use word_tally::{TallyMap, WordTally};
 
 fn main() {
     match run() {
@@ -26,19 +26,32 @@ fn main() {
 }
 
 fn run() -> Result<()> {
-    // Parse arguments and prepare options and an input reader
+    // Parse arguments and prepare options
     let args = Args::parse();
+    let sources = args.get_sources();
     let options = args.get_options()?;
-    let input = Input::new(args.get_input(), options.io())?;
 
-    // Construct a `WordTally` instance
-    let word_tally = WordTally::new(&input, &options)?;
+    // Process inputs and aggregate results
+    let inputs = sources
+        .iter()
+        .map(|source| Input::new(source, options.io()))
+        .collect::<Result<Vec<_>>>()?;
+
+    let tally_map = inputs
+        .iter()
+        .map(|input| TallyMap::from_input(input, &options))
+        .try_fold(TallyMap::new(), |acc, result| {
+            result.map(|tally| acc.merge(tally))
+        })?;
+
+    // Create a `WordTally` from the merged `TallyMap`
+    let word_tally = WordTally::from_tally_map(tally_map, &options);
 
     // Optional verbose output
     if args.is_verbose() {
-        let source = input.source();
+        let paths: Vec<_> = inputs.iter().map(|input| input.source()).collect();
         let mut verbose = Verbose::default();
-        verbose.write_verbose_info(&word_tally, &source)?;
+        verbose.write_verbose_info(&word_tally, &paths.join(", "))?;
     }
 
     // Primary output

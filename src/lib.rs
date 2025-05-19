@@ -234,7 +234,7 @@ impl<'a> WordTally<'a> {
     }
 
     /// Creates a `WordTally` instance from a `TallyMap` and `Options`.
-    fn from_tally_map(mut tally_map: TallyMap, options: &'a Options) -> Self {
+    pub fn from_tally_map(mut tally_map: TallyMap, options: &'a Options) -> Self {
         options.filters().apply(&mut tally_map, options.case());
 
         let count = tally_map.values().sum();
