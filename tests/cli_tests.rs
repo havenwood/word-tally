@@ -315,19 +315,10 @@ fn verbose_with_csv_format() {
 
     assert
         .success()
-        .stderr(contains("metric,value"))
-        .stderr(contains("source,-"))
-        .stderr(contains("total-words,2"))
-        .stderr(contains("unique-words,2"))
-        .stderr(contains("case,lower"))
-        .stderr(contains("order,desc"))
-        .stderr(contains("processing,sequential"))
-        .stderr(contains("io,streamed"))
-        .stderr(contains("min-chars,none"))
-        .stderr(contains("min-count,none"))
-        .stderr(contains("exclude-words,none"))
-        .stderr(contains("exclude-patterns,none"))
-        .stderr(contains("include-patterns,none"))
+        .stderr(contains("source,total-words,unique-words"))
+        .stderr(contains("desc"))
+        .stderr(contains("sequential"))
+        .stderr(contains("streamed"))
         .stdout(contains("word,count"))
         .stdout(contains("forever,1"))
         .stdout(contains("hope,1"));

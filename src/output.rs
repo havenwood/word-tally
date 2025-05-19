@@ -103,44 +103,45 @@ impl Output {
         }
     }
 
-    /// Writes a line to the writer.
-    pub fn write_line(&mut self, line: &str) -> io::Result<()> {
-        self.write_all(line.as_bytes())
+    /// Writes a chunk of text to the writer.
+    pub fn write_chunk(&mut self, chunk: &str) -> io::Result<()> {
+        self.write_all(chunk.as_bytes())
     }
 
     /// Writes word tally data in the specified format.
     pub fn write_formatted_tally<'a>(&mut self, word_tally: &WordTally<'a>) -> Result<()> {
         let format = word_tally.options().serialization().format();
         let delimiter = word_tally.options().serialization().delimiter();
-        let word_data = word_tally.tally();
+        let tally = word_tally.tally();
 
         match format {
             Format::Text => {
-                for (word, count) in word_data {
-                    self.write_line(&format!("{word}{delimiter}{count}\n"))
+                for (word, count) in tally {
+                    self.write_chunk(&format!("{word}{delimiter}{count}\n"))
                         .context("failed to write word-count pair")?;
                 }
             }
             Format::Json => {
-                let json = serde_json::to_string(
-                    &word_data
-                        .iter()
-                        .map(|(word, count)| (word.as_ref(), count))
-                        .collect::<Vec<_>>(),
-                )
-                .context("failed to serialize word tally to JSON")?;
-                self.write_line(&format!("{json}\n"))
+                let mut json_data = Vec::with_capacity(tally.len());
+                json_data.extend(tally.iter().map(|(word, count)| (word.as_ref(), count)));
+                let json = serde_json::to_string(&json_data)
+                    .context("failed to serialize word tally to JSON")?;
+                self.write_chunk(&format!("{json}\n"))
                     .context("failed to write JSON output")?;
             }
             Format::Csv => {
-                let mut wtr = csv::Writer::from_writer(Vec::new());
+                // The minimum CSV row size is 4 ("a,1\n")
+                let min_row_len = tally.len() * 3;
+                // The CSV header size is always 11 ("word,count\n")
+                let min_capacity = min_row_len + 11;
+                let mut wtr = csv::Writer::from_writer(Vec::with_capacity(min_capacity));
                 wtr.write_record(["word", "count"])?;
-                for (word, count) in word_data {
+                for (word, count) in tally {
                     wtr.write_record([word.as_ref(), &count.to_string()])?;
                 }
                 let csv_data = String::from_utf8(wtr.into_inner()?)
                     .context("failed to convert CSV output to UTF-8 string")?;
-                self.write_line(&csv_data)
+                self.write_chunk(&csv_data)
                     .context("failed to write CSV output")?;
             }
         }

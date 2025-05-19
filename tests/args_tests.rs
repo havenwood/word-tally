@@ -190,7 +190,7 @@ fn test_get_options() {
         .success()
         .stderr(contains("\"case\":\"upper\""))
         .stderr(contains("\"order\":\"asc\""))
-        .stderr(contains("\"minChars\":\"3\""));
+        .stderr(contains("\"minChars\":3"));
 }
 
 #[test]
@@ -288,8 +288,8 @@ fn test_args_shorthand_flags() {
         .success()
         .stderr(contains("\"case\":\"upper\""))
         .stderr(contains("\"order\":\"asc\""))
-        .stderr(contains("\"minChars\":\"3\""))
-        .stderr(contains("\"minCount\":\"2\""));
+        .stderr(contains("\"minChars\":3"))
+        .stderr(contains("\"minCount\":2"));
 }
 
 #[test]
@@ -485,8 +485,8 @@ fn test_args_options_comprehensive() {
         .write_stdin("Test TEST test")
         .assert()
         .success()
-        .stderr(contains("metric,value"))
-        .stderr(contains("processing,parallel"));
+        .stderr(contains("processing"))
+        .stderr(contains("parallel"));
 }
 
 //

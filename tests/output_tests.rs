@@ -49,11 +49,11 @@ mod output_tests {
     }
 
     #[test]
-    fn test_output_write_line() {
+    fn test_output_write_chunk() {
         let temp_file = NamedTempFile::new().expect("create temp file");
         let mut output = Output::file(temp_file.path()).expect("process test");
         output
-            .write_line("I'm Nobody! Who are you?")
+            .write_chunk("I'm Nobody! Who are you?")
             .expect("process test");
         output.flush().expect("process test");
 
@@ -82,20 +82,20 @@ mod output_tests {
     }
 
     #[test]
-    fn test_write_line_succeeds() {
+    fn test_write_chunk_succeeds() {
         let temp_file = NamedTempFile::new().expect("create temp file");
         let mut output = Output::file(temp_file.path()).expect("process test");
 
-        output.write_line("").expect("write empty");
-        output.write_line("Hope").expect("write Hope");
+        output.write_chunk("").expect("write empty");
+        output.write_chunk("Hope").expect("write Hope");
         output
-            .write_line("With a capital letter—")
+            .write_chunk("With a capital letter—")
             .expect("write with capital");
         output
-            .write_line("And without—is still a thing with feathers")
+            .write_chunk("And without—is still a thing with feathers")
             .expect("write feathers");
         output
-            .write_line("Tell all the truth but tell it slant—")
+            .write_chunk("Tell all the truth but tell it slant—")
             .expect("write slant");
 
         output.flush().expect("flush");
@@ -106,15 +106,15 @@ mod output_tests {
     }
 
     #[test]
-    fn test_write_line_with_newlines() {
+    fn test_write_chunk_with_newlines() {
         let temp_file = NamedTempFile::new().expect("create temp file");
         let mut output = Output::file(temp_file.path()).expect("process test");
 
         output
-            .write_line("Much Madness is divinest Sense—\nTo a discerning Eye—")
+            .write_chunk("Much Madness is divinest Sense—\nTo a discerning Eye—")
             .expect("write lines");
         output
-            .write_line("They shut me up in Prose—\n")
+            .write_chunk("They shut me up in Prose—\n")
             .expect("write with newline");
 
         output.flush().expect("flush");
