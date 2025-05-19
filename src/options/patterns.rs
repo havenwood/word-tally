@@ -210,7 +210,7 @@ impl Ord for ExcludePatterns {
     }
 }
 
-impl std::hash::Hash for ExcludePatterns {
+impl Hash for ExcludePatterns {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
     }
@@ -340,7 +340,7 @@ impl Ord for IncludePatterns {
     }
 }
 
-impl std::hash::Hash for IncludePatterns {
+impl Hash for IncludePatterns {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
     }

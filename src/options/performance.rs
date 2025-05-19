@@ -1,7 +1,7 @@
 //! Configuration for word tallying performance.
 
 use super::threads::Threads;
-use core::fmt::{self, Formatter};
+use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
 use std::env;
 use std::str::FromStr;
@@ -211,7 +211,7 @@ impl Performance {
     }
 }
 
-impl fmt::Display for Performance {
+impl Display for Performance {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,

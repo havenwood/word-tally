@@ -8,6 +8,7 @@ pub(crate) use word_tally::output;
 
 use crate::input::Input;
 use crate::output::Output;
+use crate::verbose::Verbose;
 use anyhow::Result;
 use args::Args;
 use clap::Parser;
@@ -36,7 +37,7 @@ fn run() -> Result<()> {
     // Optional verbose output
     if args.is_verbose() {
         let source = input.source();
-        let mut verbose = verbose::Verbose::default();
+        let mut verbose = Verbose::default();
         verbose.write_verbose_info(&word_tally, &source)?;
     }
 
