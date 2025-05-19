@@ -74,13 +74,6 @@ impl Output {
         }
     }
 
-    /// Creates an `Output` from a writer.
-    pub fn from_writer<W: Write + 'static>(writer: W) -> Self {
-        Self {
-            writer: Box::new(writer),
-        }
-    }
-
     /// Writes a line to the writer, handling `BrokenPipe` errors gracefully.
     pub fn write_line(&mut self, line: &str) -> Result<()> {
         Self::handle_broken_pipe(self.writer.write_all(line.as_bytes()))
