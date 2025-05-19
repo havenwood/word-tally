@@ -68,7 +68,7 @@ fn bench_regex_patterns(c: &mut Criterion) {
     let few_patterns_options = base_options.clone().with_filters(
         Filters::default()
             .with_include_patterns(&few_patterns)
-            .unwrap(),
+            .expect("filter regex compilation"),
     );
 
     group.bench_function("patterns_4", |b| {
@@ -96,7 +96,7 @@ fn bench_regex_patterns(c: &mut Criterion) {
     let many_patterns_options = base_options.clone().with_filters(
         Filters::default()
             .with_include_patterns(&many_patterns)
-            .unwrap(),
+            .expect("filter regex compilation"),
     );
 
     group.bench_function("patterns_10", |b| {

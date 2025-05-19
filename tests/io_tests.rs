@@ -33,11 +33,14 @@ fn verify_tally(tally: &WordTally<'_>) {
 fn test_streamed_sequential() {
     let options = make_options(Io::Streamed, Processing::Sequential);
 
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
@@ -48,11 +51,14 @@ fn test_streamed_sequential() {
 fn test_streamed_parallel() {
     let options = make_options(Io::Streamed, Processing::Parallel);
 
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
@@ -63,11 +69,14 @@ fn test_streamed_parallel() {
 fn test_buffered_sequential() {
     let options = make_options(Io::Buffered, Processing::Sequential);
 
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
@@ -78,11 +87,14 @@ fn test_buffered_sequential() {
 fn test_buffered_parallel() {
     let options = make_options(Io::Buffered, Processing::Parallel);
 
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
@@ -91,9 +103,9 @@ fn test_buffered_parallel() {
 
 #[test]
 fn test_new_with_io_combinations() {
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
-    let file_path = temp_file.path().to_str().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
+    let file_path = temp_file.path().to_str().expect("temp file path");
 
     let io_strategies = [Io::Streamed, Io::Buffered, Io::MemoryMapped];
     let processing_strategies = [Processing::Sequential, Processing::Parallel];
@@ -134,9 +146,9 @@ Nullam efficitur, mi at dapibus tincidunt, risus orci vulputate lacus, et vehicu
 
 #[test]
 fn test_parallel_processing_with_large_text() {
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    Write::write_all(&mut temp_file, LARGE_TEST_TEXT.as_bytes()).unwrap();
-    let file_path = temp_file.path().to_str().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, LARGE_TEST_TEXT.as_bytes()).expect("process test");
+    let file_path = temp_file.path().to_str().expect("temp file path");
 
     let sequential_options = make_options(Io::Buffered, Processing::Sequential);
     let parallel_options = make_options(Io::Buffered, Processing::Parallel);
@@ -165,9 +177,9 @@ fn test_parallel_processing_with_large_text() {
 
 #[test]
 fn test_memory_mapped_with_real_file() {
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
-    let file_path = temp_file.path().to_str().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
+    let file_path = temp_file.path().to_str().expect("temp file path");
 
     let mmap_sequential_options = make_options(Io::MemoryMapped, Processing::Sequential);
     let sequential_input = Input::new(file_path, mmap_sequential_options.io())
@@ -192,12 +204,12 @@ fn test_memory_mapped_with_real_file() {
 fn test_read_trait_with_all_io_strategies() {
     use std::io::Read;
 
-    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_dir = tempfile::tempdir().expect("process test");
     let file_path = temp_dir.path().join("test_io.txt");
-    std::fs::write(&file_path, TEST_TEXT).unwrap();
+    std::fs::write(&file_path, TEST_TEXT).expect("process test");
 
-    let file_input = Input::new(&file_path, Io::Streamed).unwrap();
-    let mmap_input = Input::new(&file_path, Io::MemoryMapped).unwrap();
+    let file_input = Input::new(&file_path, Io::Streamed).expect("create test input");
+    let mmap_input = Input::new(&file_path, Io::MemoryMapped).expect("create test input");
     let bytes_input = Input::from_bytes(TEST_TEXT);
 
     let test_cases = [file_input, mmap_input, bytes_input];
@@ -249,9 +261,9 @@ fn test_nonexistent_file_handling() {
 
 #[test]
 fn test_new_with_all_io_strategies() {
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).unwrap();
-    let file_path = temp_file.path().to_str().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
+    let file_path = temp_file.path().to_str().expect("temp file path");
 
     let io_strategies = [Io::Streamed, Io::Buffered, Io::MemoryMapped];
     let processing_strategies = [Processing::Sequential, Processing::Parallel];
@@ -274,9 +286,9 @@ fn test_new_with_all_io_strategies() {
 fn test_utf8_boundary_handling() {
     let test_text = "æ æ æ æ";
 
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    Write::write_all(&mut temp_file, test_text.as_bytes()).unwrap();
-    let file_path = temp_file.path().to_str().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, test_text.as_bytes()).expect("process test");
+    let file_path = temp_file.path().to_str().expect("temp file path");
 
     let small_chunk_size = 32;
     let performance = Performance::default().with_chunk_size(small_chunk_size);
@@ -371,17 +383,17 @@ fn test_io_traits_clone_copy() {
 fn test_io_serialization() {
     // Test Serialize
     let io = Io::MemoryMapped;
-    let serialized = serde_json::to_string(&io).unwrap();
+    let serialized = serde_json::to_string(&io).expect("serialize JSON");
     assert_eq!(serialized, "\"MemoryMapped\"");
 
     // Test Deserialize
-    let deserialized: Io = serde_json::from_str("\"Buffered\"").unwrap();
+    let deserialized: Io = serde_json::from_str("\"Buffered\"").expect("deserialize JSON");
     assert_eq!(deserialized, Io::Buffered);
 
     // Test roundtrip
     let original = Io::Bytes;
-    let json = serde_json::to_string(&original).unwrap();
-    let roundtrip: Io = serde_json::from_str(&json).unwrap();
+    let json = serde_json::to_string(&original).expect("serialize JSON");
+    let roundtrip: Io = serde_json::from_str(&json).expect("deserialize JSON");
     assert_eq!(original, roundtrip);
 }
 

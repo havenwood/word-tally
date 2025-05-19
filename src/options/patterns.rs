@@ -23,7 +23,7 @@ struct Patterns {
 impl Default for Patterns {
     fn default() -> Self {
         // Use an empty patterns array and empty RegexSet
-        Self::new(Vec::new()).expect("Default creation with empty vec should never fail")
+        Self::new(Vec::new()).expect("compile empty input patterns")
     }
 }
 

@@ -103,7 +103,7 @@ fn test_wordtally_deserialize() {
     }"#;
 
     // Deserialize directly into WordTally
-    let word_tally: WordTally<'_> = serde_json::from_str(json).unwrap();
+    let word_tally: WordTally<'_> = serde_json::from_str(json).expect("deserialize JSON");
 
     // Verify the values
     assert_eq!(word_tally.count(), 8);
@@ -124,7 +124,13 @@ fn test_pathbuf_as_ref() {
     // Access a reference to the inner PathBuf
     let path_ref = option_path.as_ref();
     assert!(path_ref.is_some());
-    assert_eq!(path_ref.unwrap().to_str().unwrap(), "/tmp/output.txt");
+    assert_eq!(
+        path_ref
+            .expect("get path ref")
+            .to_str()
+            .expect("process test"),
+        "/tmp/output.txt"
+    );
 
     // Test with None
     let none_path: Option<PathBuf> = None;

@@ -13,7 +13,12 @@ fn test_threads_count() {
     let threads_all = Threads::All;
     let all_count = threads_all.count();
     assert!(all_count > 0);
-    assert!(all_count <= std::thread::available_parallelism().unwrap().get());
+    assert!(
+        all_count
+            <= std::thread::available_parallelism()
+                .expect("process test")
+                .get()
+    );
 }
 
 #[test]
@@ -98,17 +103,17 @@ fn test_threads_traits() {
 fn test_threads_serialization() {
     // Test serialization
     let threads = Threads::Count(4);
-    let json = serde_json::to_string(&threads).unwrap();
+    let json = serde_json::to_string(&threads).expect("serialize JSON");
     assert_eq!(json, r#"{"Count":4}"#);
 
     let threads_all = Threads::All;
-    let json_all = serde_json::to_string(&threads_all).unwrap();
+    let json_all = serde_json::to_string(&threads_all).expect("serialize JSON");
     assert_eq!(json_all, r#""All""#);
 
     // Test deserialization
-    let deserialized: Threads = serde_json::from_str(&json).unwrap();
+    let deserialized: Threads = serde_json::from_str(&json).expect("deserialize JSON");
     assert_eq!(deserialized, threads);
 
-    let deserialized_all: Threads = serde_json::from_str(&json_all).unwrap();
+    let deserialized_all: Threads = serde_json::from_str(&json_all).expect("deserialize JSON");
     assert_eq!(deserialized_all, threads_all);
 }

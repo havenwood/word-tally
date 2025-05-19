@@ -80,15 +80,18 @@ fn test_serialization_with_format() {
 
 #[test]
 fn test_serialization_with_delimiter() {
-    let delim = Serialization::with_delimiter("::").unwrap();
+    let delim = Serialization::with_delimiter("::").expect("create delimiter");
     assert_eq!(delim.delimiter(), "::");
 }
 
 const TEST_INPUT: &[u8] = b"test convenience constructors";
 
 fn create_test_file() -> (tempfile::TempDir, String) {
-    let temp_dir = tempfile::tempdir().unwrap();
+    let temp_dir = tempfile::tempdir().expect("process test");
     let file_path = temp_dir.path().join("test_input.txt");
-    std::fs::write(&file_path, TEST_INPUT).unwrap();
-    (temp_dir, file_path.to_str().unwrap().to_string())
+    std::fs::write(&file_path, TEST_INPUT).expect("process test");
+    (
+        temp_dir,
+        file_path.to_str().expect("process test").to_string(),
+    )
 }

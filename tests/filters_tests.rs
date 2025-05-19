@@ -33,10 +33,10 @@ fn test_filters_new() {
         exclude_patterns.as_ref(),
         include_patterns.as_ref(),
     )
-    .unwrap();
+    .expect("execute operation");
 
-    assert_eq!(filters.min_chars().unwrap(), 3);
-    assert_eq!(filters.min_count().unwrap(), 2);
+    assert_eq!(filters.min_chars().expect("process test"), 3);
+    assert_eq!(filters.min_count().expect("process test"), 2);
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_none());
     assert!(filters.include_patterns().is_none());
@@ -49,10 +49,10 @@ fn test_filters_new() {
         exclude_patterns.as_ref(),
         include_patterns.as_ref(),
     )
-    .unwrap();
+    .expect("execute operation");
 
-    assert_eq!(filters.min_chars().unwrap(), 3);
-    assert_eq!(filters.min_count().unwrap(), 2);
+    assert_eq!(filters.min_chars().expect("process test"), 3);
+    assert_eq!(filters.min_count().expect("process test"), 2);
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_some());
     assert!(filters.include_patterns().is_none());
@@ -66,10 +66,10 @@ fn test_filters_new() {
         exclude_patterns.as_ref(),
         include_patterns.as_ref(),
     )
-    .unwrap();
+    .expect("execute operation");
 
-    assert_eq!(filters.min_chars().unwrap(), 3);
-    assert_eq!(filters.min_count().unwrap(), 2);
+    assert_eq!(filters.min_chars().expect("process test"), 3);
+    assert_eq!(filters.min_count().expect("process test"), 2);
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_none());
     assert!(filters.include_patterns().is_some());
@@ -83,10 +83,10 @@ fn test_filters_new() {
         exclude_patterns.as_ref(),
         include_patterns.as_ref(),
     )
-    .unwrap();
+    .expect("execute operation");
 
-    assert_eq!(filters.min_chars().unwrap(), 3);
-    assert_eq!(filters.min_count().unwrap(), 2);
+    assert_eq!(filters.min_chars().expect("process test"), 3);
+    assert_eq!(filters.min_count().expect("process test"), 2);
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_some());
     assert!(filters.include_patterns().is_some());
@@ -117,10 +117,10 @@ fn test_filters_with_empty_patterns() {
         exclude_patterns.as_ref(),
         include_patterns.as_ref(),
     )
-    .unwrap();
+    .expect("execute operation");
 
-    assert_eq!(filters.min_chars().unwrap(), 3);
-    assert_eq!(filters.min_count().unwrap(), 2);
+    assert_eq!(filters.min_chars().expect("process test"), 3);
+    assert_eq!(filters.min_count().expect("process test"), 2);
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_none());
     assert!(filters.include_patterns().is_none());
@@ -143,10 +143,10 @@ fn test_serialization_with_patterns() {
         exclude_patterns.as_ref(),
         include_patterns.as_ref(),
     )
-    .unwrap();
+    .expect("execute operation");
 
-    let serialized = serde_json::to_string(&filters).unwrap();
-    let deserialized: Filters = serde_json::from_str(&serialized).unwrap();
+    let serialized = serde_json::to_string(&filters).expect("serialize JSON");
+    let deserialized: Filters = serde_json::from_str(&serialized).expect("deserialize JSON");
 
     assert_eq!(deserialized.min_chars(), filters.min_chars());
     assert_eq!(deserialized.min_count(), filters.min_count());
@@ -156,12 +156,18 @@ fn test_serialization_with_patterns() {
     "includePatterns": ["test.*"]
   }"#;
 
-    let deserialized_filters: Filters = serde_json::from_str(serialized).unwrap();
-    let deserialized_exclude_patterns = deserialized_filters.exclude_patterns().as_ref().unwrap();
+    let deserialized_filters: Filters = serde_json::from_str(serialized).expect("deserialize JSON");
+    let deserialized_exclude_patterns = deserialized_filters
+        .exclude_patterns()
+        .as_ref()
+        .expect("process test");
     assert!(deserialized_exclude_patterns.matches("the"));
     assert!(deserialized_exclude_patterns.matches("is"));
 
-    let deserialized_include_patterns = deserialized_filters.include_patterns().as_ref().unwrap();
+    let deserialized_include_patterns = deserialized_filters
+        .include_patterns()
+        .as_ref()
+        .expect("process test");
     assert!(deserialized_include_patterns.matches("test"));
     assert!(!deserialized_include_patterns.matches("123"));
 
@@ -184,7 +190,7 @@ fn test_multiple_regexp_patterns() {
 
     let filters = Filters::default()
         .with_include_patterns(&multiple_patterns)
-        .unwrap();
+        .expect("execute operation");
 
     let mut tally_map = TallyMap::new();
     tally_map.extend_from_str("apple apple apple banana banana eating eating eating eating eating orange running running running running Example Example test test test test test test", Case::Original);
@@ -208,15 +214,15 @@ fn test_patterns_accessors() {
 
     let filters = Filters::default()
         .with_exclude_patterns(&exclude_patterns)
-        .unwrap()
+        .expect("execute operation")
         .with_include_patterns(&include_patterns)
-        .unwrap();
+        .expect("execute operation");
 
-    let excl_patterns = filters.exclude_patterns().as_ref().unwrap();
+    let excl_patterns = filters.exclude_patterns().as_ref().expect("process test");
     assert!(excl_patterns.matches("bad"));
     assert!(!excl_patterns.matches("good"));
 
-    let incl_patterns = filters.include_patterns().as_ref().unwrap();
+    let incl_patterns = filters.include_patterns().as_ref().expect("process test");
     assert!(incl_patterns.matches("good"));
     assert!(!incl_patterns.matches("bad"));
 }
@@ -256,12 +262,15 @@ fn test_pattern_serialization() {
     ];
     let filters = Filters::default()
         .with_include_patterns(&multi_patterns)
-        .unwrap();
+        .expect("execute operation");
 
-    let serialized = serde_json::to_string(&filters).unwrap();
-    let deserialized: Filters = serde_json::from_str(&serialized).unwrap();
+    let serialized = serde_json::to_string(&filters).expect("serialize JSON");
+    let deserialized: Filters = serde_json::from_str(&serialized).expect("deserialize JSON");
 
-    let patterns = deserialized.include_patterns().as_ref().unwrap();
+    let patterns = deserialized
+        .include_patterns()
+        .as_ref()
+        .expect("process test");
     assert!(patterns.matches("testing"));
     assert!(patterns.matches("running"));
     assert!(patterns.matches("123"));
@@ -279,9 +288,9 @@ fn test_filter_combination() {
         .with_min_count(2)
         .with_exclude_words(exclude_words)
         .with_exclude_patterns(&exclude_patterns)
-        .unwrap()
+        .expect("execute operation")
         .with_include_patterns(&include_patterns)
-        .unwrap();
+        .expect("execute operation");
 
     let mut tally_map = tally_map_from_counts(&[
         ("test", 3),
@@ -315,7 +324,7 @@ fn test_case_sensitive_exclude_patterns() {
 
     let filters = Filters::default()
         .with_exclude_patterns(&exclude_patterns)
-        .unwrap();
+        .expect("execute operation");
 
     let mut tally_map = tally_map_from_counts(&[("Test", 3), ("test", 2), ("TEST", 1)]);
 
@@ -379,7 +388,7 @@ fn test_overlapping_patterns() {
 
     let filters = Filters::default()
         .with_include_patterns(&vec![r"^good".to_string(), r"^g.*t$".to_string()])
-        .unwrap();
+        .expect("execute operation");
 
     filters.apply(&mut tally_map, Case::Lower);
 
@@ -392,9 +401,9 @@ fn test_include_exclude_patterns_combination() {
 
     let filters = Filters::default()
         .with_include_patterns(&vec![r"^good".to_string()])
-        .unwrap()
+        .expect("execute operation")
         .with_exclude_patterns(&vec![r"bye$".to_string()])
-        .unwrap();
+        .expect("execute operation");
 
     filters.apply(&mut tally_map, Case::Lower);
 
@@ -424,7 +433,7 @@ fn test_exclude_empty_patterns() {
     let empty_patterns: Vec<String> = vec![];
     let filters = Filters::default()
         .with_exclude_patterns(&empty_patterns)
-        .unwrap();
+        .expect("execute operation");
 
     assert!(filters.exclude_patterns().is_none());
 }
@@ -434,7 +443,7 @@ fn test_include_empty_patterns() {
     let empty_patterns: Vec<String> = vec![];
     let filters = Filters::default()
         .with_include_patterns(&empty_patterns)
-        .unwrap();
+        .expect("execute operation");
 
     assert!(filters.include_patterns().is_none());
 }
@@ -446,9 +455,9 @@ fn test_pattern_precedence() {
 
     let filters = Filters::default()
         .with_include_patterns(&vec![r".*est.*".to_string()])
-        .unwrap()
+        .expect("execute operation")
         .with_exclude_patterns(&vec![r"^test$".to_string()])
-        .unwrap();
+        .expect("execute operation");
 
     filters.apply(&mut tally_map, Case::Lower);
 
@@ -492,14 +501,14 @@ fn test_complex_filter_combination() {
         .with_min_count(3)
         .with_exclude_words(vec!["the".to_string()])
         .with_exclude_patterns(&vec![r"\d+".to_string()])
-        .unwrap();
+        .expect("execute operation");
 
     let filters2 = Filters::default()
         .with_min_chars(2)
         .with_min_count(3)
         .with_exclude_words(vec!["the".to_string()])
         .with_exclude_patterns(&vec![r"\d+".to_string()])
-        .unwrap();
+        .expect("execute operation");
 
     filters1.apply(&mut tally_map1, Case::Lower);
     filters2.apply(&mut tally_map2, Case::Lower);
@@ -514,9 +523,9 @@ fn test_with_unescaped_exclude_words() {
 
     let filters = Filters::default()
         .with_unescaped_exclude_words(&escaped_words)
-        .unwrap();
+        .expect("execute operation");
 
-    let exclude_words = filters.exclude_words().as_ref().unwrap();
+    let exclude_words = filters.exclude_words().as_ref().expect("process test");
     let words_list = exclude_words.as_ref();
 
     assert_eq!(words_list.len(), 3);

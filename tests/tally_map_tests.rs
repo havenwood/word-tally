@@ -177,7 +177,7 @@ fn test_from_input_with_bytes() {
     let result = TallyMap::from_input(&input, &options);
     assert!(result.is_ok());
 
-    let tally = result.unwrap();
+    let tally = result.expect("process test data");
     assert_eq!(tally.len(), 5);
 }
 
@@ -192,7 +192,7 @@ fn test_from_input_streamed() {
     let result = TallyMap::from_input(&input, &options);
     assert!(result.is_ok());
 
-    let tally = result.unwrap();
+    let tally = result.expect("process test data");
     assert_eq!(tally.len(), 5);
 }
 
@@ -209,7 +209,7 @@ fn test_from_input_parallel() {
     let result = TallyMap::from_input(&input, &options);
     assert!(result.is_ok());
 
-    let tally = result.unwrap();
+    let tally = result.expect("process test data");
     assert_eq!(tally.len(), 5);
 }
 
@@ -226,7 +226,7 @@ fn test_from_input_parallel_streamed() {
     let result = TallyMap::from_input(&input, &options);
     assert!(result.is_ok());
 
-    let tally = result.unwrap();
+    let tally = result.expect("process test data");
     assert_eq!(tally.len(), 5);
 }
 

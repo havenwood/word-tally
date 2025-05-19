@@ -17,7 +17,7 @@ struct ExpectedFields<'a> {
 }
 
 fn create_test_data_file() -> tempfile::NamedTempFile {
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     // Using content that matches expected test data structure
     let content = b"d\n\
                     123 123 123 123 123\n\
@@ -26,7 +26,7 @@ fn create_test_data_file() -> tempfile::NamedTempFile {
                     d C d d d D D D D\n\
                     c D c c c c c c C C C C C C\n\
                     123\n";
-    std::io::Write::write_all(&mut temp_file, content).unwrap();
+    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
     temp_file
 }
 
@@ -37,7 +37,7 @@ fn word_tally(
     filters: Filters,
 ) -> WordTally<'static> {
     let test_file = Box::leak(Box::new(create_test_data_file()));
-    let file_path = test_file.path().to_str().unwrap();
+    let file_path = test_file.path().to_str().expect("temp file path");
 
     let options = Options::new(
         case,
@@ -277,12 +277,15 @@ fn vec_from() {
 #[test]
 fn test_into_tally() {
     let input_text = b"Hope is the thing with feathers that perches in the soul";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
@@ -312,12 +315,15 @@ fn test_into_tally() {
 #[test]
 fn test_iterator() {
     let input_text = b"double trouble double";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
@@ -335,12 +341,15 @@ fn test_iterator() {
 #[test]
 fn test_iterator_for_loop() {
     let input_text = b"llama llama pajamas";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
@@ -356,8 +365,8 @@ fn test_iterator_for_loop() {
 #[test]
 fn test_excluding_words() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let words = vec!["Heaven".to_string(), "Hell".to_string()];
     let serializer = Serialization::default();
@@ -373,8 +382,11 @@ fn test_excluding_words() {
     );
     let options_arc = make_shared(options);
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), options_arc.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options_arc.io(),
+    )
+    .expect("Failed to create Input");
 
     let tally = WordTally::new(&input, &options_arc).expect("Failed to create WordTally");
     let result = tally.tally();
@@ -387,14 +399,16 @@ fn test_excluding_words() {
 #[test]
 fn test_excluding_patterns() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let serializer = Serialization::default();
 
     // Exclude words starting with 't'
     let patterns = vec!["^t.*".to_string()];
-    let filters = Filters::default().with_exclude_patterns(&patterns).unwrap();
+    let filters = Filters::default()
+        .with_exclude_patterns(&patterns)
+        .expect("set exclude patterns");
 
     let options = Options::new(
         Case::default(),
@@ -407,8 +421,11 @@ fn test_excluding_patterns() {
     );
     let options_arc = make_shared(options);
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), options_arc.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options_arc.io(),
+    )
+    .expect("Failed to create Input");
 
     let tally = WordTally::new(&input, &options_arc).expect("Failed to create WordTally");
     let result = tally.tally();
@@ -427,15 +444,17 @@ fn test_excluding_patterns() {
 #[test]
 fn test_including_patterns() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
-    let file_path = temp_file.path().to_str().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    let file_path = temp_file.path().to_str().expect("temp file path");
 
     let serializer = Serialization::default();
 
     // Include only words starting with `'h'`
     let patterns = vec!["^h.*".to_string()];
-    let filters = Filters::default().with_include_patterns(&patterns).unwrap();
+    let filters = Filters::default()
+        .with_include_patterns(&patterns)
+        .expect("set include patterns");
 
     let options = Options::new(
         Case::default(),
@@ -470,9 +489,9 @@ fn test_including_patterns() {
 #[test]
 fn test_combining_include_exclude_patterns() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
-    let file_path = temp_file.path().to_str().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    let file_path = temp_file.path().to_str().expect("temp file path");
 
     let serializer = Serialization::default();
 
@@ -482,9 +501,9 @@ fn test_combining_include_exclude_patterns() {
 
     let filters = Filters::default()
         .with_include_patterns(&include_patterns)
-        .unwrap()
+        .expect("execute operation")
         .with_exclude_patterns(&exclude_patterns)
-        .unwrap();
+        .expect("execute operation");
 
     let options = Options::new(
         Case::default(),
@@ -516,7 +535,7 @@ fn test_input_size() {
     let file_input = Input::File(temp_file.path().to_path_buf());
     let size = file_input.size();
     assert!(size.is_some());
-    assert!(size.unwrap() > 0);
+    assert!(size.expect("get file size") > 0);
 
     let stdin_input = Input::Stdin;
     assert_eq!(stdin_input.size(), None);
@@ -525,9 +544,9 @@ fn test_input_size() {
 #[test]
 fn test_parallel_vs_sequential() {
     let input_text = b"I taste a liquor never brewed. I taste a liquor.";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
-    let file_path = temp_file.path().to_str().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    let file_path = temp_file.path().to_str().expect("temp file path");
 
     // Sequential processing
     let seq_performance = Performance::default();
@@ -584,7 +603,7 @@ fn test_parallel_vs_sequential() {
 fn test_memory_mapped_vs_streamed() {
     // Use the test file
     let test_file = create_test_data_file();
-    let file_path = test_file.path().to_str().unwrap();
+    let file_path = test_file.path().to_str().expect("temp file path");
 
     // Set up options for memory-mapped I/O (sequential)
     let mmap_performance = Performance::default();
@@ -657,8 +676,8 @@ fn test_memory_mapped_vs_streamed() {
 fn test_parallel_count() {
     // Instead of using environment variables, just test the parallel function works
     let input_text = b"Test with default settings for chunk size and thread count";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let performance = Performance::default();
     let options = Options::with_defaults(
@@ -670,8 +689,11 @@ fn test_parallel_count() {
         performance,
     );
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let parallel = WordTally::new(&input, &options).expect("Failed to create parallel WordTally");
 
@@ -685,8 +707,8 @@ fn test_parallel_count() {
 #[test]
 fn test_merge_maps() {
     let input_text = b"This is a test of the map merging functionality";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let performance = Performance::default();
     let options = Options::with_defaults(
@@ -698,8 +720,11 @@ fn test_merge_maps() {
         performance,
     );
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
@@ -725,7 +750,7 @@ mod serialization_tests {
 
     #[test]
     fn with_delimiter() {
-        let delim = Serialization::with_delimiter("::").unwrap();
+        let delim = Serialization::with_delimiter("::").expect("create delimiter");
         assert_eq!(delim.delimiter(), "::");
     }
 }
@@ -754,10 +779,13 @@ mod wordtally_constructor_tests {
     const TEST_INPUT: &[u8] = b"test convenience constructors";
 
     fn create_test_file() -> (tempfile::TempDir, String) {
-        let temp_dir = tempfile::tempdir().unwrap();
+        let temp_dir = tempfile::tempdir().expect("process test");
         let file_path = temp_dir.path().join("test_input.txt");
-        std::fs::write(&file_path, TEST_INPUT).unwrap();
-        (temp_dir, file_path.to_str().unwrap().to_string())
+        std::fs::write(&file_path, TEST_INPUT).expect("process test");
+        (
+            temp_dir,
+            file_path.to_str().expect("process test").to_string(),
+        )
         // temp_dir will be kept alive until it's dropped
     }
 
@@ -839,8 +867,8 @@ fn test_min_count_graphemes() {
 #[test]
 fn test_to_json() {
     let input_text = b"wombat wombat bat";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
     let filters = Filters::default();
     let options = Options::new(
         Case::default(),
@@ -854,11 +882,14 @@ fn test_to_json() {
 
     let shared_options = make_shared(options);
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), shared_options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        shared_options.io(),
+    )
+    .expect("Failed to create Input");
 
     let expected = WordTally::new(&input, &shared_options).expect("Failed to create WordTally");
-    let serialized = serde_json::to_string(&expected).unwrap();
+    let serialized = serde_json::to_string(&expected).expect("serialize JSON");
 
     assert!(serialized.contains("\"tally\":[[\"wombat\",2],[\"bat\",1]]"));
     assert!(serialized.contains("\"count\":3"));
@@ -871,8 +902,8 @@ fn test_to_json() {
 #[test]
 fn test_from_json() {
     let input_text = b"wombat wombat bat";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let filters = Filters::default();
     let options = Options::new(
@@ -885,12 +916,15 @@ fn test_from_json() {
         Performance::default(),
     );
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
-    let json = serde_json::to_string(&original).unwrap();
-    let deserialized: WordTally<'_> = serde_json::from_str(&json).unwrap();
+    let json = serde_json::to_string(&original).expect("serialize JSON");
+    let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
@@ -902,16 +936,19 @@ fn test_from_json() {
 #[test]
 fn test_deserialization_with_serde() {
     let input_text = b"wombat wombat bat";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
-    let json = serde_json::to_string(&original).unwrap();
-    let deserialized: WordTally<'_> = serde_json::from_str(&json).unwrap();
+    let json = serde_json::to_string(&original).expect("serialize JSON");
+    let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
@@ -926,16 +963,19 @@ fn test_deserialization_with_serde() {
 #[test]
 fn test_json_field_renamed() {
     let input_text = b"test json field renaming";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     // Test that the field renaming in the serialization works correctly
     let options = Options::default();
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
-    let json = serde_json::to_string(&original).unwrap();
+    let json = serde_json::to_string(&original).expect("serialize JSON");
 
     // Check that the JSON contains `"uniqueCount"` instead of `"uniq_count"`
     assert!(json.contains("uniqueCount"));
@@ -945,20 +985,23 @@ fn test_json_field_renamed() {
 #[test]
 fn test_json_field_camel_case_deserialization() {
     let input_text = b"test";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
-    let serialized = serde_json::to_string(&original).unwrap();
+    let serialized = serde_json::to_string(&original).expect("serialize JSON");
 
     assert!(serialized.contains("\"uniqueCount\":"));
     assert!(!serialized.contains("\"uniq_count\":"));
 
-    let deserialized: WordTally<'_> = serde_json::from_str(&serialized).unwrap();
+    let deserialized: WordTally<'_> = serde_json::from_str(&serialized).expect("deserialize JSON");
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
 }
@@ -966,12 +1009,12 @@ fn test_json_field_camel_case_deserialization() {
 #[test]
 fn test_into_owned_converts_borrowed_to_owned() {
     let content = b"apple banana cherry";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, content).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
 
     let options = Options::default();
-    let input = Input::new(temp_file.path(), options.io()).unwrap();
-    let word_tally = WordTally::new(&input, &options).unwrap();
+    let input = Input::new(temp_file.path(), options.io()).expect("process test");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
 
     // Store original values before consuming
     let original_count = word_tally.count();
@@ -992,8 +1035,8 @@ fn test_into_owned_converts_borrowed_to_owned() {
 #[test]
 fn test_into_owned_preserves_all_data() {
     let content = b"one two three one two one";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, content).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
 
     let options = Options::default()
         .with_case(Case::Upper)
@@ -1004,8 +1047,8 @@ fn test_into_owned_preserves_all_data() {
                 .with_exclude_words(vec!["ONE".to_string()]),
         );
 
-    let input = Input::new(temp_file.path(), options.io()).unwrap();
-    let original = WordTally::new(&input, &options).unwrap();
+    let input = Input::new(temp_file.path(), options.io()).expect("process test");
+    let original = WordTally::new(&input, &options).expect("create word tally");
 
     // Store original values
     let original_count = original.count();
@@ -1031,12 +1074,12 @@ fn test_into_owned_preserves_all_data() {
 fn test_into_owned_multiple_conversions() {
     // Test that we can convert to owned multiple times
     let content = b"test multiple conversions";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, content).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
 
     let options = Options::default();
-    let input = Input::new(temp_file.path(), options.io()).unwrap();
-    let word_tally = WordTally::new(&input, &options).unwrap();
+    let input = Input::new(temp_file.path(), options.io()).expect("process test");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
 
     // First conversion
     let owned1 = word_tally.into_owned();
@@ -1051,16 +1094,16 @@ fn test_into_owned_multiple_conversions() {
 #[test]
 fn test_into_owned_with_custom_options() {
     let content = b"HELLO WORLD HELLO RUST WORLD HELLO";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, content).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
 
     let options = Options::default()
         .with_case(Case::Lower)
         .with_sort(Sort::Asc)
         .with_filters(Filters::default().with_min_count(2));
 
-    let input = Input::new(temp_file.path(), options.io()).unwrap();
-    let original = WordTally::new(&input, &options).unwrap();
+    let input = Input::new(temp_file.path(), options.io()).expect("process test");
+    let original = WordTally::new(&input, &options).expect("create word tally");
 
     // Verify original state (min_count filter applies)
     // Only `"world"` (2) and `"hello"` (3) remain; `"rust"` (1) is filtered out

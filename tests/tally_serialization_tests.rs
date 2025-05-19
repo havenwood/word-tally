@@ -8,17 +8,20 @@ fn make_shared<T>(value: T) -> Arc<T> {
 #[test]
 fn test_to_json() {
     let input_text = b"wombat wombat bat";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
     let shared_options = make_shared(options);
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), shared_options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        shared_options.io(),
+    )
+    .expect("Failed to create Input");
 
     let expected = WordTally::new(&input, &shared_options).expect("Failed to create WordTally");
-    let serialized = serde_json::to_string(&expected).unwrap();
+    let serialized = serde_json::to_string(&expected).expect("serialize JSON");
 
     assert!(serialized.contains("\"tally\":[[\"wombat\",2],[\"bat\",1]]"));
     assert!(serialized.contains("\"count\":3"));
@@ -31,16 +34,19 @@ fn test_to_json() {
 #[test]
 fn test_from_json() {
     let input_text = b"wombat wombat bat";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
-    let json = serde_json::to_string(&original).unwrap();
-    let deserialized: WordTally<'_> = serde_json::from_str(&json).unwrap();
+    let json = serde_json::to_string(&original).expect("serialize JSON");
+    let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
@@ -52,15 +58,18 @@ fn test_from_json() {
 #[test]
 fn test_json_field_renamed() {
     let input_text = b"test json field renaming";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
-    let json = serde_json::to_string(&original).unwrap();
+    let json = serde_json::to_string(&original).expect("serialize JSON");
 
     assert!(json.contains("uniqueCount"));
     assert!(!json.contains("uniq_count"));
@@ -69,16 +78,19 @@ fn test_json_field_renamed() {
 #[test]
 fn test_deserialization_with_serde() {
     let input_text = b"wombat wombat bat";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
-    let json = serde_json::to_string(&original).unwrap();
-    let deserialized: WordTally<'_> = serde_json::from_str(&json).unwrap();
+    let json = serde_json::to_string(&original).expect("serialize JSON");
+    let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
@@ -96,7 +108,7 @@ fn test_serialization_with_format() {
 
 #[test]
 fn test_serialization_with_delimiter() {
-    let delim = Serialization::with_delimiter("::").unwrap();
+    let delim = Serialization::with_delimiter("::").expect("create delimiter");
     assert_eq!(delim.delimiter(), "::");
 }
 
@@ -118,19 +130,19 @@ fn test_deserialization_errors() {
 #[test]
 fn test_comprehensive_wordtally_serialization() {
     let content = b"apple banana apple cherry banana apple";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, content).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
 
     let options = Options::default()
         .with_case(Case::Lower)
         .with_sort(Sort::Desc);
 
-    let input = Input::new(temp_file.path(), options.io()).unwrap();
-    let tally = WordTally::new(&input, &options).unwrap();
+    let input = Input::new(temp_file.path(), options.io()).expect("process test");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
 
-    let json = serde_json::to_string(&tally).unwrap();
+    let json = serde_json::to_string(&tally).expect("serialize JSON");
 
-    let deserialized: WordTally<'_> = serde_json::from_str(&json).unwrap();
+    let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(tally.count(), deserialized.count());
     assert_eq!(tally.uniq_count(), deserialized.uniq_count());
@@ -143,14 +155,14 @@ fn test_comprehensive_wordtally_serialization() {
 #[test]
 fn test_json_field_names() {
     let content = b"test words for json";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, content).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
 
     let options = Options::default();
-    let input = Input::new(temp_file.path(), options.io()).unwrap();
-    let tally = WordTally::new(&input, &options).unwrap();
+    let input = Input::new(temp_file.path(), options.io()).expect("process test");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
 
-    let json = serde_json::to_string(&tally).unwrap();
+    let json = serde_json::to_string(&tally).expect("serialize JSON");
 
     assert!(json.contains("\"uniqueCount\""));
     assert!(!json.contains("\"uniq_count\""));
@@ -162,8 +174,8 @@ fn test_json_field_names() {
 #[test]
 fn test_round_trip_serialization() {
     let content = b"one two three one two one";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, content).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
 
     let options = Options::default()
         .with_case(Case::Upper)
@@ -171,12 +183,12 @@ fn test_round_trip_serialization() {
         .with_format(Format::Json)
         .with_filters(word_tally::Filters::default().with_min_chars(2));
 
-    let input = Input::new(temp_file.path(), options.io()).unwrap();
-    let original = WordTally::new(&input, &options).unwrap();
+    let input = Input::new(temp_file.path(), options.io()).expect("process test");
+    let original = WordTally::new(&input, &options).expect("create word tally");
 
-    let json = serde_json::to_string(&original).unwrap();
+    let json = serde_json::to_string(&original).expect("serialize JSON");
 
-    let deserialized: WordTally<'_> = serde_json::from_str(&json).unwrap();
+    let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(original.count(), deserialized.count());
     assert_eq!(original.uniq_count(), deserialized.uniq_count());

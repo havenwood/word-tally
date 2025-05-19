@@ -8,25 +8,32 @@ fn make_shared<T>(value: T) -> Arc<T> {
 }
 
 fn create_test_tally_with_text(text: &[u8], sort: Sort) -> WordTally<'static> {
-    let mut temp_file = NamedTempFile::new().unwrap();
-    temp_file.write_all(text).unwrap();
+    let mut temp_file = NamedTempFile::new().expect("create temp file");
+    temp_file.write_all(text).expect("write test data");
 
     let options = Options::default().with_sort(sort);
     let options_static = Box::leak(Box::new(options));
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), options_static.io()).unwrap();
-    WordTally::new(&input, options_static).unwrap()
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options_static.io(),
+    )
+    .expect("process test");
+    WordTally::new(&input, options_static).expect("create word tally")
 }
 
 #[test]
 fn test_into_tally() {
     let input_text = b"Hope is the thing with feathers that perches in the soul";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
@@ -55,12 +62,15 @@ fn test_into_tally() {
 #[test]
 fn test_iterator() {
     let input_text = b"double trouble double";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 
@@ -78,12 +88,15 @@ fn test_iterator() {
 #[test]
 fn test_iterator_for_loop() {
     let input_text = b"llama llama pajamas";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 

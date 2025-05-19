@@ -19,15 +19,18 @@ fn test_wordtally_hash() {
     let hope_input_alpha = Input::from_bytes(hope_text);
     let hope_input_beta = Input::from_bytes(hope_text);
 
-    let hope_tally_alpha = WordTally::new(&hope_input_alpha, &base_options).unwrap();
-    let hope_tally_beta = WordTally::new(&hope_input_beta, &base_options).unwrap();
+    let hope_tally_alpha =
+        WordTally::new(&hope_input_alpha, &base_options).expect("create word tally");
+    let hope_tally_beta =
+        WordTally::new(&hope_input_beta, &base_options).expect("create word tally");
 
     assert_eq!(hope_tally_alpha.count(), hope_tally_beta.count());
     assert_eq!(hope_tally_alpha.uniq_count(), hope_tally_beta.uniq_count());
 
     let extended_hope_text = "Hope is the thing with feathers That perches";
     let extended_hope_input = Input::from_bytes(extended_hope_text);
-    let extended_hope_tally = WordTally::new(&extended_hope_input, &base_options).unwrap();
+    let extended_hope_tally =
+        WordTally::new(&extended_hope_input, &base_options).expect("create word tally");
 
     assert_ne!(hope_tally_alpha.count(), extended_hope_tally.count());
     assert_ne!(
@@ -37,7 +40,8 @@ fn test_wordtally_hash() {
 
     let repeated_hope_text = "Hope is the thing with Hope is the";
     let repeated_hope_input = Input::from_bytes(repeated_hope_text);
-    let repeated_hope_tally = WordTally::new(&repeated_hope_input, &base_options).unwrap();
+    let repeated_hope_tally =
+        WordTally::new(&repeated_hope_input, &base_options).expect("create word tally");
 
     assert_ne!(hope_tally_alpha.count(), repeated_hope_tally.count());
 }
@@ -211,8 +215,9 @@ fn test_hash_collisions() {
     let bird_input = Input::from_bytes(bird_text);
     let truth_input = Input::from_bytes(truth_text);
 
-    let bird_tally = WordTally::new(&bird_input, &lowercase_asc_text).unwrap();
-    let truth_tally = WordTally::new(&truth_input, &uppercase_desc_json).unwrap();
+    let bird_tally = WordTally::new(&bird_input, &lowercase_asc_text).expect("create word tally");
+    let truth_tally =
+        WordTally::new(&truth_input, &uppercase_desc_json).expect("create word tally");
 
     assert_ne!(calculate_hash(&bird_tally), calculate_hash(&truth_tally));
 }
@@ -228,8 +233,10 @@ fn test_wordtally_includes_options_in_hash() {
     let success_input_alpha = Input::from_bytes(success_text);
     let success_input_beta = Input::from_bytes(success_text);
 
-    let success_lowercase = WordTally::new(&success_input_alpha, &lowercase_options).unwrap();
-    let success_uppercase = WordTally::new(&success_input_beta, &uppercase_options).unwrap();
+    let success_lowercase =
+        WordTally::new(&success_input_alpha, &lowercase_options).expect("create word tally");
+    let success_uppercase =
+        WordTally::new(&success_input_beta, &uppercase_options).expect("create word tally");
 
     assert_ne!(success_lowercase, success_uppercase);
 
@@ -244,8 +251,10 @@ fn test_wordtally_includes_options_in_hash() {
     let success_input_gamma = Input::from_bytes(success_text);
     let success_input_delta = Input::from_bytes(success_text);
 
-    let success_ascending = WordTally::new(&success_input_gamma, &lowercase_asc).unwrap();
-    let success_descending = WordTally::new(&success_input_delta, &lowercase_desc).unwrap();
+    let success_ascending =
+        WordTally::new(&success_input_gamma, &lowercase_asc).expect("create word tally");
+    let success_descending =
+        WordTally::new(&success_input_delta, &lowercase_desc).expect("create word tally");
 
     assert_ne!(success_ascending, success_descending);
 }
@@ -255,17 +264,18 @@ fn test_wordtally_hash_fields() {
     let text = "The Brain is wider than";
     let input = Input::from_bytes(text);
     let options = Options::default();
-    let tally = WordTally::new(&input, &options).unwrap();
+    let tally = WordTally::new(&input, &options).expect("create word tally");
 
     let doubled_text = "The Brain is wider than the Sky For put";
     let doubled_input = Input::from_bytes(doubled_text);
-    let doubled_tally = WordTally::new(&doubled_input, &options).unwrap();
+    let doubled_tally = WordTally::new(&doubled_input, &options).expect("create word tally");
 
     assert_ne!(tally, doubled_tally);
 
     let uppercase_options = Options::default().with_case(Case::Upper);
     let uppercase_input = Input::from_bytes(text);
-    let uppercase_tally = WordTally::new(&uppercase_input, &uppercase_options).unwrap();
+    let uppercase_tally =
+        WordTally::new(&uppercase_input, &uppercase_options).expect("create word tally");
 
     assert_ne!(tally, uppercase_tally);
 }
@@ -291,9 +301,9 @@ fn test_equality_and_hashing() {
 
     // Create a test file
     let test_text = b"test text for hashing";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, test_text).unwrap();
-    let file_path = temp_file.path().to_str().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, test_text).expect("write test data");
+    let file_path = temp_file.path().to_str().expect("temp file path");
 
     let tallies: Vec<WordTally<'static>> = cases_and_sorts
         .iter()

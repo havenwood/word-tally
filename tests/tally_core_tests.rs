@@ -5,7 +5,7 @@ use word_tally::{
 };
 
 fn create_test_data_file() -> NamedTempFile {
-    let mut temp_file = NamedTempFile::new().unwrap();
+    let mut temp_file = NamedTempFile::new().expect("create temp file");
     let content = b"A narrow Fellow in the Grass\n\
 Occasionally rides -\n\
 You may have met him? Did you not\n\
@@ -15,7 +15,7 @@ The Grass divides as with a Comb -\n\
 A spotted Shaft is seen -\n\
 And then it closes at your feet\n\
 And opens further on -";
-    std::io::Write::write_all(&mut temp_file, content).unwrap();
+    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
     temp_file
 }
 
@@ -26,7 +26,7 @@ fn word_tally(
     filters: Filters,
 ) -> WordTally<'static> {
     let test_file = Box::leak(Box::new(create_test_data_file()));
-    let file_path = test_file.path().to_str().unwrap();
+    let file_path = test_file.path().to_str().expect("temp file path");
 
     let options = Options::new(
         case,
@@ -226,10 +226,10 @@ struct ExpectedFields<'a> {
 }
 
 fn create_test_tally_with_text(input_text: &[u8], sort: Sort) -> WordTally<'static> {
-    let mut temp_file = NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
     let temp_file_static = Box::leak(Box::new(temp_file));
-    let file_path = temp_file_static.path().to_str().unwrap();
+    let file_path = temp_file_static.path().to_str().expect("temp file path");
 
     let options = Options::default().with_sort(sort);
     let options_static = Box::leak(Box::new(options));
@@ -366,7 +366,7 @@ fn test_numeric_sorting() {
         tally_vec
             .iter()
             .find(|(word, _)| word.as_ref() == "1")
-            .unwrap()
+            .expect("execute operation")
             .1,
         1
     );
@@ -374,7 +374,7 @@ fn test_numeric_sorting() {
         tally_vec
             .iter()
             .find(|(word, _)| word.as_ref() == "200")
-            .unwrap()
+            .expect("execute operation")
             .1,
         1
     );

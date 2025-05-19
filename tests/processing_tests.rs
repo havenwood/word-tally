@@ -47,18 +47,20 @@ mod processing_tests {
 
         // Test serialization
         let sequential = Processing::Sequential;
-        let json = serde_json::to_string(&sequential).unwrap();
+        let json = serde_json::to_string(&sequential).expect("serialize JSON");
         assert_eq!(json, "\"Sequential\"");
 
         let parallel = Processing::Parallel;
-        let json = serde_json::to_string(&parallel).unwrap();
+        let json = serde_json::to_string(&parallel).expect("serialize JSON");
         assert_eq!(json, "\"Parallel\"");
 
         // Test deserialization
-        let deserialized: Processing = serde_json::from_str("\"Sequential\"").unwrap();
+        let deserialized: Processing =
+            serde_json::from_str("\"Sequential\"").expect("deserialize JSON");
         assert_eq!(deserialized, Processing::Sequential);
 
-        let deserialized: Processing = serde_json::from_str("\"Parallel\"").unwrap();
+        let deserialized: Processing =
+            serde_json::from_str("\"Parallel\"").expect("deserialize JSON");
         assert_eq!(deserialized, Processing::Parallel);
     }
 }

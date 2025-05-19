@@ -42,11 +42,11 @@ fn test_format_field_in_struct() {
 #[test]
 fn test_format_serialization() {
     let options = Options::default().with_format(Format::Json);
-    let serialized = serde_json::to_string(&options).unwrap();
+    let serialized = serde_json::to_string(&options).expect("serialize JSON");
 
     assert!(serialized.contains("\"format\":\"Json\""));
 
-    let deserialized: Options = serde_json::from_str(&serialized).unwrap();
+    let deserialized: Options = serde_json::from_str(&serialized).expect("deserialize JSON");
     assert_eq!(deserialized.serialization().format(), Format::Json);
 }
 
@@ -59,9 +59,9 @@ fn test_comprehensive_options_serialization() {
         .with_io(Io::MemoryMapped)
         .with_filters(Filters::default().with_min_chars(3).with_min_count(2));
 
-    let json = serde_json::to_string(&options).unwrap();
+    let json = serde_json::to_string(&options).expect("serialize JSON");
 
-    let deserialized: Options = serde_json::from_str(&json).unwrap();
+    let deserialized: Options = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(options.case(), deserialized.case());
     assert_eq!(options.sort(), deserialized.sort());
@@ -273,8 +273,8 @@ fn test_options_serde_full() {
         .with_io(Io::Buffered)
         .with_processing(Processing::Parallel);
 
-    let serialized = serde_json::to_string(&options).unwrap();
-    let deserialized: Options = serde_json::from_str(&serialized).unwrap();
+    let serialized = serde_json::to_string(&options).expect("serialize JSON");
+    let deserialized: Options = serde_json::from_str(&serialized).expect("deserialize JSON");
 
     assert_eq!(deserialized.case(), options.case());
     assert_eq!(deserialized.sort(), options.sort());

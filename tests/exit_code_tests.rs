@@ -74,8 +74,14 @@ fn test_csv_error() {
         .has_headers(false)
         .from_reader(data.as_bytes());
     // Skip the first valid record and get to the invalid one
-    drop(reader.records().next().unwrap().unwrap());
-    let csv_err = reader.records().next().unwrap().unwrap_err();
+    drop(
+        reader
+            .records()
+            .next()
+            .expect("process test")
+            .expect("parse CSV record"),
+    );
+    let csv_err = reader.records().next().expect("process test").unwrap_err();
     let err: Error = csv_err.into();
     assert_eq!(ExitCode::from_error(&err), ExitCode::DataError);
 }

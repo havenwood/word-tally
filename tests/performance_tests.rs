@@ -96,8 +96,8 @@ fn test_serde() {
         .with_verbose(true)
         .with_chunk_size(32768);
 
-    let json = serde_json::to_string(&perf).unwrap();
-    let deserialized: Performance = serde_json::from_str(&json).unwrap();
+    let json = serde_json::to_string(&perf).expect("serialize JSON");
+    let deserialized: Performance = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(perf, deserialized);
 }

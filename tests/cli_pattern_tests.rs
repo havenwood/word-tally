@@ -2,7 +2,7 @@ use assert_cmd::Command;
 use predicates::prelude::*;
 
 fn word_tally() -> Command {
-    Command::cargo_bin("word-tally").unwrap()
+    Command::cargo_bin("word-tally").expect("process test")
 }
 
 #[test]

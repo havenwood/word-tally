@@ -4,21 +4,21 @@ mod serialization_tests {
 
     #[test]
     fn test_serialization_new_text() {
-        let serialization = Serialization::new(Format::Text, " ").unwrap();
+        let serialization = Serialization::new(Format::Text, " ").expect("create serialization");
         assert_eq!(serialization.format(), Format::Text);
         assert_eq!(serialization.delimiter(), " ");
     }
 
     #[test]
     fn test_serialization_new_json() {
-        let serialization = Serialization::new(Format::Json, ",").unwrap();
+        let serialization = Serialization::new(Format::Json, ",").expect("create serialization");
         assert_eq!(serialization.format(), Format::Json);
         assert_eq!(serialization.delimiter(), ",");
     }
 
     #[test]
     fn test_serialization_new_csv() {
-        let serialization = Serialization::new(Format::Csv, ",").unwrap();
+        let serialization = Serialization::new(Format::Csv, ",").expect("create serialization");
         assert_eq!(serialization.format(), Format::Csv);
         assert_eq!(serialization.delimiter(), ",");
     }
@@ -31,7 +31,7 @@ mod serialization_tests {
 
     #[test]
     fn test_serialization_with_delimiter() {
-        let serialization = Serialization::with_delimiter("\t").unwrap();
+        let serialization = Serialization::with_delimiter("\t").expect("create delimiter");
         assert_eq!(serialization.delimiter(), "\t");
     }
 

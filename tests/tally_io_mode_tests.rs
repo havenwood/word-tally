@@ -7,14 +7,14 @@ fn make_shared<T>(value: T) -> Arc<T> {
 
 #[test]
 fn test_input_size() {
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     let content = b"This test file replaces the hardcoded fixture";
-    std::io::Write::write_all(&mut temp_file, content).unwrap();
+    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
 
     let file_input = Input::File(temp_file.path().to_path_buf());
     let size = file_input.size();
     assert!(size.is_some());
-    assert!(size.unwrap() > 0);
+    assert!(size.expect("get file size") > 0);
 
     let stdin_input = Input::Stdin;
     assert_eq!(stdin_input.size(), None);
@@ -23,9 +23,9 @@ fn test_input_size() {
 #[test]
 fn test_parallel_vs_sequential() {
     let input_text = b"I taste a liquor never brewed. I taste a liquor.";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
-    let file_path = temp_file.path().to_str().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    let file_path = temp_file.path().to_str().expect("temp file path");
 
     // Sequential processing
     let seq_performance = word_tally::Performance::default();
@@ -80,10 +80,10 @@ fn test_parallel_vs_sequential() {
 
 #[test]
 fn test_memory_mapped_vs_streamed() {
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     let content = b"Quantum leapt circumference imperceptible enigma quantum enigma";
-    std::io::Write::write_all(&mut temp_file, content).unwrap();
-    let file_path = temp_file.path().to_str().unwrap();
+    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
+    let file_path = temp_file.path().to_str().expect("temp file path");
 
     // Set up options for memory-mapped I/O (sequential)
     let mmap_performance = word_tally::Performance::default();
@@ -160,8 +160,8 @@ fn test_memory_mapped_vs_streamed() {
 fn test_parallel_count() {
     // Test the parallel function works with default settings
     let input_text = b"Test with default settings for chunk size and thread count";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let performance = word_tally::Performance::default();
     let options = Options::with_defaults(
@@ -173,8 +173,11 @@ fn test_parallel_count() {
         performance,
     );
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let parallel = WordTally::new(&input, &options).expect("Failed to create parallel WordTally");
 
@@ -186,8 +189,8 @@ fn test_parallel_count() {
 #[test]
 fn test_merge_maps() {
     let input_text = b"This is a test of the map merging functionality";
-    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-    std::io::Write::write_all(&mut temp_file, input_text).unwrap();
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let performance = word_tally::Performance::default();
     let options = Options::with_defaults(
@@ -199,8 +202,11 @@ fn test_merge_maps() {
         performance,
     );
 
-    let input = Input::new(temp_file.path().to_str().unwrap(), options.io())
-        .expect("Failed to create Input");
+    let input = Input::new(
+        temp_file.path().to_str().expect("temp file path"),
+        options.io(),
+    )
+    .expect("Failed to create Input");
 
     let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
 

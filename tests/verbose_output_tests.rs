@@ -19,14 +19,17 @@ mod verbose_unit_tests {
 
         #[allow(dead_code)]
         fn content(&self) -> String {
-            let data = self.content.lock().unwrap();
+            let data = self.content.lock().expect("process test");
             String::from_utf8_lossy(&data).to_string()
         }
     }
 
     impl Write for MockWriter {
         fn write(&mut self, buf: &[u8]) -> IoResult<usize> {
-            self.content.lock().unwrap().extend_from_slice(buf);
+            self.content
+                .lock()
+                .expect("process test")
+                .extend_from_slice(buf);
             Ok(buf.len())
         }
 
@@ -38,11 +41,15 @@ mod verbose_unit_tests {
     // Helper function to create test WordTally
     fn create_test_tally(options: &Options) -> WordTally<'_> {
         let test_text = b"hope is the thing with feathers that perches";
-        let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-        std::io::Write::write_all(&mut temp_file, test_text).unwrap();
+        let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+        std::io::Write::write_all(&mut temp_file, test_text).expect("write test data");
 
-        let input = Input::new(temp_file.path().to_str().unwrap(), options.io()).unwrap();
-        WordTally::new(&input, options).unwrap()
+        let input = Input::new(
+            temp_file.path().to_str().expect("temp file path"),
+            options.io(),
+        )
+        .expect("process test");
+        WordTally::new(&input, options).expect("create word tally")
     }
 
     // Test that verbose output works with JSON format
@@ -57,7 +64,7 @@ mod verbose_unit_tests {
         // This is already covered by cli_verbose_tests.rs
 
         // However, we can test that the WordTally serializes properly to JSON
-        let json = serde_json::to_string(&tally).unwrap();
+        let json = serde_json::to_string(&tally).expect("serialize JSON");
         assert!(json.contains("\"count\":"));
         assert!(json.contains("\"uniqueCount\":"));
         assert!(json.contains("\"tally\":"));
@@ -72,16 +79,18 @@ mod verbose_unit_tests {
 
         // Test CSV serialization of the tally itself
         let mut csv_writer = csv::Writer::from_writer(vec![]);
-        csv_writer.write_record(["word", "count"]).unwrap();
+        csv_writer
+            .write_record(["word", "count"])
+            .expect("process test");
 
         for (word, count) in &tally {
             csv_writer
                 .write_record([word.as_ref(), &count.to_string()])
-                .unwrap();
+                .expect("execute operation");
         }
 
-        let data = csv_writer.into_inner().unwrap();
-        let csv = String::from_utf8(data).unwrap();
+        let data = csv_writer.into_inner().expect("process test");
+        let csv = String::from_utf8(data).expect("process test");
         assert!(csv.contains("word,count"));
         assert!(csv.contains("hope,1"));
     }
@@ -150,8 +159,8 @@ mod verbose_unit_tests {
         let tally_with = create_test_tally(&options_with_filters);
         let tally_without = create_test_tally(&options_without_filters);
 
-        let json_with = serde_json::to_string(&tally_with).unwrap();
-        let json_without = serde_json::to_string(&tally_without).unwrap();
+        let json_with = serde_json::to_string(&tally_with).expect("serialize JSON");
+        let json_without = serde_json::to_string(&tally_without).expect("serialize JSON");
 
         // Check that options are properly serialized in JSON
         assert!(json_with.contains("\"options\":"));
@@ -162,18 +171,22 @@ mod verbose_unit_tests {
     #[test]
     fn test_verbose_with_empty_input() {
         let test_text = b"";
-        let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-        std::io::Write::write_all(&mut temp_file, test_text).unwrap();
+        let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+        std::io::Write::write_all(&mut temp_file, test_text).expect("write test data");
 
         let options = Options::default();
-        let input = Input::new(temp_file.path().to_str().unwrap(), options.io()).unwrap();
-        let tally = WordTally::new(&input, &options).unwrap();
+        let input = Input::new(
+            temp_file.path().to_str().expect("temp file path"),
+            options.io(),
+        )
+        .expect("process test");
+        let tally = WordTally::new(&input, &options).expect("create word tally");
 
         assert_eq!(tally.count(), 0);
         assert_eq!(tally.uniq_count(), 0);
 
         // Test that empty tally still serializes correctly
-        let json = serde_json::to_string(&tally).unwrap();
+        let json = serde_json::to_string(&tally).expect("serialize JSON");
         assert!(json.contains("\"count\":0"));
         assert!(json.contains("\"uniqueCount\":0"));
     }
@@ -182,15 +195,19 @@ mod verbose_unit_tests {
     #[test]
     fn test_verbose_with_special_characters() {
         let test_text = b"test \"quoted\" text & special <chars>";
-        let mut temp_file = tempfile::NamedTempFile::new().unwrap();
-        std::io::Write::write_all(&mut temp_file, test_text).unwrap();
+        let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+        std::io::Write::write_all(&mut temp_file, test_text).expect("write test data");
 
         let options = Options::default();
-        let input = Input::new(temp_file.path().to_str().unwrap(), options.io()).unwrap();
-        let tally = WordTally::new(&input, &options).unwrap();
+        let input = Input::new(
+            temp_file.path().to_str().expect("temp file path"),
+            options.io(),
+        )
+        .expect("process test");
+        let tally = WordTally::new(&input, &options).expect("create word tally");
 
         // Check that special characters are handled properly
-        let json = serde_json::to_string(&tally).unwrap();
+        let json = serde_json::to_string(&tally).expect("serialize JSON");
         assert!(json.contains("test"));
         assert!(json.contains("quoted"));
     }

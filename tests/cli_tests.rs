@@ -4,7 +4,7 @@ use predicates::str::{self, contains};
 use std::fs;
 
 fn word_tally() -> Command {
-    Command::cargo_bin("word-tally").unwrap()
+    Command::cargo_bin("word-tally").expect("process test")
 }
 
 #[test]
@@ -80,8 +80,11 @@ fn output_longhand() {
         .arg("--output=test.txt")
         .assert();
     assert.success().stdout("");
-    assert_eq!("narrow 1\n", fs::read_to_string("test.txt").unwrap());
-    fs::remove_file("test.txt").unwrap();
+    assert_eq!(
+        "narrow 1\n",
+        fs::read_to_string("test.txt").expect("process test")
+    );
+    fs::remove_file("test.txt").expect("process test");
 }
 
 #[test]
@@ -91,8 +94,11 @@ fn output_shorthand() {
         .arg("-o=test2.txt")
         .assert();
     assert.success().stdout("");
-    assert_eq!("narrow 1\n", fs::read_to_string("test2.txt").unwrap());
-    fs::remove_file("test2.txt").unwrap();
+    assert_eq!(
+        "narrow 1\n",
+        fs::read_to_string("test2.txt").expect("process test")
+    );
+    fs::remove_file("test2.txt").expect("process test");
 }
 
 #[test]
@@ -158,7 +164,7 @@ fn no_words() {
 #[test]
 fn test_discard_words() {
     let input = "Hope is the thing with feathers that perches in the soul.";
-    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    let mut cmd = Command::cargo_bin("word-tally").expect("process test");
     cmd.write_stdin(input)
         .arg("--exclude-words=feathers,soul")
         .assert()
@@ -169,7 +175,7 @@ fn test_discard_words() {
 #[test]
 fn test_exclude_patterns() {
     let input = "I dwell in possibility - a fairer house than prose.";
-    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    let mut cmd = Command::cargo_bin("word-tally").expect("process test");
     cmd.write_stdin(input)
         .arg("--exclude=^h.*") // Exclude words starting with 'h'
         .arg("--exclude=.*t$") // Exclude words ending with 't'
@@ -188,7 +194,7 @@ fn test_exclude_patterns() {
 #[test]
 fn test_multiple_exclude_patterns() {
     let input = "success fame sunset wild nobody moon immortal";
-    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    let mut cmd = Command::cargo_bin("word-tally").expect("process test");
     cmd.write_stdin(input)
         .arg("--exclude=^s.*") // Exclude words starting with 's'
         .arg("--exclude=.*g$") // Exclude words ending with 'g'
@@ -207,7 +213,7 @@ fn test_multiple_exclude_patterns() {
 #[test]
 fn test_include_patterns() {
     let input = "nobody knows tomorrow certain immortal narrow sublime";
-    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    let mut cmd = Command::cargo_bin("word-tally").expect("process test");
     cmd.write_stdin(input)
         .arg("--include=^[nt].*") // Include words starting with 'n' or 't'
         .assert()
@@ -224,7 +230,7 @@ fn test_include_patterns() {
 #[test]
 fn test_multiple_include_patterns() {
     let input = "beauty finite infinite fame certain forever sublime";
-    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    let mut cmd = Command::cargo_bin("word-tally").expect("process test");
     cmd.write_stdin(input)
         .arg("--include=^f.*") // Include words starting with 'f'
         .arg("--include=.*e$") // Include words ending with 'e'
@@ -242,7 +248,7 @@ fn test_multiple_include_patterns() {
 #[test]
 fn test_combine_exclusions() {
     let input = "Tell all the truth but tell it slant - success in circuit lies.";
-    let mut cmd = Command::cargo_bin("word-tally").unwrap();
+    let mut cmd = Command::cargo_bin("word-tally").expect("process test");
     cmd.write_stdin(input)
         .arg("--exclude-words=tell,lies")
         .arg("--exclude=^s.*")
