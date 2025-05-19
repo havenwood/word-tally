@@ -50,7 +50,36 @@ fn test_format_serialization() {
     assert_eq!(deserialized.serialization().format(), Format::Json);
 }
 
-// Test Options constructors
+#[test]
+fn test_comprehensive_options_serialization() {
+    let options = Options::default()
+        .with_case(Case::Upper)
+        .with_sort(Sort::Desc)
+        .with_format(Format::Json)
+        .with_io(Io::MemoryMapped)
+        .with_filters(Filters::default().with_min_chars(3).with_min_count(2));
+
+    let json = serde_json::to_string(&options).unwrap();
+
+    let deserialized: Options = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(options.case(), deserialized.case());
+    assert_eq!(options.sort(), deserialized.sort());
+    assert_eq!(options.io(), deserialized.io());
+    assert_eq!(
+        options.filters().min_chars(),
+        deserialized.filters().min_chars()
+    );
+    assert_eq!(
+        options.filters().min_count(),
+        deserialized.filters().min_count()
+    );
+    assert_eq!(
+        options.serialization().format(),
+        deserialized.serialization().format()
+    );
+}
+
 #[test]
 fn test_options_new() {
     let case = Case::Upper;
@@ -95,7 +124,6 @@ fn test_options_with_defaults() {
     assert!(matches!(options.filters(), _));
 }
 
-// Test builder methods
 #[test]
 fn test_with_case() {
     let options = Options::default().with_case(Case::Upper);
@@ -172,7 +200,6 @@ fn test_with_chunk_size() {
     assert_eq!(options.performance().chunk_size, 8192);
 }
 
-// Test getter methods
 #[test]
 fn test_getters() {
     let options = Options::default()
@@ -190,7 +217,6 @@ fn test_getters() {
     assert_eq!(options.processing(), Processing::Parallel);
 }
 
-// Test chaining multiple builders
 #[test]
 fn test_builder_chaining() {
     let options = Options::default()
@@ -217,7 +243,6 @@ fn test_builder_chaining() {
     assert_eq!(options.performance().chunk_size, 16384);
 }
 
-// Test AsRef traits
 #[test]
 fn test_as_ref_serialization() {
     let options = Options::default().with_format(Format::Csv);
@@ -239,7 +264,6 @@ fn test_as_ref_performance() {
     assert_eq!(performance_ref.threads.count(), 2);
 }
 
-// Test Options serde
 #[test]
 fn test_options_serde_full() {
     let options = Options::default()

@@ -111,10 +111,10 @@
 //! # }
 //! ```
 
-use std::{hash::Hash, slice, str, sync::OnceLock};
+use std::{borrow::Cow, slice, str, sync::OnceLock};
 
 use anyhow::Result;
-use serde::{self, Deserialize, Serialize, ser::SerializeStruct};
+use serde::{self, Deserialize, Serialize};
 
 pub mod exit_code;
 pub mod input;
@@ -147,7 +147,7 @@ pub type Tally = Box<[(Word, Count)]>;
 /// A shared `OnceLock` for default `Options`.
 static DEFAULT_OPTIONS: OnceLock<Options> = OnceLock::new();
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq)]
+#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 /// A tally of word frequencies and counts, along with processing options.
 pub struct WordTally<'a> {
@@ -155,12 +155,14 @@ pub struct WordTally<'a> {
     tally: Tally,
 
     /// All of the options specified for how to tally.
-    options: &'a Options,
+    #[serde(borrow)]
+    options: Cow<'a, Options>,
 
     /// The sum of all words tallied.
     count: Count,
 
     /// The sum of uniq words tallied.
+    #[serde(rename = "uniqueCount")]
     uniq_count: Count,
 }
 
@@ -169,58 +171,10 @@ impl Default for WordTally<'static> {
     fn default() -> Self {
         Self {
             tally: Box::new([]),
-            options: DEFAULT_OPTIONS.get_or_init(Options::default),
+            options: Cow::Borrowed(DEFAULT_OPTIONS.get_or_init(Options::default)),
             count: 0,
             uniq_count: 0,
         }
-    }
-}
-
-/// Serializes all fields of a `WordTally` to JSON.
-impl Serialize for WordTally<'_> {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        let mut state = serializer.serialize_struct("WordTally", 4)?;
-        state.serialize_field("tally", &self.tally)?;
-        state.serialize_field("options", &self.options)?;
-        state.serialize_field("count", &self.count)?;
-        state.serialize_field("uniqueCount", &self.uniq_count)?;
-        state.end()
-    }
-}
-
-/// Deserialize into a `WordTally` from JSON.
-///
-/// Warning: To avoid `Options` issues with deserialization & lifetimes, we deserialize `Options`.
-/// by leaking the allocation to get a static reference.
-impl<'de> Deserialize<'de> for WordTally<'_> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        #[derive(Deserialize)]
-        struct Fields {
-            tally: Tally,
-            options: Options,
-            count: Count,
-            #[serde(rename = "uniqueCount")]
-            uniq_count: Count,
-        }
-
-        // Deserialize into the helper struct
-        let data = Fields::deserialize(deserializer)?;
-
-        // Leak the `Options` to obtain a reference with static lifetime for `WordTally`
-        let options_ref: &'static Options = Box::leak(Box::new(data.options));
-
-        Ok(Self {
-            tally: data.tally,
-            options: options_ref,
-            count: data.count,
-            uniq_count: data.uniq_count,
-        })
     }
 }
 
@@ -288,7 +242,7 @@ impl<'a> WordTally<'a> {
         let uniq_count = tally.len();
 
         let mut instance = Self {
-            options,
+            options: Cow::Borrowed(options),
             tally,
             count,
             uniq_count,
@@ -304,9 +258,27 @@ impl<'a> WordTally<'a> {
         &self.tally
     }
 
+    /// Consumes the `tally` field.
+    pub fn into_tally(self) -> Tally {
+        self.tally
+    }
+
+    /// Converts to owned data with an appropriate lifetime.
+    pub fn into_owned<'b>(self) -> WordTally<'b>
+    where
+        'a: 'b,
+    {
+        WordTally {
+            tally: self.tally,
+            options: Cow::Owned(self.options.into_owned()),
+            count: self.count,
+            uniq_count: self.uniq_count,
+        }
+    }
+
     /// Gets a reference to the `options`.
-    pub const fn options(&self) -> &Options {
-        self.options
+    pub fn options(&self) -> &Options {
+        &self.options
     }
 
     /// Gets the `uniq_count` field.
@@ -317,11 +289,6 @@ impl<'a> WordTally<'a> {
     /// Gets the `count` field.
     pub const fn count(&self) -> Count {
         self.count
-    }
-
-    /// Consumes the `tally` field.
-    pub fn into_tally(self) -> Tally {
-        self.tally
     }
 
     /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.

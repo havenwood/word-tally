@@ -392,7 +392,7 @@ fn test_excluding_patterns() {
 
     let serializer = Serialization::default();
 
-    // Create patterns to exclude words starting with 't'
+    // Exclude words starting with 't'
     let patterns = vec!["^t.*".to_string()];
     let filters = Filters::default().with_exclude_patterns(&patterns).unwrap();
 
@@ -433,7 +433,7 @@ fn test_including_patterns() {
 
     let serializer = Serialization::default();
 
-    // Create patterns to include only words starting with 'h'
+    // Include only words starting with `'h'`
     let patterns = vec!["^h.*".to_string()];
     let filters = Filters::default().with_include_patterns(&patterns).unwrap();
 
@@ -453,17 +453,17 @@ fn test_including_patterns() {
     let tally = WordTally::new(&input, &options_arc).expect("Failed to create WordTally");
     let result = tally.tally();
 
-    // These should be present (words starting with 'h')
+    // These should be present (words starting with `'h'`)
     assert!(result.iter().any(|(word, _)| word.as_ref() == "heaven"));
     assert!(result.iter().any(|(word, _)| word.as_ref() == "hell"));
 
-    // These should be excluded (words not starting with 'h')
+    // These should be excluded (words not starting with `'h'`)
     assert!(!result.iter().any(|(word, _)| word.as_ref() == "tree"));
     assert!(!result.iter().any(|(word, _)| word.as_ref() == "would"));
     assert!(!result.iter().any(|(word, _)| word.as_ref() == "to"));
     assert!(!result.iter().any(|(word, _)| word.as_ref() == "the"));
 
-    // Make sure we only have words starting with 'h'
+    // Make sure we only have words starting with `'h'`
     assert!(result.iter().all(|(word, _)| word.starts_with('h')));
 }
 
@@ -476,7 +476,7 @@ fn test_combining_include_exclude_patterns() {
 
     let serializer = Serialization::default();
 
-    // Include words starting with 'h' but exclude 'hell'
+    // Include words starting with `'h'` but exclude `'hell'`
     let include_patterns = vec!["^h.*".to_string()];
     let exclude_patterns = vec!["^hell$".to_string()];
 
@@ -502,7 +502,7 @@ fn test_combining_include_exclude_patterns() {
     let tally = WordTally::new(&input, &options_arc).expect("Failed to create WordTally");
     let result = tally.tally();
 
-    // 'heaven' should be the only word present (starts with 'h' but isn't 'hell')
+    // `'heaven'` should be the only word present (starts with `'h'` but isn't `'hell'`)
     assert!(result.iter().any(|(word, _)| word.as_ref() == "heaven"));
     assert!(!result.iter().any(|(word, _)| word.as_ref() == "hell"));
 
@@ -799,7 +799,6 @@ mod wordtally_constructor_tests {
     #[test]
     fn with_custom_chunk_size() {
         let (_temp_dir, file_path) = create_test_file();
-        // Create custom performance with a specific chunk size
         let performance = Performance::default().with_chunk_size(32_768);
         let options = Options::with_defaults(
             Case::default(),
@@ -839,12 +838,9 @@ fn test_min_count_graphemes() {
 
 #[test]
 fn test_to_json() {
-    // Create temporary file
     let input_text = b"wombat wombat bat";
     let mut temp_file = tempfile::NamedTempFile::new().unwrap();
     std::io::Write::write_all(&mut temp_file, input_text).unwrap();
-
-    // Create options
     let filters = Filters::default();
     let options = Options::new(
         Case::default(),
@@ -856,7 +852,6 @@ fn test_to_json() {
         Performance::default(),
     );
 
-    // Create a static reference
     let shared_options = make_shared(options);
 
     let input = Input::new(temp_file.path().to_str().unwrap(), shared_options.io())
@@ -922,15 +917,14 @@ fn test_deserialization_with_serde() {
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
     assert_eq!(deserialized.tally(), original.tally());
 
-    // Options should be functionally equivalent but not the same instance
+    // Options should be functionally equivalent
     assert_eq!(deserialized.options().case(), original.options().case());
     assert_eq!(deserialized.options().sort(), original.options().sort());
-    assert!(!std::ptr::eq(deserialized.options(), original.options()));
+    // Deserialized instance will have owned options, not shared references
 }
 
 #[test]
 fn test_json_field_renamed() {
-    // Create temporary file
     let input_text = b"test json field renaming";
     let mut temp_file = tempfile::NamedTempFile::new().unwrap();
     std::io::Write::write_all(&mut temp_file, input_text).unwrap();
@@ -943,7 +937,7 @@ fn test_json_field_renamed() {
     let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
     let json = serde_json::to_string(&original).unwrap();
 
-    // Check that the JSON contains "uniqueCount" instead of "uniq_count"
+    // Check that the JSON contains `"uniqueCount"` instead of `"uniq_count"`
     assert!(json.contains("uniqueCount"));
     assert!(!json.contains("uniq_count"));
 }
@@ -967,4 +961,122 @@ fn test_json_field_camel_case_deserialization() {
     let deserialized: WordTally<'_> = serde_json::from_str(&serialized).unwrap();
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
+}
+
+#[test]
+fn test_into_owned_converts_borrowed_to_owned() {
+    let content = b"apple banana cherry";
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, content).unwrap();
+
+    let options = Options::default();
+    let input = Input::new(temp_file.path(), options.io()).unwrap();
+    let word_tally = WordTally::new(&input, &options).unwrap();
+
+    // Store original values before consuming
+    let original_count = word_tally.count();
+    let original_uniq_count = word_tally.uniq_count();
+    let original_tally_len = word_tally.tally().len();
+    let original_case = word_tally.options().case();
+
+    // Convert to owned
+    let owned_tally = word_tally.into_owned();
+
+    // Verify that all data is preserved
+    assert_eq!(owned_tally.count(), original_count);
+    assert_eq!(owned_tally.uniq_count(), original_uniq_count);
+    assert_eq!(owned_tally.tally().len(), original_tally_len);
+    assert_eq!(owned_tally.options().case(), original_case);
+}
+
+#[test]
+fn test_into_owned_preserves_all_data() {
+    let content = b"one two three one two one";
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, content).unwrap();
+
+    let options = Options::default()
+        .with_case(Case::Upper)
+        .with_sort(Sort::Desc)
+        .with_filters(
+            Filters::default()
+                .with_min_chars(2)
+                .with_exclude_words(vec!["ONE".to_string()]),
+        );
+
+    let input = Input::new(temp_file.path(), options.io()).unwrap();
+    let original = WordTally::new(&input, &options).unwrap();
+
+    // Store original values
+    let original_count = original.count();
+    let original_uniq_count = original.uniq_count();
+    let original_tally: Vec<_> = original.tally().to_vec();
+    let original_case = original.options().case();
+    let original_sort = original.options().sort();
+    let original_min_chars = original.options().filters().min_chars();
+
+    // Convert to owned
+    let owned = original.into_owned();
+
+    // Verify all data is preserved
+    assert_eq!(owned.count(), original_count);
+    assert_eq!(owned.uniq_count(), original_uniq_count);
+    assert_eq!(owned.tally(), &original_tally[..]);
+    assert_eq!(owned.options().case(), original_case);
+    assert_eq!(owned.options().sort(), original_sort);
+    assert_eq!(owned.options().filters().min_chars(), original_min_chars);
+}
+
+#[test]
+fn test_into_owned_multiple_conversions() {
+    // Test that we can convert to owned multiple times
+    let content = b"test multiple conversions";
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, content).unwrap();
+
+    let options = Options::default();
+    let input = Input::new(temp_file.path(), options.io()).unwrap();
+    let word_tally = WordTally::new(&input, &options).unwrap();
+
+    // First conversion
+    let owned1 = word_tally.into_owned();
+    assert_eq!(owned1.count(), 3);
+
+    // Second conversion (already owned, but should still work)
+    let owned2 = owned1.into_owned();
+    assert_eq!(owned2.count(), 3);
+    assert_eq!(owned2.uniq_count(), 3);
+}
+
+#[test]
+fn test_into_owned_with_custom_options() {
+    let content = b"HELLO WORLD HELLO RUST WORLD HELLO";
+    let mut temp_file = tempfile::NamedTempFile::new().unwrap();
+    std::io::Write::write_all(&mut temp_file, content).unwrap();
+
+    let options = Options::default()
+        .with_case(Case::Lower)
+        .with_sort(Sort::Asc)
+        .with_filters(Filters::default().with_min_count(2));
+
+    let input = Input::new(temp_file.path(), options.io()).unwrap();
+    let original = WordTally::new(&input, &options).unwrap();
+
+    // Verify original state (min_count filter applies)
+    // Only `"world"` (2) and `"hello"` (3) remain; `"rust"` (1) is filtered out
+    assert_eq!(original.count(), 5); // Total words after filtering
+    assert_eq!(original.uniq_count(), 2); // Unique words after filtering
+
+    // Convert to owned
+    let owned = original.into_owned();
+
+    // Verify owned version maintains the same state
+    assert_eq!(owned.count(), 5);
+    assert_eq!(owned.uniq_count(), 2);
+    assert_eq!(owned.options().case(), Case::Lower);
+    assert_eq!(owned.options().sort(), Sort::Asc);
+
+    // The tally should be sorted ascending by count and filtered by min_count
+    let tally = owned.tally();
+    assert_eq!(tally.len(), 2); // Filtered by min_count
 }

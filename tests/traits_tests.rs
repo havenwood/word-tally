@@ -7,7 +7,7 @@ use word_tally::options::{
     processing::Processing,
     serialization::{Format, Serialization},
 };
-use word_tally::{Input, Options};
+use word_tally::{Input, Options, WordTally};
 
 #[test]
 fn test_display_implementations() {
@@ -102,8 +102,8 @@ fn test_wordtally_deserialize() {
         "uniqueCount": 2
     }"#;
 
-    // Deserialize it
-    let word_tally: word_tally::WordTally<'_> = serde_json::from_str(json).unwrap();
+    // Deserialize directly into WordTally
+    let word_tally: WordTally<'_> = serde_json::from_str(json).unwrap();
 
     // Verify the values
     assert_eq!(word_tally.count(), 8);
