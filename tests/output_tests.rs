@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod output_tests {
     use std::fs;
-    use std::io::Write;
+    use std::io::{ErrorKind, Write};
     use std::path::PathBuf;
     use tempfile::NamedTempFile;
     use word_tally::Output;
@@ -52,11 +52,13 @@ mod output_tests {
     fn test_output_write_line() {
         let temp_file = NamedTempFile::new().expect("create temp file");
         let mut output = Output::file(temp_file.path()).expect("process test");
-        output.write_line("test line").expect("process test");
+        output
+            .write_line("I'm Nobody! Who are you?")
+            .expect("process test");
         output.flush().expect("process test");
 
         let contents = fs::read_to_string(temp_file.path()).expect("process test");
-        assert_eq!(contents, "test line");
+        assert_eq!(contents, "I'm Nobody! Who are you?");
     }
 
     #[test]
@@ -70,10 +72,112 @@ mod output_tests {
     fn test_output_write_trait() {
         let temp_file = NamedTempFile::new().expect("create temp file");
         let mut output = Output::file(temp_file.path()).expect("process test");
-        output.write_all(b"test data").expect("write test data");
+        output
+            .write_all("The Brain—is wider than the Sky—".as_bytes())
+            .expect("write test data");
         output.flush().expect("process test");
 
         let contents = fs::read_to_string(temp_file.path()).expect("process test");
-        assert_eq!(contents, "test data");
+        assert_eq!(contents, "The Brain—is wider than the Sky—");
+    }
+
+    #[test]
+    fn test_write_line_succeeds() {
+        let temp_file = NamedTempFile::new().expect("create temp file");
+        let mut output = Output::file(temp_file.path()).expect("process test");
+
+        output.write_line("").expect("write empty");
+        output.write_line("Hope").expect("write Hope");
+        output
+            .write_line("With a capital letter—")
+            .expect("write with capital");
+        output
+            .write_line("And without—is still a thing with feathers")
+            .expect("write feathers");
+        output
+            .write_line("Tell all the truth but tell it slant—")
+            .expect("write slant");
+
+        output.flush().expect("flush");
+
+        let contents = fs::read_to_string(temp_file.path()).expect("read file");
+        let expected = "HopeWith a capital letter—And without—is still a thing with feathersTell all the truth but tell it slant—";
+        assert_eq!(contents, expected);
+    }
+
+    #[test]
+    fn test_write_line_with_newlines() {
+        let temp_file = NamedTempFile::new().expect("create temp file");
+        let mut output = Output::file(temp_file.path()).expect("process test");
+
+        output
+            .write_line("Much Madness is divinest Sense—\nTo a discerning Eye—")
+            .expect("write lines");
+        output
+            .write_line("They shut me up in Prose—\n")
+            .expect("write with newline");
+
+        output.flush().expect("flush");
+
+        let contents = fs::read_to_string(temp_file.path()).expect("read file");
+        assert_eq!(
+            contents,
+            "Much Madness is divinest Sense—\nTo a discerning Eye—They shut me up in Prose—\n"
+        );
+    }
+
+    #[test]
+    #[cfg(unix)]
+    fn test_broken_pipe_simulation() {
+        use std::io::Write;
+        use std::process::{Command, Stdio};
+
+        let mut child = Command::new("sh")
+            .arg("-c")
+            .arg("exit 0")
+            .stdin(Stdio::piped())
+            .spawn()
+            .expect("failed to spawn process");
+
+        let mut stdin = child.stdin.take().expect("failed to get stdin");
+
+        child.wait().expect("failed to wait for child");
+
+        let write_result = stdin.write_all(b"data to write");
+
+        match write_result {
+            Err(e) if e.kind() == ErrorKind::BrokenPipe => {}
+            _ => panic!("Expected broken pipe error"),
+        }
+    }
+
+    #[test]
+    fn test_flush_can_fail() {
+        use std::io::{self, Write};
+
+        struct FailingWriter {
+            fail_on_flush: bool,
+        }
+
+        impl Write for FailingWriter {
+            fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+                Ok(buf.len())
+            }
+
+            fn flush(&mut self) -> io::Result<()> {
+                if self.fail_on_flush {
+                    Err(io::Error::other("flush failed"))
+                } else {
+                    Ok(())
+                }
+            }
+        }
+
+        let mut writer = FailingWriter {
+            fail_on_flush: true,
+        };
+        let flush_result = writer.flush();
+        assert!(flush_result.is_err());
+        assert_eq!(flush_result.unwrap_err().kind(), io::ErrorKind::Other);
     }
 }

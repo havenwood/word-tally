@@ -149,7 +149,9 @@ impl Verbose {
         let output = info.to_string();
         self.output
             .write_line(&output)
-            .context("failed to write verbose output")
+            .context("failed to write verbose output")?;
+
+        Ok(())
     }
 
     /// Creates and writes a CSV with metrics and values.

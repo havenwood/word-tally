@@ -31,13 +31,42 @@ impl Default for Output {
     }
 }
 
+/// `Write` trait implementation for our writer.
+///
+/// Note: Broken pipe handling is needed for commands like `word-tally | head`.
+/// Once it stabilizes, the `unix_sigpipe` feature will be a better solution here.
 impl Write for Output {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        self.writer.write(buf)
+        match self.writer.write(buf) {
+            Ok(n) => Ok(n),
+            Err(err) => match err.kind() {
+                // Pretend we wrote all bytes on broken pipe
+                BrokenPipe => Ok(buf.len()),
+                _ => Err(err),
+            },
+        }
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.writer.flush()
+        match self.writer.flush() {
+            Ok(()) => Ok(()),
+            Err(err) => match err.kind() {
+                // Ignore broken pipe errors for CLI tools
+                BrokenPipe => Ok(()),
+                _ => Err(err),
+            },
+        }
+    }
+
+    fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
+        match self.writer.write_all(buf) {
+            Ok(()) => Ok(()),
+            Err(err) => match err.kind() {
+                // Ignore broken pipe errors for CLI tools
+                BrokenPipe => Ok(()),
+                _ => Err(err),
+            },
+        }
     }
 }
 
@@ -54,7 +83,7 @@ impl Output {
     /// Creates an `Output` that writes to a file with error context.
     pub fn file(path: &Path) -> Result<Self> {
         let file = File::create(path)
-            .map(|file| Box::new(LineWriter::new(file)) as Writer)
+            .map(|file| Box::new(LineWriter::new(file)))
             .with_context(|| format!("failed to create output file: {}", path.display()))?;
 
         Ok(Self { writer: file })
@@ -74,14 +103,9 @@ impl Output {
         }
     }
 
-    /// Writes a line to the writer, handling `BrokenPipe` errors gracefully.
-    pub fn write_line(&mut self, line: &str) -> Result<()> {
-        Self::handle_broken_pipe(self.writer.write_all(line.as_bytes()))
-    }
-
-    /// Flushes the writer, ensuring all output is written.
-    pub fn flush(&mut self) -> Result<()> {
-        Self::handle_broken_pipe(self.writer.flush())
+    /// Writes a line to the writer.
+    pub fn write_line(&mut self, line: &str) -> io::Result<()> {
+        self.write_all(line.as_bytes())
     }
 
     /// Writes word tally data in the specified format.
@@ -93,7 +117,8 @@ impl Output {
         match format {
             Format::Text => {
                 for (word, count) in word_data {
-                    self.write_line(&format!("{word}{delimiter}{count}\n"))?;
+                    self.write_line(&format!("{word}{delimiter}{count}\n"))
+                        .context("failed to write word-count pair")?;
                 }
             }
             Format::Json => {
@@ -104,7 +129,8 @@ impl Output {
                         .collect::<Vec<_>>(),
                 )
                 .context("failed to serialize word tally to JSON")?;
-                self.write_line(&format!("{json}\n"))?;
+                self.write_line(&format!("{json}\n"))
+                    .context("failed to write JSON output")?;
             }
             Format::Csv => {
                 let mut wtr = csv::Writer::from_writer(Vec::new());
@@ -114,21 +140,11 @@ impl Output {
                 }
                 let csv_data = String::from_utf8(wtr.into_inner()?)
                     .context("failed to convert CSV output to UTF-8 string")?;
-                self.write_line(&csv_data)?;
+                self.write_line(&csv_data)
+                    .context("failed to write CSV output")?;
             }
         }
 
-        self.flush()
-    }
-
-    /// Processes the result of a write, handling `BrokenPipe` errors gracefully.
-    fn handle_broken_pipe(result: io::Result<()>) -> Result<()> {
-        match result {
-            Ok(()) => Ok(()),
-            Err(err) => match err.kind() {
-                BrokenPipe => Ok(()),
-                _ => Err(err.into()),
-            },
-        }
+        self.flush().context("failed to flush output")
     }
 }

@@ -449,3 +449,56 @@ fn parallel_with_large_chunk() {
         .stdout(contains("sublime 1"))
         .stdout(contains("forever 1"));
 }
+
+#[test]
+#[cfg(unix)]
+fn broken_pipe_behavior() {
+    let input = r#"Because I could not stop for Death –
+He kindly stopped for me –
+The Carriage held but just Ourselves –
+And Immortality."#;
+
+    let mut cmd = word_tally();
+    cmd.write_stdin(input)
+        .assert()
+        .success()
+        .stdout(contains("death"));
+}
+
+#[test]
+fn normal_pipe_operation() {
+    let input = r#""Hope" is the thing with feathers -
+That perches in the soul -"#;
+
+    let mut cmd = word_tally();
+    cmd.write_stdin(input);
+    cmd.assert()
+        .success()
+        .stdout(contains("hope"))
+        .stdout(contains("feathers"));
+}
+
+#[test]
+#[cfg(unix)]
+fn large_input_broken_pipe() {
+    let mut large_input = String::new();
+    for _ in 0..1000 {
+        large_input.push_str(
+            r#"I dwell in Possibility – a fairer House than Prose –
+More numerous of Windows – Superior – for Doors –
+
+Of Chambers as the Cedars – Impregnable of eye –
+And for an everlasting Roof
+The Gambrels of the Sky –
+
+Of Visitors – the fairest –
+For Occupation – This –
+The spreading wide my narrow Hands
+To gather Paradise –
+
+"#,
+        );
+    }
+    let mut cmd = word_tally();
+    cmd.write_stdin(large_input).assert().success();
+}

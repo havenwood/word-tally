@@ -9,10 +9,9 @@ This directory contains all tests for the word-tally project.
   - `cli_case_sort_tests.rs`: Case and sort options
   - `cli_env_tests.rs`: Environment variable tests
   - `cli_format_tests.rs`: Output format options (JSON, CSV, text)
-  - `cli_output_tests.rs`: File output tests
   - `cli_pattern_tests.rs`: Pattern matching and filtering
   - `cli_verbose_tests.rs`: Verbose output tests
-  - `cli_tests.rs`: Legacy CLI tests
+  - `cli_tests.rs`: General CLI tests including output and pipe handling
 
 - **Library Tests** (`tally_*.rs`): Tests for the core library functionality
   - `tally_core_tests.rs`: Core WordTally functionality
