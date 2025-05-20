@@ -1,6 +1,7 @@
 //! I/O strategy and processing mode benchmarks.
 
-use criterion::{BatchSize, Criterion, black_box, criterion_group, criterion_main};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
 use word_tally::{Input, Io, Options, Processing, WordTally};
 
 #[path = "common.rs"]

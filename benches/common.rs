@@ -1,11 +1,12 @@
 //! Shared benchmark utilities.
 
+use std::hint::black_box;
 use std::io::Write;
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-use criterion::{BatchSize, Criterion, black_box, measurement::WallTime};
+use criterion::{BatchSize, Criterion, measurement::WallTime};
 use fake::Fake;
 use fake::faker::lorem::en::Words;
 use tempfile::NamedTempFile;

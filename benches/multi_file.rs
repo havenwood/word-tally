@@ -1,6 +1,7 @@
 //! Multi-file processing benchmarks.
 
-use criterion::{BatchSize, Criterion, black_box, criterion_group, criterion_main};
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
+use std::hint::black_box;
 use tempfile::NamedTempFile;
 use word_tally::{Input, Io, Options, Processing, TallyMap};
 
