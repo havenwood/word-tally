@@ -403,6 +403,9 @@ fn test_slice_reader_large_buffer() {
     use std::fs::File;
     use word_tally::input_reader::{BytesReader, MmapReader};
 
+    // Define constants before any statements
+    const BUFFER_SIZE: usize = 8192;
+
     let data = b"I heard a fly buzz when I died\n".repeat(1000);
 
     // Create temporary file for mmap
@@ -415,9 +418,6 @@ fn test_slice_reader_large_buffer() {
 
     let mut mmap_reader = MmapReader::new(&mmap);
     let mut bytes_reader = BytesReader::new(&data);
-
-    // Test that the 8KB buffer limit works
-    const BUFFER_SIZE: usize = 8192;
 
     let mmap_fill = mmap_reader.fill_buf().expect("process test");
     let bytes_fill = bytes_reader.fill_buf().expect("process test");

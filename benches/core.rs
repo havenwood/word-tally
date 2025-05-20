@@ -26,7 +26,7 @@ fn bench_sorting_strategies(c: &mut Criterion) {
         group.bench_function(*sort_name, |b| {
             self::common::bench_word_tally_with_string(
                 b,
-                text_sample.clone(),
+                &text_sample,
                 &shared_options,
                 create_temp_input,
             );
@@ -62,7 +62,7 @@ fn bench_filtering_strategies(c: &mut Criterion) {
         group.bench_function(*filter_name, |b| {
             self::common::bench_word_tally_with_string(
                 b,
-                text_sample.clone(),
+                &text_sample,
                 &shared_options,
                 create_temp_input,
             );

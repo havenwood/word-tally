@@ -31,7 +31,7 @@ fn test_display_implementations() {
 
     // Test Performance Display
     let perf = Performance::default();
-    let display = format!("{}", perf);
+    let display = format!("{perf}");
     assert!(display.contains("Performance {"));
     assert!(display.contains("tally_capacity"));
     assert!(display.contains("uniqueness"));
@@ -140,10 +140,10 @@ fn test_pathbuf_as_ref() {
 #[test]
 fn test_input_display() {
     let file_input = Input::File(PathBuf::from("/tmp/test.txt"));
-    assert_eq!(format!("{}", file_input), "File(/tmp/test.txt)");
+    assert_eq!(format!("{file_input}"), "File(/tmp/test.txt)");
 
     let stdin_input = Input::Stdin;
-    assert_eq!(format!("{}", stdin_input), "Stdin");
+    assert_eq!(format!("{stdin_input}"), "Stdin");
 }
 
 #[test]

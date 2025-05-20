@@ -15,7 +15,7 @@
 //! - `args.rs`: CLI argument parsing and command-line interface
 //! - `exit_code.rs`: Exit code definitions and handling
 //! - `input.rs`: Input source management strategies
-//! - `input_reader.rs`: Input readers implementing Read and BufRead traits
+//! - `input_reader.rs`: Input readers implementing `Read` and `BufRead` traits
 //! - `lib.rs`: Core library functionality and API
 //! - `main.rs`: CLI entry point and execution
 //! - `options/`: Configuration and processing options
@@ -183,13 +183,31 @@ impl<'a> From<WordTally<'a>> for Vec<(Word, Count)> {
     }
 }
 
+/// An explicit `iter` method for `WordTally`.
+impl WordTally<'_> {
+    /// Returns an iterator over references to the words and counts.
+    pub fn iter(&self) -> slice::Iter<'_, (Word, Count)> {
+        self.tally.iter()
+    }
+}
+
 /// Makes `WordTally` reference available directly in a for loop.
 impl<'i> IntoIterator for &'i WordTally<'_> {
     type Item = &'i (Word, Count);
     type IntoIter = slice::Iter<'i, (Word, Count)>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.tally.iter()
+        self.iter()
+    }
+}
+
+/// Allows consuming the `WordTally` in a for loop, yielding owned pairs.
+impl IntoIterator for WordTally<'_> {
+    type Item = (Word, Count);
+    type IntoIter = <Box<[(Word, Count)]> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.tally.into_iter()
     }
 }
 
@@ -232,6 +250,7 @@ impl<'a> WordTally<'a> {
     }
 
     /// Creates a `WordTally` instance from a `TallyMap` and `Options`.
+    #[must_use]
     pub fn from_tally_map(mut tally_map: TallyMap, options: &'a Options) -> Self {
         options.filters().apply(&mut tally_map, options.case());
 
@@ -252,16 +271,19 @@ impl<'a> WordTally<'a> {
     }
 
     /// Gets the `tally` field.
+    #[must_use]
     pub fn tally(&self) -> &[(Word, Count)] {
         &self.tally
     }
 
     /// Consumes the `tally` field.
+    #[must_use]
     pub fn into_tally(self) -> Tally {
         self.tally
     }
 
     /// Converts to owned data with an appropriate lifetime.
+    #[must_use]
     pub fn into_owned<'b>(self) -> WordTally<'b>
     where
         'a: 'b,
@@ -275,16 +297,19 @@ impl<'a> WordTally<'a> {
     }
 
     /// Gets a reference to the `options`.
+    #[must_use]
     pub fn options(&self) -> &Options {
         &self.options
     }
 
     /// Gets the `uniq_count` field.
+    #[must_use]
     pub const fn uniq_count(&self) -> Count {
         self.uniq_count
     }
 
     /// Gets the `count` field.
+    #[must_use]
     pub const fn count(&self) -> Count {
         self.count
     }

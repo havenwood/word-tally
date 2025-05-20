@@ -66,13 +66,13 @@ impl AsRef<[String]> for Patterns {
 }
 
 impl Patterns {
-    /// Creates a pattern set and compiles the RegexSet.
+    /// Creates a pattern set and compiles the `RegexSet`.
     fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
         let regex_set = RegexSet::new(&input_patterns)?;
 
         Ok(Self {
-            regex_set,
             input_patterns,
+            regex_set,
         })
     }
 
@@ -81,7 +81,7 @@ impl Patterns {
         Self::new(input_patterns.to_vec())
     }
 
-    /// Checks if a word matches any pattern in the RegexSet.
+    /// Checks if a word matches any pattern in the `RegexSet`.
     fn matches(&self, word: &str) -> bool {
         self.regex_set.is_match(word)
     }
@@ -128,26 +128,34 @@ impl ExcludePatterns {
     /// let empty = ExcludePatterns::default();
     /// assert!(empty.is_empty());
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns a `regex::Error` if any pattern cannot be compiled into a valid regular expression.
     pub fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
         Ok(Self(Patterns::new(input_patterns)?))
     }
 
     /// Tests if a word matches any pattern.
+    #[must_use]
     pub fn matches(&self, word: &str) -> bool {
         self.0.matches(word)
     }
 
     /// Returns a slice of the original pattern strings.
+    #[must_use]
     pub fn as_patterns(&self) -> &[String] {
         self.0.as_patterns()
     }
 
     /// Returns the number of patterns.
+    #[must_use]
     pub const fn len(&self) -> usize {
         self.0.input_patterns.len()
     }
 
     /// Returns true if there are no patterns.
+    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.0.input_patterns.is_empty()
     }
@@ -184,9 +192,8 @@ impl<'de> Deserialize<'de> for ExcludePatterns {
         use serde::de::Error;
         let input_patterns: InputPatterns = Vec::deserialize(deserializer)?;
 
-        Self::new(input_patterns).map_err(|e| {
-            D::Error::custom(format!("failed to compile exclude regex patterns: {}", e))
-        })
+        Self::new(input_patterns)
+            .map_err(|e| D::Error::custom(format!("failed to compile exclude regex patterns: {e}")))
     }
 }
 
@@ -258,26 +265,34 @@ impl IncludePatterns {
     /// assert!(patterns.matches("unlike"));
     /// assert!(!patterns.matches("likely"));
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns a `regex::Error` if any pattern cannot be compiled into a valid regular expression.
     pub fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
         Ok(Self(Patterns::new(input_patterns)?))
     }
 
     /// Tests if a word matches any pattern.
+    #[must_use]
     pub fn matches(&self, word: &str) -> bool {
         self.0.matches(word)
     }
 
     /// Returns a slice of the original pattern strings.
+    #[must_use]
     pub fn as_patterns(&self) -> &[String] {
         self.0.as_patterns()
     }
 
     /// Returns the number of patterns.
+    #[must_use]
     pub const fn len(&self) -> usize {
         self.0.input_patterns.len()
     }
 
     /// Returns true if there are no patterns.
+    #[must_use]
     pub const fn is_empty(&self) -> bool {
         self.0.input_patterns.is_empty()
     }
@@ -314,9 +329,8 @@ impl<'de> Deserialize<'de> for IncludePatterns {
         use serde::de::Error;
         let input_patterns: InputPatterns = Vec::deserialize(deserializer)?;
 
-        Self::new(input_patterns).map_err(|e| {
-            D::Error::custom(format!("failed to compile include regex patterns: {}", e))
-        })
+        Self::new(input_patterns)
+            .map_err(|e| D::Error::custom(format!("failed to compile include regex patterns: {e}")))
     }
 }
 

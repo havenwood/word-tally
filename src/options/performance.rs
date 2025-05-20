@@ -17,10 +17,10 @@ pub struct Performance {
     pub words_per_kb: u16,
 
     /// Size of chunks for parallel processing (in bytes).
-    pub chunk_size: usize,
+    pub chunk_size: u64,
 
     /// Base stdin size for unknown-sized inputs.
-    pub base_stdin_size: usize,
+    pub base_stdin_size: u64,
 
     /// Thread configuration for parallel processing.
     pub threads: Threads,
@@ -43,14 +43,30 @@ impl Default for Performance {
 }
 
 impl Performance {
+    /// Helper to convert `u64` to `usize` with platform-aware capping
+    #[inline]
+    #[allow(clippy::cast_possible_truncation)]
+    #[must_use]
+    pub const fn u64_to_usize(value: u64) -> usize {
+        if cfg!(target_pointer_width = "32") {
+            // Cap at `u32::MAX` on 32-bit platforms
+            if value > u32::MAX as u64 {
+                u32::MAX as usize
+            } else {
+                value as usize
+            }
+        } else {
+            value as usize
+        }
+    }
     /// Default configuration constants.
     const WORDS_PER_KB: u16 = 128; // Words-per-KB estimation
     const MAX_WORDS_PER_KB: u16 = 512; // Maximum words-per-KB (one word every other byte)
     const UNIQUENESS_RATIO: u16 = 256; // 256:1 ratio saves memory (~10:1 is more reasonable for books)
-    const CHUNK_SIZE: usize = 64 * 1024; // 64KB
-    const BASE_STDIN_SIZE: usize = 256 * 1024; // 256KB estimated stdin size
+    const CHUNK_SIZE: u64 = 64 * 1024; // 64KB
+    const BASE_STDIN_SIZE: u64 = 256 * 1024; // 256KB estimated stdin size
     const MIN_THREAD_CAPACITY: usize = 1024; // Minimum capacity per thread
-    const CHARS_PER_LINE: usize = 80; // Chars-per-line estimation
+    const CHARS_PER_LINE: u64 = 80; // Chars-per-line estimation
 
     /// Environment variable names for configuration.
     const ENV_STDIN_BUFFER_SIZE: &str = "WORD_TALLY_STDIN_BUFFER_SIZE";
@@ -84,36 +100,42 @@ impl Performance {
     }
 
     /// Set the base stdin size for unknown-sized inputs.
+    #[must_use]
     pub const fn with_base_stdin_size(mut self, size: usize) -> Self {
-        self.base_stdin_size = size;
+        self.base_stdin_size = size as u64;
         self
     }
 
     /// Set the chunk size for this configuration.
+    #[must_use]
     pub const fn with_chunk_size(mut self, size: usize) -> Self {
-        self.chunk_size = size;
+        self.chunk_size = size as u64;
         self
     }
 
     /// Set the thread count.
+    #[must_use]
     pub const fn with_threads(mut self, threads: Threads) -> Self {
         self.threads = threads;
         self
     }
 
     /// Set the uniqueness ratio for this configuration.
+    #[must_use]
     pub const fn with_uniqueness_ratio(mut self, ratio: u16) -> Self {
         self.uniqueness_ratio = ratio;
         self
     }
 
     /// Set verbose mode.
+    #[must_use]
     pub const fn with_verbose(mut self, verbose: bool) -> Self {
         self.verbose = verbose;
         self
     }
 
     /// Set the words-per-KB for this configuration.
+    #[must_use]
     pub const fn with_words_per_kb(mut self, words_per_kb: u16) -> Self {
         self.words_per_kb = if words_per_kb > Self::MAX_WORDS_PER_KB {
             Self::MAX_WORDS_PER_KB
@@ -124,56 +146,67 @@ impl Performance {
     }
 
     /// Get the base stdin size.
-    pub const fn base_stdin_size(&self) -> usize {
+    #[must_use]
+    pub const fn base_stdin_size(&self) -> u64 {
         self.base_stdin_size
     }
 
     /// Get the chunk size.
+    #[must_use]
     pub const fn chunk_size(&self) -> usize {
-        self.chunk_size
+        Self::u64_to_usize(self.chunk_size)
     }
 
     /// Get the thread configuration.
+    #[must_use]
     pub const fn threads(&self) -> Threads {
         self.threads
     }
 
     /// Calculate capacity based on input size in bytes.
-    const fn calculate_capacity(&self, size_bytes: usize) -> usize {
+    const fn calculate_capacity(&self, size_bytes: u64) -> usize {
         Self::calculate_capacity_static(size_bytes, self.words_per_kb, self.uniqueness_ratio)
     }
 
     /// Static version of capacity calculation for use in const contexts.
     const fn calculate_capacity_static(
-        size_bytes: usize,
+        size_bytes: u64,
         words_per_kb: u16,
         uniqueness_ratio: u16,
     ) -> usize {
-        let kb_size = size_bytes / 1024;
+        // For extremely large files, cap at usize::MAX/u64::MAX boundary
+        let kb_size = (size_bytes / 1024) as usize;
         let estimated_words = kb_size * words_per_kb as usize;
         estimated_words / uniqueness_ratio as usize
     }
 
     /// Estimated capacity based on input size.
+    #[must_use]
     pub const fn capacity(&self, input_size: Option<usize>) -> usize {
         match input_size {
             None => Self::base_stdin_tally_capacity(),
-            Some(size) => self.calculate_capacity(size),
+            Some(size) => self.calculate_capacity(size as u64),
         }
     }
 
     /// Default configuration value for export.
+    #[must_use]
     pub const fn base_stdin_tally_capacity() -> usize {
-        Self::BASE_STDIN_SIZE / 1024 * Self::WORDS_PER_KB as usize / Self::UNIQUENESS_RATIO as usize
+        let capacity = (Self::BASE_STDIN_SIZE / 1024) * (Self::WORDS_PER_KB as u64)
+            / (Self::UNIQUENESS_RATIO as u64);
+        Self::u64_to_usize(capacity)
     }
 
     /// Estimated lines per chunk based on chunk size and average line length.
+    #[must_use]
     pub const fn lines_per_chunk(&self) -> usize {
         let lines = self.chunk_size / Self::CHARS_PER_LINE;
-        if lines > 128 { lines } else { 128 }
+        let safe_lines = Self::u64_to_usize(lines);
+        if safe_lines > 128 { safe_lines } else { 128 }
     }
 
     /// Capacity for each thread in parallel processing.
+    #[must_use]
     pub fn capacity_per_thread(&self) -> usize {
         let thread_count = self.threads.count();
         let per_thread = Self::base_stdin_tally_capacity() / thread_count;

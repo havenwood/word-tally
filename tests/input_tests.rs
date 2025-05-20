@@ -68,23 +68,23 @@ fn test_input_default() {
 #[test]
 fn test_input_display() {
     let stdin_input = Input::default();
-    assert_eq!(format!("{}", stdin_input), "Stdin");
+    assert_eq!(format!("{stdin_input}"), "Stdin");
 
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, b"test").expect("write test data");
 
     let file_input = Input::new(temp_file.path(), Io::Streamed).expect("create test input");
-    let file_display = format!("{}", file_input);
+    let file_display = format!("{file_input}");
     assert!(file_display.starts_with("File("));
     assert!(file_display.contains(temp_file.path().display().to_string().as_str()));
 
     let mmap_input = Input::new(temp_file.path(), Io::MemoryMapped).expect("create test input");
-    let mmap_display = format!("{}", mmap_input);
+    let mmap_display = format!("{mmap_input}");
     assert!(mmap_display.starts_with("Mmap("));
     assert!(mmap_display.contains(temp_file.path().display().to_string().as_str()));
 
     let bytes_input = Input::from_bytes(b"test");
-    assert_eq!(format!("{}", bytes_input), "Bytes");
+    assert_eq!(format!("{bytes_input}"), "Bytes");
 }
 
 #[test]
@@ -100,7 +100,7 @@ fn test_input_clone() {
 
     assert_eq!(input.source(), cloned.source());
     assert_eq!(input.size(), cloned.size());
-    assert_eq!(format!("{:?}", input), format!("{:?}", cloned));
+    assert_eq!(format!("{input:?}"), format!("{:?}", cloned));
 }
 
 #[test]

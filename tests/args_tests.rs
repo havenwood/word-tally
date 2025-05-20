@@ -369,7 +369,7 @@ fn test_args_input_from_file() {
         .arg("-v")
         .assert()
         .success()
-        .stderr(contains(format!("source {}", filename)));
+        .stderr(contains(format!("source {filename}")));
 }
 
 #[test]
@@ -504,12 +504,12 @@ fn test_args_all_io_modes() {
     for (input, expected) in &test_inputs {
         Command::cargo_bin("word-tally")
             .expect("execute operation")
-            .arg(format!("--io={}", input))
+            .arg(format!("--io={input}"))
             .arg("-v")
             .write_stdin("test")
             .assert()
             .success()
-            .stderr(contains(format!("io {}", expected)));
+            .stderr(contains(format!("io {expected}")));
     }
 }
 
@@ -520,12 +520,12 @@ fn test_args_case_modes() {
     for case in &test_cases {
         Command::cargo_bin("word-tally")
             .expect("execute operation")
-            .arg(format!("--case={}", case))
+            .arg(format!("--case={case}"))
             .arg("-v")
             .write_stdin("Test")
             .assert()
             .success()
-            .stderr(contains(format!("case {}", case)));
+            .stderr(contains(format!("case {case}")));
     }
 }
 
@@ -536,12 +536,12 @@ fn test_args_sort_modes() {
     for sort in &test_sorts {
         Command::cargo_bin("word-tally")
             .expect("execute operation")
-            .arg(format!("--sort={}", sort))
+            .arg(format!("--sort={sort}"))
             .arg("-v")
             .write_stdin("test")
             .assert()
             .success()
-            .stderr(contains(format!("order {}", sort)));
+            .stderr(contains(format!("order {sort}")));
     }
 }
 
@@ -552,7 +552,7 @@ fn test_args_format_modes() {
     for format in &test_formats {
         Command::cargo_bin("word-tally")
             .expect("execute operation")
-            .arg(format!("--format={}", format))
+            .arg(format!("--format={format}"))
             .arg("-v")
             .write_stdin("test")
             .assert()

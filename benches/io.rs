@@ -27,12 +27,12 @@ fn bench_io_processing_combinations(c: &mut Criterion, size_kb: usize) {
     ];
 
     {
-        let group_name = format!("io_strategies/file_size_{}kb", size_kb);
+        let group_name = format!("io_strategies/file_size_{size_kb}kb");
         let mut group = create_bench_group(c, &group_name);
 
         for (io, io_name) in &io_strategies {
             for (processing, proc_name) in &processing_strategies {
-                let benchmark_name = format!("{}_{}", io_name, proc_name);
+                let benchmark_name = format!("{io_name}_{proc_name}");
                 let options = Options::default().with_io(*io).with_processing(*processing);
                 let shared_options = make_shared(options);
 

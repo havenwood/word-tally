@@ -28,11 +28,13 @@ pub struct TallyMap {
 
 impl TallyMap {
     /// Creates a new empty `TallyMap`.
+    #[must_use]
     pub fn new() -> Self {
         Self::default()
     }
 
     /// Creates a new `TallyMap` with the specified capacity.
+    #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
             inner: HashMap::with_capacity(capacity),
@@ -40,11 +42,13 @@ impl TallyMap {
     }
 
     /// Returns the number of unique words in the map.
+    #[must_use]
     pub fn len(&self) -> usize {
         self.inner.len()
     }
 
     /// Returns true if the map contains no words.
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.inner.is_empty()
     }
@@ -78,6 +82,7 @@ impl TallyMap {
     /// Merge two tally maps, always merging the smaller into the larger.
     ///
     /// Returns the merged map containing the combined counts from both input maps.
+    #[must_use]
     pub fn merge(mut self, other: Self) -> Self {
         // Always merge the smaller map into the larger for better performance
         if self.len() < other.len() {
@@ -91,6 +96,14 @@ impl TallyMap {
     }
 
     /// Creates a `TallyMap` from an `Input` source and `Options`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Input cannot be read (file not found, permission denied, etc.)
+    /// - Input contains invalid UTF-8 data
+    /// - A configured thread pool cannot be initialized
+    /// - I/O errors occur during reading
     pub fn from_input(input: &Input, options: &Options) -> Result<Self> {
         match (options.processing(), options.io()) {
             // Sequential processing
@@ -178,7 +191,7 @@ impl TallyMap {
             }
 
             // Calculate batch size in bytes for better capacity estimation
-            let batch_size_bytes = batch.iter().map(|s| s.len()).sum();
+            let batch_size_bytes: usize = batch.iter().map(std::string::String::len).sum();
             let batch_capacity = perf.capacity(Some(batch_size_bytes));
 
             // Process batch in parallel - let Rayon handle work distribution
@@ -273,10 +286,16 @@ impl TallyMap {
             boundaries.push(0);
 
             boundaries.extend((1..num_chunks).map(|i| {
-                // Find next valid UTF-8 character boundary after `chunk_size` bytes using an iterator
-                (i * chunk_size..)
-                    .find(|&pos| pos >= total_size || content.is_char_boundary(pos))
-                    .unwrap_or(total_size)
+                // Find next valid UTF-8 character boundary after `chunk_size` bytes
+                // Use take() to limit the search range and avoid potential infinite iteration
+                let start_pos = i * chunk_size;
+                if start_pos >= total_size {
+                    total_size
+                } else {
+                    (start_pos..total_size)
+                        .find(|&pos| content.is_char_boundary(pos))
+                        .unwrap_or(total_size)
+                }
             }));
 
             // Last boundary
@@ -335,15 +354,17 @@ impl TallyMap {
     /// Reads the entire input into a string buffer.
     fn read_input_to_string(input: &Input, perf: &Performance) -> Result<String> {
         // Use actual size if available; otherwise use base_stdin_size() for unknown inputs
-        let buffer_capacity = input.size().unwrap_or_else(|| perf.base_stdin_size());
+        let buffer_capacity = input
+            .size()
+            .unwrap_or_else(|| Performance::u64_to_usize(perf.base_stdin_size()));
 
         // Read entire input into memory
         let mut buffer = String::with_capacity(buffer_capacity);
         input
             .reader()
-            .with_context(|| format!("failed to create reader for input: {}", input))?
+            .with_context(|| format!("failed to create reader for input: {input}"))?
             .read_to_string(&mut buffer)
-            .with_context(|| format!("failed to read input into buffer: {}", input))?;
+            .with_context(|| format!("failed to read input into buffer: {input}"))?;
 
         Ok(buffer)
     }

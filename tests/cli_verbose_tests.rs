@@ -144,8 +144,8 @@ fn verbose_csv_full_output() {
     assert!(lines[0].contains("unique-words"));
 
     // Check that second line contains expected data
-    assert!(lines[1].contains("-")); // source
-    assert!(lines[1].contains("0")); // totalWords and uniqueWords
+    assert!(lines[1].contains('-')); // source
+    assert!(lines[1].contains('0')); // totalWords and uniqueWords
 }
 
 #[test]
@@ -172,9 +172,9 @@ fn verbose_csv_with_options() {
 
     // Check metrics in second line
     let lines: Vec<&str> = stderr.lines().collect();
-    assert!(lines[1].contains("2")); // totalWords: Only "hope hope" remain after filters
-    assert!(lines[1].contains("1")); // uniqueWords: Only "hope" is unique
-    assert!(lines[1].contains("4")); // minChars
+    assert!(lines[1].contains('2')); // totalWords: Only "hope hope" remain after filters
+    assert!(lines[1].contains('1')); // uniqueWords: Only "hope" is unique
+    assert!(lines[1].contains('4')); // minChars
     assert!(lines[1].contains("the"));
     assert!(lines[1].contains("and"));
 }

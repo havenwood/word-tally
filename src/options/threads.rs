@@ -18,6 +18,7 @@ pub enum Threads {
 
 impl Threads {
     /// Get the actual number of threads that will be used.
+    #[must_use]
     pub fn count(self) -> usize {
         match self {
             Self::All => rayon::current_num_threads(),
@@ -26,6 +27,11 @@ impl Threads {
     }
 
     /// Initialize the Rayon thread pool.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the thread pool cannot be initialized or if the
+    /// number of threads specified is invalid.
     pub fn init_pool(self) -> anyhow::Result<()> {
         static INIT_ATTEMPTED: AtomicBool = AtomicBool::new(false);
 
@@ -41,7 +47,7 @@ impl Threads {
                     .num_threads(count as usize)
                     .build_global()
                     .with_context(|| {
-                        format!("failed to configure thread pool with {} threads", count)
+                        format!("failed to configure thread pool with {count} threads")
                     })?;
             }
             Self::All => {

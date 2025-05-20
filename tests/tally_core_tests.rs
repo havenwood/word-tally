@@ -54,7 +54,7 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
 
     if sort == Sort::Unsorted {
         let expected_set: std::collections::HashSet<(&str, Count)> =
-            fields.tally.iter().cloned().collect();
+            fields.tally.iter().copied().collect();
         let actual_set: std::collections::HashSet<(&str, Count)> = word_tally
             .tally()
             .iter()
@@ -81,7 +81,7 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
 
         let mut actual_by_count: std::collections::HashMap<Count, Vec<Box<str>>> =
             std::collections::HashMap::new();
-        for (word, count) in actual_tally.iter() {
+        for (word, count) in actual_tally {
             actual_by_count
                 .entry(*count)
                 .or_default()
@@ -90,15 +90,14 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
 
         for (count, expected_words) in expected_by_count {
             if let Some(actual_words) = actual_by_count.get(&count) {
-                let actual_set: std::collections::HashSet<&str> =
-                    actual_words.iter().map(|w| w.as_ref()).collect();
+                let actual_set: std::collections::HashSet<&str> = actual_words
+                    .iter()
+                    .map(std::convert::AsRef::as_ref)
+                    .collect();
                 for expected_word in expected_words {
                     assert!(
                         actual_set.contains(expected_word),
-                        "Expected word '{}' not found at count {}. Actual words: {:?}",
-                        expected_word,
-                        count,
-                        actual_words
+                        "Expected word '{expected_word}' not found at count {count}. Actual words: {actual_words:?}"
                     );
                 }
             }

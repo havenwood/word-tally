@@ -82,10 +82,14 @@ impl Display for Serialization {
 impl Serialization {
     /// Helper function to unescape a delimiter string.
     fn format_delimiter(delimiter: &str) -> Result<String> {
-        unescape(delimiter).with_context(|| format!("failed to unescape delimiter: {}", delimiter))
+        unescape(delimiter).with_context(|| format!("failed to unescape delimiter: {delimiter}"))
     }
 
     /// Create a new Serialize instance with specified settings.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the delimiter cannot be unescaped.
     pub fn new(format: Format, delimiter: &str) -> Result<Self> {
         let formatted_delimiter = Self::format_delimiter(delimiter)?;
 
@@ -96,6 +100,7 @@ impl Serialization {
     }
 
     /// Create a Serialize with custom format.
+    #[must_use]
     pub fn with_format(format: Format) -> Self {
         Self {
             format,
@@ -104,6 +109,10 @@ impl Serialization {
     }
 
     /// Create a Serialize with custom delimiter.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the delimiter cannot be unescaped.
     pub fn with_delimiter(delimiter: &str) -> Result<Self> {
         let formatted_delimiter = Self::format_delimiter(delimiter)?;
 
@@ -123,17 +132,20 @@ impl Serialization {
     /// let serialization = Serialization::default().with_format_setting(Format::Json);
     /// assert_eq!(serialization.format(), Format::Json);
     /// ```
+    #[must_use]
     pub const fn with_format_setting(mut self, format: Format) -> Self {
         self.format = format;
         self
     }
 
     /// Get the format setting.
+    #[must_use]
     pub const fn format(&self) -> Format {
         self.format
     }
 
     /// Get the delimiter.
+    #[must_use]
     pub fn delimiter(&self) -> &str {
         &self.delimiter
     }

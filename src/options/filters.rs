@@ -84,27 +84,27 @@ impl Filters {
     pub fn new(
         min_chars: &Option<MinChars>,
         min_count: &Option<MinCount>,
-        exclude_words: Option<&ExcludeWordsList>,
-        exclude_patterns: Option<&InputPatterns>,
-        include_patterns: Option<&InputPatterns>,
+        exclude_words: Option<ExcludeWordsList>,
+        exclude_patterns: Option<InputPatterns>,
+        include_patterns: Option<InputPatterns>,
     ) -> Result<Self, regex::Error> {
         // Create initial filters
         let mut filters = Self {
             min_chars: *min_chars,
             min_count: *min_count,
-            exclude_words: exclude_words.map(|words| ExcludeWords::from(words.to_vec())),
+            exclude_words: exclude_words.map(ExcludeWords::from),
             exclude_patterns: None,
             include_patterns: None,
         };
 
         // Add exclude regex patterns if provided
         if let Some(patterns) = exclude_patterns.filter(|p| !p.is_empty()) {
-            filters = filters.with_exclude_patterns(patterns)?;
+            filters = filters.with_exclude_patterns(&patterns)?;
         }
 
         // Add include regex patterns if provided
         if let Some(patterns) = include_patterns.filter(|p| !p.is_empty()) {
-            filters = filters.with_include_patterns(patterns)?;
+            filters = filters.with_include_patterns(&patterns)?;
         }
 
         Ok(filters)
@@ -120,24 +120,31 @@ impl Filters {
     /// let filters = Filters::default().with_min_chars(3);
     /// assert_eq!(filters.min_chars(), Some(3));
     /// ```
+    #[must_use]
     pub const fn with_min_chars(mut self, min_chars: MinChars) -> Self {
         self.min_chars = Some(min_chars);
         self
     }
 
     /// Set minimum count requirement.
+    #[must_use]
     pub const fn with_min_count(mut self, min_count: MinCount) -> Self {
         self.min_count = Some(min_count);
         self
     }
 
     /// Set words to exclude.
+    #[must_use]
     pub fn with_exclude_words(mut self, words: ExcludeWordsList) -> Self {
         self.exclude_words = Some(ExcludeWords(words));
         self
     }
 
     /// Set words to exclude, unescaping them first.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if unescaping of any word fails.
     pub fn with_unescaped_exclude_words(mut self, words: &[String]) -> Result<Self> {
         let unescaped_words = Self::format_exclude_words(words)?;
         self.exclude_words = Some(ExcludeWords(unescaped_words));
@@ -164,6 +171,10 @@ impl Filters {
     }
 
     /// Sets patterns to exclude words that match.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `regex::Error` if any pattern cannot be compiled into a valid regular expression.
     pub fn with_exclude_patterns(
         self,
         input_patterns: &InputPatterns,
@@ -176,6 +187,10 @@ impl Filters {
     }
 
     /// Sets patterns to include only words that match.
+    ///
+    /// # Errors
+    ///
+    /// Returns a `regex::Error` if any pattern cannot be compiled into a valid regular expression.
     pub fn with_include_patterns(
         self,
         input_patterns: &InputPatterns,
@@ -188,26 +203,31 @@ impl Filters {
     }
 
     /// Get the minimum character requirement.
+    #[must_use]
     pub const fn min_chars(&self) -> Option<MinChars> {
         self.min_chars
     }
 
     /// Get the minimum count requirement
+    #[must_use]
     pub const fn min_count(&self) -> Option<MinCount> {
         self.min_count
     }
 
     /// Get the excluded words list
+    #[must_use]
     pub const fn exclude_words(&self) -> &Option<ExcludeWords> {
         &self.exclude_words
     }
 
     /// Get the excluded patterns.
+    #[must_use]
     pub const fn exclude_patterns(&self) -> &Option<ExcludePatterns> {
         &self.exclude_patterns
     }
 
     /// Get the included patterns.
+    #[must_use]
     pub const fn include_patterns(&self) -> &Option<IncludePatterns> {
         &self.include_patterns
     }

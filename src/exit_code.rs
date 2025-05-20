@@ -17,6 +17,7 @@ pub const IO_ERROR: i32 = 74;
 pub const NO_PERMISSION: i32 = 77;
 
 /// Converts an error to an appropriate exit code.
+#[must_use]
 pub fn from_error(err: &Error) -> i32 {
     // Check Clap errors (during argument parsing)
     if let Some(clap_err) = err.downcast_ref::<clap::Error>() {

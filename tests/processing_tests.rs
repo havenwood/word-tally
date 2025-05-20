@@ -15,6 +15,8 @@ mod processing_tests {
 
     #[test]
     fn test_processing_traits() {
+        use std::collections::HashSet;
+
         // Test Debug trait
         assert_eq!(format!("{:?}", Processing::Sequential), "Sequential");
         assert_eq!(format!("{:?}", Processing::Parallel), "Parallel");
@@ -33,8 +35,6 @@ mod processing_tests {
         // Test Ord trait
         assert!(Processing::Sequential < Processing::Parallel);
 
-        // Test Hash trait (by using in a HashSet)
-        use std::collections::HashSet;
         let mut set = HashSet::new();
         set.insert(Processing::Sequential);
         set.insert(Processing::Parallel);

@@ -64,15 +64,15 @@ impl Sort {
                 .tally
                 .par_sort_unstable_by_key(|&(_, count)| Reverse(count)),
             (Self::Asc, Processing::Parallel) => {
-                w.tally.par_sort_unstable_by_key(|&(_, count)| count)
+                w.tally.par_sort_unstable_by_key(|&(_, count)| count);
             }
 
             // Sequential unstable sorting
             (Self::Desc, Processing::Sequential) => {
-                w.tally.sort_unstable_by_key(|&(_, count)| Reverse(count))
+                w.tally.sort_unstable_by_key(|&(_, count)| Reverse(count));
             }
             (Self::Asc, Processing::Sequential) => {
-                w.tally.sort_unstable_by_key(|&(_, count)| count)
+                w.tally.sort_unstable_by_key(|&(_, count)| count);
             }
         }
     }

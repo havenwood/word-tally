@@ -40,7 +40,7 @@ struct VerboseData<'a> {
 }
 
 impl<'a> VerboseData<'a> {
-    /// Create from WordTally and source.
+    /// Create from `WordTally` and source.
     fn from_tally(tally: &'a WordTally<'a>, source: &'a str) -> Self {
         let options = tally.options();
         let filters = options.filters();
@@ -70,11 +70,11 @@ impl<'a> VerboseData<'a> {
             ("source", self.source.to_string()),
             ("total-words", self.total_words.to_string()),
             ("unique-words", self.unique_words.to_string()),
-            ("delimiter", self.delimiter.clone()),
-            ("case", self.case.clone()),
-            ("order", self.order.clone()),
-            ("processing", self.processing.clone()),
-            ("io", self.io.clone()),
+            ("delimiter", self.delimiter.to_string()),
+            ("case", self.case.to_string()),
+            ("order", self.order.to_string()),
+            ("processing", self.processing.to_string()),
+            ("io", self.io.to_string()),
             (
                 "min-chars",
                 self.min_chars.map_or("none".to_string(), |v| v.to_string()),
@@ -87,19 +87,19 @@ impl<'a> VerboseData<'a> {
                 "exclude-words",
                 self.exclude_words
                     .as_ref()
-                    .map_or("none".to_string(), |v| v.to_string()),
+                    .map_or("none".to_string(), std::string::ToString::to_string),
             ),
             (
                 "exclude-patterns",
                 self.exclude_patterns
                     .as_ref()
-                    .map_or("none".to_string(), |v| v.to_string()),
+                    .map_or("none".to_string(), std::string::ToString::to_string),
             ),
             (
                 "include-patterns",
                 self.include_patterns
                     .as_ref()
-                    .map_or("none".to_string(), |v| v.to_string()),
+                    .map_or("none".to_string(), std::string::ToString::to_string),
             ),
         ]);
         pairs
@@ -126,7 +126,7 @@ impl Verbose {
             serde_json::to_string(data).context("failed to serialize verbose info to JSON")?;
 
         self.output
-            .write_chunk(&format!("{}\n\n", json))
+            .write_chunk(&format!("{json}\n\n"))
             .context("failed to write JSON output")
     }
 
@@ -149,7 +149,7 @@ impl Verbose {
         // Write each field as key-value pairs
         for (field_name, value) in data.field_pairs() {
             self.output
-                .write_chunk(&format!("{}{}{}\n", field_name, delimiter, value))?;
+                .write_chunk(&format!("{field_name}{delimiter}{value}\n"))?;
         }
 
         // Add separator if needed

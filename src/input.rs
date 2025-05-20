@@ -2,6 +2,7 @@
 
 use crate::input_reader::InputReader;
 use crate::options::io::Io;
+use crate::options::performance::Performance;
 use anyhow::{Context, Result};
 use memmap2::Mmap;
 use std::fmt::{self, Formatter};
@@ -23,6 +24,13 @@ impl Input {
     /// Construct an `Input` from a file path or stdin (designated by "-").
     ///
     /// For bytes data, use `Input::from_bytes` instead.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - File cannot be opened for reading (when using file-based I/O modes)
+    /// - Memory mapping fails (when using memory-mapped I/O)
+    /// - `Io::Bytes` is specified (use `Input::from_bytes` instead)
     pub fn new<P: AsRef<Path>>(p: P, io: Io) -> Result<Self> {
         // Handle the stdin case
         let path_ref = p.as_ref();
@@ -63,11 +71,19 @@ impl Input {
     }
 
     /// A helper to get an `InputReader` from this input.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - File cannot be opened for reading
+    /// - Standard input cannot be accessed
+    /// - Any other I/O error occurs during reader creation
     pub fn reader(&self) -> io::Result<InputReader<'_>> {
         InputReader::new(self)
     }
 
     /// Returns the file name of the input or `"-"` for stdin.
+    #[must_use]
     pub fn source(&self) -> String {
         match self {
             Self::Stdin => "-".to_string(),
@@ -75,8 +91,8 @@ impl Input {
                 || format!("No filename: {}", path.display()),
                 |name| {
                     name.to_str().map_or_else(
-                        || format!("Non-UTF-8 filename: {:?}", name),
-                        |utf8_name| utf8_name.to_string(),
+                        || format!("Non-UTF-8 filename: {}", name.to_string_lossy()),
+                        std::string::ToString::to_string,
                     )
                 },
             ),
@@ -86,12 +102,13 @@ impl Input {
 
     /// Get the size of the input in bytes, if available.
     /// Returns `None` for stdin and when a filesize can't be determined.
+    #[must_use]
     pub fn size(&self) -> Option<usize> {
         match self {
             Self::Stdin => None,
             Self::File(path) => fs::metadata(path)
-                .map(|metadata| metadata.len() as usize)
-                .ok(),
+                .ok()
+                .map(|metadata| Performance::u64_to_usize(metadata.len())),
             Self::Mmap(mmap, _) => Some(mmap.len()),
             Self::Bytes(bytes) => Some(bytes.len()),
         }

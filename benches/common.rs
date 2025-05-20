@@ -14,6 +14,7 @@ use tempfile::NamedTempFile;
 use word_tally::{Input, Io, Options, WordTally};
 
 /// Generate random text for benchmarks.
+#[must_use]
 pub fn generate_sample_text(lines: usize, words_per_line: std::ops::Range<usize>) -> String {
     (0..lines)
         .map(|_| {
@@ -26,11 +27,13 @@ pub fn generate_sample_text(lines: usize, words_per_line: std::ops::Range<usize>
 }
 
 /// Small text sample (~30KB)
+#[must_use]
 pub fn small_text() -> String {
     generate_sample_text(300, 5..12)
 }
 
 /// Medium text sample (~100KB)
+#[must_use]
 pub fn medium_text() -> String {
     generate_sample_text(800, 8..15)
 }
@@ -41,6 +44,7 @@ pub fn make_shared<T>(value: T) -> Arc<T> {
 }
 
 /// Standard Criterion configuration.
+#[must_use]
 pub fn standard_criterion_config() -> Criterion {
     Criterion::default()
         .configure_from_args()
@@ -49,17 +53,17 @@ pub fn standard_criterion_config() -> Criterion {
         .warm_up_time(Duration::from_secs(3))
 }
 
-/// Benchmark WordTally with string input.
+/// Benchmark `WordTally` with string input.
 pub fn bench_word_tally_with_string<F>(
     b: &mut criterion::Bencher<'_>,
-    text: String,
+    text: &str,
     options: &Arc<Options>,
     setup_fn: F,
 ) where
-    F: Fn(String) -> (NamedTempFile, Input),
+    F: Fn(&str) -> (NamedTempFile, Input),
 {
     b.iter_batched(
-        || setup_fn(text.clone()),
+        || setup_fn(text),
         |(temp_file, input)| {
             // Keep temp_file alive within the closure
             let _ = &temp_file;
@@ -70,6 +74,14 @@ pub fn bench_word_tally_with_string<F>(
 }
 
 /// Create benchmark file of specified size in KB.
+///
+/// # Panics
+///
+/// Panics if:
+/// - Failed to create a temporary file
+/// - Failed to write content to the file
+/// - Failed to flush the file
+#[must_use]
 pub fn create_benchmark_file(size_kb: usize) -> (NamedTempFile, PathBuf) {
     let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
 
@@ -98,7 +110,15 @@ pub fn create_bench_group<'a>(
 }
 
 /// Create temp file and input from text.
-pub fn create_temp_input(text: String) -> (NamedTempFile, Input) {
+///
+/// # Panics
+///
+/// Panics if:
+/// - Failed to create temporary file
+/// - Failed to write to temporary file
+/// - Failed to create Input from file path
+#[must_use]
+pub fn create_temp_input(text: &str) -> (NamedTempFile, Input) {
     let mut temp_file = NamedTempFile::new().expect("create benchmark temp file");
     std::io::Write::write_all(&mut temp_file, text.as_bytes()).expect("write benchmark text");
     let input = Input::new(temp_file.path(), Io::Buffered).expect("create benchmark input");

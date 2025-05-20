@@ -72,6 +72,10 @@ impl Write for Output {
 
 impl Output {
     /// Creates an `Output` from optional arguments, choosing between file or stdout.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the output file path is provided but the file cannot be created.
     pub fn new(output: &Option<PathBuf>) -> Result<Self> {
         match output.as_deref() {
             Some(path) if path == Path::new("-") => Ok(Self::stdout()),
@@ -81,6 +85,14 @@ impl Output {
     }
 
     /// Creates an `Output` that writes to a file with error context.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the file cannot be created, which could happen due to:
+    /// - Path doesn't exist
+    /// - Permission issues
+    /// - Disk is full
+    /// - File is already in use by another process
     pub fn file(path: &Path) -> Result<Self> {
         let file = File::create(path)
             .map(|file| Box::new(LineWriter::new(file)))
@@ -90,6 +102,7 @@ impl Output {
     }
 
     /// Creates an `Output` that writes to stdout.
+    #[must_use]
     pub fn stdout() -> Self {
         Self {
             writer: Box::new(io::stdout().lock()),
@@ -97,6 +110,7 @@ impl Output {
     }
 
     /// Creates an `Output` that writes to stderr.
+    #[must_use]
     pub fn stderr() -> Self {
         Self {
             writer: Box::new(io::stderr().lock()),
@@ -104,12 +118,25 @@ impl Output {
     }
 
     /// Writes a chunk of text to the writer.
+    ///
+    /// # Errors
+    ///
+    /// Returns an I/O error if the write operation fails, such as when:
+    /// - Disk is full
+    /// - File is not writable
+    /// - Pipe is broken
     pub fn write_chunk(&mut self, chunk: &str) -> io::Result<()> {
         self.write_all(chunk.as_bytes())
     }
 
     /// Writes word tally data in the specified format.
-    pub fn write_formatted_tally<'a>(&mut self, word_tally: &WordTally<'a>) -> Result<()> {
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Writing to the output fails due to I/O errors
+    /// - CSV or JSON serialization encounters an error
+    pub fn write_formatted_tally(&mut self, word_tally: &WordTally<'_>) -> Result<()> {
         let format = word_tally.options().serialization().format();
         let delimiter = word_tally.options().serialization().delimiter();
         let tally = word_tally.tally();

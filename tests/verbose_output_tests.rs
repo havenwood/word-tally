@@ -103,7 +103,7 @@ mod verbose_unit_tests {
         let tally = create_test_tally(&options);
 
         // Test text serialization through debug trait
-        let text = format!("{:?}", tally);
+        let text = format!("{tally:?}");
         assert!(!text.is_empty());
     }
 

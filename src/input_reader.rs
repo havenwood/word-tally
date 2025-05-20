@@ -1,4 +1,4 @@
-//! Input readers implementing Read and BufRead traits.
+//! Input readers implementing Read and `BufRead` traits.
 
 use crate::input::Input;
 use memmap2::Mmap;
@@ -17,6 +17,14 @@ pub enum InputReader<'a> {
 
 impl<'a> InputReader<'a> {
     /// Create an `InputReader` instance from an `Input`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file cannot be opened (for file-based inputs)
+    /// - Standard input is not accessible
+    /// - Permission is denied when accessing a file
+    /// - The file does not exist
     pub fn new(input: &'a Input) -> io::Result<Self> {
         match input {
             Input::Stdin => Ok(Self::Stdin(BufReader::new(io::stdin()))),
@@ -43,7 +51,7 @@ impl<'a> InputReader<'a> {
 }
 
 // The `impl BufRead` provides `lines()` for an `InputReader`
-impl<'a> BufRead for InputReader<'a> {
+impl BufRead for InputReader<'_> {
     fn fill_buf(&mut self) -> io::Result<&[u8]> {
         match self {
             Self::Stdin(reader) => reader.fill_buf(),
@@ -63,7 +71,7 @@ impl<'a> BufRead for InputReader<'a> {
     }
 }
 
-impl<'a> Read for InputReader<'a> {
+impl Read for InputReader<'_> {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         match self {
             Self::Stdin(reader) => reader.read(buf),

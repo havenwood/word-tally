@@ -29,9 +29,9 @@ fn test_filters_new() {
     let filters = Filters::new(
         &min_chars,
         &min_count,
-        exclude_words.as_ref(),
-        exclude_patterns.as_ref(),
-        include_patterns.as_ref(),
+        exclude_words.clone(),
+        exclude_patterns,
+        include_patterns.clone(),
     )
     .expect("execute operation");
 
@@ -45,9 +45,9 @@ fn test_filters_new() {
     let filters = Filters::new(
         &min_chars,
         &min_count,
-        exclude_words.as_ref(),
-        exclude_patterns.as_ref(),
-        include_patterns.as_ref(),
+        exclude_words.clone(),
+        exclude_patterns,
+        include_patterns,
     )
     .expect("execute operation");
 
@@ -62,9 +62,9 @@ fn test_filters_new() {
     let filters = Filters::new(
         &min_chars,
         &min_count,
-        exclude_words.as_ref(),
-        exclude_patterns.as_ref(),
-        include_patterns.as_ref(),
+        exclude_words.clone(),
+        exclude_patterns,
+        include_patterns,
     )
     .expect("execute operation");
 
@@ -79,9 +79,9 @@ fn test_filters_new() {
     let filters = Filters::new(
         &min_chars,
         &min_count,
-        exclude_words.as_ref(),
-        exclude_patterns.as_ref(),
-        include_patterns.as_ref(),
+        exclude_words.clone(),
+        exclude_patterns,
+        include_patterns.clone(),
     )
     .expect("execute operation");
 
@@ -95,9 +95,9 @@ fn test_filters_new() {
     let result = Filters::new(
         &min_chars,
         &min_count,
-        exclude_words.as_ref(),
-        exclude_patterns.as_ref(),
-        include_patterns.as_ref(),
+        exclude_words,
+        exclude_patterns,
+        include_patterns,
     );
     assert!(result.is_err());
 }
@@ -113,9 +113,9 @@ fn test_filters_with_empty_patterns() {
     let filters = Filters::new(
         &min_chars,
         &min_count,
-        exclude_words.as_ref(),
-        exclude_patterns.as_ref(),
-        include_patterns.as_ref(),
+        exclude_words,
+        exclude_patterns,
+        include_patterns,
     )
     .expect("execute operation");
 
@@ -139,9 +139,9 @@ fn test_serialization_with_patterns() {
     let filters = Filters::new(
         &min_chars,
         &min_count,
-        exclude_words.as_ref(),
-        exclude_patterns.as_ref(),
-        include_patterns.as_ref(),
+        exclude_words,
+        exclude_patterns,
+        include_patterns,
     )
     .expect("execute operation");
 
@@ -538,13 +538,13 @@ fn test_with_unescaped_exclude_words() {
 fn test_display_exclude_words() {
     let words = vec!["hello".to_string(), "world".to_string()];
     let exclude_words = ExcludeWords(words);
-    assert_eq!(format!("{}", exclude_words), "hello,world");
+    assert_eq!(format!("{exclude_words}"), "hello,world");
 }
 
 #[test]
 fn test_filters_display() {
     let filters = Filters::default().with_min_chars(3).with_min_count(2);
 
-    assert!(format!("{:?}", filters).contains("min_chars: Some(3)"));
-    assert!(format!("{:?}", filters).contains("min_count: Some(2)"));
+    assert!(format!("{filters:?}").contains("min_chars: Some(3)"));
+    assert!(format!("{filters:?}").contains("min_count: Some(2)"));
 }

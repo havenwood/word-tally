@@ -26,10 +26,10 @@ fn bench_processing_comparison(c: &mut Criterion) {
             let options = Options::default().with_processing(*processing);
             let shared_options = make_shared(options);
 
-            group.bench_function(format!("{}_{}", size_name, proc_name), |b| {
+            group.bench_function(format!("{size_name}_{proc_name}"), |b| {
                 self::common::bench_word_tally_with_string(
                     b,
-                    text_sample.clone(),
+                    text_sample,
                     &shared_options,
                     create_temp_input,
                 );
@@ -52,7 +52,7 @@ fn bench_regex_patterns(c: &mut Criterion) {
     group.bench_function("patterns_0", |b| {
         self::common::bench_word_tally_with_string(
             b,
-            text_sample.clone(),
+            &text_sample,
             &make_shared(base_options.clone()),
             create_temp_input,
         );
@@ -74,7 +74,7 @@ fn bench_regex_patterns(c: &mut Criterion) {
     group.bench_function("patterns_4", |b| {
         self::common::bench_word_tally_with_string(
             b,
-            text_sample.clone(),
+            &text_sample,
             &make_shared(few_patterns_options.clone()),
             create_temp_input,
         );
@@ -102,7 +102,7 @@ fn bench_regex_patterns(c: &mut Criterion) {
     group.bench_function("patterns_10", |b| {
         self::common::bench_word_tally_with_string(
             b,
-            text_sample.clone(),
+            &text_sample,
             &make_shared(many_patterns_options.clone()),
             create_temp_input,
         );

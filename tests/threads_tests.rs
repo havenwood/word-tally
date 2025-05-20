@@ -57,10 +57,10 @@ fn test_threads_from_u16() {
 #[test]
 fn test_threads_display() {
     let threads_3 = Threads::Count(3);
-    assert_eq!(format!("{}", threads_3), "3");
+    assert_eq!(format!("{threads_3}"), "3");
 
     let threads_all = Threads::All;
-    let display = format!("{}", threads_all);
+    let display = format!("{threads_all}");
     assert!(display.parse::<usize>().is_ok());
 }
 

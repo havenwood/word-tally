@@ -14,7 +14,7 @@ use std::env;
 /// - **Buffered**: Loads entire content into memory before processing.
 ///   Useful alternative when memory-mapping isn't optimal but memory is available.
 ///
-/// - **MemoryMapped**: Uses the OS virtual memory system for efficient file access.
+/// - **`MemoryMapped`**: Uses the OS virtual memory system for efficient file access.
 ///   Requires a seekable file. Raises an error with non-seekable inputs.
 ///
 /// # Examples
@@ -64,7 +64,8 @@ impl Display for Io {
 /// Environment variable name for I/O configuration.
 pub const ENV_IO: &str = "WORD_TALLY_IO";
 
-/// Parse I/O strategy from WORD_TALLY_IO environment variable.
+/// Parse I/O strategy from `WORD_TALLY_IO` environment variable.
+#[must_use]
 pub fn parse_io_from_env() -> Io {
     match env::var(ENV_IO).ok().as_deref() {
         Some(s) if s.eq_ignore_ascii_case("streamed") => Io::Streamed,

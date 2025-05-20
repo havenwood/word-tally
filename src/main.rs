@@ -19,7 +19,7 @@ fn main() {
     match run() {
         Ok(()) => process::exit(exit_code::SUCCESS),
         Err(err) => {
-            eprintln!("Error: {}", err);
+            eprintln!("Error: {err}");
             process::exit(exit_code::from_error(&err));
         }
     }
@@ -49,13 +49,14 @@ fn run() -> Result<()> {
 
     // Optional verbose output
     if args.is_verbose() {
-        let paths: Vec<_> = inputs.iter().map(|input| input.source()).collect();
+        let paths: Vec<_> = inputs.iter().map(word_tally::Input::source).collect();
         let mut verbose = Verbose::default();
         verbose.write_verbose_info(&word_tally, &paths.join(", "))?;
     }
 
     // Primary output
-    let mut output = Output::new(args.get_output())?;
+    let output_option = args.get_output().map(ToOwned::to_owned);
+    let mut output = Output::new(&output_option)?;
     output.write_formatted_tally(&word_tally)?;
 
     Ok(())

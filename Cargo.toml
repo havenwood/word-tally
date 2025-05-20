@@ -53,15 +53,20 @@ lto = true
 strip = true
 
 [lints.clippy]
-cargo = "warn"
-nursery = "warn"
+cargo = "deny"
+correctness = "deny"
+nursery = "deny"
+pedantic = "warn"
+perf = "deny"
+suspicious = "deny"
 
 [lints.rust]
-future_incompatible = "warn"
-let_underscore = "warn"
-nonstandard_style = "warn"
-rust_2018_compatibility = "warn"
-rust_2018_idioms = "warn"
-rust_2021_compatibility = "warn"
-rust_2024_compatibility = "warn"
-unused = "warn"
+future_incompatible = "deny"
+let_underscore = "deny"
+missing_debug_implementations = "deny"
+nonstandard_style = "deny"
+rust_2018_compatibility = "deny"
+rust_2018_idioms = "deny"
+rust_2021_compatibility = "deny"
+rust_2024_compatibility = "deny"
+unused = "deny"

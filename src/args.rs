@@ -95,8 +95,8 @@ impl Args {
     }
 
     /// Get the output file path.
-    pub const fn get_output(&self) -> &Option<PathBuf> {
-        &self.output
+    pub const fn get_output(&self) -> Option<&PathBuf> {
+        self.output.as_ref()
     }
 
     /// Get the verbose flag.

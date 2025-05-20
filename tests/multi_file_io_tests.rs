@@ -106,7 +106,7 @@ fn large_multi_file_sets() {
     let temp_files: Vec<NamedTempFile> = (0..5)
         .map(|i| {
             let temp_file = NamedTempFile::new().expect("create temp file");
-            fs::write(&temp_file, format!("word{} common", i)).expect("write test file");
+            fs::write(&temp_file, format!("word{i} common")).expect("write test file");
             temp_file
         })
         .collect();

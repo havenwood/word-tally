@@ -111,15 +111,13 @@ fn test_extend_from_str_lower_case() {
     let hello_count = result
         .iter()
         .find(|(w, _)| w == "hello")
-        .map(|(_, c)| *c)
-        .unwrap_or(0);
+        .map_or(0, |(_, c)| *c);
     assert_eq!(hello_count, 2);
 
     let world_count = result
         .iter()
         .find(|(w, _)| w == "world")
-        .map(|(_, c)| *c)
-        .unwrap_or(0);
+        .map_or(0, |(_, c)| *c);
     assert_eq!(world_count, 1);
 }
 
@@ -134,15 +132,13 @@ fn test_extend_from_str_upper_case() {
     let hello_count = result
         .iter()
         .find(|(w, _)| w == "HELLO")
-        .map(|(_, c)| *c)
-        .unwrap_or(0);
+        .map_or(0, |(_, c)| *c);
     assert_eq!(hello_count, 2);
 
     let world_count = result
         .iter()
         .find(|(w, _)| w == "WORLD")
-        .map(|(_, c)| *c)
-        .unwrap_or(0);
+        .map_or(0, |(_, c)| *c);
     assert_eq!(world_count, 1);
 }
 
@@ -251,7 +247,7 @@ fn test_clone() {
 #[test]
 fn test_debug() {
     let tally = make_tally(&[("hello", 3)]);
-    let debug_str = format!("{:?}", tally);
+    let debug_str = format!("{tally:?}");
     assert!(debug_str.contains("TallyMap"));
     assert!(debug_str.contains("inner"));
 }

@@ -445,10 +445,10 @@ fn parallel_with_large_chunk() {
 #[test]
 #[cfg(unix)]
 fn broken_pipe_behavior() {
-    let input = r#"Because I could not stop for Death –
+    let input = r"Because I could not stop for Death –
 He kindly stopped for me –
 The Carriage held but just Ourselves –
-And Immortality."#;
+And Immortality.";
 
     let mut cmd = word_tally();
     cmd.write_stdin(input)
@@ -476,7 +476,7 @@ fn large_input_broken_pipe() {
     let mut large_input = String::new();
     for _ in 0..1000 {
         large_input.push_str(
-            r#"I dwell in Possibility – a fairer House than Prose –
+            r"I dwell in Possibility – a fairer House than Prose –
 More numerous of Windows – Superior – for Doors –
 
 Of Chambers as the Cedars – Impregnable of eye –
@@ -488,7 +488,7 @@ For Occupation – This –
 The spreading wide my narrow Hands
 To gather Paradise –
 
-"#,
+",
         );
     }
     let mut cmd = word_tally();

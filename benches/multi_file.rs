@@ -74,7 +74,7 @@ fn bench_multi_file_scaling(c: &mut Criterion) {
             .map(|(_, path)| path.to_str().unwrap())
             .collect();
 
-        let group_name = format!("multi_file_scaling/{}_files", count);
+        let group_name = format!("multi_file_scaling/{count}_files");
         let mut group = create_bench_group(c, &group_name);
 
         let io_strategies = [
