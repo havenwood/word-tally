@@ -72,6 +72,7 @@ impl TallyMap {
     }
 
     /// Extends the tally map with word counts from a string slice.
+    #[inline]
     pub fn extend_from_str(&mut self, content: &str, case: Case) {
         for word in content.unicode_words() {
             let normalized = case.normalize(word);

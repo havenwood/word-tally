@@ -44,7 +44,6 @@ impl Default for Performance {
 
 impl Performance {
     /// Helper to convert `u64` to `usize` with platform-aware capping
-    #[inline]
     #[allow(clippy::cast_possible_truncation)]
     #[must_use]
     pub const fn u64_to_usize(value: u64) -> usize {

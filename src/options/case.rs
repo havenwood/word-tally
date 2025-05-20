@@ -51,6 +51,7 @@ impl Case {
     /// assert_eq!(Case::Original.normalize(hello), hello.into());
     /// ```
     #[must_use]
+    #[inline]
     pub fn normalize(&self, word: &str) -> Word {
         match self {
             Self::Lower => word.to_lowercase().into_boxed_str(),
