@@ -5,7 +5,7 @@ use word_tally::{Performance, Threads};
 // Test constants
 #[test]
 fn test_constants() {
-    // These values are documented in the Performance struct
+    // These values are documented in the `Performance` struct
     assert_eq!(Performance::base_stdin_tally_capacity(), 128);
 }
 
@@ -106,7 +106,6 @@ fn test_serde() {
 #[test]
 fn test_environment_logic() {
     // Test the logic without actually setting environment variables
-    // This tests the default behavior when no env vars are set
     let perf = Performance::from_env();
 
     // Should get defaults when no env vars are set

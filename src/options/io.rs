@@ -15,7 +15,7 @@ use std::env;
 ///   Useful alternative when memory-mapping isn't optimal but memory is available.
 ///
 /// - **MemoryMapped**: Uses the OS virtual memory system for efficient file access.
-///   Requires a seekable file. Raises an error with piped input like stdin.
+///   Requires a seekable file. Raises an error with non-seekable inputs.
 ///
 /// # Examples
 ///

@@ -1,15 +1,13 @@
 //! A tally of words with a count of the number of times each appears.
 //!
-//! `WordTally` tallies the occurrences of words in text sources. It operates by streaming
-//! input line by line, eliminating the need to load entire files or streams into memory.
+//! `WordTally` tallies the number of times words appear in source input. I/O is streamed in
+//! sequential mode by default to reduce memory usage. Memory-mapped I/O in parallel mode is
+//! typically the fastest for processing large files. Memory-mapped I/O requires a seekable file,
+//! but streamed and fully-buffered-in-memory I/O also support piped input along with files.
 //!
 //! Word boundaries are determined using the [`unicode-segmentation`](https://docs.rs/unicode-segmentation/)
 //! crate, which implements the [Unicode Standard Annex #29](https://unicode.org/reports/tr29/)
 //! specification for text segmentation across languages.
-//!
-//! The library offers both sequential and parallel processing modes. When operating
-//! in parallel mode, the input is processed in discrete chunks across available CPU cores,
-//! maintaining memory efficiency while improving processing speed for larger inputs.
 //!
 //! ## Module structure
 //!
@@ -78,7 +76,7 @@
 //!
 //! * [`Processing`]: Choose between sequential or parallel processing
 //! * [`Io`]: Control the input method (streamed, buffered, or memory-mapped)
-//! * [`Threads`]: Control the thread pool size for parallel execution
+//! * [`Threads`]: Control the thread pool size for parallel mode
 //! * [`Performance`]: Configure performance settings
 //!
 //! ## Output
@@ -161,7 +159,7 @@ pub struct WordTally<'a> {
     /// The sum of all words tallied.
     count: Count,
 
-    /// The sum of uniq words tallied.
+    /// The sum of unique words tallied.
     #[serde(rename = "uniqueCount")]
     uniq_count: Count,
 }
@@ -178,14 +176,14 @@ impl Default for WordTally<'static> {
     }
 }
 
-/// A `tally` supports `iter` and can also be represented as a `Vec`.
+/// Converts a `WordTally` into a `Vec<(Word, Count)>`.
 impl<'a> From<WordTally<'a>> for Vec<(Word, Count)> {
     fn from(word_tally: WordTally<'a>) -> Self {
         word_tally.into_tally().into_vec()
     }
 }
 
-/// A `tally` can also be iterated over directly from a `WordTally`.
+/// Makes `WordTally` reference available directly in a for loop.
 impl<'i> IntoIterator for &'i WordTally<'_> {
     type Item = &'i (Word, Count);
     type IntoIter = slice::Iter<'i, (Word, Count)>;

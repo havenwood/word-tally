@@ -90,7 +90,7 @@ impl TallyMap {
         }
     }
 
-    /// Creates a `TallyMap` from an `input` source and `options`.
+    /// Creates a `TallyMap` from an `Input` source and `Options`.
     pub fn from_input(input: &Input, options: &Options) -> Result<Self> {
         match (options.processing(), options.io()) {
             // Sequential processing

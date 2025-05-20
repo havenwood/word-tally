@@ -21,30 +21,32 @@ This directory contains all tests for the word-tally project.
   - `tally_iterator_tests.rs`: Iterator implementation
   - `tally_map_tests.rs`: TallyMap data structure tests
   - `tally_serialization_tests.rs`: JSON/serde tests
-  - `tally_serialization_error_tests.rs`: Serialization error handling
 
 - **API Tests** (`api_tests.rs`): Public API integration tests
 - **Error Tests** (`error_integration_tests.rs`): Error handling integration tests
-- **Legacy Tests** (`lib_tests.rs`): Legacy library tests
+- **Core Library Tests** (`lib_tests.rs`): Comprehensive tests for core WordTally functionality including case handling, sorting, filtering, I/O modes, processing strategies, and serialization
 
 ## Module-specific tests
 
 Tests for specific modules and components:
 - `args_tests.rs`: Argument parsing tests
-- `errors_tests.rs`: Error code mapping tests
+- `exit_code_tests.rs`: Exit code definitions and handling tests
 - `filters_tests.rs`: Filter functionality tests
 - `hash_tests.rs`: Hash implementation tests
 - `input_tests.rs`: Input module tests
 - `input_reader_tests.rs`: InputReader module tests
 - `io_tests.rs`: I/O strategy tests
+- `multi_file_io_tests.rs`: Multiple file input handling tests
 - `options_tests.rs`: Options configuration tests
 - `output_tests.rs`: Output module tests
+- `patterns_tests.rs`: Pattern matching module tests
 - `performance_tests.rs`: Performance settings tests
 - `processing_tests.rs`: Processing mode tests
 - `serialization_tests.rs`: Serialization module tests
 - `threads_tests.rs`: Thread configuration tests
 - `traits_tests.rs`: Trait implementation tests
-- `verbose_tests.rs`: Verbose output tests
+- `verbose_tests.rs`: Verbose formatting tests
+- `verbose_output_tests.rs`: Verbose output functionality tests
 
 ## Test utilities
 
@@ -52,10 +54,6 @@ Each test file is self-contained with local helper functions. This approach ensu
 - `word_tally()` function for CLI command building
 - `make_shared()` function for Arc wrapper creation
 - Test-specific helper functions as needed
-
-## Test data
-
-The `fixtures/` directory contains test data files.
 
 ## Running tests
 
@@ -72,14 +70,3 @@ cargo test -- --nocapture
 # Run tests in release mode
 cargo test --release
 ```
-
-## Writing tests
-
-When adding new tests:
-
-1. Place integration tests at the root of `tests/`
-2. Name CLI tests with `cli_` prefix
-3. Name library tests with `tally_` prefix
-4. Use descriptive test function names
-5. Document complex test scenarios with comments
-6. Keep tests focused on a single aspect of functionality

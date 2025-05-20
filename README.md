@@ -4,13 +4,7 @@
 [![docs.rs](https://img.shields.io/docsrs/word-tally?style=for-the-badge&link=https%3A%2F%2Fdocs.rs%2Fword-tally%2Flatest%2Fword_tally%2F)](https://docs.rs/word-tally/latest/word_tally/)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/havenwood/word-tally/rust.yml?style=for-the-badge)](https://github.com/havenwood/word-tally/actions/workflows/rust.yml)
 
-Output a tally of the number of times unique unicode words appear in a source. Provides a command line and Rust library interface. I/O is streamed by default, but buffered and memory-mapped I/O are also supported to optimize for different file sizes and workloads. Memory-mapping is only supported for files with seekable file descriptors. Optionally take advantage of multiple CPU cores through parellization of sorting, memory-mapped file I/O and word counting.
-
-## Installation
-
-```sh
-cargo install word-tally
-```
+Tallies the number of times each word appears in one or more unicode input sources. Use `word-tally` as a command-line tool or `WordTally` via the Rust library interface. I/O is streamed by default. Memory-mapped and fully-buffered-in-memory I/O modes can be selected to optimize for different file sizes and workloads. Optionally take advantage of multiple CPU cores through parallelization of sorting, memory-mapped file I/O and word counting. Memory-mapping is only supported for files with seekable file descriptors, but performs well in parallel mode.
 
 ## Usage
 
@@ -38,11 +32,17 @@ Options:
   -V, --version                Print version
 ```
 
+## Installation
+
+```sh
+cargo install word-tally
+```
+
 ## Examples
 
 ### I/O & parallelization
 
-word-tally uses sequental, streamed processing by default but supports parallel processing for memory-mapped, streamed and fully-buffered I/O. The different modes have different performance and memory usage characteristics.
+word-tally uses sequential, streamed processing by default to reduce memory usage. Parallel processing is also available for memory-mapped, streamed and fully-buffered I/O. The different modes have different performance and resource usage characteristics.
 
 ```sh
 # Streamed I/O from stdin (`--io=streamed` is default)
@@ -251,7 +251,7 @@ The library supports case normalization, sorting, filtering and I/O and processi
 
 ## Stability notice
 
-**Pre-release level stability**: This is prerelease software. Expect breaking interface changes at MINOR version (0.x.0) bumps until there is a stable release.
+**Pre-release level stability**: This is prerelease software. Expect breaking interface changes at MINOR version (0.x.0) bumps until a stable release.
 
 ## Tests & benchmarks
 

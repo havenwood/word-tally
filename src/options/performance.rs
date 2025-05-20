@@ -184,9 +184,7 @@ impl Performance {
             .min(Self::base_stdin_tally_capacity())
     }
 
-    //
     // Env-parsing helpers
-    //
 
     /// Parse numeric environment variable with fallback to default value.
     fn parse_env_var<T: FromStr>(name: &str, default: T) -> T {
