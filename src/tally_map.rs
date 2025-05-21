@@ -2,22 +2,22 @@
 
 use std::{
     collections::{HashMap, hash_map},
+    fmt::Display,
     io::{BufRead, Read},
-    mem,
     path::Path,
     str,
     sync::Arc,
 };
 
 use anyhow::{Context, Result};
+use memchr::memchr_iter;
 use memmap2::Mmap;
 use rayon::prelude::*;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::options::case::Case;
-use crate::options::io::Io;
-use crate::options::processing::Processing;
-use crate::options::{Options, performance::Performance};
+use crate::options::{
+    Options, case::Case, io::Io, performance::Performance, processing::Processing,
+};
 use crate::{Count, Input, Word};
 
 /// Map for tracking word counts with non-deterministic iteration order.
@@ -39,6 +39,18 @@ impl TallyMap {
         Self {
             inner: HashMap::with_capacity(capacity),
         }
+    }
+
+    /// Extends the tally map with word counts from a string slice.
+    #[must_use]
+    pub fn from_content(content: &str, case: Case, perf: &Performance) -> Self {
+        let mut instance = Self::with_capacity(perf.chunk_capacity(content.len()));
+
+        for word in content.unicode_words() {
+            *instance.inner.entry(case.normalize(word)).or_insert(0) += 1;
+        }
+
+        instance
     }
 
     /// Returns the number of unique words in the map.
@@ -75,8 +87,7 @@ impl TallyMap {
     #[inline]
     pub fn extend_from_str(&mut self, content: &str, case: Case) {
         for word in content.unicode_words() {
-            let normalized = case.normalize(word);
-            *self.inner.entry(normalized).or_insert(0) += 1;
+            *self.inner.entry(case.normalize(word)).or_insert(0) += 1;
         }
     }
 
@@ -129,16 +140,46 @@ impl TallyMap {
         }
     }
 
-    //
-    // Sequential I/O
-    //
+    /// Sequential buffered word tallying.
+    ///
+    /// Reads the entire input into memory before processing sequentially.
+    fn buffered_count(input: &Input, options: &Options) -> Result<Self> {
+        let perf = options.performance();
+        let content = Self::read_input_to_string(input, perf)?;
+        let mut tally = Self::with_capacity(perf.capacity(input.size()));
+        tally.extend_from_str(&content, options.case());
+
+        Ok(tally)
+    }
+
+    /// Parallel buffered word tallying.
+    ///
+    /// Processes data in parallel with Rayon after loading entire content:
+    /// - Uses memchr SIMD to find newline-aligned chunk boundaries
+    /// - Trades higher memory usage for processing speed
+    fn par_buffered_count(input: &Input, options: &Options) -> Result<Self> {
+        let case = options.case();
+        let perf = options.performance();
+        let content = Self::read_input_to_string(input, perf)?;
+        let content_len = content.len();
+        let total_chunks = perf.total_chunks(content_len);
+
+        // Find optimal chunk boundaries that align with newlines
+        let boundaries = Self::simd_chunk_boundaries(&content, total_chunks);
+
+        // Process content in parallel using the boundaries
+        let tally = Self::process_content_in_chunks(&content, case, &boundaries);
+
+        Ok(tally)
+    }
 
     /// Sequential streamed word tallying.
     ///
     /// Streams one line at a time, avoiding needing to always hold the entire input in memory.
     fn streamed_count(input: &Input, options: &Options) -> Result<Self> {
+        let perf = options.performance();
+        let mut tally = Self::with_capacity(perf.capacity(input.size()));
         let reader = input.reader()?;
-        let mut tally = Self::with_capacity(options.performance().capacity(input.size()));
 
         reader
             .lines()
@@ -155,95 +196,119 @@ impl TallyMap {
         Ok(tally)
     }
 
-    /// Sequential buffered word tallying.
-    ///
-    /// Reads the entire input into memory before processing sequentially.
-    fn buffered_count(input: &Input, options: &Options) -> Result<Self> {
-        let perf = options.performance();
-        let case = options.case();
-        let content = Self::read_input_to_string(input, perf)?;
-        let capacity = perf.capacity(Some(content.len()));
-        let mut tally = Self::with_capacity(capacity);
-
-        tally.extend_from_str(&content, case);
-
-        Ok(tally)
-    }
-
-    //
-    // Parallel I/O
-    //
-
     /// Parallel, streamed word tallying.
     ///
-    /// Streams batches of lines, processing the batches in parallel. Avoids always needing to
-    /// hold the entire input in memory. Uses memory-based batching for more consistent workloads.
+    /// Processes data in parallel with Rayon while streaming:
+    /// - Uses memchr SIMD to find newline-aligned chunk boundaries
+    /// - Stream in chunks, without loading the entire input into memory
+    /// - Balances performance and memory usage
     fn par_streamed_count(input: &Input, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
-        let reader = input.reader()?;
-        let estimated_lines_per_chunk = perf.lines_per_chunk();
-        let mut tally = Self::with_capacity(perf.capacity(input.size()));
+        let mut reader = input.reader()?;
 
-        // Helper closure to process accumulated lines and merge into tally
-        let mut process_batch = |batch: Vec<String>| {
-            if batch.is_empty() {
-                return;
+        let buffer_size = crate::options::performance::Performance::STREAM_BUFFER_SIZE;
+        let input_size = input.size().unwrap_or_else(|| perf.base_stdin_size_usize());
+        let num_threads = rayon::current_num_threads();
+        let total_chunks =
+            num_threads * crate::options::performance::Performance::CHUNKS_PER_THREAD;
+        let min_chunk_size = crate::options::performance::Performance::MIN_STREAM_CHUNK_SIZE;
+        let target_chunk_size = input_size.div_ceil(total_chunks).max(min_chunk_size);
+
+        let tally_capacity = perf.capacity(input.size());
+        let mut tally = Self::with_capacity(tally_capacity);
+
+        // Buffer to hold the current batch of data
+        let mut buffer = Vec::with_capacity(buffer_size);
+        let mut eof = false;
+
+        while !eof {
+            // Fill buffer until we have enough data or reach EOF
+            if buffer.len() < target_chunk_size {
+                // Read directly into a temporary buffer
+                let mut read_buffer = vec![0; buffer_size.saturating_sub(buffer.len())];
+                let bytes_read = reader
+                    .read(&mut read_buffer)
+                    .with_context(|| format!("failed to read from: {input}"))?;
+
+                if bytes_read == 0 {
+                    eof = true;
+                    if buffer.is_empty() {
+                        break;
+                    }
+                } else {
+                    // Add only the bytes we actually read
+                    buffer.extend_from_slice(&read_buffer[..bytes_read]);
+
+                    if !eof && buffer.len() < target_chunk_size {
+                        continue;
+                    }
+                }
             }
 
-            // Calculate batch size in bytes for better capacity estimation
-            let batch_size_bytes: usize = batch.iter().map(std::string::String::len).sum();
-            let batch_capacity = perf.capacity(Some(batch_size_bytes));
+            // Find all newline positions in a single pass
+            let newline_positions: Vec<usize> = memchr_iter(b'\n', &buffer).collect();
 
-            // Process batch in parallel - let Rayon handle work distribution
-            let batch_result = batch
-                .chunks(rayon::current_num_threads() * 2)
-                .par_bridge()
-                .map(|chunk| {
-                    let mut local_tally = Self::with_capacity(batch_capacity);
-                    for line in chunk {
-                        local_tally.extend_from_str(line, case);
-                    }
-                    local_tally
-                })
-                .reduce(|| Self::with_capacity(batch_capacity), Self::merge);
+            // If we have no newlines or not enough data, continue reading
+            if newline_positions.is_empty() && !eof && buffer.len() < target_chunk_size {
+                continue;
+            }
 
-            // Extend tally with batch results (reserve is handled in extend)
-            tally.extend(batch_result);
-        };
+            // Determine chunk boundaries based on newlines and target chunk size
+            let mut chunk_boundaries = Vec::with_capacity(total_chunks + 1);
+            chunk_boundaries.push(0);
 
-        let mut batch_of_lines = Vec::with_capacity(estimated_lines_per_chunk);
-        let mut accumulated_bytes = 0;
-
-        reader
-            .lines()
-            .enumerate()
-            .try_for_each(|(line_num, try_line)| {
-                let line = try_line.with_context(|| {
-                    format!("failed to read line {} from: {}", line_num + 1, input)
-                })?;
-
-                // Track memory used by this line
-                accumulated_bytes += line.len();
-                batch_of_lines.push(line);
-
-                // Process batch when it reaches target memory threshold
-                if accumulated_bytes >= perf.chunk_size() {
-                    // Last batch's size rather than estimation to better match input pattern
-                    let current_batch_size = batch_of_lines.len();
-                    // Swap out the full batch for an empty one, reusing the previous capacity
-                    let full_batch_of_lines =
-                        mem::replace(&mut batch_of_lines, Vec::with_capacity(current_batch_size));
-                    process_batch(full_batch_of_lines);
-                    accumulated_bytes = 0;
+            // Create boundaries at newlines near chunk size targets
+            let mut last_boundary = 0;
+            for pos in &newline_positions {
+                if *pos - last_boundary >= target_chunk_size {
+                    // Include the newline boundary in the chunk
+                    chunk_boundaries.push(*pos + 1);
+                    last_boundary = *pos + 1;
                 }
+            }
 
-                Ok::<_, anyhow::Error>(())
-            })?;
+            // Add the end of buffer at end of file
+            if eof
+                && (chunk_boundaries.is_empty() || *chunk_boundaries.last().unwrap() < buffer.len())
+            {
+                chunk_boundaries.push(buffer.len());
+            }
 
-        // Process any remaining lines in the final batch
-        if !batch_of_lines.is_empty() {
-            process_batch(batch_of_lines);
+            if chunk_boundaries.len() > 1 {
+                // Validate UTF-8 once for the entire processed section
+                let process_end = *chunk_boundaries.last().unwrap();
+                let content = Self::parse_utf8_slice(&buffer[..process_end], input)?;
+
+                // Process chunks in parallel using boundaries similar to other parallel methods
+                let batch_result = chunk_boundaries
+                    .windows(2)
+                    .par_bridge()
+                    .fold(Self::new, |mut local_tally, window| {
+                        let start = window[0];
+                        let end = window[1];
+                        if end > start {
+                            local_tally.extend_from_str(&content[start..end], case);
+                        }
+                        local_tally
+                    })
+                    .reduce_with(Self::merge)
+                    .unwrap_or_else(Self::default);
+
+                // Merge the batch results into the main tally
+                tally = tally.merge(batch_result);
+
+                // Remove processed data from the buffer
+                let last_boundary = *chunk_boundaries.last().unwrap();
+                if last_boundary > 0 && last_boundary <= buffer.len() {
+                    buffer.drain(..last_boundary);
+                }
+            } else if eof && !buffer.is_empty() {
+                // Process any remaining data at end of file
+                let remaining = Self::parse_utf8_slice(&buffer, input)?;
+                tally.extend_from_str(remaining, case);
+                buffer.clear();
+            }
         }
 
         Ok(tally)
@@ -251,115 +316,36 @@ impl TallyMap {
 
     /// Parallel memory-mapped word tallying.
     ///
-    /// Uses a simple divide-and-conquer approach for parallel processing with mmap:
-    /// - Divids content into chunks at UTF-8 character boundaries
-    /// - Direct memory-mapped file content access with OS-managed paging
-    /// - Process full chunks without line-by-line iteration
+    /// Processes data in parallel with Rayon using memory-mapped slicing of files:
+    /// - Uses memmap2 to access file contents without loading the entire file into memory
+    /// - Optimized chunk boundary detection using direct slices with character boundary checks
+    /// - Provides high performance with moderate memory usage
     ///
-    /// An alternative single-pass approach could begin processing chunks during.
-    /// boundary detection and not store chunk indices, but would need more complex.
-    /// thread coordination.
+    /// # Limitations
+    ///
+    /// Memory mapping only works with seekable files (regular files on disk).
+    /// It will not work with stdin, pipes, or other non-seekable sources.
     fn par_mmap_count(mmap: &Arc<Mmap>, path: &Path, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
-        let chunk_size = perf.chunk_size();
 
-        // This provides a view into the content rather than copying
-        let content = match str::from_utf8(mmap) {
-            Ok(content) => content,
-            Err(e) => {
-                return Err(e).with_context(|| {
-                    format!(
-                        "invalid UTF-8 at byte offset {} from: {}",
-                        e.valid_up_to(),
-                        path.display()
-                    )
-                });
-            }
-        };
-        let total_size = content.len();
-        let num_chunks = total_size.div_ceil(chunk_size);
+        // Provide a view into the content rather than copying
+        let content = Self::parse_utf8_slice(mmap, &path.display())?;
+        let content_len = content.len();
+        let total_chunks = perf.total_chunks(content_len);
 
-        // Create chunk boundaries with first (0) and last (total_size) elements, plus interior boundaries
-        let chunk_boundaries = {
-            let mut boundaries = Vec::with_capacity(num_chunks + 1);
-            // First boundary
-            boundaries.push(0);
+        // Find optimal chunk boundaries that align with character boundaries
+        let boundaries = Self::mmap_chunk_boundaries(content, total_chunks);
 
-            boundaries.extend((1..num_chunks).map(|i| {
-                // Find next valid UTF-8 character boundary after `chunk_size` bytes
-                // Use take() to limit the search range and avoid potential infinite iteration
-                let start_pos = i * chunk_size;
-                if start_pos >= total_size {
-                    total_size
-                } else {
-                    (start_pos..total_size)
-                        .find(|&pos| content.is_char_boundary(pos))
-                        .unwrap_or(total_size)
-                }
-            }));
-
-            // Last boundary
-            boundaries.push(total_size);
-
-            boundaries
-        };
-
-        // Calculate optimal capacities for better memory usage
-        let avg_chunk_size = total_size / num_chunks.max(1);
-        let per_chunk_capacity = perf.capacity(Some(avg_chunk_size));
-
-        // Calculate optimal capacity for the final reduced `TallyMap`
-        let reduce_capacity = perf.capacity(Some(mmap.len()));
-
-        let tally = chunk_boundaries
-            .windows(2)
-            .par_bridge()
-            .map(|window| {
-                let chunk = &content[window[0]..window[1]];
-                let mut local_tally = Self::with_capacity(per_chunk_capacity);
-
-                // Extract words from chunks, without heed for newlines
-                local_tally.extend_from_str(chunk, case);
-
-                local_tally
-            })
-            .reduce(|| Self::with_capacity(reduce_capacity), Self::merge);
-
-        Ok(tally)
-    }
-
-    /// Parallel buffered word tallying.
-    ///
-    /// Reads the entire input into memory before processing in parallel.
-    fn par_buffered_count(input: &Input, options: &Options) -> Result<Self> {
-        let case = options.case();
-        let perf = options.performance();
-        let content = Self::read_input_to_string(input, perf)?;
-
-        let tally = content
-            .par_lines()
-            .fold(
-                || Self::with_capacity(perf.capacity_per_thread()),
-                |mut tally, line| {
-                    tally.extend_from_str(line, case);
-                    tally
-                },
-            )
-            .reduce_with(Self::merge)
-            .unwrap_or_else(|| Self::with_capacity(perf.capacity(Some(content.len()))));
+        // Process content in parallel using the boundaries
+        let tally = Self::process_content_in_chunks(content, case, &boundaries);
 
         Ok(tally)
     }
 
     /// Reads the entire input into a string buffer.
     fn read_input_to_string(input: &Input, perf: &Performance) -> Result<String> {
-        // Use actual size if available; otherwise use base_stdin_size() for unknown inputs
-        let buffer_capacity = input
-            .size()
-            .unwrap_or_else(|| Performance::u64_to_usize(perf.base_stdin_size()));
-
-        // Read entire input into memory
+        let buffer_capacity = perf.capacity(input.size());
         let mut buffer = String::with_capacity(buffer_capacity);
         input
             .reader()
@@ -368,6 +354,119 @@ impl TallyMap {
             .with_context(|| format!("failed to read input into buffer: {input}"))?;
 
         Ok(buffer)
+    }
+
+    /// Find chunk boundaries at newlines with SIMD.
+    fn simd_chunk_boundaries(content: &str, total_chunks: usize) -> Vec<usize> {
+        let content_len = content.len();
+        let target_chunk_size = content_len.div_ceil(total_chunks);
+
+        // Add an extra capacity for the closing boundary
+        let mut boundaries = Vec::with_capacity(total_chunks + 1);
+        boundaries.push(0);
+
+        if !content.is_empty() {
+            let mut last_boundary = 0;
+
+            for pos in memchr_iter(b'\n', content.as_bytes()) {
+                if pos - last_boundary >= target_chunk_size && content.is_char_boundary(pos + 1) {
+                    boundaries.push(pos + 1);
+                    last_boundary = pos + 1;
+                }
+            }
+        }
+
+        if *boundaries.last().unwrap_or(&0) < content_len {
+            boundaries.push(content_len);
+        }
+
+        boundaries
+    }
+
+    /// Find memory-mapped chunk boundaries with direct character boundary checks.
+    fn mmap_chunk_boundaries(content: &str, num_chunks: usize) -> Vec<usize> {
+        let total_size = content.len();
+        let chunk_size = total_size.div_ceil(num_chunks);
+
+        if total_size == 0 {
+            return vec![0];
+        }
+
+        let mut boundaries = Vec::with_capacity(num_chunks + 1);
+        boundaries.push(0);
+
+        boundaries.extend((1..num_chunks).map(|i| {
+            // Find next valid UTF-8 character boundary after a chunk of bytes
+            let start_pos = i * chunk_size;
+            if start_pos >= total_size {
+                total_size
+            } else {
+                (start_pos..total_size)
+                    .find(|&pos| content.is_char_boundary(pos))
+                    .unwrap_or(total_size)
+            }
+        }));
+
+        if *boundaries.last().unwrap_or(&0) < total_size {
+            boundaries.push(total_size);
+        }
+
+        boundaries
+    }
+
+    /// Process content in parallel chunks using pre-calculated boundaries.
+    ///
+    /// Takes content and chunk boundaries, processes each chunk in parallel,
+    /// then merges results. Used by both memory-mapped and buffered parallel modes.
+    fn process_content_in_chunks(content: &str, case: Case, boundaries: &[usize]) -> Self {
+        boundaries
+            .windows(2)
+            .par_bridge()
+            .fold(Self::new, |mut local_tally, window| {
+                local_tally.extend_from_str(&content[window[0]..window[1]], case);
+                local_tally
+            })
+            .reduce_with(Self::merge)
+            .unwrap_or_else(Self::default)
+    }
+
+    /// Parse a UTF-8 slice with error recovery, truncating at last valid boundary on error.
+    fn parse_utf8_slice<'a, D: Display>(buffer: &'a [u8], input_name: &D) -> Result<&'a str> {
+        str::from_utf8(buffer).or_else(|e| {
+            let valid_len = e.valid_up_to();
+            let adjusted_len = Self::find_valid_boundary(buffer, valid_len);
+
+            match adjusted_len {
+                0 => Err(e).with_context(|| {
+                    format!(
+                        "invalid UTF-8 at byte offset {} from: {}",
+                        e.valid_up_to(),
+                        input_name
+                    )
+                }),
+                len => str::from_utf8(&buffer[..len])
+                    .map_err(|_| e)
+                    .with_context(|| {
+                        format!(
+                            "invalid UTF-8 at byte offset {} from: {}",
+                            e.valid_up_to(),
+                            input_name
+                        )
+                    }),
+            }
+        })
+    }
+
+    /// Find the last valid UTF-8 character boundary at or before the given position.
+    fn find_valid_boundary(buffer: &[u8], valid_len: usize) -> usize {
+        if valid_len == 0 {
+            return 0;
+        }
+
+        (0..=valid_len)
+            .rev()
+            .find(|&len| str::from_utf8(&buffer[..len]).is_ok())
+            .unwrap_or(0)
     }
 }
 

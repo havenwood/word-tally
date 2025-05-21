@@ -6,7 +6,7 @@ use word_tally::{Performance, Threads};
 #[test]
 fn test_constants() {
     // These values are documented in the `Performance` struct
-    assert_eq!(Performance::base_stdin_tally_capacity(), 128);
+    assert_eq!(Performance::base_stdin_tally_capacity(), 256);
 }
 
 // Test builder methods
@@ -36,16 +36,20 @@ fn test_lines_per_chunk() {
     assert_eq!(perf_small.lines_per_chunk(), 128); // minimum value
 }
 
-// Test capacity per thread
 #[test]
-fn test_capacity_per_thread() {
-    // Test with single thread
-    let perf = Performance::default().with_threads(Threads::Count(1));
-    assert_eq!(perf.capacity_per_thread(), 128); // full capacity
+fn test_chunks() {
+    let perf = Performance::default();
 
-    // Test with multiple threads
-    let perf_multi = Performance::default().with_threads(Threads::Count(10));
-    assert_eq!(perf_multi.capacity_per_thread(), 128); // hits base capacity limit
+    assert_eq!(perf.chunks(0), 0);
+    assert_eq!(perf.chunks(1), 1);
+    assert_eq!(perf.chunks(perf.chunk_size() / 2), 1);
+
+    let thread_count = rayon::current_num_threads();
+    let max_chunks = thread_count * Performance::CHUNKS_PER_THREAD;
+
+    let chunks = perf.chunks(100_000_000);
+    assert!(chunks <= max_chunks);
+    assert!(chunks > 0);
 }
 
 // Test trait implementations
@@ -109,7 +113,7 @@ fn test_environment_logic() {
     let perf = Performance::from_env();
 
     // Should get defaults when no env vars are set
-    assert_eq!(perf.uniqueness_ratio, 256);
+    assert_eq!(perf.uniqueness_ratio, 128);
     assert_eq!(perf.words_per_kb, 128);
     assert_eq!(perf.chunk_size, 65536);
     assert_eq!(perf.base_stdin_size, 256 * 1024);

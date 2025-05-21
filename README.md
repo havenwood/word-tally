@@ -6,6 +6,8 @@
 
 Tallies the number of times each word appears in one or more unicode input sources. Use `word-tally` as a command-line tool or `WordTally` via the Rust library interface. I/O is streamed by default. Memory-mapped and fully-buffered-in-memory I/O modes can be selected to optimize for different file sizes and workloads. Optionally take advantage of multiple CPU cores through parallelization of sorting, memory-mapped file I/O and word counting. Memory-mapping is only supported for files with seekable file descriptors, but performs well in parallel mode.
 
+Parallel streaming and parallel buffered I/O modes use SIMD for quick chunk boundary detection. Parallel memory-mapped I/O mode slices chunk boundaries more directly and is often the most efficient choice for large files. Sequential streaming mode uses the least peak memory and is the default.
+
 ## Usage
 
 ```

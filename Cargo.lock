@@ -1000,6 +1000,7 @@ dependencies = [
  "criterion",
  "csv",
  "fake",
+ "memchr",
  "memmap2",
  "predicates",
  "rayon",

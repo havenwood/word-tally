@@ -58,16 +58,29 @@ impl Performance {
             value as usize
         }
     }
-    /// Default configuration constants.
-    const WORDS_PER_KB: u16 = 128; // Words-per-KB estimation
-    const MAX_WORDS_PER_KB: u16 = 512; // Maximum words-per-KB (one word every other byte)
-    const UNIQUENESS_RATIO: u16 = 256; // 256:1 ratio saves memory (~10:1 is more reasonable for books)
-    const CHUNK_SIZE: u64 = 64 * 1024; // 64KB
-    const BASE_STDIN_SIZE: u64 = 256 * 1024; // 256KB estimated stdin size
-    const MIN_THREAD_CAPACITY: usize = 1024; // Minimum capacity per thread
-    const CHARS_PER_LINE: u64 = 80; // Chars-per-line estimation
 
-    /// Environment variable names for configuration.
+    /// Estimated is 128 words per KB.
+    const WORDS_PER_KB: u16 = 128;
+    /// Estimated number of words per line.
+    pub const WORDS_PER_LINE: u8 = 10;
+    /// Estimated 512 words per KB (quite low, at one word every other byte).
+    const MAX_WORDS_PER_KB: u16 = 512;
+    /// Estimated ratio of 128:1 ratio, saves memory (~10:1 is more reasonable for books).
+    const UNIQUENESS_RATIO: u16 = 128;
+    /// Default chunk size is 64KB.
+    const CHUNK_SIZE: u64 = 64 * 1024;
+    /// Estimated stdin size is 256KB.
+    const BASE_STDIN_SIZE: u64 = 256 * 1024;
+    /// Estimated 80 characters per line.
+    const CHARS_PER_LINE: u64 = 80;
+    /// Target chunks per thread (2-4 chunks per thread helps with work stealing).
+    pub const CHUNKS_PER_THREAD: usize = 4;
+    /// Streaming buffer size for parallel processing (4MB).
+    pub const STREAM_BUFFER_SIZE: usize = 4 * 1024 * 1024;
+    /// Minimum chunk size for parallel streaming (512KB).
+    pub const MIN_STREAM_CHUNK_SIZE: usize = 512 * 1024;
+
+    // Environment variable names for configuration.
     const ENV_STDIN_BUFFER_SIZE: &str = "WORD_TALLY_STDIN_BUFFER_SIZE";
     const ENV_CHUNK_SIZE: &str = "WORD_TALLY_CHUNK_SIZE";
     const ENV_UNIQUENESS_RATIO: &str = "WORD_TALLY_UNIQUENESS_RATIO";
@@ -150,6 +163,12 @@ impl Performance {
         self.base_stdin_size
     }
 
+    /// Get the base stdin size as usize with platform-aware capping.
+    #[must_use]
+    pub const fn base_stdin_size_usize(&self) -> usize {
+        Self::u64_to_usize(self.base_stdin_size)
+    }
+
     /// Get the chunk size.
     #[must_use]
     pub const fn chunk_size(&self) -> usize {
@@ -163,20 +182,12 @@ impl Performance {
     }
 
     /// Calculate capacity based on input size in bytes.
-    const fn calculate_capacity(&self, size_bytes: u64) -> usize {
-        Self::calculate_capacity_static(size_bytes, self.words_per_kb, self.uniqueness_ratio)
-    }
+    #[must_use]
+    pub const fn chunk_capacity(&self, byte_size: usize) -> usize {
+        let kb_size = byte_size / 1024;
+        let estimated_words = kb_size * self.words_per_kb as usize;
 
-    /// Static version of capacity calculation for use in const contexts.
-    const fn calculate_capacity_static(
-        size_bytes: u64,
-        words_per_kb: u16,
-        uniqueness_ratio: u16,
-    ) -> usize {
-        // For extremely large files, cap at usize::MAX/u64::MAX boundary
-        let kb_size = (size_bytes / 1024) as usize;
-        let estimated_words = kb_size * words_per_kb as usize;
-        estimated_words / uniqueness_ratio as usize
+        estimated_words / self.uniqueness_ratio as usize
     }
 
     /// Estimated capacity based on input size.
@@ -184,7 +195,7 @@ impl Performance {
     pub const fn capacity(&self, input_size: Option<usize>) -> usize {
         match input_size {
             None => Self::base_stdin_tally_capacity(),
-            Some(size) => self.calculate_capacity(size as u64),
+            Some(size) => self.chunk_capacity(size),
         }
     }
 
@@ -204,16 +215,24 @@ impl Performance {
         if safe_lines > 128 { safe_lines } else { 128 }
     }
 
-    /// Capacity for each thread in parallel processing.
+    /// Calculate optimal number of chunks based on content length.
     #[must_use]
-    pub fn capacity_per_thread(&self) -> usize {
-        let thread_count = self.threads.count();
-        let per_thread = Self::base_stdin_tally_capacity() / thread_count;
+    pub const fn total_chunks(&self, content_len: usize) -> usize {
+        if content_len == 0 {
+            return 0;
+        }
 
-        // Give each thread a reasonable minimum capacity, but don't exceed total
-        per_thread
-            .max(Self::MIN_THREAD_CAPACITY)
-            .min(Self::base_stdin_tally_capacity())
+        content_len.div_ceil(self.chunk_size())
+    }
+
+    /// Calculate optimal number of chunks per thread.
+    #[must_use]
+    pub fn chunks(&self, content_len: usize) -> usize {
+        let total_chunks = self.total_chunks(content_len);
+        let multiple_of_threads = rayon::current_num_threads() * Self::CHUNKS_PER_THREAD;
+
+        // Several times the thread count or the total number of chunks, whichever is smaller
+        multiple_of_threads.min(total_chunks)
     }
 
     // Env-parsing helpers

@@ -7,7 +7,8 @@
 //!
 //! Word boundaries are determined using the [`unicode-segmentation`](https://docs.rs/unicode-segmentation/)
 //! crate, which implements the [Unicode Standard Annex #29](https://unicode.org/reports/tr29/)
-//! specification for text segmentation across languages.
+//! specification for text segmentation across languages. The [`memchr`](https://docs.rs/memchr/)
+//! crate provides SIMD-accelerated text boundary detection for efficient parallel processing.
 //!
 //! ## Module structure
 //!
