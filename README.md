@@ -4,9 +4,9 @@
 [![docs.rs](https://img.shields.io/docsrs/word-tally?style=for-the-badge&link=https%3A%2F%2Fdocs.rs%2Fword-tally%2Flatest%2Fword_tally%2F)](https://docs.rs/word-tally/latest/word_tally/)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/havenwood/word-tally/rust.yml?style=for-the-badge)](https://github.com/havenwood/word-tally/actions/workflows/rust.yml)
 
-Tallies the number of times each word appears in one or more unicode input sources. Use `word-tally` as a command-line tool or `WordTally` via the Rust library interface. I/O is streamed by default. Memory-mapped and fully-buffered-in-memory I/O modes can be selected to optimize for different file sizes and workloads. Optionally take advantage of multiple CPU cores through parallelization of sorting, memory-mapped file I/O and word counting. Memory-mapping is only supported for files with seekable file descriptors, but performs well in parallel mode.
+Tallies the number of times each word appears in one or more unicode input sources. Use `word-tally` as a command-line tool or `WordTally` via the Rust library interface. I/O is streamed by default. Memory-mapped and fully-buffered-in-memory I/O modes can be selected to optimize for different file sizes and workloads. Optionally take advantage of multiple CPU cores through parallelized tallying and sorting.
 
-Parallel streaming and parallel buffered I/O modes use SIMD for quick chunk boundary detection. Parallel memory-mapped I/O mode slices chunk boundaries more directly and is often the most efficient choice for large files. Sequential streaming mode uses the least peak memory and is the default.
+Parallel streamed, buffered and memory-mapped I/O modes use SIMD for quick newline-based chunk boundary detection. Memory-mapping is only supported for files with seekable file descriptors but is able to optimize boundary finding. Sequential streaming mode uses the least peak memory and is the default.
 
 ## Usage
 

@@ -322,7 +322,7 @@ impl TallyMap {
     ///
     /// Processes data in parallel with Rayon using memory-mapped slicing of files:
     /// - Uses memmap2 to access file contents without loading the entire file into memory
-    /// - Optimized chunk boundary detection using direct slices with character boundary checks
+    /// - Optimized chunk boundary detection using SIMD newline scanning
     /// - Provides high performance with moderate memory usage
     ///
     /// # Limitations
@@ -338,7 +338,7 @@ impl TallyMap {
         let content_len = content.len();
         let total_chunks = perf.total_chunks(content_len);
 
-        // Find optimal chunk boundaries that align with character boundaries
+        // Find optimal chunk boundaries that align with newlines
         let boundaries = Self::mmap_chunk_boundaries(content, total_chunks);
 
         // Process content in parallel using the boundaries
@@ -365,21 +365,28 @@ impl TallyMap {
         let content_len = content.len();
         let target_chunk_size = content_len.div_ceil(total_chunks);
 
-        // Add an extra capacity for the closing boundary
         let mut boundaries = Vec::with_capacity(total_chunks + 1);
+
+        // First boundary
         boundaries.push(0);
+        boundaries.extend(
+            memchr_iter(b'\n', content.as_bytes())
+                // Track distance from last boundary
+                .scan(0, |last_boundary, pos| {
+                    if pos - *last_boundary >= target_chunk_size {
+                        let boundary = pos + 1;
+                        *last_boundary = boundary;
 
-        if !content.is_empty() {
-            let mut last_boundary = 0;
+                        // Found a newline far enough from the last boundary
+                        Some(boundary)
+                    } else {
+                        // Skip this newline, too close to the last boundary
+                        None
+                    }
+                }),
+        );
 
-            for pos in memchr_iter(b'\n', content.as_bytes()) {
-                if pos - last_boundary >= target_chunk_size && content.is_char_boundary(pos + 1) {
-                    boundaries.push(pos + 1);
-                    last_boundary = pos + 1;
-                }
-            }
-        }
-
+        // Last boundary should be the end if it isnt already
         if *boundaries.last().unwrap_or(&0) < content_len {
             boundaries.push(content_len);
         }
@@ -387,33 +394,28 @@ impl TallyMap {
         boundaries
     }
 
-    /// Find memory-mapped chunk boundaries with direct character boundary checks.
+    /// Find memory-mapped chunk boundaries using SIMD newline detection.
     fn mmap_chunk_boundaries(content: &str, num_chunks: usize) -> Vec<usize> {
-        let total_size = content.len();
-        let chunk_size = total_size.div_ceil(num_chunks);
-
-        if total_size == 0 {
-            return vec![0];
-        }
+        let content_len = content.len();
+        let target_chunk_size = content_len.div_ceil(num_chunks);
 
         let mut boundaries = Vec::with_capacity(num_chunks + 1);
+
+        // First boundary
         boundaries.push(0);
-
-        boundaries.extend((1..num_chunks).map(|i| {
-            // Find next valid UTF-8 character boundary after a chunk of bytes
-            let start_pos = i * chunk_size;
-            if start_pos >= total_size {
-                total_size
-            } else {
-                (start_pos..total_size)
-                    .find(|&pos| content.is_char_boundary(pos))
-                    .unwrap_or(total_size)
-            }
-        }));
-
-        if *boundaries.last().unwrap_or(&0) < total_size {
-            boundaries.push(total_size);
-        }
+        boundaries.extend((1..=num_chunks).map(|i| i * target_chunk_size).filter_map(
+            |target_pos| {
+                if target_pos >= content_len {
+                    // Last boundary is end of file if the proposed chunk is past the end
+                    Some(content_len)
+                } else {
+                    // Search backwards for a newline with SIMD
+                    //
+                    // Returns `None` if none is found or the position of the newline
+                    memchr::memrchr(b'\n', &content.as_bytes()[..target_pos]).map(|pos| pos + 1)
+                }
+            },
+        ));
 
         boundaries
     }
