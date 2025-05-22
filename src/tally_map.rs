@@ -186,7 +186,11 @@ impl TallyMap {
             .enumerate()
             .try_for_each(|(line_num, try_line)| {
                 let line = try_line.with_context(|| {
-                    format!("failed to read line {} from: {}", line_num + 1, input)
+                    format!(
+                        "failed to read line {} from: {}",
+                        line_num + 1,
+                        input.source()
+                    )
                 })?;
                 tally.extend_from_str(&line, options.case());
 
@@ -229,7 +233,7 @@ impl TallyMap {
                 let mut read_buffer = vec![0; buffer_size.saturating_sub(buffer.len())];
                 let bytes_read = reader
                     .read(&mut read_buffer)
-                    .with_context(|| format!("failed to read from: {input}"))?;
+                    .with_context(|| format!("failed to read from: {}", input.source()))?;
 
                 if bytes_read == 0 {
                     eof = true;
@@ -349,9 +353,9 @@ impl TallyMap {
         let mut buffer = String::with_capacity(buffer_capacity);
         input
             .reader()
-            .with_context(|| format!("failed to create reader for input: {input}"))?
+            .with_context(|| format!("failed to create reader for input: {}", input.source()))?
             .read_to_string(&mut buffer)
-            .with_context(|| format!("failed to read input into buffer: {input}"))?;
+            .with_context(|| format!("failed to read input into buffer: {}", input.source()))?;
 
         Ok(buffer)
     }

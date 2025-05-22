@@ -172,19 +172,20 @@ fn test_input_source_edge_cases() {
     use std::ffi::OsStr;
     use std::os::unix::ffi::OsStrExt;
 
-    // Test with path that has no filename
+    // Test with root path
     let path = std::path::Path::new("/");
     let input = Input::new(path, Io::Streamed).expect("create test input");
-    assert!(input.source().contains("No filename"));
+    assert_eq!(input.source(), "/");
 
-    // Test with non-UTF8 filename (requires Unix-like system)
+    // Test with non-UTF8 path (requires Unix-like system)
     #[cfg(unix)]
     {
         let non_utf8_bytes = b"\xFF\xFE\xFD";
         let non_utf8_osstr = OsStr::from_bytes(non_utf8_bytes);
         let path = std::path::Path::new(non_utf8_osstr);
         let input = Input::new(path, Io::Streamed).expect("create test input");
-        assert!(input.source().contains("Non-UTF-8 filename"));
+        // Should show the lossy representation of the path
+        assert!(input.source().contains("���"));
     }
 }
 

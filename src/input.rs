@@ -82,20 +82,12 @@ impl Input {
         InputReader::new(self)
     }
 
-    /// Returns the file name of the input or `"-"` for stdin.
+    /// Returns the source path or identifier for display in error messages.
     #[must_use]
     pub fn source(&self) -> String {
         match self {
             Self::Stdin => "-".to_string(),
-            Self::File(path) | Self::Mmap(_, path) => path.file_name().map_or_else(
-                || format!("No filename: {}", path.display()),
-                |name| {
-                    name.to_str().map_or_else(
-                        || format!("Non-UTF-8 filename: {}", name.to_string_lossy()),
-                        std::string::ToString::to_string,
-                    )
-                },
-            ),
+            Self::File(path) | Self::Mmap(_, path) => path.display().to_string(),
             Self::Bytes(_) => "<bytes>".to_string(),
         }
     }

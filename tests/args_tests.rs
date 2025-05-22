@@ -356,12 +356,7 @@ fn test_args_input_from_file() {
     let temp_file = NamedTempFile::new().expect("create temp file");
     fs::write(&temp_file, "test content").expect("process test");
 
-    let filename = temp_file
-        .path()
-        .file_name()
-        .expect("process test")
-        .to_str()
-        .expect("process test");
+    let path = temp_file.path().display().to_string();
 
     Command::cargo_bin("word-tally")
         .expect("execute operation")
@@ -369,7 +364,7 @@ fn test_args_input_from_file() {
         .arg("-v")
         .assert()
         .success()
-        .stderr(contains(format!("source {filename}")));
+        .stderr(contains(format!("source {path}")));
 }
 
 #[test]
