@@ -2,9 +2,9 @@
 
 use crate::options::case::Case;
 use crate::options::patterns::{ExcludePatterns, IncludePatterns, InputPatterns};
-use crate::{Count, TallyMap};
+use crate::{Count, TallyMap, WordTallyError};
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use core::fmt::{self, Display, Formatter};
 use core::ops::Deref;
 use serde::{Deserialize, Serialize};
@@ -260,7 +260,15 @@ impl Filters {
     fn format_exclude_words(words: &[String]) -> Result<ExcludeWordsList> {
         words
             .iter()
-            .map(|w| unescape(w).with_context(|| format!("failed to unescape: {w}")))
+            .map(|w| {
+                unescape(w).map_err(|_| {
+                    WordTallyError::Unescape {
+                        context: "exclude word".to_string(),
+                        value: w.clone(),
+                    }
+                    .into()
+                })
+            })
             .collect()
     }
 }

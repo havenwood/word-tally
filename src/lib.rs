@@ -16,6 +16,7 @@
 //!
 //! The `WordTally` library is organized into these modules:
 //! - `args.rs`: CLI argument parsing and command-line interface
+//! - `error.rs`: Error types for the library
 //! - `exit_code.rs`: Exit code definitions and handling
 //! - `input.rs`: Input source management strategies
 //! - `input_reader.rs`: Input readers implementing `Read` and `BufRead` traits
@@ -117,6 +118,7 @@ use std::{borrow::Cow, slice, str};
 use anyhow::Result;
 use serde::{self, Deserialize, Serialize};
 
+pub mod error;
 pub mod exit_code;
 pub mod input;
 pub mod input_reader;
@@ -124,6 +126,7 @@ pub mod options;
 pub mod output;
 pub mod tally_map;
 
+pub use error::Error as WordTallyError;
 pub use input::Input;
 pub use input_reader::InputReader;
 pub use options::patterns::{ExcludePatterns, IncludePatterns, InputPatterns};

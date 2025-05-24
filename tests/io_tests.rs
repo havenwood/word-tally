@@ -246,7 +246,7 @@ fn test_bytes_io_with_input_new() {
     let result = Input::new(TEST_TEXT, Io::Bytes);
     assert!(result.is_err());
     let err = result.unwrap_err().to_string();
-    assert!(err.contains("use `Input::from_bytes()`"));
+    assert!(err.contains("byte I/O mode requires `Input::from_bytes()`"));
 }
 
 #[test]

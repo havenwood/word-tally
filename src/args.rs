@@ -1,6 +1,6 @@
 //! Command-line argument parsing and access.
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::{ArgAction, Parser};
 use std::path::PathBuf;
 
@@ -12,7 +12,7 @@ use word_tally::options::{
     serialization::{Format, Serialization},
     sort::Sort,
 };
-use word_tally::{Count, Options};
+use word_tally::{Count, Options, WordTallyError};
 
 /// A utility for tallying word frequencies in text.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Parser)]
@@ -25,7 +25,7 @@ use word_tally::{Count, Options};
 )]
 pub struct Args {
     /// File paths to use as input (use "-" for stdin).
-    #[arg(value_name = "PATHS")]
+    #[arg(value_name = "PATHS", default_value = "-")]
     sources: Vec<String>,
 
     // Performance options
@@ -37,7 +37,7 @@ pub struct Args {
     #[arg(short = 'S', long = "no-parallel", action = ArgAction::SetFalse)]
     parallel: bool,
 
-    /// Use threads for parallel processing [default].
+    /// Enable parallel processing [default].
     #[arg(short = 'p', long = "parallel", overrides_with = "parallel")]
     _no_parallel: bool,
 
@@ -92,10 +92,7 @@ pub struct Args {
 impl Args {
     /// Get the input file paths.
     pub fn get_sources(&self) -> Vec<&str> {
-        match self.sources.as_slice() {
-            [] => vec!["-"],
-            sources => sources.iter().map(String::as_str).collect(),
-        }
+        self.sources.iter().map(String::as_str).collect()
     }
 
     /// Get the output file path.
@@ -137,15 +134,23 @@ impl Args {
                 None => Ok(f),
             })
             .and_then(|f| match &self.exclude {
-                Some(patterns) => f
-                    .with_exclude_patterns(patterns)
-                    .context("failed to create exclude patterns"),
+                Some(patterns) => f.with_exclude_patterns(patterns).map_err(|e| {
+                    WordTallyError::Pattern {
+                        kind: "exclude".to_string(),
+                        message: e.to_string(),
+                    }
+                    .into()
+                }),
                 None => Ok(f),
             })
             .and_then(|f| match &self.include {
-                Some(patterns) => f
-                    .with_include_patterns(patterns)
-                    .context("failed to create include patterns"),
+                Some(patterns) => f.with_include_patterns(patterns).map_err(|e| {
+                    WordTallyError::Pattern {
+                        kind: "include".to_string(),
+                        message: e.to_string(),
+                    }
+                    .into()
+                }),
                 None => Ok(f),
             })
     }

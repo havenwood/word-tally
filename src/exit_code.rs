@@ -1,75 +1,93 @@
-//! Error exit codes for word-tally
-//!
-//! Follows Unix sysexits.h convention for exit code numbers.
+//! Exit codes for word-tally following Unix sysexits.h convention
 
-use anyhow::Error;
+use crate::error::Error;
 use clap::error::ErrorKind as ClapErrorKind;
-use std::fmt::{Debug, Display};
 use std::io;
-use std::num::TryFromIntError;
 
-pub const SUCCESS: i32 = 0;
-pub const FAILURE: i32 = 1;
-pub const USAGE: i32 = 64;
-pub const DATA_ERROR: i32 = 65;
-pub const NO_INPUT: i32 = 66;
-pub const CANNOT_CREATE: i32 = 73;
-pub const IO_ERROR: i32 = 74;
-pub const NO_PERMISSION: i32 = 77;
-
-/// Converts an error to an appropriate exit code.
-#[must_use]
-pub fn from_error(err: &Error) -> i32 {
-    // Check Clap errors (during argument parsing)
-    if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
-        return match clap_err.kind() {
-            // Successful `--help` or `--version` display
-            ClapErrorKind::DisplayHelp | ClapErrorKind::DisplayVersion => SUCCESS,
-            // Clap usage errors
-            _ => USAGE,
-        };
-    }
-
-    // Check for usage errors by message content
-    let err_msg = err.to_string();
-    if err_msg.contains("Memory-mapped I/O is not supported for stdin")
-        || err_msg.contains("Memory-mapped I/O requires a file input")
-    {
-        return USAGE;
-    }
-
-    // Check I/O errors (when opening files)
-    if let Some(io_err) = err.downcast_ref::<io::Error>() {
-        return match io_err.kind() {
-            // No input errors
-            io::ErrorKind::NotFound => NO_INPUT,
-            // Permission errors
-            io::ErrorKind::PermissionDenied => NO_PERMISSION,
-            // Inability to create errors
-            io::ErrorKind::AlreadyExists => CANNOT_CREATE,
-            // Other I/O errors
-            _ => IO_ERROR,
-        };
-    }
-
-    // Check data errors (during processing)
-    if is_error_type::<regex::Error>(err)
-        || is_error_type::<serde_json::Error>(err)
-        || is_error_type::<csv::Error>(err)
-        || is_error_type::<std::str::Utf8Error>(err)
-        || is_error_type::<std::string::FromUtf8Error>(err)
-        || is_error_type::<unescaper::Error>(err)
-        || is_error_type::<TryFromIntError>(err)
-    // File too large for platform
-    {
-        return DATA_ERROR;
-    }
-
-    // Any other errors
-    FAILURE
+/// Exit codes following Unix sysexits.h convention
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ExitCode {
+    /// Successful termination
+    Success = 0,
+    /// General failure
+    Failure = 1,
+    /// Command line usage error
+    Usage = 64,
+    /// Data format error
+    Data = 65,
+    /// Cannot open input
+    NoInput = 66,
+    /// Cannot create output
+    CannotCreate = 73,
+    /// I/O error
+    Io = 74,
+    /// Permission denied
+    NoPermission = 77,
 }
 
-/// Helper function to check if an error is of a specific type.
-fn is_error_type<E: Display + Debug + Send + Sync + 'static>(err: &Error) -> bool {
-    err.downcast_ref::<E>().is_some()
+impl ExitCode {
+    /// Convert a Clap error to an appropriate exit code
+    fn from_clap_error(err: &clap::Error) -> Self {
+        match err.kind() {
+            // Successful `--help` or `--version` display
+            ClapErrorKind::DisplayHelp | ClapErrorKind::DisplayVersion => Self::Success,
+            // Clap usage errors
+            _ => Self::Usage,
+        }
+    }
+
+    /// Convert a word-tally error to an appropriate exit code
+    fn from_word_tally_error(err: &Error) -> Self {
+        match err {
+            Error::Usage(_) | Error::MmapStdin | Error::BytesWithPath | Error::Config(_) => {
+                Self::Usage
+            }
+            Error::Utf8 { .. }
+            | Error::Pattern { .. }
+            | Error::JsonSerialization(_)
+            | Error::CsvSerialization(_)
+            | Error::Unescape { .. }
+            | Error::ChunkCountExceeded { .. }
+            | Error::BatchSizeExceeded { .. } => Self::Data,
+            Error::Io { source, .. } => Self::from_io_error(source),
+        }
+    }
+
+    /// Convert an I/O error to an appropriate exit code
+    fn from_io_error(err: &io::Error) -> Self {
+        match err.kind() {
+            io::ErrorKind::NotFound => Self::NoInput,
+            io::ErrorKind::PermissionDenied => Self::NoPermission,
+            io::ErrorKind::AlreadyExists => Self::CannotCreate,
+            _ => Self::Io,
+        }
+    }
+
+    /// Converts an error to an appropriate exit code.
+    #[must_use]
+    pub fn from_error(err: &anyhow::Error) -> Self {
+        // Clap errors
+        if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
+            return Self::from_clap_error(clap_err);
+        }
+
+        // Tallying errors
+        if let Some(wt_err) = err.downcast_ref::<Error>() {
+            return Self::from_word_tally_error(wt_err);
+        }
+
+        // I/O errors
+        if let Some(io_err) = err.downcast_ref::<io::Error>() {
+            return Self::from_io_error(io_err);
+        }
+
+        // Any other errors
+        Self::Failure
+    }
+}
+
+impl From<ExitCode> for i32 {
+    fn from(code: ExitCode) -> Self {
+        code as Self
+    }
 }

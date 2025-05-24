@@ -1,8 +1,9 @@
 //! Read trait abstractions for files, stdin or memory-mapped I/O.
 
+use crate::WordTallyError;
 use crate::input_reader::InputReader;
 use crate::options::io::Io;
-use anyhow::{Context, Result};
+use anyhow::Result;
 use memmap2::Mmap;
 use std::fmt::{self, Formatter};
 use std::fs::{self, File};
@@ -35,11 +36,7 @@ impl Input {
         let path_ref = p.as_ref();
         if path_ref.as_os_str() == "-" {
             match io {
-                Io::MemoryMapped => {
-                    anyhow::bail!(
-                        "Memory-mapped I/O is not supported for stdin. Use --io=streamed or --io=buffered instead."
-                    )
-                }
+                Io::MemoryMapped => return Err(WordTallyError::MmapStdin.into()),
                 _ => return Ok(Self::Stdin),
             }
         }
@@ -52,22 +49,23 @@ impl Input {
             }
             Io::MemoryMapped => {
                 let path_buf = path_ref.to_path_buf();
-                let file = File::open(&path_buf).with_context(|| {
-                    format!(
-                        "failed to open file for memory mapping: {}",
-                        path_buf.display()
-                    )
+                let file = File::open(&path_buf).map_err(|e| WordTallyError::Io {
+                    path: path_buf.display().to_string(),
+                    message: "failed to open file for memory mapping".to_string(),
+                    source: e,
                 })?;
 
                 // Safety: Memory mapping requires `unsafe` per memmap2 crate
-                let mmap = unsafe { Mmap::map(&file)? };
+                let mmap = unsafe { Mmap::map(&file) }.map_err(|e| WordTallyError::Io {
+                    path: path_buf.display().to_string(),
+                    message: "failed to create memory map".to_string(),
+                    source: e,
+                })?;
                 let mmap_arc = Arc::new(mmap);
 
                 Ok(Self::Mmap(mmap_arc, path_buf))
             }
-            Io::Bytes => {
-                anyhow::bail!("For byte data with `Io::Bytes`, use `Input::from_bytes()`.")
-            }
+            Io::Bytes => Err(WordTallyError::BytesWithPath.into()),
         }
     }
 

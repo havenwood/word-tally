@@ -111,7 +111,7 @@ fn test_input_bytes_error() {
         result
             .unwrap_err()
             .to_string()
-            .contains("For byte data with `Io::Bytes`, use `Input::from_bytes()`")
+            .contains("byte I/O mode requires `Input::from_bytes()`")
     );
 }
 

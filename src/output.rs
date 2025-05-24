@@ -1,7 +1,7 @@
 //! Write trait abstractions for stdout and file serialization.
 
-use crate::WordTally;
 use crate::options::serialization::Format;
+use crate::{Count, Word, WordTally, WordTallyError};
 use anyhow::{Context, Result};
 use std::fmt::{self, Debug, Formatter};
 use std::fs::File;
@@ -142,38 +142,43 @@ impl Output {
         let tally = word_tally.tally();
 
         match format {
-            Format::Text => {
-                for (word, count) in tally {
-                    self.write_chunk(&format!("{word}{delimiter}{count}\n"))
-                        .context("failed to write word-count pair")?;
-                }
-
-                self.flush().context("failed to flush output")
-            }
-            Format::Json => {
-                let mut json_data = Vec::with_capacity(tally.len());
-                json_data.extend(tally.iter().map(|(word, count)| (word.as_ref(), count)));
-                let json = serde_json::to_string(&json_data)
-                    .context("failed to serialize word tally to JSON")?;
-                self.write_chunk(&format!("{json}\n"))
-                    .context("failed to write JSON output")?;
-
-                self.flush().context("failed to flush JSON output")
-            }
-            Format::Csv => {
-                let mut csv_writer = csv::Writer::from_writer(&mut self.writer);
-                csv_writer
-                    .write_record(["word", "count"])
-                    .context("failed to write CSV header")?;
-
-                for (word, count) in tally {
-                    csv_writer
-                        .write_record([word.as_ref(), &count.to_string()])
-                        .context("failed to write CSV row")?;
-                }
-
-                csv_writer.flush().context("failed to flush CSV writer")
-            }
+            Format::Text => self.write_text(tally, delimiter),
+            Format::Json => self.write_json(tally),
+            Format::Csv => self.write_csv(tally),
         }
+    }
+
+    fn write_text(&mut self, tally: &[(Word, Count)], delimiter: &str) -> Result<()> {
+        for (word, count) in tally {
+            self.write_chunk(&format!("{word}{delimiter}{count}\n"))
+                .context("failed to write word-count pair")?;
+        }
+
+        self.flush().context("failed to flush output")
+    }
+
+    fn write_json(&mut self, tally: &[(Word, Count)]) -> Result<()> {
+        let mut json_data = Vec::with_capacity(tally.len());
+        json_data.extend(tally.iter().map(|(word, count)| (word.as_ref(), count)));
+        let json = serde_json::to_string(&json_data).map_err(WordTallyError::JsonSerialization)?;
+        self.write_chunk(&format!("{json}\n"))
+            .context("failed to write JSON output")?;
+
+        self.flush().context("failed to flush JSON output")
+    }
+
+    fn write_csv(&mut self, tally: &[(Word, Count)]) -> Result<()> {
+        let mut csv_writer = csv::Writer::from_writer(&mut self.writer);
+        csv_writer
+            .write_record(["word", "count"])
+            .map_err(WordTallyError::CsvSerialization)?;
+
+        for (word, count) in tally {
+            csv_writer
+                .write_record([word.as_ref(), &count.to_string()])
+                .map_err(WordTallyError::CsvSerialization)?;
+        }
+
+        csv_writer.flush().context("failed to flush CSV output")
     }
 }

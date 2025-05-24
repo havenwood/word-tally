@@ -6,7 +6,7 @@
 
 Tallies the number of times each word appears in one or more unicode input sources. Use `word-tally` as a command-line tool or `WordTally` via the Rust library interface. I/O is streamed by default. Memory-mapped and fully-buffered-in-memory I/O modes can be selected to optimize for different file sizes and workloads. Optionally take advantage of multiple CPU cores through parallelized tallying and sorting.
 
-Parallel streamed, buffered and memory-mapped I/O modes use SIMD for quick newline-based chunk boundary detection. Memory-mapping is only supported for files with seekable file descriptors but is able to optimize boundary finding. Parallel streaming mode is the default for better performance, reasonable memory usage and flexibility with stdin and files. Sequential streaming mode (via `--no-parallel`) uses the least peak memory.
+Parallel streamed, buffered and memory-mapped I/O modes use SIMD for quick newline-based chunk boundary detection. Memory mapping is only supported for files with seekable file descriptors but is able to optimize boundary finding. Sequential streaming mode uses the least peak memory. Parallel streaming mode is the default, for a some increased performance with somewhat constrained memory usage along with flexibility handling stdin and files.
 
 ## Usage
 
@@ -19,14 +19,14 @@ Arguments:
 Options:
   -I, --io <STRATEGY>          I/O strategy [default: streamed] [possible values: mmap, streamed, buffered]
   -S, --no-parallel            Disable parallel processing (use sequential)
-  -p, --parallel               Use threads for parallel processing [default]
+  -p, --parallel               Enable parallel processing [default]
   -c, --case <FORMAT>          Case normalization [default: lower] [possible values: original, upper, lower]
   -s, --sort <ORDER>           Sort order [default: desc] [possible values: desc, asc, unsorted]
   -m, --min-chars <COUNT>      Exclude words containing fewer than min chars
   -M, --min-count <COUNT>      Exclude words appearing fewer than min times
   -E, --exclude-words <WORDS>  Exclude words from a comma-delimited list
-  -i, --include <PATTERN>      Include only words matching a regex pattern
-  -x, --exclude <PATTERN>      Exclude words matching a regex pattern
+  -i, --include <PATTERNS>     Include only words matching a regex pattern
+  -x, --exclude <PATTERNS>     Exclude words matching a regex pattern
   -f, --format <FORMAT>        Output format [default: text] [possible values: text, json, csv]
   -d, --delimiter <VALUE>      Delimiter between keys and values [default: " "]
   -o, --output <PATH>          Write output to file rather than stdout
@@ -48,10 +48,10 @@ cargo install word-tally
 word-tally uses parallel, streamed processing by default for better performance, reasonable memory usage and flexibility with stdin and files. Sequential processing (via `--no-parallel`) is available as a minimal-memory option. The different I/O modes (streamed, buffered, memory-mapped) have different performance and resource usage characteristics.
 
 ```sh
-# Streamed I/O from stdin (`--io=streamed` is default)
+# Streamed I/O with parallel processing from stdin
 echo "tally me" | word-tally
 
-# Streamed I/O from a file
+# Streamed I/O with parallel processing from a file
 word-tally file.txt
 
 # Process multiple files with aggregated word counts
@@ -63,13 +63,10 @@ cat file1.txt | word-tally - file2.txt
 # Memory-mapped I/O with efficient parallel processing (requires a file rather than stdin)
 word-tally --io=mmap document.txt
 
-# Buffered I/O with parallel processing (default)
+# Buffered I/O with parallel processing
 word-tally --io=buffered document.txt
 
-# Streamed I/O with parallel processing (default)
-word-tally --io=streamed document.txt
-
-# Sequential processing for minimal memory usage
+# Streamed with sequential processing for minimal memory usage
 word-tally --no-parallel document.txt
 ```
 
@@ -217,8 +214,9 @@ Parallel processing configuration:
 - `64`: Command line usage error
 - `65`: Data format error
 - `66`: Cannot open input
-- `69`: Service unavailable
+- `73`: Cannot create output file
 - `74`: I/O error
+- `77`: Permission denied
 
 ## Library usage
 

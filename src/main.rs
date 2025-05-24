@@ -1,7 +1,6 @@
 //! `word-tally` tallies and outputs the count of words from a given input.
 
 pub(crate) mod args;
-pub(crate) mod exit_code;
 pub(crate) mod verbose;
 pub(crate) use word_tally::input;
 pub(crate) use word_tally::output;
@@ -13,14 +12,14 @@ use anyhow::Result;
 use args::Args;
 use clap::Parser;
 use std::process;
-use word_tally::{TallyMap, WordTally};
+use word_tally::{TallyMap, WordTally, exit_code::ExitCode};
 
 fn main() {
     match run() {
-        Ok(()) => process::exit(exit_code::SUCCESS),
+        Ok(()) => process::exit(ExitCode::Success.into()),
         Err(err) => {
             eprintln!("Error: {err}");
-            process::exit(exit_code::from_error(&err));
+            process::exit(ExitCode::from_error(&err).into());
         }
     }
 }

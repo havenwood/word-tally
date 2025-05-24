@@ -512,7 +512,7 @@ fn test_args_all_io_modes() {
         .assert()
         .failure()
         .code(64)
-        .stderr(contains("Memory-mapped I/O is not supported for stdin"));
+        .stderr(contains("memory-mapped I/O requires a file, not stdin"));
 }
 
 #[test]
@@ -647,7 +647,7 @@ fn test_args_invalid_regex_exclude() {
         .write_stdin("test")
         .assert()
         .failure()
-        .stderr(contains("failed to create exclude patterns"));
+        .stderr(contains("invalid exclude pattern"));
 }
 
 #[test]
@@ -658,7 +658,7 @@ fn test_args_invalid_regex_include() {
         .write_stdin("test")
         .assert()
         .failure()
-        .stderr(contains("failed to create include patterns"));
+        .stderr(contains("invalid include pattern"));
 }
 
 //

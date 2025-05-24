@@ -1,6 +1,7 @@
 //! Serialization format options and settings.
 
-use anyhow::{Context, Result};
+use crate::WordTallyError;
+use anyhow::Result;
 use clap::ValueEnum;
 use core::fmt::{self, Display, Formatter};
 use serde::{self, Deserialize, Serialize};
@@ -82,7 +83,13 @@ impl Display for Serialization {
 impl Serialization {
     /// Helper function to unescape a delimiter string.
     fn format_delimiter(delimiter: &str) -> Result<String> {
-        unescape(delimiter).with_context(|| format!("failed to unescape delimiter: {delimiter}"))
+        unescape(delimiter).map_err(|_| {
+            WordTallyError::Unescape {
+                context: "delimiter".to_string(),
+                value: delimiter.to_string(),
+            }
+            .into()
+        })
     }
 
     /// Create a new Serialize instance with specified settings.

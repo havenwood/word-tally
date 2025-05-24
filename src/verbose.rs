@@ -3,7 +3,7 @@
 use crate::output::Output;
 use anyhow::{Context, Result};
 use serde::Serialize;
-use word_tally::{Format, WordTally};
+use word_tally::{Format, WordTally, WordTallyError};
 
 /// Handles verbose output formatting and display of word tally results.
 #[derive(Debug)]
@@ -122,8 +122,7 @@ impl Verbose {
 
     /// Write verbose info in JSON format.
     fn write_json(&mut self, data: &VerboseData<'_>) -> Result<()> {
-        let json =
-            serde_json::to_string(data).context("failed to serialize verbose info to JSON")?;
+        let json = serde_json::to_string(data).map_err(WordTallyError::JsonSerialization)?;
 
         self.output
             .write_chunk(&format!("{json}\n\n"))

@@ -19,7 +19,7 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::options::{
     Options, case::Case, io::Io, performance::Performance, processing::Processing,
 };
-use crate::{Count, Input, Word};
+use crate::{Count, Input, Word, WordTallyError};
 
 /// Map for tracking word counts with non-deterministic iteration order.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -130,7 +130,7 @@ impl TallyMap {
             // Parallel processing
             (Processing::Parallel, Io::MemoryMapped) => {
                 let Input::Mmap(mmap_arc, path) = input else {
-                    anyhow::bail!("Memory-mapped I/O requires a file input, not stdin")
+                    return Err(WordTallyError::MmapStdin.into());
                 };
                 Self::par_mmap_count(mmap_arc, path, options)
             }
@@ -164,13 +164,10 @@ impl TallyMap {
 
         // Find newline-aligned chunk boundaries
         let total_chunks = perf.total_chunks(content.len() as u64);
-        let num_chunks = usize::try_from(total_chunks).with_context(|| {
-            format!(
-                "File too large for 32-bit system: {} chunks needed, but platform limit is {} chunks",
-                total_chunks,
-                usize::MAX
-            )
-        })?;
+        let num_chunks =
+            usize::try_from(total_chunks).map_err(|_| WordTallyError::ChunkCountExceeded {
+                chunks: total_chunks,
+            })?;
         let boundaries = Self::chunk_boundaries(&content, num_chunks);
         // Process content in parallel using the chunk boundaries
         let tally = Self::process_chunks(&content, &boundaries, options.case());
@@ -197,13 +194,10 @@ impl TallyMap {
         let content = Self::parse_utf8_slice(mmap, &path.display())?;
         // Calculate chunk boundaries with mmap and SIMD
         let total_chunks = perf.total_chunks(content.len() as u64);
-        let num_chunks = usize::try_from(total_chunks).with_context(|| {
-            format!(
-                "File too large for 32-bit system: {} chunks needed, but platform limit is {} chunks",
-                total_chunks,
-                usize::MAX
-            )
-        })?;
+        let num_chunks =
+            usize::try_from(total_chunks).map_err(|_| WordTallyError::ChunkCountExceeded {
+                chunks: total_chunks,
+            })?;
         let boundaries = Self::mmap_boundaries(content, num_chunks);
         // Process content in parallel using the boundaries
         let tally = Self::process_chunks(content, &boundaries, case);
@@ -250,22 +244,12 @@ impl TallyMap {
         let mut reader = input.reader()?;
 
         let stream_batch = Performance::stream_batch_size();
-        let batch_size = usize::try_from(stream_batch).with_context(|| {
-            format!(
-                "Batch size too large for 32-bit system: {} bytes needed, but platform limit is {} bytes",
-                stream_batch,
-                usize::MAX
-            )
-        })?;
+        let batch_size = usize::try_from(stream_batch)
+            .map_err(|_| WordTallyError::BatchSizeExceeded { size: stream_batch })?;
         let input_size = input.size().unwrap_or_else(|| perf.base_stdin_size());
         let target_size = perf.stream_batch_size_for_input(input_size);
-        let target_batch_size = usize::try_from(target_size).with_context(|| {
-            format!(
-                "Target batch size too large for 32-bit system: {} bytes needed, but platform limit is {} bytes",
-                target_size,
-                usize::MAX
-            )
-        })?;
+        let target_batch_size = usize::try_from(target_size)
+            .map_err(|_| WordTallyError::BatchSizeExceeded { size: target_size })?;
 
         let tally_capacity = perf.capacity(input.size());
         let initial_tally = Self::with_capacity(tally_capacity);
@@ -515,29 +499,25 @@ impl TallyMap {
     }
 
     /// Parse a UTF-8 slice with error recovery, truncating at last valid boundary on error.
-    fn parse_utf8_slice<'a>(buffer: &'a [u8], input_name: &impl Display) -> Result<&'a str> {
+    fn parse_utf8_slice<'a>(buffer: &'a [u8], _input_name: &impl Display) -> Result<&'a str> {
         str::from_utf8(buffer).or_else(|e| {
-            let valid_len = e.valid_up_to();
-            let adjusted_len = Self::find_valid_boundary(buffer, valid_len);
+            let adjusted_len = Self::find_valid_boundary(buffer, e.valid_up_to());
 
-            match adjusted_len {
-                0 => Err(e).with_context(|| {
-                    format!(
-                        "invalid UTF-8 at byte offset {} from: {}",
-                        e.valid_up_to(),
-                        input_name
-                    )
-                }),
-                len => str::from_utf8(&buffer[..len])
-                    .map_err(|_| e)
-                    .with_context(|| {
-                        format!(
-                            "invalid UTF-8 at byte offset {} from: {}",
-                            e.valid_up_to(),
-                            input_name
-                        )
-                    }),
+            if adjusted_len == 0 {
+                return Err(WordTallyError::Utf8 {
+                    byte: e.valid_up_to(),
+                    source: e,
+                }
+                .into());
             }
+
+            str::from_utf8(&buffer[..adjusted_len]).map_err(|_| {
+                WordTallyError::Utf8 {
+                    byte: e.valid_up_to(),
+                    source: e,
+                }
+                .into()
+            })
         })
     }
 }
