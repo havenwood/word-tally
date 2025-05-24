@@ -3,6 +3,8 @@
 use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
 
+use crate::Performance;
+
 /// Determines the processing strategy.
 ///
 /// Performance characteristics:
@@ -40,6 +42,24 @@ impl Display for Processing {
         match self {
             Self::Sequential => write!(f, "sequential"),
             Self::Parallel => write!(f, "parallel"),
+        }
+    }
+}
+
+impl Processing {
+    /// Initialize resources needed for this processing mode.
+    ///
+    /// For parallel processing, this initializes the global thread pool.
+    /// For sequential processing, this is a no-op.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if parallel mode is selected but the thread pool
+    /// cannot be initialized.
+    pub fn initialize(&self, performance: &Performance) -> anyhow::Result<()> {
+        match self {
+            Self::Parallel => performance.threads().init_pool(),
+            Self::Sequential => Ok(()),
         }
     }
 }

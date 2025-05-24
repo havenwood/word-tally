@@ -224,11 +224,6 @@ impl<'a> WordTally<'a> {
     /// # }
     /// ```
     pub fn new(input: &Input, options: &'a Options) -> Result<Self> {
-        // Initialize thread pool if parallel processing
-        if matches!(options.processing(), Processing::Parallel) {
-            options.performance().threads().init_pool()?;
-        }
-
         // Generate the tally map from the input
         let tally_map = TallyMap::from_input(input, options)?;
 
