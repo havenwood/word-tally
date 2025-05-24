@@ -26,31 +26,6 @@ fn test_with_verbose() {
 }
 
 // Test calculation methods
-#[test]
-fn test_lines_per_chunk() {
-    let perf = Performance::default();
-    assert_eq!(perf.lines_per_chunk(), 819); // 65536 / 80
-
-    // Test with small chunk size to hit the minimum
-    let perf_small = Performance::default().with_chunk_size(1024);
-    assert_eq!(perf_small.lines_per_chunk(), 128); // minimum value
-}
-
-#[test]
-fn test_chunks() {
-    let perf = Performance::default();
-
-    assert_eq!(perf.chunks(0), 0);
-    assert_eq!(perf.chunks(1), 1);
-    assert_eq!(perf.chunks(perf.chunk_size() / 2), 1);
-
-    let thread_count = rayon::current_num_threads();
-    let max_chunks = thread_count * Performance::CHUNKS_PER_THREAD;
-
-    let chunks = perf.chunks(100_000_000);
-    assert!(chunks <= max_chunks);
-    assert!(chunks > 0);
-}
 
 // Test trait implementations
 #[test]

@@ -482,3 +482,135 @@ fn test_io_debug_format() {
     assert_eq!(format!("{:?}", Io::MemoryMapped), "MemoryMapped");
     assert_eq!(format!("{:?}", Io::Bytes), "Bytes");
 }
+
+//
+// Tests for streaming chunk size handling
+//
+
+use std::fs::File;
+use std::sync::Arc;
+use tempfile::TempDir;
+use word_tally::{Case, Filters, Serialization, Sort};
+
+fn make_shared<T>(value: T) -> Arc<T> {
+    Arc::new(value)
+}
+
+/// Generate a simple test file with known content.
+fn create_test_file_with_size(dir: &TempDir, size_mb: usize) -> anyhow::Result<String> {
+    let path = dir.path().join(format!("test_{size_mb}mb.txt"));
+    let mut file = File::create(&path)?;
+
+    // Simple pattern: 10 "narrow" + 10 "certain" per line
+    let pattern = "narrow narrow narrow narrow narrow narrow narrow narrow narrow narrow certain certain certain certain certain certain certain certain certain certain\n";
+    let pattern_bytes = pattern.as_bytes();
+    let target_bytes = size_mb * 1024 * 1024;
+    let mut written = 0;
+
+    while written < target_bytes {
+        file.write_all(pattern_bytes)?;
+        written += pattern_bytes.len();
+    }
+
+    Ok(path.to_string_lossy().to_string())
+}
+
+#[test]
+fn test_streaming_processes_entire_file() -> anyhow::Result<()> {
+    let temp_dir = TempDir::new()?;
+
+    // Create a 5MB file - larger than typical batch size
+    let file_path = create_test_file_with_size(&temp_dir, 5)?;
+
+    let base_options = Options::new(
+        Case::default(),
+        Sort::default(),
+        Serialization::default(),
+        Filters::default(),
+        Io::Streamed,
+        Processing::Parallel,
+        Performance::default(),
+    );
+
+    // Test streaming
+    let streaming_options = make_shared(base_options.clone().with_io(Io::Streamed));
+    let streaming_input = Input::new(&file_path, streaming_options.io())?;
+    let streaming_tally = WordTally::new(&streaming_input, &streaming_options)?;
+    let streaming_count: usize = streaming_tally
+        .into_iter()
+        .find(|(w, _)| &**w == "narrow")
+        .map_or(0, |(_, c)| c);
+
+    // Test buffered for comparison
+    let buffered_options = make_shared(base_options.with_io(Io::Buffered));
+    let buffered_input = Input::new(&file_path, buffered_options.io())?;
+    let buffered_tally = WordTally::new(&buffered_input, &buffered_options)?;
+    let buffered_count: usize = buffered_tally
+        .into_iter()
+        .find(|(w, _)| &**w == "narrow")
+        .map_or(0, |(_, c)| c);
+
+    assert_eq!(
+        streaming_count, buffered_count,
+        "Streaming count ({streaming_count}) differs from buffered count ({buffered_count})"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn test_streaming_consistency_across_io_modes() -> anyhow::Result<()> {
+    let temp_dir = TempDir::new()?;
+    let file_path = create_test_file_with_size(&temp_dir, 2)?; // 2MB file
+
+    // Test with streaming
+    let performance = Performance::default();
+    let filters = Filters::default();
+    let streaming_options = Options::new(
+        Case::default(),
+        Sort::default(),
+        Serialization::default(),
+        filters.clone(),
+        Io::Streamed,
+        Processing::Parallel,
+        performance,
+    );
+    let streaming_options_arc = make_shared(streaming_options);
+
+    let streaming_input = Input::new(&file_path, streaming_options_arc.io())?;
+    let streaming_tally = WordTally::new(&streaming_input, &streaming_options_arc)?;
+    let streaming_results: Vec<_> = streaming_tally.into_iter().collect();
+
+    // Test with buffered
+    let buffered_options = Options::new(
+        Case::default(),
+        Sort::default(),
+        Serialization::default(),
+        filters,
+        Io::Buffered,
+        Processing::Parallel,
+        performance,
+    );
+    let buffered_options_arc = make_shared(buffered_options);
+
+    let buffered_input = Input::new(&file_path, buffered_options_arc.io())?;
+    let buffered_tally = WordTally::new(&buffered_input, &buffered_options_arc)?;
+    let buffered_results: Vec<_> = buffered_tally.into_iter().collect();
+
+    assert_eq!(
+        streaming_results.len(),
+        buffered_results.len(),
+        "Different number of unique words"
+    );
+
+    // Convert to HashMap for order-independent comparison
+    let streaming_map: std::collections::HashMap<_, _> = streaming_results.into_iter().collect();
+    let buffered_map: std::collections::HashMap<_, _> = buffered_results.into_iter().collect();
+
+    assert_eq!(
+        streaming_map, buffered_map,
+        "Results differ between streaming and buffered modes"
+    );
+
+    Ok(())
+}

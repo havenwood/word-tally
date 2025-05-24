@@ -34,7 +34,7 @@ impl Default for Performance {
         Self {
             uniqueness_ratio: Self::UNIQUENESS_RATIO,
             words_per_kb: Self::WORDS_PER_KB,
-            chunk_size: Self::CHUNK_SIZE,
+            chunk_size: Self::PAR_CHUNK_SIZE,
             base_stdin_size: Self::BASE_STDIN_SIZE,
             threads: Threads::default(),
             verbose: false,
@@ -61,24 +61,16 @@ impl Performance {
 
     /// Estimated is 128 words per KB.
     const WORDS_PER_KB: u16 = 128;
-    /// Estimated number of words per line.
-    pub const WORDS_PER_LINE: u8 = 10;
-    /// Estimated 512 words per KB (quite low, at one word every other byte).
+    /// At most, 512 words per KB (one word every other byte).
     const MAX_WORDS_PER_KB: u16 = 512;
     /// Estimated ratio of 128:1 ratio, saves memory (~10:1 is more reasonable for books).
     const UNIQUENESS_RATIO: u16 = 128;
-    /// Default chunk size is 64KB.
-    const CHUNK_SIZE: u64 = 64 * 1024;
     /// Estimated stdin size is 256KB.
     const BASE_STDIN_SIZE: u64 = 256 * 1024;
-    /// Estimated 80 characters per line.
-    const CHARS_PER_LINE: u64 = 80;
     /// Target chunks per thread (2-4 chunks per thread helps with work stealing).
-    pub const CHUNKS_PER_THREAD: usize = 4;
-    /// Streaming buffer size for parallel processing (4MB).
-    pub const STREAM_BUFFER_SIZE: usize = 4 * 1024 * 1024;
-    /// Minimum chunk size for parallel streaming (512KB).
-    pub const MIN_STREAM_CHUNK_SIZE: usize = 512 * 1024;
+    pub const PAR_CHUNKS_PER_THREAD: u8 = 4;
+    /// Chunk size for parallel processing is 64KB.
+    pub const PAR_CHUNK_SIZE: u64 = 64 * 1024;
 
     // Environment variable names for configuration.
     const ENV_STDIN_BUFFER_SIZE: &str = "WORD_TALLY_STDIN_BUFFER_SIZE";
@@ -103,7 +95,7 @@ impl Performance {
                 ),
                 words_per_kb: Self::parse_env_var(Self::ENV_WORDS_PER_KB, Self::WORDS_PER_KB)
                     .min(Self::MAX_WORDS_PER_KB),
-                chunk_size: Self::parse_env_var(Self::ENV_CHUNK_SIZE, Self::CHUNK_SIZE),
+                chunk_size: Self::parse_env_var(Self::ENV_CHUNK_SIZE, Self::PAR_CHUNK_SIZE),
                 base_stdin_size,
                 threads: Self::parse_threads(),
                 verbose: false,
@@ -113,15 +105,15 @@ impl Performance {
 
     /// Set the base stdin size for unknown-sized inputs.
     #[must_use]
-    pub const fn with_base_stdin_size(mut self, size: usize) -> Self {
-        self.base_stdin_size = size as u64;
+    pub const fn with_base_stdin_size(mut self, size: u64) -> Self {
+        self.base_stdin_size = size;
         self
     }
 
     /// Set the chunk size for this configuration.
     #[must_use]
-    pub const fn with_chunk_size(mut self, size: usize) -> Self {
-        self.chunk_size = size as u64;
+    pub const fn with_chunk_size(mut self, size: u64) -> Self {
+        self.chunk_size = size;
         self
     }
 
@@ -207,14 +199,6 @@ impl Performance {
         Self::u64_to_usize(capacity)
     }
 
-    /// Estimated lines per chunk based on chunk size and average line length.
-    #[must_use]
-    pub const fn lines_per_chunk(&self) -> usize {
-        let lines = self.chunk_size / Self::CHARS_PER_LINE;
-        let safe_lines = Self::u64_to_usize(lines);
-        if safe_lines > 128 { safe_lines } else { 128 }
-    }
-
     /// Calculate optimal number of chunks based on content length.
     #[must_use]
     pub const fn total_chunks(&self, content_len: usize) -> usize {
@@ -225,14 +209,27 @@ impl Performance {
         content_len.div_ceil(self.chunk_size())
     }
 
-    /// Calculate optimal number of chunks per thread.
+    /// Get the batch buffer size for streaming operations.
     #[must_use]
-    pub fn chunks(&self, content_len: usize) -> usize {
-        let total_chunks = self.total_chunks(content_len);
-        let multiple_of_threads = rayon::current_num_threads() * Self::CHUNKS_PER_THREAD;
+    pub fn stream_batch_size() -> usize {
+        let thread_count = rayon::current_num_threads() as u64;
+        let batch_size =
+            u64::from(Self::PAR_CHUNKS_PER_THREAD) * thread_count * Self::PAR_CHUNK_SIZE;
+        Self::u64_to_usize(batch_size)
+    }
 
-        // Several times the thread count or the total number of chunks, whichever is smaller
-        multiple_of_threads.min(total_chunks)
+    /// Calculate total number of chunks for streaming based on thread count.
+    #[must_use]
+    pub fn stream_total_chunks() -> usize {
+        rayon::current_num_threads() * Self::PAR_CHUNKS_PER_THREAD as usize
+    }
+
+    /// Calculate streaming batch size based on input size.
+    #[must_use]
+    pub fn stream_batch_size_for_input(&self, input_size: usize) -> usize {
+        let total_chunks = Self::stream_total_chunks();
+        let target_batch_size = input_size.div_ceil(total_chunks);
+        target_batch_size.max(Self::u64_to_usize(Self::PAR_CHUNK_SIZE))
     }
 
     // Env-parsing helpers
