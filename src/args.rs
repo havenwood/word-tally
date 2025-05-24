@@ -33,9 +33,13 @@ pub struct Args {
     #[arg(short = 'I', long, value_enum, default_value_t = Io::Streamed, value_name = "STRATEGY")]
     io: Io,
 
-    /// Use threads for parallel processing.
-    #[arg(short = 'p', long)]
+    /// Disable parallel processing (use sequential).
+    #[arg(short = 'S', long = "no-parallel", action = ArgAction::SetFalse)]
     parallel: bool,
+
+    /// Use threads for parallel processing [default].
+    #[arg(short = 'p', long = "parallel", overrides_with = "parallel")]
+    _no_parallel: bool,
 
     // Output formatting options
     /// Case normalization.

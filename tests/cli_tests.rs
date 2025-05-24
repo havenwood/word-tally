@@ -31,7 +31,7 @@ fn verbose_without_input() {
     let assert = word_tally().arg("-v").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nprocessing sequential\nio streamed\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nprocessing parallel\nio streamed\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 
@@ -40,7 +40,7 @@ fn verbose_with_min_chars() {
     let assert = word_tally().arg("-v").arg("--min-chars=42").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nprocessing sequential\nio streamed\nmin-chars 42\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nprocessing parallel\nio streamed\nmin-chars 42\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 
@@ -49,7 +49,7 @@ fn verbose_with_min_count() {
     let assert = word_tally().arg("-v").arg("--min-count=42").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nprocessing sequential\nio streamed\nmin-chars none\nmin-count 42\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nprocessing parallel\nio streamed\nmin-chars none\nmin-count 42\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 
@@ -61,7 +61,7 @@ fn verbose_with_exclude_words() {
         .assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nprocessing sequential\nio streamed\nmin-chars none\nmin-count none\nexclude-words narrow,certain\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nprocessing parallel\nio streamed\nmin-chars none\nmin-count none\nexclude-words narrow,certain\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 
@@ -70,7 +70,7 @@ fn verbose_with_input() {
     let assert = word_tally().write_stdin("narrow").arg("-v").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 1\nunique-words 1\ndelimiter \" \"\ncase lower\norder desc\nprocessing sequential\nio streamed\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n\n")
+        .stderr("source -\ntotal-words 1\nunique-words 1\ndelimiter \" \"\ncase lower\norder desc\nprocessing parallel\nio streamed\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n\n")
         .stdout("narrow 1\n");
 }
 
@@ -296,7 +296,7 @@ fn verbose_with_json_format() {
         .stderr(contains("\"uniqueWords\":2"))
         .stderr(contains("\"case\":\"lower\""))
         .stderr(contains("\"order\":\"desc\""))
-        .stderr(contains("\"processing\":\"sequential\""))
+        .stderr(contains("\"processing\":\"parallel\""))
         .stderr(contains("\"io\":\"streamed\""))
         .stderr(contains("\"minChars\":null"))
         .stderr(contains("\"minCount\":null"))
@@ -318,7 +318,7 @@ fn verbose_with_csv_format() {
         .success()
         .stderr(contains("source,total-words,unique-words"))
         .stderr(contains("desc"))
-        .stderr(contains("sequential"))
+        .stderr(contains("parallel"))
         .stderr(contains("streamed"))
         .stdout(contains("word,count"))
         .stdout(contains("forever,1"))
@@ -592,4 +592,104 @@ fn stdin_with_file_as_sources() {
         .stdout(contains("road 2\n"))
         .stdout(contains("narrow 1\n"))
         .stdout(contains("fame 1\n"));
+}
+
+#[test]
+fn test_parallel_flags() {
+    // Test default is parallel
+    word_tally()
+        .write_stdin("test")
+        .arg("--verbose")
+        .assert()
+        .success()
+        .stderr(contains("processing parallel"));
+
+    // Test explicit --parallel flag
+    word_tally()
+        .write_stdin("test")
+        .arg("--parallel")
+        .arg("--verbose")
+        .assert()
+        .success()
+        .stderr(contains("processing parallel"));
+
+    // Test -p short flag
+    word_tally()
+        .write_stdin("test")
+        .arg("-p")
+        .arg("--verbose")
+        .assert()
+        .success()
+        .stderr(contains("processing parallel"));
+
+    // Test --no-parallel flag
+    word_tally()
+        .write_stdin("test")
+        .arg("--no-parallel")
+        .arg("--verbose")
+        .assert()
+        .success()
+        .stderr(contains("processing sequential"));
+
+    // Test -S short flag
+    word_tally()
+        .write_stdin("test")
+        .arg("-S")
+        .arg("--verbose")
+        .assert()
+        .success()
+        .stderr(contains("processing sequential"));
+}
+
+#[test]
+fn test_parallel_flag_overrides() {
+    // Test --parallel --no-parallel (last wins)
+    word_tally()
+        .write_stdin("test")
+        .arg("--parallel")
+        .arg("--no-parallel")
+        .arg("--verbose")
+        .assert()
+        .success()
+        .stderr(contains("processing sequential"));
+
+    // Test --no-parallel --parallel (last wins)
+    word_tally()
+        .write_stdin("test")
+        .arg("--no-parallel")
+        .arg("--parallel")
+        .arg("--verbose")
+        .assert()
+        .success()
+        .stderr(contains("processing parallel"));
+
+    // Test -p -S (last wins)
+    word_tally()
+        .write_stdin("test")
+        .arg("-p")
+        .arg("-S")
+        .arg("--verbose")
+        .assert()
+        .success()
+        .stderr(contains("processing sequential"));
+
+    // Test -S -p (last wins)
+    word_tally()
+        .write_stdin("test")
+        .arg("-S")
+        .arg("-p")
+        .arg("--verbose")
+        .assert()
+        .success()
+        .stderr(contains("processing parallel"));
+
+    // Test mixed short and long flags
+    word_tally()
+        .write_stdin("test")
+        .arg("-p")
+        .arg("--no-parallel")
+        .arg("--verbose")
+        .assert()
+        .success()
+        .stderr(contains("processing sequential"));
 }

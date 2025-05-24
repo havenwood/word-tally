@@ -10,7 +10,7 @@ mod processing_tests {
 
     #[test]
     fn test_processing_default() {
-        assert_eq!(Processing::default(), Processing::Sequential);
+        assert_eq!(Processing::default(), Processing::Parallel);
     }
 
     #[test]

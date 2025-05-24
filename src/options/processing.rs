@@ -19,7 +19,7 @@ use crate::Performance;
 /// ```
 /// use word_tally::Processing;
 ///
-/// assert_eq!(Processing::default(), Processing::Sequential);
+/// assert_eq!(Processing::default(), Processing::Parallel);
 /// assert_eq!(Processing::Parallel.to_string(), "parallel");
 /// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -33,7 +33,7 @@ pub enum Processing {
 
 impl Default for Processing {
     fn default() -> Self {
-        Self::Sequential
+        Self::Parallel
     }
 }
 

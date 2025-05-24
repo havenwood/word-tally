@@ -6,7 +6,7 @@
 
 Tallies the number of times each word appears in one or more unicode input sources. Use `word-tally` as a command-line tool or `WordTally` via the Rust library interface. I/O is streamed by default. Memory-mapped and fully-buffered-in-memory I/O modes can be selected to optimize for different file sizes and workloads. Optionally take advantage of multiple CPU cores through parallelized tallying and sorting.
 
-Parallel streamed, buffered and memory-mapped I/O modes use SIMD for quick newline-based chunk boundary detection. Memory-mapping is only supported for files with seekable file descriptors but is able to optimize boundary finding. Sequential streaming mode uses the least peak memory and is the default.
+Parallel streamed, buffered and memory-mapped I/O modes use SIMD for quick newline-based chunk boundary detection. Memory-mapping is only supported for files with seekable file descriptors but is able to optimize boundary finding. Parallel streaming mode is the default for better performance, reasonable memory usage and flexibility with stdin and files. Sequential streaming mode (via `--no-parallel`) uses the least peak memory.
 
 ## Usage
 
@@ -18,7 +18,8 @@ Arguments:
 
 Options:
   -I, --io <STRATEGY>          I/O strategy [default: streamed] [possible values: mmap, streamed, buffered]
-  -p, --parallel               Use threads for parallel processing
+  -S, --no-parallel            Disable parallel processing (use sequential)
+  -p, --parallel               Use threads for parallel processing [default]
   -c, --case <FORMAT>          Case normalization [default: lower] [possible values: original, upper, lower]
   -s, --sort <ORDER>           Sort order [default: desc] [possible values: desc, asc, unsorted]
   -m, --min-chars <COUNT>      Exclude words containing fewer than min chars
@@ -44,7 +45,7 @@ cargo install word-tally
 
 ### I/O & parallelization
 
-word-tally uses sequential, streamed processing by default to reduce memory usage. Parallel processing is also available for memory-mapped, streamed and fully-buffered I/O. The different modes have different performance and resource usage characteristics.
+word-tally uses parallel, streamed processing by default for better performance, reasonable memory usage and flexibility with stdin and files. Sequential processing (via `--no-parallel`) is available as a minimal-memory option. The different I/O modes (streamed, buffered, memory-mapped) have different performance and resource usage characteristics.
 
 ```sh
 # Streamed I/O from stdin (`--io=streamed` is default)
@@ -60,13 +61,16 @@ word-tally file1.txt file2.txt file3.txt
 cat file1.txt | word-tally - file2.txt
 
 # Memory-mapped I/O with efficient parallel processing (requires a file rather than stdin)
-word-tally --io=mmap --parallel document.txt
+word-tally --io=mmap document.txt
 
-# Buffered I/O with parallel processing
-word-tally --io=buffered --parallel document.txt
+# Buffered I/O with parallel processing (default)
+word-tally --io=buffered document.txt
 
-# Streamed I/O with parallel processing
-word-tally --io=streamed --parallel document.txt
+# Streamed I/O with parallel processing (default)
+word-tally --io=streamed document.txt
+
+# Sequential processing for minimal memory usage
+word-tally --no-parallel document.txt
 ```
 
 The `--io=mmap` memory-mapped processing mode only works with files and cannot be used with piped input. Parallel processing with memory mapping can be very efficient but mmap requires a file with a seekable file descriptor.
@@ -170,7 +174,7 @@ echo "fe fi fi fo fo fo" | word-tally --verbose
 #>> delimiter " "
 #>> case lower
 #>> order desc
-#>> processing sequential
+#>> processing parallel
 #>> io streamed
 #>> min-chars none
 #>> min-count none
@@ -189,7 +193,7 @@ The following environment variables configure various aspects of the library:
 I/O and processing strategy configuration:
 
 - `WORD_TALLY_IO` - I/O strategy (default: streamed, options: streamed, buffered, memory-mapped)
-- `WORD_TALLY_PROCESSING` - Processing strategy (default: sequential, options: sequential, parallel)
+- `WORD_TALLY_PROCESSING` - Processing strategy (default: parallel, options: sequential, parallel)
 
 Memory allocation and performance:
 
@@ -229,19 +233,20 @@ use word_tally::{Io, Options, Processing, WordTally};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let file = File::open("document.txt")?;
+    // Parallel streamed
     let word_tally = WordTally::new(&file, &Options::default())?;
     assert!(word_tally.count() > 0);
 
+    // Parallel memory mapped
     let another_file = File::open("another-document.txt")?;
     let options = Options::default()
-        .with_io(Io::MemoryMapped)
-        .with_processing(Processing::Parallel);
-    let parallel_tally = WordTally::new(another_file, &options)?;
-    assert!(parallel_tally.count() > 0);
+        .with_io(Io::MemoryMapped);
+    let mmap_tally = WordTally::new(another_file, &options)?;
+    assert!(mmap_tally.count() > 0);
 
-    println!("Words: {} total, {} unique", parallel_tally.count(), parallel_tally.uniq_count());
+    println!("Words: {} total, {} unique", mmap_tally.count(), mmap_tally.uniq_count());
 
-    for (word, count) in parallel_tally.tally().iter().take(5) {
+    for (word, count) in mmap_tally.tally().iter().take(5) {
         println!("{}: {}", word, count);
     }
 

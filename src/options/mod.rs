@@ -101,7 +101,7 @@ impl Options {
     ///
     /// // Default configuration
     /// let options = Options::default();
-    /// assert_eq!(options.processing(), Processing::Sequential);
+    /// assert_eq!(options.processing(), Processing::Parallel);
     ///
     /// // Targeted customization with builder methods
     /// let options = Options::default()
@@ -263,6 +263,19 @@ impl Options {
     #[must_use]
     pub const fn processing(&self) -> Processing {
         self.processing
+    }
+
+    /// Initialize the thread pool if parallel processing is enabled.
+    ///
+    /// This method initializes the global thread pool when using parallel processing.
+    /// For sequential processing, this is a no-op.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if parallel mode is selected but the thread pool
+    /// cannot be initialized.
+    pub fn init_thread_pool_if_parallel(&self) -> anyhow::Result<()> {
+        self.processing.initialize(&self.performance)
     }
 }
 

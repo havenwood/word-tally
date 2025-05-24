@@ -130,7 +130,7 @@ impl TallyMap {
             // Parallel processing
             (Processing::Parallel, Io::MemoryMapped) => {
                 let Input::Mmap(mmap_arc, path) = input else {
-                    unreachable!("This will only be called with `Input::Mmap(Arc<Mmap>, PathBuf)`.")
+                    anyhow::bail!("Memory-mapped I/O requires a file input, not stdin")
                 };
                 Self::par_mmap_count(mmap_arc, path, options)
             }

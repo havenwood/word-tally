@@ -34,7 +34,14 @@ impl Input {
         // Handle the stdin case
         let path_ref = p.as_ref();
         if path_ref.as_os_str() == "-" {
-            return Ok(Self::Stdin);
+            match io {
+                Io::MemoryMapped => {
+                    anyhow::bail!(
+                        "Memory-mapped I/O is not supported for stdin. Use --io=streamed or --io=buffered instead."
+                    )
+                }
+                _ => return Ok(Self::Stdin),
+            }
         }
 
         match io {

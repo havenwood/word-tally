@@ -81,14 +81,14 @@ fn test_args_default_delimiter() {
 
 #[test]
 fn test_args_default_processing() {
-    // Default processing should be sequential
+    // Default processing should be parallel
     Command::cargo_bin("word-tally")
         .expect("execute operation")
         .arg("-v")
         .write_stdin("test")
         .assert()
         .success()
-        .stderr(contains("processing sequential"));
+        .stderr(contains("processing parallel"));
 }
 
 #[test]
@@ -160,7 +160,7 @@ fn test_args_defaults_with_minimal_flags() {
         .stderr(contains("delimiter \" \""))
         .stderr(contains("case lower"))
         .stderr(contains("order desc"))
-        .stderr(contains("processing sequential"))
+        .stderr(contains("processing parallel"))
         .stderr(contains("io streamed"))
         .stderr(contains("min-chars none"))
         .stderr(contains("min-count none"))
@@ -490,13 +490,10 @@ fn test_args_options_comprehensive() {
 
 #[test]
 fn test_args_all_io_modes() {
-    let test_inputs = [
-        ("streamed", "streamed"),
-        ("buffered", "buffered"),
-        ("mmap", "memory-mapped"),
-    ];
+    // Test streamed and buffered with stdin
+    let stdin_modes = [("streamed", "streamed"), ("buffered", "buffered")];
 
-    for (input, expected) in &test_inputs {
+    for (input, expected) in &stdin_modes {
         Command::cargo_bin("word-tally")
             .expect("execute operation")
             .arg(format!("--io={input}"))
@@ -506,6 +503,16 @@ fn test_args_all_io_modes() {
             .success()
             .stderr(contains(format!("io {expected}")));
     }
+
+    // Test mmap separately - it should fail with stdin
+    Command::cargo_bin("word-tally")
+        .expect("execute operation")
+        .arg("--io=mmap")
+        .write_stdin("test")
+        .assert()
+        .failure()
+        .code(64)
+        .stderr(contains("Memory-mapped I/O is not supported for stdin"));
 }
 
 #[test]

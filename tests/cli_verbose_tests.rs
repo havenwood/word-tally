@@ -11,7 +11,7 @@ fn verbose_without_input() {
         .arg("-v")
         .assert()
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nprocessing sequential\nio streamed\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase lower\norder desc\nprocessing parallel\nio streamed\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 
@@ -81,7 +81,7 @@ fn verbose_json_full_output() {
     assert_eq!(json["delimiter"], "\" \"");
     assert_eq!(json["case"], "lower");
     assert_eq!(json["order"], "desc");
-    assert_eq!(json["processing"], "sequential");
+    assert_eq!(json["processing"], "parallel");
     assert_eq!(json["io"], "streamed");
     assert_eq!(json["minChars"], serde_json::Value::Null);
     assert_eq!(json["minCount"], serde_json::Value::Null);

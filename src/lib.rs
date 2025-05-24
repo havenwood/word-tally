@@ -1,9 +1,11 @@
 //! A tally of words with a count of the number of times each appears.
 //!
 //! `WordTally` tallies the number of times words appear in source input. I/O is streamed in
-//! sequential mode by default to reduce memory usage. Memory-mapped I/O in parallel mode is
-//! typically the fastest for processing large files. Memory-mapped I/O requires a seekable file,
-//! but streamed and fully-buffered-in-memory I/O also support piped input along with files.
+//! parallel mode by default for better performance, reasonable memory usage and flexibility with
+//! stdin and files. Memory-mapped I/O in parallel mode is typically the fastest for processing
+//! large files. Memory-mapped I/O requires a seekable file, but streamed and fully-buffered-in-memory
+//! I/O also support piped input along with files. Sequential streaming mode (via `--no-parallel`)
+//! uses the least peak memory.
 //!
 //! Word boundaries are determined using the [`unicode-segmentation`](https://docs.rs/unicode-segmentation/)
 //! crate, which implements the [Unicode Standard Annex #29](https://unicode.org/reports/tr29/)
@@ -203,6 +205,10 @@ impl<'a> WordTally<'a> {
     ///
     /// This constructor handles all I/O strategies (streamed, buffered and memory-mapped).
     ///
+    /// **Note**: For parallel processing, the thread pool should be initialized before calling
+    /// this method. Use `options.init_thread_pool_if_parallel()?` to set up the thread pool.
+    /// If not initialized, Rayon will use a default thread pool with all available cores.
+    ///
     /// # Errors
     ///
     /// An error will be returned if:
@@ -218,6 +224,8 @@ impl<'a> WordTally<'a> {
     ///
     /// # fn example() -> Result<()> {
     /// let options = Options::default();
+    /// // Initialize thread pool for parallel processing
+    /// options.init_thread_pool_if_parallel()?;
     /// let input = Input::new("document.txt", Io::Streamed)?;
     /// let word_tally = WordTally::new(&input, &options)?;
     /// # Ok(())

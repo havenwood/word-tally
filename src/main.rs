@@ -31,8 +31,8 @@ fn run() -> Result<()> {
     let sources = args.get_sources();
     let options = args.get_options()?;
 
-    // Initialize processing mode (thread pool for parallel)
-    options.processing().initialize(options.performance())?;
+    // Initialize thread pool if parallel processing is enabled
+    options.init_thread_pool_if_parallel()?;
 
     // Process inputs and aggregate results
     let inputs = sources

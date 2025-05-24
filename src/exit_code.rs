@@ -30,6 +30,14 @@ pub fn from_error(err: &Error) -> i32 {
         };
     }
 
+    // Check for usage errors by message content
+    let err_msg = err.to_string();
+    if err_msg.contains("Memory-mapped I/O is not supported for stdin")
+        || err_msg.contains("Memory-mapped I/O requires a file input")
+    {
+        return USAGE;
+    }
+
     // Check I/O errors (when opening files)
     if let Some(io_err) = err.downcast_ref::<io::Error>() {
         return match io_err.kind() {
