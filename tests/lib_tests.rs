@@ -679,15 +679,7 @@ fn test_parallel_count() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
-    let performance = Performance::default();
-    let options = Options::with_defaults(
-        Case::default(),
-        Sort::default(),
-        Serialization::default(),
-        Io::Streamed,
-        Processing::Parallel,
-        performance,
-    );
+    let options = Options::default().with_processing(Processing::Parallel);
 
     let input = Input::new(
         temp_file.path().to_str().expect("temp file path"),
@@ -710,15 +702,7 @@ fn test_merge_maps() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
-    let performance = Performance::default();
-    let options = Options::with_defaults(
-        Case::default(),
-        Sort::default(),
-        Serialization::default(),
-        Io::Streamed,
-        Processing::Parallel,
-        performance,
-    );
+    let options = Options::default().with_processing(Processing::Parallel);
 
     let input = Input::new(
         temp_file.path().to_str().expect("temp file path"),
@@ -799,26 +783,9 @@ mod wordtally_constructor_tests {
     }
 
     #[test]
-    fn test_default() {
-        // Test the Default implementation for WordTally
-        let tally = WordTally::default();
-        assert_eq!(tally.count(), 0);
-        assert_eq!(tally.uniq_count(), 0);
-        assert!(tally.tally().is_empty());
-    }
-
-    #[test]
     fn with_parallel_processing() {
         let (_temp_dir, file_path) = create_test_file();
-        let performance = Performance::default();
-        let options = Options::with_defaults(
-            Case::default(),
-            Sort::default(),
-            Serialization::default(),
-            Io::Streamed,
-            Processing::Parallel,
-            performance,
-        );
+        let options = Options::default().with_processing(Processing::Parallel);
         let input = Input::new(&file_path, options.io()).expect("Failed to create Input");
         let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
         assert_eq!(tally.count(), 3);
@@ -827,15 +794,9 @@ mod wordtally_constructor_tests {
     #[test]
     fn with_custom_chunk_size() {
         let (_temp_dir, file_path) = create_test_file();
-        let performance = Performance::default().with_chunk_size(32_768);
-        let options = Options::with_defaults(
-            Case::default(),
-            Sort::default(),
-            Serialization::default(),
-            Io::Streamed,
-            Processing::Parallel,
-            performance,
-        );
+        let options = Options::default()
+            .with_processing(Processing::Parallel)
+            .with_chunk_size(32_768);
 
         let input = Input::new(&file_path, options.io()).expect("Failed to create Input");
         let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");

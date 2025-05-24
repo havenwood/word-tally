@@ -19,15 +19,6 @@ fn test_words_exclude_from() {
 }
 
 #[test]
-fn test_default() {
-    // Test the Default implementation for WordTally
-    let tally = WordTally::default();
-    assert_eq!(tally.count(), 0);
-    assert_eq!(tally.uniq_count(), 0);
-    assert!(tally.tally().is_empty());
-}
-
-#[test]
 fn test_with_defaults() {
     let (_temp_dir, file_path) = create_test_file();
     let options = Options::default();
@@ -39,15 +30,7 @@ fn test_with_defaults() {
 #[test]
 fn test_with_parallel_processing() {
     let (_temp_dir, file_path) = create_test_file();
-    let performance = word_tally::Performance::default();
-    let options = Options::with_defaults(
-        word_tally::Case::default(),
-        word_tally::Sort::default(),
-        Serialization::default(),
-        word_tally::Io::Streamed,
-        word_tally::Processing::Parallel,
-        performance,
-    );
+    let options = Options::default().with_processing(word_tally::Processing::Parallel);
     let input = Input::new(&file_path, options.io()).expect("Failed to create Input");
     let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
     assert_eq!(tally.count(), 3);
@@ -56,16 +39,9 @@ fn test_with_parallel_processing() {
 #[test]
 fn test_with_custom_chunk_size() {
     let (_temp_dir, file_path) = create_test_file();
-    // Create custom performance with a specific chunk size
-    let performance = word_tally::Performance::default().with_chunk_size(32_768);
-    let options = Options::with_defaults(
-        word_tally::Case::default(),
-        word_tally::Sort::default(),
-        Serialization::default(),
-        word_tally::Io::Streamed,
-        word_tally::Processing::Parallel,
-        performance,
-    );
+    let options = Options::default()
+        .with_processing(word_tally::Processing::Parallel)
+        .with_chunk_size(32_768);
 
     let input = Input::new(&file_path, options.io()).expect("Failed to create Input");
     let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");

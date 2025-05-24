@@ -130,27 +130,6 @@ impl Options {
         }
     }
 
-    /// Create a new Options instance with default filters.
-    #[must_use]
-    pub fn with_defaults(
-        case: Case,
-        sort: Sort,
-        serialization: Serialization,
-        io: Io,
-        processing: Processing,
-        performance: Performance,
-    ) -> Self {
-        Self::new(
-            case,
-            sort,
-            serialization,
-            Filters::default(),
-            io,
-            processing,
-            performance,
-        )
-    }
-
     /// Set case handling strategy.
     #[must_use]
     pub const fn with_case(mut self, case: Case) -> Self {

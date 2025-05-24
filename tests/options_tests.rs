@@ -107,7 +107,7 @@ fn test_options_new() {
 }
 
 #[test]
-fn test_options_with_defaults() {
+fn test_options_new_with_default_filters() {
     let case = Case::Lower;
     let sort = Sort::Asc;
     let serialization = Serialization::default();
@@ -115,7 +115,15 @@ fn test_options_with_defaults() {
     let processing = Processing::Sequential;
     let performance = Performance::default();
 
-    let options = Options::with_defaults(case, sort, serialization, io, processing, performance);
+    let options = Options::new(
+        case,
+        sort,
+        serialization,
+        Filters::default(),
+        io,
+        processing,
+        performance,
+    );
 
     assert_eq!(options.case(), case);
     assert_eq!(options.sort(), sort);

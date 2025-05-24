@@ -110,7 +110,7 @@
 //! # }
 //! ```
 
-use std::{borrow::Cow, slice, str, sync::OnceLock};
+use std::{borrow::Cow, slice, str};
 
 use anyhow::Result;
 use serde::{self, Deserialize, Serialize};
@@ -143,9 +143,6 @@ pub type Count = usize;
 pub type Word = Box<str>;
 pub type Tally = Box<[(Word, Count)]>;
 
-/// A shared `OnceLock` for default `Options`.
-static DEFAULT_OPTIONS: OnceLock<Options> = OnceLock::new();
-
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 /// A tally of word frequencies and counts, along with processing options.
@@ -163,18 +160,6 @@ pub struct WordTally<'a> {
     /// The sum of unique words tallied.
     #[serde(rename = "uniqueCount")]
     uniq_count: Count,
-}
-
-/// A default `WordTally` is empty with default `Options`.
-impl Default for WordTally<'static> {
-    fn default() -> Self {
-        Self {
-            tally: Box::new([]),
-            options: Cow::Borrowed(DEFAULT_OPTIONS.get_or_init(Options::default)),
-            count: 0,
-            uniq_count: 0,
-        }
-    }
 }
 
 /// Converts a `WordTally` into a `Vec<(Word, Count)>`.

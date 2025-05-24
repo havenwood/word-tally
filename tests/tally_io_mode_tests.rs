@@ -163,15 +163,7 @@ fn test_parallel_count() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
-    let performance = word_tally::Performance::default();
-    let options = Options::with_defaults(
-        word_tally::Case::default(),
-        word_tally::Sort::default(),
-        Serialization::default(),
-        Io::Streamed,
-        Processing::Parallel,
-        performance,
-    );
+    let options = Options::default().with_processing(Processing::Parallel);
 
     let input = Input::new(
         temp_file.path().to_str().expect("temp file path"),
@@ -192,15 +184,7 @@ fn test_merge_maps() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
-    let performance = word_tally::Performance::default();
-    let options = Options::with_defaults(
-        word_tally::Case::default(),
-        word_tally::Sort::default(),
-        Serialization::default(),
-        Io::Streamed,
-        Processing::Parallel,
-        performance,
-    );
+    let options = Options::default().with_processing(Processing::Parallel);
 
     let input = Input::new(
         temp_file.path().to_str().expect("temp file path"),
