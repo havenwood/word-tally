@@ -2,7 +2,6 @@
 
 use crate::input_reader::InputReader;
 use crate::options::io::Io;
-use crate::options::performance::Performance;
 use anyhow::{Context, Result};
 use memmap2::Mmap;
 use std::fmt::{self, Formatter};
@@ -95,14 +94,12 @@ impl Input {
     /// Get the size of the input in bytes, if available.
     /// Returns `None` for stdin and when a filesize can't be determined.
     #[must_use]
-    pub fn size(&self) -> Option<usize> {
+    pub fn size(&self) -> Option<u64> {
         match self {
             Self::Stdin => None,
-            Self::File(path) => fs::metadata(path)
-                .ok()
-                .map(|metadata| Performance::u64_to_usize(metadata.len())),
-            Self::Mmap(mmap, _) => Some(mmap.len()),
-            Self::Bytes(bytes) => Some(bytes.len()),
+            Self::File(path) => fs::metadata(path).ok().map(|metadata| metadata.len()),
+            Self::Mmap(mmap, _) => Some(mmap.len() as u64),
+            Self::Bytes(bytes) => Some(bytes.len() as u64),
         }
     }
 }

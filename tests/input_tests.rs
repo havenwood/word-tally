@@ -26,7 +26,7 @@ fn test_input_new_file() {
         .to_str()
         .expect("process test");
     assert!(input.source().contains(filename));
-    assert_eq!(input.size(), Some(test_data.len()));
+    assert_eq!(input.size(), Some(test_data.len() as u64));
 }
 
 #[test]
@@ -45,7 +45,7 @@ fn test_input_new_mmap() {
         .to_str()
         .expect("process test");
     assert!(input.source().contains(filename));
-    assert_eq!(input.size(), Some(test_data.len()));
+    assert_eq!(input.size(), Some(test_data.len() as u64));
 }
 
 #[test]
@@ -54,7 +54,7 @@ fn test_input_from_bytes() {
     let input = Input::from_bytes(test_data);
     assert!(matches!(input, Input::Bytes(_)));
     assert_eq!(input.source(), "<bytes>");
-    assert_eq!(input.size(), Some(test_data.len()));
+    assert_eq!(input.size(), Some(test_data.len() as u64));
 }
 
 #[test]

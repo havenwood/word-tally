@@ -234,7 +234,7 @@ fn test_bytes_input() {
         let input = Input::from_bytes(TEST_TEXT);
 
         assert_eq!(input.source(), "<bytes>");
-        assert_eq!(input.size(), Some(TEST_TEXT.len()));
+        assert_eq!(input.size(), Some(TEST_TEXT.len() as u64));
 
         let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
         verify_tally(&tally);

@@ -1,5 +1,6 @@
 use anyhow::{Error, anyhow};
 use std::io;
+use std::num::TryFromIntError;
 use word_tally::exit_code;
 
 fn create_io_error(kind: io::ErrorKind) -> Error {
@@ -117,6 +118,16 @@ fn test_clap_version() {
         .unwrap_err();
     let err: Error = anyhow!(clap_err);
     assert_eq!(exit_code::from_error(&err), exit_code::SUCCESS);
+}
+
+#[test]
+fn test_try_from_int_error() {
+    // Create a TryFromIntError by attempting an invalid conversion
+    let large_u64: u64 = u64::MAX;
+    let result: Result<u32, TryFromIntError> = large_u64.try_into();
+    let try_from_err = result.unwrap_err();
+    let err: Error = try_from_err.into();
+    assert_eq!(exit_code::from_error(&err), exit_code::DATA_ERROR);
 }
 
 #[test]

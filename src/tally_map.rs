@@ -45,7 +45,7 @@ impl TallyMap {
     /// Extends the tally map with word counts from a string slice.
     #[must_use]
     pub fn from_content(content: &str, case: Case, perf: &Performance) -> Self {
-        let mut instance = Self::with_capacity(perf.chunk_capacity(content.len()));
+        let mut instance = Self::with_capacity(perf.chunk_capacity(content.len() as u64));
 
         for word in content.unicode_words() {
             *instance.inner.entry(case.normalize(word)).or_insert(0) += 1;
@@ -163,7 +163,15 @@ impl TallyMap {
         let content = Self::read_input_to_string(input, perf)?;
 
         // Find newline-aligned chunk boundaries
-        let boundaries = Self::chunk_boundaries(&content, perf.total_chunks(content.len()));
+        let total_chunks = perf.total_chunks(content.len() as u64);
+        let num_chunks = usize::try_from(total_chunks).with_context(|| {
+            format!(
+                "File too large for 32-bit system: {} chunks needed, but platform limit is {} chunks",
+                total_chunks,
+                usize::MAX
+            )
+        })?;
+        let boundaries = Self::chunk_boundaries(&content, num_chunks);
         // Process content in parallel using the chunk boundaries
         let tally = Self::process_chunks(&content, &boundaries, options.case());
 
@@ -188,7 +196,15 @@ impl TallyMap {
         // Provide a view into the content rather than copying
         let content = Self::parse_utf8_slice(mmap, &path.display())?;
         // Calculate chunk boundaries with mmap and SIMD
-        let boundaries = Self::mmap_boundaries(content, perf.total_chunks(content.len()));
+        let total_chunks = perf.total_chunks(content.len() as u64);
+        let num_chunks = usize::try_from(total_chunks).with_context(|| {
+            format!(
+                "File too large for 32-bit system: {} chunks needed, but platform limit is {} chunks",
+                total_chunks,
+                usize::MAX
+            )
+        })?;
+        let boundaries = Self::mmap_boundaries(content, num_chunks);
         // Process content in parallel using the boundaries
         let tally = Self::process_chunks(content, &boundaries, case);
 
@@ -233,9 +249,23 @@ impl TallyMap {
         let case = options.case();
         let mut reader = input.reader()?;
 
-        let batch_size = Performance::stream_batch_size();
-        let input_size = input.size().unwrap_or_else(|| perf.base_stdin_size_usize());
-        let target_batch_size = perf.stream_batch_size_for_input(input_size);
+        let stream_batch = Performance::stream_batch_size();
+        let batch_size = usize::try_from(stream_batch).with_context(|| {
+            format!(
+                "Batch size too large for 32-bit system: {} bytes needed, but platform limit is {} bytes",
+                stream_batch,
+                usize::MAX
+            )
+        })?;
+        let input_size = input.size().unwrap_or_else(|| perf.base_stdin_size());
+        let target_size = perf.stream_batch_size_for_input(input_size);
+        let target_batch_size = usize::try_from(target_size).with_context(|| {
+            format!(
+                "Target batch size too large for 32-bit system: {} bytes needed, but platform limit is {} bytes",
+                target_size,
+                usize::MAX
+            )
+        })?;
 
         let tally_capacity = perf.capacity(input.size());
         let initial_tally = Self::with_capacity(tally_capacity);
@@ -458,7 +488,7 @@ impl TallyMap {
             1 if reached_eof && !buffer.is_empty() => {
                 // Final chunk: process sequentially
                 let remaining = Self::parse_utf8_slice(buffer, input)?;
-                let mut tally = Self::with_capacity(perf.chunk_capacity(buffer.len()));
+                let mut tally = Self::with_capacity(perf.chunk_capacity(buffer.len() as u64));
                 tally.extend_from_str(remaining, case);
                 Ok(Some((tally, buffer.len())))
             }

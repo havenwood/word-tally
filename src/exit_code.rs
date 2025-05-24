@@ -6,6 +6,7 @@ use anyhow::Error;
 use clap::error::ErrorKind as ClapErrorKind;
 use std::fmt::{Debug, Display};
 use std::io;
+use std::num::TryFromIntError;
 
 pub const SUCCESS: i32 = 0;
 pub const FAILURE: i32 = 1;
@@ -50,6 +51,8 @@ pub fn from_error(err: &Error) -> i32 {
         || is_error_type::<std::str::Utf8Error>(err)
         || is_error_type::<std::string::FromUtf8Error>(err)
         || is_error_type::<unescaper::Error>(err)
+        || is_error_type::<TryFromIntError>(err)
+    // File too large for platform
     {
         return DATA_ERROR;
     }
