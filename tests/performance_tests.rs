@@ -16,23 +16,12 @@ fn test_with_base_stdin_size() {
     assert_eq!(perf.base_stdin_size, 512 * 1024);
 }
 
-#[test]
-fn test_with_verbose() {
-    let perf = Performance::default().with_verbose(true);
-    assert!(perf.verbose);
-
-    let perf = Performance::default().with_verbose(false);
-    assert!(!perf.verbose);
-}
-
 // Test calculation methods
 
 // Test trait implementations
 #[test]
 fn test_clone() {
-    let perf1 = Performance::default()
-        .with_verbose(true)
-        .with_chunk_size(32768);
+    let perf1 = Performance::default().with_chunk_size(32768);
     let perf2 = perf1;
     assert_eq!(perf1, perf2);
 }
@@ -43,7 +32,7 @@ fn test_partial_eq() {
     let perf2 = Performance::default();
     assert_eq!(perf1, perf2);
 
-    let perf3 = Performance::default().with_verbose(true);
+    let perf3 = Performance::default().with_chunk_size(32768);
     assert_ne!(perf1, perf3);
 }
 
@@ -71,9 +60,7 @@ fn test_hash() {
 // Test serialization
 #[test]
 fn test_serde() {
-    let perf = Performance::default()
-        .with_verbose(true)
-        .with_chunk_size(32768);
+    let perf = Performance::default().with_chunk_size(32768);
 
     let json = serde_json::to_string(&perf).expect("serialize JSON");
     let deserialized: Performance = serde_json::from_str(&json).expect("deserialize JSON");
@@ -92,6 +79,5 @@ fn test_environment_logic() {
     assert_eq!(perf.words_per_kb, 128);
     assert_eq!(perf.chunk_size, 65536);
     assert_eq!(perf.base_stdin_size, 256 * 1024);
-    assert!(!perf.verbose);
     assert_eq!(perf.threads, Threads::All);
 }

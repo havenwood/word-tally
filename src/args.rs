@@ -113,7 +113,7 @@ impl Args {
             self.get_filters()?,
             self.io,
             self.parallel.into(),
-            Performance::from_env().with_verbose(self.verbose),
+            Performance::from_env(),
         ))
     }
 

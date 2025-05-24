@@ -39,7 +39,6 @@ fn test_display_implementations() {
     assert!(display.contains("chunk"));
     assert!(display.contains("stdin_size"));
     assert!(display.contains("threads"));
-    assert!(display.contains("verbose"));
 }
 
 #[test]

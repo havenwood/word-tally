@@ -24,9 +24,6 @@ pub struct Performance {
 
     /// Thread configuration for parallel processing.
     pub threads: Threads,
-
-    /// Option to print verbose messages.
-    pub verbose: bool,
 }
 
 impl Default for Performance {
@@ -37,7 +34,6 @@ impl Default for Performance {
             chunk_size: Self::PAR_CHUNK_SIZE,
             base_stdin_size: Self::BASE_STDIN_SIZE,
             threads: Threads::default(),
-            verbose: false,
         }
     }
 }
@@ -98,7 +94,6 @@ impl Performance {
                 chunk_size: Self::parse_env_var(Self::ENV_CHUNK_SIZE, Self::PAR_CHUNK_SIZE),
                 base_stdin_size,
                 threads: Self::parse_threads(),
-                verbose: false,
             }
         })
     }
@@ -128,13 +123,6 @@ impl Performance {
     #[must_use]
     pub const fn with_uniqueness_ratio(mut self, ratio: u16) -> Self {
         self.uniqueness_ratio = ratio;
-        self
-    }
-
-    /// Set verbose mode.
-    #[must_use]
-    pub const fn with_verbose(mut self, verbose: bool) -> Self {
-        self.verbose = verbose;
         self
     }
 
@@ -261,14 +249,13 @@ impl Display for Performance {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Performance {{ tally_capacity: {}, uniqueness: {}, words/kb: {}, chunk: {}, stdin_size: {}, threads: {}, verbose: {} }}",
+            "Performance {{ tally_capacity: {}, uniqueness: {}, words/kb: {}, chunk: {}, stdin_size: {}, threads: {} }}",
             Self::base_stdin_tally_capacity(),
             self.uniqueness_ratio,
             self.words_per_kb,
             self.chunk_size(),
             self.base_stdin_size(),
-            self.threads(),
-            self.verbose
+            self.threads()
         )
     }
 }
