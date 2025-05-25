@@ -143,10 +143,12 @@ impl Verbose {
     /// Write verbose info in text format.
     fn write_text(&mut self, data: &VerboseData<'_>, delimiter: &str) -> Result<()> {
         // Write each field as key-value pairs
-        for (field_name, value) in data.field_pairs() {
-            self.output
-                .write_chunk(&format!("{field_name}{delimiter}{value}\n"))?;
-        }
+        data.field_pairs()
+            .into_iter()
+            .try_for_each(|(field_name, value)| {
+                self.output
+                    .write_chunk(&format!("{field_name}{delimiter}{value}\n"))
+            })?;
 
         // Add separator if needed
         if data.total_words > 0 {

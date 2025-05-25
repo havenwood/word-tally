@@ -47,9 +47,9 @@ impl TallyMap {
     pub fn from_content(content: &str, case: Case, perf: &Performance) -> Self {
         let mut instance = Self::with_capacity(perf.chunk_capacity(content.len() as u64));
 
-        for word in content.unicode_words() {
+        content.unicode_words().for_each(|word| {
             *instance.inner.entry(case.normalize(word)).or_insert(0) += 1;
-        }
+        });
 
         instance
     }
@@ -87,9 +87,9 @@ impl TallyMap {
     /// Extends the tally map with word counts from a string slice.
     #[inline]
     pub fn extend_from_str(&mut self, content: &str, case: Case) {
-        for word in content.unicode_words() {
+        content.unicode_words().for_each(|word| {
             *self.inner.entry(case.normalize(word)).or_insert(0) += 1;
-        }
+        });
     }
 
     /// Merge two tally maps, always merging the smaller into the larger.
@@ -543,10 +543,10 @@ impl Extend<(Word, Count)> for TallyMap {
     fn extend<T: IntoIterator<Item = (Word, Count)>>(&mut self, tally: T) {
         let iter = tally.into_iter();
         let (lower_bound, _) = iter.size_hint();
-        self.inner.reserve(lower_bound);
 
-        for (word, count) in iter {
+        self.inner.reserve(lower_bound);
+        iter.for_each(|(word, count)| {
             *self.inner.entry(word).or_insert(0) += count;
-        }
+        });
     }
 }

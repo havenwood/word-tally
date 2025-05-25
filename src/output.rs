@@ -149,10 +149,10 @@ impl Output {
     }
 
     fn write_text(&mut self, tally: &[(Word, Count)], delimiter: &str) -> Result<()> {
-        for (word, count) in tally {
+        tally.iter().try_for_each(|(word, count)| {
             self.write_chunk(&format!("{word}{delimiter}{count}\n"))
-                .context("failed to write word-count pair")?;
-        }
+                .context("failed to write word-count pair")
+        })?;
 
         self.flush().context("failed to flush output")
     }
@@ -173,11 +173,11 @@ impl Output {
             .write_record(["word", "count"])
             .map_err(WordTallyError::CsvSerialization)?;
 
-        for (word, count) in tally {
+        tally.iter().try_for_each(|(word, count)| {
             csv_writer
                 .write_record([word.as_ref(), &count.to_string()])
-                .map_err(WordTallyError::CsvSerialization)?;
-        }
+                .map_err(WordTallyError::CsvSerialization)
+        })?;
 
         csv_writer.flush().context("failed to flush CSV output")
     }
