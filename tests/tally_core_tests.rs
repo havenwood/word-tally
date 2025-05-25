@@ -240,24 +240,25 @@ fn create_test_tally_with_text(input_text: &[u8], sort: Sort) -> WordTally<'stat
 #[test]
 fn test_sort_mutates_tally() {
     let input_text = b"revery circuit narrow revery circuit revery narrow narrow narrow narrow";
-    let mut tally = create_test_tally_with_text(input_text, Sort::Unsorted);
 
-    tally.sort(Sort::Asc);
-    let asc_tally = tally.tally().to_vec();
-
+    // Test ascending sort
+    let tally_asc = create_test_tally_with_text(input_text, Sort::Asc);
+    let asc_tally = tally_asc.tally().to_vec();
     assert_eq!(asc_tally[0].0.as_ref(), "circuit");
     assert_eq!(asc_tally[0].1, 2);
 
-    tally.sort(Sort::Desc);
-    let desc_tally = tally.tally().to_vec();
-
+    // Test descending sort
+    let tally_desc = create_test_tally_with_text(input_text, Sort::Desc);
+    let desc_tally = tally_desc.tally().to_vec();
     assert_eq!(desc_tally[0].0.as_ref(), "narrow");
     assert_eq!(desc_tally[0].1, 5);
 
-    let unsorted_before = tally.tally().to_vec();
-    tally.sort(Sort::Unsorted);
-    let unsorted_after = tally.tally().to_vec();
-
+    // Test unsorted remains unsorted
+    let tally_unsorted = create_test_tally_with_text(input_text, Sort::Unsorted);
+    let mut tally_unsorted_mut = tally_unsorted;
+    let unsorted_before = tally_unsorted_mut.tally().to_vec();
+    tally_unsorted_mut.sort();
+    let unsorted_after = tally_unsorted_mut.tally().to_vec();
     assert_eq!(unsorted_before, unsorted_after);
 }
 

@@ -8,7 +8,7 @@ mod output_tests {
 
     #[test]
     fn test_output_new_with_none() {
-        let output = Output::new(&None).expect("process test");
+        let output = Output::new(None).expect("process test");
         // Should default to stdout
         assert!(matches!(output, _));
     }
@@ -16,7 +16,7 @@ mod output_tests {
     #[test]
     fn test_output_new_with_dash() {
         let path = PathBuf::from("-");
-        let output = Output::new(&Some(path)).expect("process test");
+        let output = Output::new(Some(path.as_path())).expect("process test");
         // Should use stdout for "-"
         assert!(matches!(output, _));
     }
@@ -24,8 +24,8 @@ mod output_tests {
     #[test]
     fn test_output_new_with_file_path() {
         let temp_file = NamedTempFile::new().expect("create temp file");
-        let path = temp_file.path().to_path_buf();
-        let output = Output::new(&Some(path)).expect("process test");
+        let path = temp_file.path();
+        let output = Output::new(Some(path)).expect("process test");
         assert!(matches!(output, _));
     }
 

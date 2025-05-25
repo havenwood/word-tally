@@ -136,11 +136,11 @@ impl Serialization {
     /// ```
     /// use word_tally::{Format, Serialization};
     ///
-    /// let serialization = Serialization::default().with_format_setting(Format::Json);
+    /// let serialization = Serialization::default().set_format(Format::Json);
     /// assert_eq!(serialization.format(), Format::Json);
     /// ```
     #[must_use]
-    pub const fn with_format_setting(mut self, format: Format) -> Self {
+    pub const fn set_format(mut self, format: Format) -> Self {
         self.format = format;
         self
     }

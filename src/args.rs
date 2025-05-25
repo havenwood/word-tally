@@ -91,27 +91,27 @@ pub struct Args {
 
 impl Args {
     /// Get the input file paths.
-    pub fn get_sources(&self) -> Vec<&str> {
-        self.sources.iter().map(String::as_str).collect()
+    pub fn sources(&self) -> &[String] {
+        &self.sources
     }
 
     /// Get the output file path.
-    pub const fn get_output(&self) -> Option<&PathBuf> {
+    pub const fn output(&self) -> Option<&PathBuf> {
         self.output.as_ref()
     }
 
     /// Get the verbose flag.
-    pub const fn is_verbose(&self) -> bool {
+    pub const fn verbose(&self) -> bool {
         self.verbose
     }
 
     /// Parse command-line arguments and convert them to word-tally `Options`.
-    pub fn get_options(&self) -> Result<Options> {
+    pub fn to_options(&self) -> Result<Options> {
         Ok(Options::new(
             self.case,
             self.sort,
             Serialization::new(self.format, &self.delimiter)?,
-            self.get_filters()?,
+            self.build_filters()?,
             self.io,
             self.parallel.into(),
             Performance::from_env(),
@@ -119,7 +119,7 @@ impl Args {
     }
 
     /// Helper to create filters from arguments.
-    fn get_filters(&self) -> Result<Filters> {
+    fn build_filters(&self) -> Result<Filters> {
         Ok(Filters::default())
             .map(|f| match self.min_chars {
                 Some(min) => f.with_min_chars(min),

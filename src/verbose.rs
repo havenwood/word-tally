@@ -34,9 +34,9 @@ struct VerboseData<'a> {
     io: String,
     min_chars: Option<usize>,
     min_count: Option<usize>,
-    exclude_words: &'a Option<word_tally::ExcludeWords>,
-    exclude_patterns: &'a Option<word_tally::ExcludePatterns>,
-    include_patterns: &'a Option<word_tally::IncludePatterns>,
+    exclude_words: Option<&'a word_tally::ExcludeWords>,
+    exclude_patterns: Option<&'a word_tally::ExcludePatterns>,
+    include_patterns: Option<&'a word_tally::IncludePatterns>,
 }
 
 impl<'a> VerboseData<'a> {
@@ -86,19 +86,16 @@ impl<'a> VerboseData<'a> {
             (
                 "exclude-words",
                 self.exclude_words
-                    .as_ref()
                     .map_or("none".to_string(), std::string::ToString::to_string),
             ),
             (
                 "exclude-patterns",
                 self.exclude_patterns
-                    .as_ref()
                     .map_or("none".to_string(), std::string::ToString::to_string),
             ),
             (
                 "include-patterns",
                 self.include_patterns
-                    .as_ref()
                     .map_or("none".to_string(), std::string::ToString::to_string),
             ),
         ]);

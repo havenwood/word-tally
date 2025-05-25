@@ -27,8 +27,8 @@ fn main() {
 fn run() -> Result<()> {
     // Parse arguments and prepare options
     let args = Args::parse();
-    let sources = args.get_sources();
-    let options = args.get_options()?;
+    let sources = args.sources();
+    let options = args.to_options()?;
 
     // Initialize thread pool if parallel processing is enabled
     options.init_thread_pool_if_parallel()?;
@@ -36,7 +36,7 @@ fn run() -> Result<()> {
     // Process inputs and aggregate results
     let inputs = sources
         .iter()
-        .map(|source| Input::new(source, options.io()))
+        .map(|source| Input::new(source.as_str(), options.io()))
         .collect::<Result<Vec<_>>>()?;
 
     let tally_map = inputs
@@ -50,15 +50,14 @@ fn run() -> Result<()> {
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
     // Optional verbose output
-    if args.is_verbose() {
+    if args.verbose() {
         let paths: Vec<_> = inputs.iter().map(word_tally::Input::source).collect();
         let mut verbose = Verbose::default();
         verbose.write_verbose_info(&word_tally, &paths.join(", "))?;
     }
 
     // Primary output
-    let output_option = args.get_output().map(ToOwned::to_owned);
-    let mut output = Output::new(&output_option)?;
+    let mut output = Output::new(args.output().map(std::path::PathBuf::as_path))?;
     output.write_formatted_tally(&word_tally)?;
 
     Ok(())

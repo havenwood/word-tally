@@ -37,7 +37,7 @@ mod serialization_tests {
 
     #[test]
     fn test_serialization_with_format_setting() {
-        let serialization = Serialization::default().with_format_setting(Format::Csv);
+        let serialization = Serialization::default().set_format(Format::Csv);
         assert_eq!(serialization.format(), Format::Csv);
     }
 
@@ -50,7 +50,7 @@ mod serialization_tests {
 
     #[test]
     fn test_serialization_builder_chain() {
-        let serialization = Serialization::default().with_format_setting(Format::Csv);
+        let serialization = Serialization::default().set_format(Format::Csv);
         assert_eq!(serialization.format(), Format::Csv);
     }
 }

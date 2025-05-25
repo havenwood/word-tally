@@ -168,16 +168,14 @@ impl Options {
     /// Set output format while preserving other options.
     #[must_use]
     pub fn with_format(mut self, format: Format) -> Self {
-        self.serialization = self.serialization.with_format_setting(format);
+        self.serialization = self.serialization.set_format(format);
         self
     }
 
     /// Set delimiter for text output.
     #[must_use]
-    pub fn with_delimiter(mut self, delimiter: String) -> Self {
-        let mut serialization = self.serialization;
-        serialization.delimiter = delimiter;
-        self.serialization = serialization;
+    pub fn with_delimiter(mut self, delimiter: impl Into<String>) -> Self {
+        self.serialization.delimiter = delimiter.into();
         self
     }
 

@@ -257,7 +257,7 @@ impl<'a> WordTally<'a> {
             uniq_count,
         };
 
-        instance.sort(options.sort());
+        instance.sort();
 
         instance
     }
@@ -307,7 +307,7 @@ impl<'a> WordTally<'a> {
     }
 
     /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
-    pub fn sort(&mut self, sort: Sort) {
-        sort.apply(self);
+    pub fn sort(&mut self) {
+        self.options.sort().apply(self);
     }
 }

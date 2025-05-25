@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 use std::fmt::{self, Debug, Formatter};
 use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Write};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 /// `Writer` dynamic dispatches the `Write` trait.
 pub type Writer = Box<dyn Write>;
@@ -76,8 +76,8 @@ impl Output {
     /// # Errors
     ///
     /// Returns an error if the output file path is provided but the file cannot be created.
-    pub fn new(output: &Option<PathBuf>) -> Result<Self> {
-        match output.as_deref() {
+    pub fn new(output: Option<&Path>) -> Result<Self> {
+        match output {
             Some(path) if path == Path::new("-") => Ok(Self::stdout()),
             Some(path) => Self::file(path),
             None => Ok(Self::stdout()),

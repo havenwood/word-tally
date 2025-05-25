@@ -82,16 +82,16 @@ impl Filters {
     ///
     /// Returns a `regex::Error` if any of the provided patterns cannot be compiled into valid regular expressions.
     pub fn new(
-        min_chars: &Option<MinChars>,
-        min_count: &Option<MinCount>,
+        min_chars: Option<MinChars>,
+        min_count: Option<MinCount>,
         exclude_words: Option<ExcludeWordsList>,
         exclude_patterns: Option<InputPatterns>,
         include_patterns: Option<InputPatterns>,
     ) -> Result<Self, regex::Error> {
         // Create initial filters
         let mut filters = Self {
-            min_chars: *min_chars,
-            min_count: *min_count,
+            min_chars,
+            min_count,
             exclude_words: exclude_words.map(ExcludeWords::from),
             exclude_patterns: None,
             include_patterns: None,
@@ -216,20 +216,20 @@ impl Filters {
 
     /// Get the excluded words list
     #[must_use]
-    pub const fn exclude_words(&self) -> &Option<ExcludeWords> {
-        &self.exclude_words
+    pub const fn exclude_words(&self) -> Option<&ExcludeWords> {
+        self.exclude_words.as_ref()
     }
 
     /// Get the excluded patterns.
     #[must_use]
-    pub const fn exclude_patterns(&self) -> &Option<ExcludePatterns> {
-        &self.exclude_patterns
+    pub const fn exclude_patterns(&self) -> Option<&ExcludePatterns> {
+        self.exclude_patterns.as_ref()
     }
 
     /// Get the included patterns.
     #[must_use]
-    pub const fn include_patterns(&self) -> &Option<IncludePatterns> {
-        &self.include_patterns
+    pub const fn include_patterns(&self) -> Option<&IncludePatterns> {
+        self.include_patterns.as_ref()
     }
 
     /// Removes words from the `tally_map` based on any word `Filters`.
@@ -242,8 +242,11 @@ impl Filters {
             tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars);
         }
 
-        if let Some(ExcludeWords(words)) = self.exclude_words() {
-            let discard: HashSet<_> = words.iter().map(|word| case.normalize(word)).collect();
+        if let Some(exclude_words) = self.exclude_words() {
+            let discard: HashSet<_> = exclude_words
+                .iter()
+                .map(|word| case.normalize(word))
+                .collect();
             tally_map.retain(|word, _| !discard.contains(word));
         }
 

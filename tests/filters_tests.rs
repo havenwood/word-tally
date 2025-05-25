@@ -27,8 +27,8 @@ fn test_filters_new() {
     let include_patterns: Option<InputPatterns> = None;
 
     let filters = Filters::new(
-        &min_chars,
-        &min_count,
+        min_chars,
+        min_count,
         exclude_words.clone(),
         exclude_patterns,
         include_patterns.clone(),
@@ -43,8 +43,8 @@ fn test_filters_new() {
 
     let exclude_patterns: Option<InputPatterns> = Some(vec!["^t.*".to_string()]);
     let filters = Filters::new(
-        &min_chars,
-        &min_count,
+        min_chars,
+        min_count,
         exclude_words.clone(),
         exclude_patterns,
         include_patterns,
@@ -60,8 +60,8 @@ fn test_filters_new() {
     let exclude_patterns: Option<InputPatterns> = None;
     let include_patterns: Option<InputPatterns> = Some(vec!["^a.*".to_string()]);
     let filters = Filters::new(
-        &min_chars,
-        &min_count,
+        min_chars,
+        min_count,
         exclude_words.clone(),
         exclude_patterns,
         include_patterns,
@@ -77,8 +77,8 @@ fn test_filters_new() {
     let exclude_patterns: Option<InputPatterns> = Some(vec!["^t.*".to_string()]);
     let include_patterns = Some(vec!["^a.*".to_string()]);
     let filters = Filters::new(
-        &min_chars,
-        &min_count,
+        min_chars,
+        min_count,
         exclude_words.clone(),
         exclude_patterns,
         include_patterns.clone(),
@@ -93,8 +93,8 @@ fn test_filters_new() {
 
     let exclude_patterns: Option<InputPatterns> = Some(vec!["[".to_string()]);
     let result = Filters::new(
-        &min_chars,
-        &min_count,
+        min_chars,
+        min_count,
         exclude_words,
         exclude_patterns,
         include_patterns,
@@ -111,8 +111,8 @@ fn test_filters_with_empty_patterns() {
     let include_patterns: Option<InputPatterns> = Some(vec![]);
 
     let filters = Filters::new(
-        &min_chars,
-        &min_count,
+        min_chars,
+        min_count,
         exclude_words,
         exclude_patterns,
         include_patterns,
@@ -137,8 +137,8 @@ fn test_serialization_with_patterns() {
     let include_patterns = Some(vec![r"[a-z]+".to_string()]);
 
     let filters = Filters::new(
-        &min_chars,
-        &min_count,
+        min_chars,
+        min_count,
         exclude_words,
         exclude_patterns,
         include_patterns,
@@ -159,14 +159,12 @@ fn test_serialization_with_patterns() {
     let deserialized_filters: Filters = serde_json::from_str(serialized).expect("deserialize JSON");
     let deserialized_exclude_patterns = deserialized_filters
         .exclude_patterns()
-        .as_ref()
         .expect("process test");
     assert!(deserialized_exclude_patterns.matches("the"));
     assert!(deserialized_exclude_patterns.matches("is"));
 
     let deserialized_include_patterns = deserialized_filters
         .include_patterns()
-        .as_ref()
         .expect("process test");
     assert!(deserialized_include_patterns.matches("test"));
     assert!(!deserialized_include_patterns.matches("123"));
@@ -218,11 +216,11 @@ fn test_patterns_accessors() {
         .with_include_patterns(&include_patterns)
         .expect("execute operation");
 
-    let excl_patterns = filters.exclude_patterns().as_ref().expect("process test");
+    let excl_patterns = filters.exclude_patterns().expect("process test");
     assert!(excl_patterns.matches("bad"));
     assert!(!excl_patterns.matches("good"));
 
-    let incl_patterns = filters.include_patterns().as_ref().expect("process test");
+    let incl_patterns = filters.include_patterns().expect("process test");
     assert!(incl_patterns.matches("good"));
     assert!(!incl_patterns.matches("bad"));
 }
@@ -248,7 +246,7 @@ fn test_default() {
 
     assert_eq!(filters.min_chars(), None);
     assert_eq!(filters.min_count(), None);
-    assert_eq!(filters.exclude_words(), &None);
+    assert_eq!(filters.exclude_words(), None);
 }
 
 #[test]
@@ -267,10 +265,7 @@ fn test_pattern_serialization() {
     let serialized = serde_json::to_string(&filters).expect("serialize JSON");
     let deserialized: Filters = serde_json::from_str(&serialized).expect("deserialize JSON");
 
-    let patterns = deserialized
-        .include_patterns()
-        .as_ref()
-        .expect("process test");
+    let patterns = deserialized.include_patterns().expect("process test");
     assert!(patterns.matches("testing"));
     assert!(patterns.matches("running"));
     assert!(patterns.matches("123"));
@@ -525,7 +520,7 @@ fn test_with_unescaped_exclude_words() {
         .with_unescaped_exclude_words(&escaped_words)
         .expect("execute operation");
 
-    let exclude_words = filters.exclude_words().as_ref().expect("process test");
+    let exclude_words = filters.exclude_words().expect("process test");
     let words_list = exclude_words.as_ref();
 
     assert_eq!(words_list.len(), 3);
