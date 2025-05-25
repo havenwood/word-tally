@@ -11,8 +11,9 @@ use crate::verbose::Verbose;
 use anyhow::Result;
 use args::Args;
 use clap::Parser;
+use rayon::prelude::*;
 use std::process;
-use word_tally::{TallyMap, WordTally, exit_code::ExitCode};
+use word_tally::{Processing, TallyMap, WordTally, exit_code::ExitCode};
 
 fn main() {
     match run() {
@@ -30,21 +31,23 @@ fn run() -> Result<()> {
     let sources = args.sources();
     let options = args.to_options()?;
 
-    // Initialize thread pool if parallel processing is enabled
-    options.init_thread_pool_if_parallel()?;
-
     // Process inputs and aggregate results
     let inputs = sources
         .iter()
         .map(|source| Input::new(source.as_str(), options.io()))
         .collect::<Result<Vec<_>>>()?;
 
-    let tally_map = inputs
-        .iter()
-        .map(|input| TallyMap::from_input(input, &options))
-        .try_fold(TallyMap::new(), |acc, result| {
-            result.map(|tally| acc.merge(tally))
-        })?;
+    options.init_thread_pool_if_parallel()?;
+    let tally_map = match options.processing() {
+        Processing::Parallel => inputs
+            .par_iter()
+            .map(|input| TallyMap::from_input(input, &options))
+            .try_reduce(TallyMap::new, |acc, tally| Ok(acc.merge(tally)))?,
+        Processing::Sequential => inputs
+            .iter()
+            .map(|input| TallyMap::from_input(input, &options))
+            .try_fold(TallyMap::new(), |acc, tally| tally.map(|t| acc.merge(t)))?,
+    };
 
     // Create a `WordTally` from the merged `TallyMap`
     let word_tally = WordTally::from_tally_map(tally_map, &options);
