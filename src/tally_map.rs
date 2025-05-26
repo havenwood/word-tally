@@ -1,7 +1,6 @@
 //! A collection for tallying word counts using `HashMap`.
 
 use std::{
-    collections::{HashMap, hash_map},
     fmt::Display,
     io::{BufRead, Read},
     iter,
@@ -10,6 +9,8 @@ use std::{
     sync::Arc,
 };
 
+use hashbrown::{HashMap, hash_map};
+
 use anyhow::{Context, Result};
 use memchr::memchr_iter;
 use memmap2::Mmap;
@@ -17,7 +18,11 @@ use rayon::prelude::*;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::options::{
-    Options, case::Case, io::Io, performance::Performance, processing::Processing,
+    Options,
+    case::Case::{self, Lower, Original, Upper},
+    io::Io,
+    performance::Performance,
+    processing::Processing,
 };
 use crate::{Count, Input, Word, WordTallyError};
 
@@ -75,23 +80,37 @@ impl TallyMap {
     /// Extends the tally map with word counts from a string slice.
     #[inline]
     pub fn add_words_from(&mut self, content: &str, case: Case) {
-        case.normalize(content).unicode_words().for_each(|word| {
-            *self.inner.entry(word.into()).or_insert(0) += 1;
+        content.unicode_words().for_each(|word| match case {
+            Original => self.increment_ref(word),
+            Lower => *self.inner.entry(word.to_lowercase().into()).or_insert(0) += 1,
+            Upper => *self.inner.entry(word.to_uppercase().into()).or_insert(0) += 1,
         });
+    }
+
+    /// Increments word count with `entry_ref()` to avoid allocation.
+    #[inline]
+    fn increment_ref(&mut self, word: &str) {
+        match self.inner.entry_ref(word) {
+            hash_map::EntryRef::Vacant(entry) => {
+                entry.insert(1);
+            }
+            hash_map::EntryRef::Occupied(mut entry) => {
+                *entry.get_mut() += 1;
+            }
+        }
     }
 
     /// Merge two tally maps, always merging the smaller into the larger.
     ///
     /// Returns the merged map containing the combined counts from both input maps.
     #[must_use]
-    pub fn merge(mut self, other: Self) -> Self {
+    pub fn merge(mut self, mut other: Self) -> Self {
         // Always merge the smaller map into the larger for better performance
         if self.len() < other.len() {
-            let mut merged = other;
-            merged.extend(self);
-            merged
+            other.extend(self.inner.drain());
+            other
         } else {
-            self.extend(other);
+            self.extend(other.inner.drain());
             self
         }
     }

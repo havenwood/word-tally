@@ -7,8 +7,8 @@ use crate::{Count, TallyMap, WordTallyError};
 use anyhow::Result;
 use core::fmt::{self, Display, Formatter};
 use core::ops::Deref;
+use hashbrown::HashSet;
 use serde::{Deserialize, Serialize};
-use std::collections::HashSet;
 use unescaper::unescape;
 use unicode_segmentation::UnicodeSegmentation;
 
