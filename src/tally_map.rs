@@ -42,18 +42,6 @@ impl TallyMap {
         }
     }
 
-    /// Extends the tally map with word counts from a string slice.
-    #[must_use]
-    pub fn from_content(content: &str, case: Case, perf: &Performance) -> Self {
-        let mut instance = Self::with_capacity(perf.chunk_capacity(content.len() as u64));
-
-        content.unicode_words().for_each(|word| {
-            *instance.inner.entry(case.normalize(word)).or_insert(0) += 1;
-        });
-
-        instance
-    }
-
     /// Returns the number of unique words in the map.
     #[must_use]
     pub fn len(&self) -> usize {
@@ -86,9 +74,9 @@ impl TallyMap {
 
     /// Extends the tally map with word counts from a string slice.
     #[inline]
-    pub fn extend_from_str(&mut self, content: &str, case: Case) {
-        content.unicode_words().for_each(|word| {
-            *self.inner.entry(case.normalize(word)).or_insert(0) += 1;
+    pub fn add_words_from(&mut self, content: &str, case: Case) {
+        case.normalize(content).unicode_words().for_each(|word| {
+            *self.inner.entry(word.into()).or_insert(0) += 1;
         });
     }
 
@@ -148,7 +136,7 @@ impl TallyMap {
         let perf = options.performance();
         let content = Self::read_input_to_string(input, perf)?;
         let mut tally = Self::with_capacity(perf.capacity(input.size()));
-        tally.extend_from_str(&content, options.case());
+        tally.add_words_from(&content, options.case());
 
         Ok(tally)
     }
@@ -224,7 +212,7 @@ impl TallyMap {
                         input.source()
                     )
                 })?;
-                tally.extend_from_str(&line, options.case());
+                tally.add_words_from(&line, options.case());
 
                 Ok::<_, anyhow::Error>(())
             })?;
@@ -309,7 +297,7 @@ impl TallyMap {
                 let start = window[0];
                 let end = window[1];
                 if end > start {
-                    local_tally.extend_from_str(&content[start..end], case);
+                    local_tally.add_words_from(&content[start..end], case);
                 }
                 local_tally
             })
@@ -473,7 +461,7 @@ impl TallyMap {
                 // Final chunk: process sequentially
                 let remaining = Self::parse_utf8_slice(buffer, input)?;
                 let mut tally = Self::with_capacity(perf.chunk_capacity(buffer.len() as u64));
-                tally.extend_from_str(remaining, case);
+                tally.add_words_from(remaining, case);
                 Ok(Some((tally, buffer.len())))
             }
             _ => {

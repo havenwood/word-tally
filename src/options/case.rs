@@ -1,6 +1,5 @@
 //! Word case normalization options.
 
-use crate::Word;
 use clap::ValueEnum;
 use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
@@ -38,25 +37,13 @@ impl Display for Case {
 }
 
 impl Case {
-    /// Normalizes word case if a `Case` other than `Case::Original` is provided.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use word_tally::Case;
-    ///
-    /// let hello = "Hello";
-    /// assert_eq!(Case::Lower.normalize(hello), "hello".into());
-    /// assert_eq!(Case::Upper.normalize(hello), "HELLO".into());
-    /// assert_eq!(Case::Original.normalize(hello), hello.into());
-    /// ```
+    /// Create a string from the uppercase, lowercase or original.
     #[must_use]
-    #[inline]
-    pub fn normalize(&self, word: &str) -> Word {
+    pub fn normalize(&self, content: &str) -> String {
         match self {
-            Self::Lower => word.to_lowercase().into_boxed_str(),
-            Self::Upper => word.to_uppercase().into_boxed_str(),
-            Self::Original => Box::from(word),
+            Self::Lower => content.to_lowercase(),
+            Self::Upper => content.to_uppercase(),
+            Self::Original => content.to_string(),
         }
     }
 }

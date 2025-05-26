@@ -7,7 +7,7 @@ fn tally_map_from_counts(counts: &[(&str, usize)]) -> TallyMap {
     let mut tally = TallyMap::new();
     for (word, count) in counts {
         for _ in 0..*count {
-            tally.extend_from_str(word, Case::Original);
+            tally.add_words_from(word, Case::Original);
         }
     }
     tally
@@ -170,7 +170,7 @@ fn test_serialization_with_patterns() {
     assert!(!deserialized_include_patterns.matches("123"));
 
     let mut tally_map = TallyMap::new();
-    tally_map.extend_from_str("the the the the the test test 123 123 123", Case::Original);
+    tally_map.add_words_from("the the the the the test test 123 123 123", Case::Original);
 
     deserialized_filters.apply(&mut tally_map, Case::Original);
 
@@ -191,7 +191,7 @@ fn test_multiple_regexp_patterns() {
         .expect("execute operation");
 
     let mut tally_map = TallyMap::new();
-    tally_map.extend_from_str("apple apple apple banana banana eating eating eating eating eating orange running running running running Example Example test test test test test test", Case::Original);
+    tally_map.add_words_from("apple apple apple banana banana eating eating eating eating eating orange running running running running Example Example test test test test test test", Case::Original);
 
     filters.apply(&mut tally_map, Case::Original);
 
@@ -410,7 +410,7 @@ fn test_include_exclude_patterns_combination() {
 fn test_case_normalization_with_exclude_words() {
     // Create a TallyMap with case-normalized words
     let mut tally_map = TallyMap::new();
-    tally_map.extend_from_str(
+    tally_map.add_words_from(
         "hello hello hello Hello Hello HELLO world world world world",
         Case::Lower,
     );

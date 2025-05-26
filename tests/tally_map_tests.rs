@@ -5,7 +5,7 @@ fn make_tally(words: &[(&str, usize)]) -> TallyMap {
     let mut tally = TallyMap::new();
     for (word, count) in words {
         for _ in 0..*count {
-            tally.extend_from_str(word, Case::Original);
+            tally.add_words_from(word, Case::Original);
         }
     }
     tally
@@ -37,7 +37,7 @@ fn test_is_empty() {
     let mut tally = TallyMap::new();
     assert!(tally.is_empty());
 
-    tally.extend_from_str("hello", Case::Original);
+    tally.add_words_from("hello", Case::Original);
     assert!(!tally.is_empty());
 }
 
@@ -46,13 +46,13 @@ fn test_len() {
     let mut tally = TallyMap::new();
     assert_eq!(tally.len(), 0);
 
-    tally.extend_from_str("hello", Case::Original);
+    tally.add_words_from("hello", Case::Original);
     assert_eq!(tally.len(), 1);
 
-    tally.extend_from_str("world", Case::Original);
+    tally.add_words_from("world", Case::Original);
     assert_eq!(tally.len(), 2);
 
-    tally.extend_from_str("hello", Case::Original);
+    tally.add_words_from("hello", Case::Original);
     assert_eq!(tally.len(), 2);
 }
 
@@ -89,9 +89,9 @@ fn test_into_tally() {
 }
 
 #[test]
-fn test_extend_from_str_original_case() {
+fn test_add_words_from_original_case() {
     let mut tally = TallyMap::new();
-    tally.extend_from_str("Hello WORLD hello", Case::Original);
+    tally.add_words_from("Hello WORLD hello", Case::Original);
     assert_eq!(tally.len(), 3);
 
     let words: Vec<String> = tally.into_iter().map(|(w, _)| w.into()).collect();
@@ -101,9 +101,9 @@ fn test_extend_from_str_original_case() {
 }
 
 #[test]
-fn test_extend_from_str_lower_case() {
+fn test_add_words_from_lower_case() {
     let mut tally = TallyMap::new();
-    tally.extend_from_str("Hello WORLD hello", Case::Lower);
+    tally.add_words_from("Hello WORLD hello", Case::Lower);
     assert_eq!(tally.len(), 2);
 
     let result: Vec<(String, usize)> = tally.into_iter().map(|(w, c)| (w.into(), c)).collect();
@@ -122,9 +122,9 @@ fn test_extend_from_str_lower_case() {
 }
 
 #[test]
-fn test_extend_from_str_upper_case() {
+fn test_add_words_from_upper_case() {
     let mut tally = TallyMap::new();
-    tally.extend_from_str("Hello WORLD hello", Case::Upper);
+    tally.add_words_from("Hello WORLD hello", Case::Upper);
     assert_eq!(tally.len(), 2);
 
     let result: Vec<(String, usize)> = tally.into_iter().map(|(w, c)| (w.into(), c)).collect();
