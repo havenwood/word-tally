@@ -82,12 +82,25 @@ impl TallyMap {
     pub fn add_words_from(&mut self, content: &str, case: Case) {
         content.unicode_words().for_each(|word| match case {
             Original => self.increment_ref(word),
-            Lower => *self.inner.entry(word.to_lowercase().into()).or_insert(0) += 1,
-            Upper => *self.inner.entry(word.to_uppercase().into()).or_insert(0) += 1,
+            Lower => {
+                // Avoid duplicate allocation when already all lowercase
+                if word.chars().all(|c| !c.is_uppercase()) {
+                    self.increment_ref(word);
+                } else {
+                    self.increment(word.to_lowercase().into_boxed_str());
+                }
+            }
+            Upper => self.increment(word.to_uppercase().into_boxed_str()),
         });
     }
 
-    /// Increments word count with `entry_ref()` to avoid allocation.
+    /// Increments a word's tally using an owned key.
+    #[inline]
+    fn increment(&mut self, word: Word) {
+        *self.inner.entry(word).or_insert(0) += 1;
+    }
+
+    /// Increments a word's tally by reference to avoid duplicate allocation.
     #[inline]
     fn increment_ref(&mut self, word: &str) {
         match self.inner.entry_ref(word) {
