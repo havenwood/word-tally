@@ -20,9 +20,9 @@ use serde::{Deserialize, Serialize};
     Deserialize,
 )]
 pub enum Case {
+    #[default]
     Original,
     Upper,
-    #[default]
     Lower,
 }
 

@@ -33,14 +33,14 @@ fn test_args_default_io() {
 
 #[test]
 fn test_args_default_case() {
-    // Default case should be lower
+    // Default case should be original
     Command::cargo_bin("word-tally")
         .expect("execute operation")
         .arg("-v")
         .write_stdin("test")
         .assert()
         .success()
-        .stderr(contains("case lower"));
+        .stderr(contains("case original"));
 }
 
 #[test]
@@ -138,7 +138,7 @@ fn test_args_all_defaults() {
         .write_stdin("This is a test")
         .assert()
         .success()
-        .stdout(contains("this 1"))
+        .stdout(contains("This 1"))
         .stdout(contains("is 1"))
         .stdout(contains("a 1"))
         .stdout(contains("test 1"));
@@ -153,12 +153,12 @@ fn test_args_defaults_with_minimal_flags() {
         .write_stdin("Test")
         .assert()
         .success()
-        .stdout(contains("test 1"))
+        .stdout(contains("Test 1"))
         .stderr(contains("source -"))
         .stderr(contains("total-words 1"))
         .stderr(contains("unique-words 1"))
         .stderr(contains("delimiter \" \""))
-        .stderr(contains("case lower"))
+        .stderr(contains("case original"))
         .stderr(contains("order desc"))
         .stderr(contains("processing parallel"))
         .stderr(contains("io streamed"))

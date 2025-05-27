@@ -5,7 +5,7 @@ const TEST_TEXT: &str = "The quick brown fox
 jumps over the lazy dog
 Pack my box with five dozen liquor jugs";
 
-const EXPECTED_WORD_COUNT: Count = 16;
+const EXPECTED_WORD_COUNT: Count = 17;
 const EXPECTED_TOTAL_COUNT: Count = 17;
 
 fn make_options(io: Io, processing: Processing) -> Options {

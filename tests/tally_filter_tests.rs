@@ -11,7 +11,7 @@ fn test_excluding_words() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
-    let words = vec!["Heaven".to_string(), "Hell".to_string()];
+    let words = vec!["heaven".to_string(), "hell".to_string()];
     let serializer = Serialization::default();
     let filters = Filters::default().with_exclude_words(words);
     let options = Options::new(

@@ -20,7 +20,7 @@ Options:
   -I, --io <STRATEGY>          I/O strategy [default: streamed] [possible values: mmap, streamed, buffered]
   -S, --no-parallel            Disable parallel processing (use sequential)
   -p, --parallel               Enable parallel processing [default]
-  -c, --case <FORMAT>          Case normalization [default: lower] [possible values: original, upper, lower]
+  -c, --case <FORMAT>          Case normalization [default: original] [possible values: original, upper, lower]
   -s, --sort <ORDER>           Sort order [default: desc] [possible values: desc, asc, unsorted]
   -m, --min-chars <COUNT>      Exclude words containing fewer than min chars
   -M, --min-count <COUNT>      Exclude words appearing fewer than min times
@@ -119,7 +119,7 @@ word-tally --format=json README.md | jq -r 'map(.[0] + " ") | join(" ")' | wordc
 ### Case normalization
 
 ```sh
-# Default lowercase normalization
+# Convert to lowercase
 word-tally --case=lower file.txt
 
 # Preserve original case
@@ -169,7 +169,7 @@ echo "fe fi fi fo fo fo" | word-tally --verbose
 #>> total-words 6
 #>> unique-words 3
 #>> delimiter " "
-#>> case lower
+#>> case original
 #>> order desc
 #>> processing parallel
 #>> io streamed

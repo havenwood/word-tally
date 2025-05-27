@@ -268,13 +268,18 @@ fn test_tally_with_punctuation() {
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 
     assert_eq!(tally.count(), 6);
-    assert_eq!(tally.uniq_count(), 2);
+    assert_eq!(tally.uniq_count(), 3);
 
     let tally_vec = tally.tally().to_vec();
-    assert_eq!(tally_vec[0].0.as_ref(), "world");
-    assert_eq!(tally_vec[0].1, 4);
-    assert_eq!(tally_vec[1].0.as_ref(), "hello");
-    assert_eq!(tally_vec[1].1, 2);
+    // All words have count 2, so we check they exist with correct counts
+    let word_counts: std::collections::HashMap<_, _> = tally_vec
+        .iter()
+        .map(|(word, count)| (word.as_ref(), *count))
+        .collect();
+
+    assert_eq!(word_counts.get("Hello"), Some(&2));
+    assert_eq!(word_counts.get("World"), Some(&2));
+    assert_eq!(word_counts.get("world"), Some(&2));
 }
 
 #[test]
@@ -327,7 +332,7 @@ fn test_edge_case_single_word() {
     assert_eq!(tally.uniq_count(), 1);
 
     let tally_vec = tally.tally().to_vec();
-    assert_eq!(tally_vec[0].0.as_ref(), "nobody");
+    assert_eq!(tally_vec[0].0.as_ref(), "Nobody");
     assert_eq!(tally_vec[0].1, 1);
 }
 

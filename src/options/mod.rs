@@ -22,7 +22,7 @@
 //!
 //! // Default options
 //! let options = Options::default();
-//! assert_eq!(options.case(), Case::Lower);
+//! assert_eq!(options.case(), Case::Original);
 //!
 //! // With specific settings
 //! let options = Options::default()

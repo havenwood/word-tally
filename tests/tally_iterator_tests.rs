@@ -42,7 +42,7 @@ fn test_into_tally() {
 
     let mut expected_counts = std::collections::HashMap::new();
     expected_counts.insert("the", 2);
-    expected_counts.insert("hope", 1);
+    expected_counts.insert("Hope", 1);
     expected_counts.insert("is", 1);
     expected_counts.insert("thing", 1);
     expected_counts.insert("with", 1);

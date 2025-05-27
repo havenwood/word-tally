@@ -157,8 +157,18 @@ fn default_case_unsorted_order() {
         Filters::default(),
         &ExpectedFields {
             count: 45,
-            uniq_count: 5,
-            tally: vec![("d", 11), ("123", 9), ("a", 3), ("c", 15), ("b", 7)],
+            uniq_count: 9,
+            tally: vec![
+                ("d", 5),
+                ("123", 9),
+                ("a", 1),
+                ("C", 8),
+                ("D", 6),
+                ("b", 3),
+                ("c", 7),
+                ("B", 4),
+                ("A", 2),
+            ],
         },
     );
 }
@@ -265,11 +275,15 @@ fn vec_from() {
     assert_eq!(
         Vec::from(tally),
         vec![
-            (Box::from("c"), 15),
-            (Box::from("d"), 11),
             (Box::from("123"), 9),
-            (Box::from("b"), 7),
-            (Box::from("a"), 3)
+            (Box::from("C"), 8),
+            (Box::from("c"), 7),
+            (Box::from("D"), 6),
+            (Box::from("d"), 5),
+            (Box::from("B"), 4),
+            (Box::from("b"), 3),
+            (Box::from("A"), 2),
+            (Box::from("a"), 1)
         ]
     );
 }
@@ -296,16 +310,16 @@ fn test_into_tally() {
     tally_vec.sort_by_key(|(word, _): &(Word, Count)| word.clone());
 
     let mut expected_tally = vec![
-        ("the".into(), 2),
-        ("hope".into(), 1),
+        ("Hope".into(), 1),
+        ("feathers".into(), 1),
+        ("in".into(), 1),
         ("is".into(), 1),
+        ("perches".into(), 1),
+        ("soul".into(), 1),
+        ("that".into(), 1),
+        ("the".into(), 2),
         ("thing".into(), 1),
         ("with".into(), 1),
-        ("feathers".into(), 1),
-        ("that".into(), 1),
-        ("perches".into(), 1),
-        ("in".into(), 1),
-        ("soul".into(), 1),
     ];
     expected_tally.sort_by_key(|(word, _): &(Word, Count)| word.clone());
 
@@ -368,7 +382,7 @@ fn test_excluding_words() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
-    let words = vec!["Heaven".to_string(), "Hell".to_string()];
+    let words = vec!["heaven".to_string(), "hell".to_string()];
     let serializer = Serialization::default();
     let filters = Filters::default().with_exclude_words(words);
     let options = Options::new(
