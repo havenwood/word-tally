@@ -12,10 +12,10 @@ use std::{
 use hashbrown::{HashMap, hash_map};
 
 use anyhow::{Context, Result};
+use icu_segmenter::{WordSegmenter, options::WordBreakInvariantOptions};
 use memchr::memchr_iter;
 use memmap2::Mmap;
 use rayon::prelude::*;
-use unicode_segmentation::UnicodeSegmentation;
 
 use crate::options::{
     Options,
@@ -80,18 +80,33 @@ impl TallyMap {
     /// Extends the tally map with word counts from a string slice.
     #[inline]
     pub fn add_words_from(&mut self, content: &str, case: Case) {
-        content.unicode_words().for_each(|word| match case {
-            Original => self.increment_ref(word),
-            Lower => {
-                // Avoid duplicate allocation when already all lowercase
-                if word.chars().all(|c| !c.is_uppercase()) {
-                    self.increment_ref(word);
-                } else {
-                    self.increment(word.to_lowercase().into_boxed_str());
+        // Create a word segmenter with default options
+        let segmenter = WordSegmenter::new_auto(WordBreakInvariantOptions::default());
+
+        // Use ICU segmenter with word types to identify actual words
+        let mut last_boundary = 0;
+        segmenter
+            .segment_str(content)
+            .iter_with_word_type()
+            .for_each(|(boundary, word_type)| {
+                if word_type.is_word_like() {
+                    let word = &content[last_boundary..boundary];
+                    match case {
+                        // Avoid duplicate allocation
+                        Original => self.increment_ref(word),
+                        Lower => {
+                            if word.chars().all(|c| !c.is_uppercase()) {
+                                // Also avoid duplicate allocation when already all lowercase
+                                self.increment_ref(word);
+                            } else {
+                                self.increment(word.to_lowercase().into_boxed_str());
+                            }
+                        }
+                        Upper => self.increment(word.to_uppercase().into_boxed_str()),
+                    }
                 }
-            }
-            Upper => self.increment(word.to_uppercase().into_boxed_str()),
-        });
+                last_boundary = boundary;
+            });
     }
 
     /// Increments a word's tally using an owned key.

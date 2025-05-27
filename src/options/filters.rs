@@ -8,9 +8,9 @@ use anyhow::Result;
 use core::fmt::{self, Display, Formatter};
 use core::ops::Deref;
 use hashbrown::HashSet;
+use icu_segmenter::GraphemeClusterSegmenter;
 use serde::{Deserialize, Serialize};
 use unescaper::unescape;
-use unicode_segmentation::UnicodeSegmentation;
 
 /// Minimum number of characters a word needs to have to be tallied.
 pub type MinChars = Count;
@@ -239,7 +239,8 @@ impl Filters {
         }
 
         if let Some(min_chars) = self.min_chars() {
-            tally_map.retain(|word, _| word.graphemes(true).count() >= min_chars);
+            let segmenter = GraphemeClusterSegmenter::new();
+            tally_map.retain(|word, _| segmenter.segment_str(word).count() > min_chars);
         }
 
         if let Some(exclude_words) = self.exclude_words() {

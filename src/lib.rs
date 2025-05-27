@@ -7,9 +7,9 @@
 //! I/O also support piped input along with files. Sequential streaming mode (via `--no-parallel`)
 //! uses the least peak memory.
 //!
-//! Word boundaries are determined using the [`unicode-segmentation`](https://docs.rs/unicode-segmentation/)
-//! crate, which implements the [Unicode Standard Annex #29](https://unicode.org/reports/tr29/)
-//! specification for text segmentation across languages. The [`memchr`](https://docs.rs/memchr/)
+//! Word boundaries are determined using the [`icu_segmenter`](https://docs.rs/icu_segmenter/)
+//! crate from ICU4X, which provides SIMD-optimized Unicode text segmentation following
+//! the [Unicode Standard Annex #29](https://unicode.org/reports/tr29/) specification. The [`memchr`](https://docs.rs/memchr/)
 //! crate provides SIMD-accelerated text boundary detection for efficient parallel processing.
 //!
 //! ## Module structure
