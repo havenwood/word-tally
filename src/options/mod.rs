@@ -61,6 +61,8 @@ use self::serialization::Format;
 use self::serialization::Serialization;
 use self::sort::Sort;
 use self::threads::Threads;
+use crate::WordTallyError;
+use anyhow::Result;
 use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
 
@@ -303,4 +305,40 @@ impl AsRef<Performance> for Options {
     fn as_ref(&self) -> &Performance {
         &self.performance
     }
+}
+
+/// Unescape a string, converting escape sequences like `\t` and `\n` to their actual characters.
+///
+/// Used for parsing delimiters and exclude words from command-line arguments.
+///
+/// # Errors
+///
+/// Returns an error if the input contains a trailing backslash without a character to escape.
+pub fn unescape(input: &str, context: &str) -> Result<String> {
+    let mut result = String::with_capacity(input.len());
+    let mut chars = input.chars();
+
+    while let Some(ch) = chars.next() {
+        match ch {
+            '\\' => match chars.next() {
+                Some('t') => result.push('\t'),
+                Some('n') => result.push('\n'),
+                Some('r') => result.push('\r'),
+                Some('"') => result.push('"'),
+                Some('\'') => result.push('\''),
+                Some('\\') => result.push('\\'),
+                Some(other) => result.push(other),
+                None => {
+                    return Err(WordTallyError::Unescape {
+                        context: context.to_string(),
+                        value: input.to_string(),
+                    }
+                    .into());
+                }
+            },
+            _ => result.push(ch),
+        }
+    }
+
+    Ok(result)
 }

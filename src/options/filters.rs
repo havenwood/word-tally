@@ -2,7 +2,8 @@
 
 use crate::options::case::Case;
 use crate::options::patterns::{ExcludePatterns, IncludePatterns, InputPatterns};
-use crate::{Count, TallyMap, WordTallyError};
+use crate::options::unescape;
+use crate::{Count, TallyMap};
 
 use anyhow::Result;
 use core::fmt::{self, Display, Formatter};
@@ -10,7 +11,6 @@ use core::ops::Deref;
 use hashbrown::HashSet;
 use icu_segmenter::GraphemeClusterSegmenter;
 use serde::{Deserialize, Serialize};
-use unescaper::unescape;
 
 /// Minimum number of characters a word needs to have to be tallied.
 pub type MinChars = Count;
@@ -262,18 +262,7 @@ impl Filters {
 
     /// Helper function to unescape a list of words
     fn format_exclude_words(words: &[String]) -> Result<ExcludeWordsList> {
-        words
-            .iter()
-            .map(|w| {
-                unescape(w).map_err(|_| {
-                    WordTallyError::Unescape {
-                        context: "exclude word".to_string(),
-                        value: w.clone(),
-                    }
-                    .into()
-                })
-            })
-            .collect()
+        words.iter().map(|w| unescape(w, "exclude word")).collect()
     }
 }
 

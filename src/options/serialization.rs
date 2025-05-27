@@ -1,11 +1,10 @@
 //! Serialization format options and settings.
 
-use crate::WordTallyError;
+use crate::options::unescape;
 use anyhow::Result;
 use clap::ValueEnum;
 use core::fmt::{self, Display, Formatter};
 use serde::{self, Deserialize, Serialize};
-use unescaper::unescape;
 
 /// Default delimiter used between word and count in text output.
 pub const DEFAULT_DELIMITER: &str = " ";
@@ -83,13 +82,7 @@ impl Display for Serialization {
 impl Serialization {
     /// Helper function to unescape a delimiter string.
     fn format_delimiter(delimiter: &str) -> Result<String> {
-        unescape(delimiter).map_err(|_| {
-            WordTallyError::Unescape {
-                context: "delimiter".to_string(),
-                value: delimiter.to_string(),
-            }
-            .into()
-        })
+        unescape(delimiter, "delimiter")
     }
 
     /// Create a new Serialize instance with specified settings.

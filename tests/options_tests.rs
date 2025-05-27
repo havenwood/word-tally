@@ -293,3 +293,56 @@ fn test_options_serde_full() {
     assert_eq!(deserialized.io(), options.io());
     assert_eq!(deserialized.processing(), options.processing());
 }
+
+#[test]
+fn test_unescape_basic_sequences() {
+    use word_tally::options::unescape;
+
+    assert_eq!(unescape("\\t", "test").unwrap(), "\t");
+    assert_eq!(unescape("\\n", "test").unwrap(), "\n");
+    assert_eq!(unescape("\\r", "test").unwrap(), "\r");
+    assert_eq!(unescape("\\\"", "test").unwrap(), "\"");
+    assert_eq!(unescape("\\'", "test").unwrap(), "'");
+    assert_eq!(unescape("\\\\", "test").unwrap(), "\\");
+}
+
+#[test]
+fn test_unescape_mixed_content() {
+    use word_tally::options::unescape;
+
+    assert_eq!(unescape("Hello\\nWorld", "test").unwrap(), "Hello\nWorld");
+    assert_eq!(
+        unescape("Tab\\tSeparated\\tValues", "test").unwrap(),
+        "Tab\tSeparated\tValues"
+    );
+    assert_eq!(
+        unescape("Path\\\\to\\\\file", "test").unwrap(),
+        "Path\\to\\file"
+    );
+}
+
+#[test]
+fn test_unescape_unknown_sequences() {
+    use word_tally::options::unescape;
+
+    assert_eq!(unescape("\\x", "test").unwrap(), "x");
+    assert_eq!(unescape("\\u1234", "test").unwrap(), "u1234");
+    assert_eq!(unescape("\\0", "test").unwrap(), "0");
+}
+
+#[test]
+fn test_unescape_trailing_backslash() {
+    use word_tally::options::unescape;
+
+    assert!(unescape("\\", "test").is_err());
+    assert!(unescape("hello\\", "test").is_err());
+}
+
+#[test]
+fn test_unescape_no_escapes() {
+    use word_tally::options::unescape;
+
+    assert_eq!(unescape("", "test").unwrap(), "");
+    assert_eq!(unescape("plain text", "test").unwrap(), "plain text");
+    assert_eq!(unescape("12345", "test").unwrap(), "12345");
+}
