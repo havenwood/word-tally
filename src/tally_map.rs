@@ -1,11 +1,8 @@
 //! A collection for tallying word counts using `HashMap`.
 
 use std::{
-    fmt::Display,
     io::{BufRead, Read},
-    iter,
-    path::Path,
-    str,
+    iter, str,
     sync::Arc,
 };
 
@@ -13,7 +10,7 @@ use hashbrown::{HashMap, hash_map};
 
 use anyhow::{Context, Result};
 use icu_segmenter::{WordSegmenter, options::WordBreakInvariantOptions};
-use memchr::memchr_iter;
+use memchr::memchr2_iter;
 use memmap2::Mmap;
 use rayon::prelude::*;
 
@@ -25,6 +22,10 @@ use crate::options::{
     processing::Processing,
 };
 use crate::{Count, Input, Word, WordTallyError};
+
+thread_local! {
+    static WORD_SEGMENTER: WordSegmenter = WordSegmenter::new_dictionary(WordBreakInvariantOptions::default()).static_to_owned();
+}
 
 /// Map for tracking word counts with non-deterministic iteration order.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -80,44 +81,38 @@ impl TallyMap {
     /// Extends the tally map with word counts from a string slice.
     #[inline]
     pub fn add_words_from(&mut self, content: &str, case: Case) {
-        // Create a word segmenter with default options
-        let segmenter = WordSegmenter::new_auto(WordBreakInvariantOptions::default());
-
-        // Use ICU segmenter with word types to identify actual words
-        let mut last_boundary = 0;
-        segmenter
-            .segment_str(content)
-            .iter_with_word_type()
-            .for_each(|(boundary, word_type)| {
-                if word_type.is_word_like() {
-                    let word = &content[last_boundary..boundary];
-                    match case {
-                        // Avoid duplicate allocation
-                        Original => self.increment_ref(word),
-                        Lower => {
-                            if word.chars().all(|c| !c.is_uppercase()) {
-                                // Also avoid duplicate allocation when already all lowercase
-                                self.increment_ref(word);
-                            } else {
-                                self.increment(word.to_lowercase().into_boxed_str());
+        // Use thread-local ICU segmenter with word types to identify actual words
+        WORD_SEGMENTER.with(|segmenter| {
+            let mut last_boundary = 0;
+            segmenter
+                .as_borrowed()
+                .segment_str(content)
+                .iter_with_word_type()
+                .for_each(|(boundary, word_type)| {
+                    if word_type.is_word_like() {
+                        let word = &content[last_boundary..boundary];
+                        match case {
+                            // Avoid duplicate allocation
+                            Original => self.increment(word),
+                            Lower => {
+                                if word.chars().all(|c| !c.is_uppercase()) {
+                                    // Also avoid duplicate allocation when already all lowercase
+                                    self.increment(word);
+                                } else {
+                                    self.increment_owned(word.to_lowercase().into_boxed_str());
+                                }
                             }
+                            Upper => self.increment_owned(word.to_uppercase().into_boxed_str()),
                         }
-                        Upper => self.increment(word.to_uppercase().into_boxed_str()),
                     }
-                }
-                last_boundary = boundary;
-            });
-    }
-
-    /// Increments a word's tally using an owned key.
-    #[inline]
-    fn increment(&mut self, word: Word) {
-        *self.inner.entry(word).or_insert(0) += 1;
+                    last_boundary = boundary;
+                });
+        });
     }
 
     /// Increments a word's tally by reference to avoid duplicate allocation.
     #[inline]
-    fn increment_ref(&mut self, word: &str) {
+    fn increment(&mut self, word: &str) {
         match self.inner.entry_ref(word) {
             hash_map::EntryRef::Vacant(entry) => {
                 entry.insert(1);
@@ -126,6 +121,12 @@ impl TallyMap {
                 *entry.get_mut() += 1;
             }
         }
+    }
+
+    /// Increments a word's tally using an owned key.
+    #[inline]
+    fn increment_owned(&mut self, word: Word) {
+        *self.inner.entry(word).or_insert(0) += 1;
     }
 
     /// Merge two tally maps, always merging the smaller into the larger.
@@ -164,10 +165,10 @@ impl TallyMap {
 
             // Parallel processing
             (Processing::Parallel, Io::MemoryMapped) => {
-                let Input::Mmap(mmap_arc, path) = input else {
+                let Input::Mmap(mmap_arc, _) = input else {
                     return Err(WordTallyError::MmapStdin.into());
                 };
-                Self::par_mmap_count(mmap_arc, path, options)
+                Self::par_mmap_count(mmap_arc, options)
             }
             (Processing::Parallel, Io::Streamed) => Self::par_streamed_count(input, options),
             (Processing::Parallel, Io::Buffered | Io::Bytes) => {
@@ -197,17 +198,7 @@ impl TallyMap {
         let perf = options.performance();
         let content = Self::read_input_to_string(input, perf)?;
 
-        // Find newline-aligned chunk boundaries
-        let total_chunks = perf.total_chunks(content.len() as u64);
-        let num_chunks =
-            usize::try_from(total_chunks).map_err(|_| WordTallyError::ChunkCountExceeded {
-                chunks: total_chunks,
-            })?;
-        let boundaries = Self::chunk_boundaries(&content, num_chunks);
-        // Process content in parallel using the chunk boundaries
-        let tally = Self::process_chunks(&content, &boundaries, options.case());
-
-        Ok(tally)
+        Self::process_content_parallel(&content, perf, options.case(), Self::chunk_boundaries)
     }
 
     /// Parallel memory-mapped word tallying.
@@ -221,20 +212,26 @@ impl TallyMap {
     ///
     /// Memory mapping only works with seekable files (regular files on disk).
     /// It will not work with stdin, pipes, or other non-seekable sources.
-    fn par_mmap_count(mmap: &Arc<Mmap>, path: &Path, options: &Options) -> Result<Self> {
+    fn par_mmap_count(mmap: &Arc<Mmap>, options: &Options) -> Result<Self> {
         let perf = options.performance();
-        let case = options.case();
+        let content = Self::parse_utf8_slice(mmap)?;
 
-        // Provide a view into the content rather than copying
-        let content = Self::parse_utf8_slice(mmap, &path.display())?;
-        // Calculate chunk boundaries with mmap and SIMD
+        Self::process_content_parallel(content, perf, options.case(), Self::mmap_boundaries)
+    }
+
+    /// Common logic for parallel content processing.
+    fn process_content_parallel(
+        content: &str,
+        perf: &Performance,
+        case: Case,
+        boundary_fn: fn(&str, usize) -> Vec<usize>,
+    ) -> Result<Self> {
         let total_chunks = perf.total_chunks(content.len() as u64);
         let num_chunks =
             usize::try_from(total_chunks).map_err(|_| WordTallyError::ChunkCountExceeded {
                 chunks: total_chunks,
             })?;
-        let boundaries = Self::mmap_boundaries(content, num_chunks);
-        // Process content in parallel using the boundaries
+        let boundaries = boundary_fn(content, num_chunks);
         let tally = Self::process_chunks(content, &boundaries, case);
 
         Ok(tally)
@@ -242,27 +239,74 @@ impl TallyMap {
 
     /// Sequential streamed word tallying.
     ///
-    /// Streams one line at a time, avoiding needing to always hold the entire input in memory.
+    /// Processes data in chunks without loading the entire input into memory.
+    /// Uses chunk-based processing for better performance than line-by-line.
     fn streamed_count(input: &Input, options: &Options) -> Result<Self> {
         let perf = options.performance();
+        let case = options.case();
+        let mut reader = input.reader()?;
+
+        let (batch_size, target_batch_size) = Self::calculate_batch_sizes(input, perf)?;
         let mut tally = Self::with_capacity(perf.capacity(input.size()));
-        let reader = input.reader()?;
+        let mut buffer = Vec::with_capacity(batch_size);
+        let mut remainder = Vec::new();
+        let mut reached_eof = false;
 
-        reader
-            .lines()
-            .enumerate()
-            .try_for_each(|(line_num, try_line)| {
-                let line = try_line.with_context(|| {
-                    format!(
-                        "failed to read line {} from: {}",
-                        line_num + 1,
-                        input.source()
-                    )
-                })?;
-                tally.add_words_from(&line, options.case());
+        while !reached_eof || !buffer.is_empty() {
+            // Fill buffer
+            Self::fill_stream_buffer(
+                &mut reader,
+                &mut buffer,
+                &mut reached_eof,
+                target_batch_size,
+                input,
+            )?;
 
-                Ok::<_, anyhow::Error>(())
-            })?;
+            // Find the last whitespace (space or newline) to ensure we don't split words
+            let process_until = if reached_eof {
+                buffer.len()
+            } else {
+                memchr::memrchr2(b' ', b'\n', &buffer).map_or(0, |pos| pos + 1)
+            };
+
+            if process_until > 0 {
+                // Process content
+                let chunk = &buffer[..process_until];
+                let content = if remainder.is_empty() {
+                    str::from_utf8(chunk)
+                } else {
+                    remainder.extend_from_slice(chunk);
+                    str::from_utf8(&remainder)
+                };
+
+                match content {
+                    Ok(text) => {
+                        tally.add_words_from(text, case);
+                        remainder.clear();
+                    }
+                    Err(e) => {
+                        // Handle UTF-8 boundary case
+                        if e.valid_up_to() > 0 {
+                            let valid =
+                                str::from_utf8(&buffer[..e.valid_up_to()]).expect("valid UTF-8");
+                            tally.add_words_from(valid, case);
+                        }
+                        // Keep invalid portion for next iteration
+                        remainder.clear();
+                        remainder.extend_from_slice(&buffer[e.valid_up_to()..process_until]);
+                    }
+                }
+
+                buffer.drain(..process_until);
+            }
+        }
+
+        // Process any remaining data
+        if !remainder.is_empty() {
+            let final_text = str::from_utf8(&remainder)
+                .with_context(|| format!("invalid UTF-8 in stream from: {}", input.source()))?;
+            tally.add_words_from(final_text, case);
+        }
 
         Ok(tally)
     }
@@ -270,7 +314,7 @@ impl TallyMap {
     /// Parallel, streamed word tallying.
     ///
     /// Processes data in parallel with Rayon while streaming:
-    /// - Uses memchr SIMD to find newline-aligned chunk boundaries
+    /// - Uses memchr SIMD to find whitespace-aligned chunk boundaries
     /// - Stream in chunks, without loading the entire input into memory
     /// - Balances performance and memory usage
     fn par_streamed_count(input: &Input, options: &Options) -> Result<Self> {
@@ -278,13 +322,7 @@ impl TallyMap {
         let case = options.case();
         let mut reader = input.reader()?;
 
-        let stream_batch = Performance::stream_batch_size();
-        let batch_size = usize::try_from(stream_batch)
-            .map_err(|_| WordTallyError::BatchSizeExceeded { size: stream_batch })?;
-        let input_size = input.size().unwrap_or_else(|| perf.base_stdin_size());
-        let target_size = perf.stream_batch_size_for_input(input_size);
-        let target_batch_size = usize::try_from(target_size)
-            .map_err(|_| WordTallyError::BatchSizeExceeded { size: target_size })?;
+        let (batch_size, target_batch_size) = Self::calculate_batch_sizes(input, perf)?;
 
         let tally_capacity = perf.capacity(input.size());
         let initial_tally = Self::with_capacity(tally_capacity);
@@ -315,7 +353,6 @@ impl TallyMap {
                     target_batch_size,
                     reached_eof,
                     case,
-                    input,
                     perf,
                 ) {
                     Ok(Some((tally_update, processed_bytes))) => {
@@ -340,16 +377,16 @@ impl TallyMap {
         boundaries
             .windows(2)
             .par_bridge()
-            .fold(Self::new, |mut local_tally, window| {
-                let start = window[0];
-                let end = window[1];
-                if end > start {
-                    local_tally.add_words_from(&content[start..end], case);
-                }
-                local_tally
+            .filter_map(|window| {
+                let (start, end) = (window[0], window[1]);
+                (end > start).then(|| &content[start..end])
+            })
+            .fold(Self::new, |mut tally, chunk| {
+                tally.add_words_from(chunk, case);
+                tally
             })
             .reduce_with(Self::merge)
-            .unwrap_or_else(Self::default)
+            .unwrap_or_default()
     }
 
     /// Reads the entire input into a string buffer.
@@ -365,36 +402,44 @@ impl TallyMap {
         Ok(buffer)
     }
 
-    /// Find chunk boundaries at newlines with SIMD.
+    /// Calculate batch sizes for streaming.
+    fn calculate_batch_sizes(input: &Input, perf: &Performance) -> Result<(usize, usize)> {
+        let stream_batch = Performance::stream_batch_size();
+        let batch_size = usize::try_from(stream_batch)
+            .map_err(|_| WordTallyError::BatchSizeExceeded { size: stream_batch })?;
+        let input_size = input.size().unwrap_or_else(|| perf.base_stdin_size());
+        let target_size = perf.stream_batch_size_for_input(input_size);
+        let target_batch_size = usize::try_from(target_size)
+            .map_err(|_| WordTallyError::BatchSizeExceeded { size: target_size })?;
+
+        Ok((batch_size, target_batch_size))
+    }
+
+    /// Find chunk boundaries at whitespace with SIMD.
     fn chunk_boundaries(content: &str, num_chunks: usize) -> Vec<usize> {
         let content_len = content.len();
         let target_chunk_size = content_len.div_ceil(num_chunks);
 
-        let mut boundaries: Vec<usize> = iter::once(0)
-            .chain(
-                memchr_iter(b'\n', content.as_bytes())
-                    .scan(0, |last_boundary, pos| {
-                        if pos - *last_boundary >= target_chunk_size {
-                            let boundary = pos + 1;
-                            *last_boundary = boundary;
-                            Some(Some(boundary))
-                        } else {
-                            Some(None)
-                        }
-                    })
-                    .flatten(),
-            )
-            .collect();
+        let mut boundaries = vec![0];
+        let mut last_boundary = 0;
+
+        for pos in memchr2_iter(b' ', b'\n', content.as_bytes()) {
+            if pos - last_boundary >= target_chunk_size {
+                let boundary = pos + 1;
+                boundaries.push(boundary);
+                last_boundary = boundary;
+            }
+        }
 
         // Add end boundary if needed
-        if boundaries.last() < Some(&content_len) {
+        if boundaries.last() != Some(&content_len) {
             boundaries.push(content_len);
         }
 
         boundaries
     }
 
-    /// Find memory-mapped chunk boundaries using SIMD newline detection.
+    /// Find memory-mapped chunk boundaries using SIMD whitespace detection.
     fn mmap_boundaries(content: &str, num_chunks: usize) -> Vec<usize> {
         let content_len = content.len();
         let target_chunk_size = content_len.div_ceil(num_chunks);
@@ -407,8 +452,9 @@ impl TallyMap {
                         // Last boundary is end of file if the proposed chunk is past the end
                         content_len
                     } else {
-                        // Search backwards for a newline with SIMD, or use target_pos if no newline found
-                        memchr::memrchr(b'\n', &content.as_bytes()[..target_pos])
+                        // Search backwards for whitespace (space or newline) with SIMD
+                        let search_region = &content.as_bytes()[..target_pos];
+                        memchr::memrchr2(b' ', b'\n', search_region)
                             .map_or(target_pos, |pos| pos + 1)
                     }
                 },
@@ -417,10 +463,10 @@ impl TallyMap {
         boundaries
     }
 
-    /// Calculate chunk boundaries within a streamed batch based on newline positions.
+    /// Calculate chunk boundaries within a streamed batch based on whitespace positions.
     fn streamed_boundaries(
         buffer: &[u8],
-        newline_positions: &[usize],
+        whitespace_positions: &[usize],
         target_batch_size: usize,
         reached_eof: bool,
     ) -> Vec<usize> {
@@ -428,7 +474,7 @@ impl TallyMap {
 
         let mut boundaries: Vec<usize> = iter::once(0)
             .chain(
-                newline_positions
+                whitespace_positions
                     .iter()
                     .scan(0, |last_boundary, &pos| {
                         if pos - *last_boundary >= chunk_size {
@@ -487,26 +533,29 @@ impl TallyMap {
         target_batch_size: usize,
         reached_eof: bool,
         case: Case,
-        input: &Input,
         perf: &Performance,
     ) -> Result<Option<(Self, usize)>> {
-        // Find all newline positions with SIMD search
-        let newline_positions: Vec<usize> = memchr_iter(b'\n', buffer).collect();
+        // Find all whitespace positions with SIMD search
+        let whitespace_positions: Vec<usize> = memchr2_iter(b' ', b'\n', buffer).collect();
 
         // Wait for more data if buffer is incomplete and not at EOF
-        if newline_positions.is_empty() && !reached_eof && buffer.len() < target_batch_size {
+        if whitespace_positions.is_empty() && !reached_eof && buffer.len() < target_batch_size {
             return Ok(None);
         }
 
-        // Calculate chunk boundaries aligned to newlines for parallel processing
-        let chunk_boundaries =
-            Self::streamed_boundaries(buffer, &newline_positions, target_batch_size, reached_eof);
+        // Calculate chunk boundaries aligned to whitespace for parallel processing
+        let chunk_boundaries = Self::streamed_boundaries(
+            buffer,
+            &whitespace_positions,
+            target_batch_size,
+            reached_eof,
+        );
 
         match chunk_boundaries.len() {
             0 => Ok(None),
             1 if reached_eof && !buffer.is_empty() => {
                 // Final chunk: process sequentially
-                let remaining = Self::parse_utf8_slice(buffer, input)?;
+                let remaining = Self::parse_utf8_slice(buffer)?;
                 let mut tally = Self::with_capacity(perf.chunk_capacity(buffer.len() as u64));
                 tally.add_words_from(remaining, case);
                 Ok(Some((tally, buffer.len())))
@@ -514,7 +563,7 @@ impl TallyMap {
             _ => {
                 // Multiple chunks: process in parallel
                 let process_end = chunk_boundaries[chunk_boundaries.len() - 1];
-                let content = Self::parse_utf8_slice(&buffer[..process_end], input)?;
+                let content = Self::parse_utf8_slice(&buffer[..process_end])?;
                 let batch_result = Self::process_chunks(content, &chunk_boundaries, case);
                 Ok(Some((batch_result, process_end)))
             }
@@ -534,7 +583,7 @@ impl TallyMap {
     }
 
     /// Parse a UTF-8 slice with error recovery, truncating at last valid boundary on error.
-    fn parse_utf8_slice<'a>(buffer: &'a [u8], _input_name: &impl Display) -> Result<&'a str> {
+    fn parse_utf8_slice(buffer: &[u8]) -> Result<&str> {
         str::from_utf8(buffer).or_else(|e| {
             let adjusted_len = Self::find_valid_boundary(buffer, e.valid_up_to());
 
@@ -581,7 +630,10 @@ impl Extend<(Word, Count)> for TallyMap {
 
         self.inner.reserve(lower_bound);
         iter.for_each(|(word, count)| {
-            *self.inner.entry(word).or_insert(0) += count;
+            self.inner
+                .entry(word)
+                .and_modify(|c| *c += count)
+                .or_insert(count);
         });
     }
 }

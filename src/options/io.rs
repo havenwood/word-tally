@@ -8,7 +8,7 @@ use std::env;
 /// Determines the I/O strategy for processing input, all either in parallel or sequentially.
 ///
 /// Performance characteristics:
-/// - **Streamed**: Processes input line-by-line without loading entire file into memory.
+/// - **Streamed**: Processes input in chunks without loading entire file or pipe into memory.
 ///   Well-suited for memory-constrained environments and pipes/non-seekable sources.
 ///
 /// - **Buffered**: Loads entire content into memory before processing.
@@ -33,7 +33,7 @@ pub enum Io {
     #[clap(name = "mmap")]
     MemoryMapped,
 
-    /// Process input line-by-line without loading entire file into memory.
+    /// Process input in chunks without loading entire source into memory.
     Streamed,
 
     /// Read entire file into memory before processing.

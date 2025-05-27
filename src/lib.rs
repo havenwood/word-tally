@@ -8,9 +8,9 @@
 //! uses the least peak memory.
 //!
 //! Word boundaries are determined using the [`icu_segmenter`](https://docs.rs/icu_segmenter/)
-//! crate from ICU4X, which provides SIMD-optimized Unicode text segmentation following
+//! crate from ICU4X, which provides Unicode text segmentation following
 //! the [Unicode Standard Annex #29](https://unicode.org/reports/tr29/) specification. The [`memchr`](https://docs.rs/memchr/)
-//! crate provides SIMD-accelerated text boundary detection for efficient parallel processing.
+//! crate provides SIMD-accelerated newline detection for efficient parallel chunk processing.
 //!
 //! ## Module structure
 //!

@@ -215,6 +215,24 @@ impl Performance {
         target_batch_size.max(Self::PAR_CHUNK_SIZE)
     }
 
+    /// Calculate chunk boundary capacity based on total chunks.
+    #[must_use]
+    pub const fn chunk_boundary_capacity(total_chunks: u64) -> usize {
+        Self::saturating_cast(total_chunks.saturating_add(1))
+    }
+
+    /// Calculate chunk boundary capacity for streaming.
+    #[must_use]
+    pub fn stream_boundary_capacity() -> usize {
+        Self::chunk_boundary_capacity(Self::stream_total_chunks() as u64)
+    }
+
+    /// Calculate chunk size for streaming based on target batch size.
+    #[must_use]
+    pub const fn stream_chunk_size(target_batch_size: usize) -> usize {
+        target_batch_size / Self::PAR_CHUNKS_PER_THREAD as usize
+    }
+
     // Env-parsing helpers
 
     /// Parse numeric environment variable with fallback to default value.

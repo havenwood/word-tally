@@ -2,9 +2,7 @@ use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs::{self, File};
 use std::io::Write;
-use std::sync::Arc;
 use tempfile::{NamedTempFile, TempDir};
-use word_tally::{Input, Options, WordTally};
 
 #[test]
 fn test_permission_denied_error() {
@@ -79,31 +77,6 @@ fn test_nonexistent_path_error() {
         ));
 }
 
-fn make_shared<T>(value: T) -> Arc<T> {
-    Arc::new(value)
-}
-
-#[test]
-fn test_new_invalid_utf8_error() {
-    let invalid_utf8 = vec![0xFF, 0xFE, 0xFD, 0x80, 0x81];
-    let mut temp_file = NamedTempFile::new().expect("create temp file");
-    temp_file.write_all(&invalid_utf8).expect("write test data");
-
-    let options = make_shared(Options::default());
-    let input = Input::new(
-        temp_file.path().to_str().expect("temp file path"),
-        options.io(),
-    )
-    .expect("process test");
-
-    let result = WordTally::new(&input, &options);
-    assert!(result.is_err());
-
-    let error = result.unwrap_err();
-    let error_msg = error.to_string();
-    assert!(!error_msg.is_empty());
-}
-
 #[test]
 fn test_input_file_not_found_error() {
     let assert = Command::cargo_bin("word-tally")
@@ -153,4 +126,22 @@ fn test_input_file_permission_denied_error() {
         perms.set_mode(0o644); // Restore permissions for cleanup
         fs::set_permissions(&file_path, perms).expect("process test");
     }
+}
+
+#[test]
+fn test_new_invalid_utf8_error() {
+    let mut file = NamedTempFile::new().expect("create temp file");
+    // Write invalid UTF-8 sequence
+    file.write_all(&[0xFF, 0xFE, 0xFD])
+        .expect("write invalid UTF-8");
+    file.flush().expect("flush file");
+
+    let assert = Command::cargo_bin("word-tally")
+        .expect("execute operation")
+        .arg(file.path())
+        .assert();
+
+    assert
+        .failure()
+        .stderr(predicate::str::contains("invalid UTF-8"));
 }
