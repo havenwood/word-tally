@@ -273,10 +273,10 @@ impl TallyMap {
                 // Process content
                 let chunk = &buffer[..process_until];
                 let content = if remainder.is_empty() {
-                    str::from_utf8(chunk)
+                    simdutf8::compat::from_utf8(chunk)
                 } else {
                     remainder.extend_from_slice(chunk);
-                    str::from_utf8(&remainder)
+                    simdutf8::compat::from_utf8(&remainder)
                 };
 
                 match content {
@@ -287,8 +287,8 @@ impl TallyMap {
                     Err(e) => {
                         // Handle UTF-8 boundary case
                         if e.valid_up_to() > 0 {
-                            let valid =
-                                str::from_utf8(&buffer[..e.valid_up_to()]).expect("valid UTF-8");
+                            let valid = simdutf8::basic::from_utf8(&buffer[..e.valid_up_to()])
+                                .expect("valid UTF-8");
                             tally.add_words_from(valid, case);
                         }
                         // Keep invalid portion for next iteration
@@ -303,7 +303,7 @@ impl TallyMap {
 
         // Process any remaining data
         if !remainder.is_empty() {
-            let final_text = str::from_utf8(&remainder)
+            let final_text = simdutf8::compat::from_utf8(&remainder)
                 .with_context(|| format!("invalid UTF-8 in stream from: {}", input.source()))?;
             tally.add_words_from(final_text, case);
         }
@@ -578,27 +578,27 @@ impl TallyMap {
 
         (0..=valid_len)
             .rev()
-            .find(|&len| str::from_utf8(&buffer[..len]).is_ok())
+            .find(|&len| simdutf8::basic::from_utf8(&buffer[..len]).is_ok())
             .unwrap_or(0)
     }
 
     /// Parse a UTF-8 slice with error recovery, truncating at last valid boundary on error.
     fn parse_utf8_slice(buffer: &[u8]) -> Result<&str> {
-        str::from_utf8(buffer).or_else(|e| {
+        simdutf8::compat::from_utf8(buffer).or_else(|e| {
             let adjusted_len = Self::find_valid_boundary(buffer, e.valid_up_to());
 
             if adjusted_len == 0 {
                 return Err(WordTallyError::Utf8 {
                     byte: e.valid_up_to(),
-                    source: e,
+                    source: str::from_utf8(buffer).unwrap_err(),
                 }
                 .into());
             }
 
-            str::from_utf8(&buffer[..adjusted_len]).map_err(|_| {
+            simdutf8::basic::from_utf8(&buffer[..adjusted_len]).map_err(|_| {
                 WordTallyError::Utf8 {
                     byte: e.valid_up_to(),
-                    source: e,
+                    source: str::from_utf8(buffer).unwrap_err(),
                 }
                 .into()
             })
