@@ -275,7 +275,7 @@ fn test_args_shorthand_flags() {
         .arg("-f=json")
         .arg("-d=,")
         .arg("-m=3")
-        .arg("-M=2")
+        .arg("-n=2")
         .arg("-v")
         .write_stdin("hello world test")
         .assert();
@@ -292,7 +292,7 @@ fn test_args_shorthand_flags() {
 fn test_args_exclude_words_list() {
     Command::cargo_bin("word-tally")
         .expect("execute operation")
-        .arg("-E=the,a,an,and,or")
+        .arg("-w=the,a,an,and,or")
         .arg("-v")
         .write_stdin("the quick brown fox and a lazy dog")
         .assert()

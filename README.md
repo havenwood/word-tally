@@ -23,13 +23,13 @@ Arguments:
   [PATHS]...  File paths to use as input (use "-" for stdin) [default: -]
 
 Options:
-  -I, --io <STRATEGY>          I/O strategy [default: parallel-stream] [possible values: stream, parallel-stream, parallel-in-memory, parallel-mmap]
+  -I, --io <STRATEGY>          I/O strategy [default: parallel-stream] [possible values: parallel-stream, stream, parallel-mmap, parallel-in-memory]
   -e, --encoding <ENCODING>    Word boundary detection encoding [default: unicode] [possible values: unicode, ascii]
   -c, --case <FORMAT>          Case normalization [default: original] [possible values: original, upper, lower]
   -s, --sort <ORDER>           Sort order [default: desc] [possible values: desc, asc, unsorted]
   -m, --min-chars <COUNT>      Exclude words containing fewer than min chars
-  -M, --min-count <COUNT>      Exclude words appearing fewer than min times
-  -E, --exclude-words <WORDS>  Exclude words from a comma-delimited list
+  -n, --min-count <COUNT>      Exclude words appearing fewer than min times
+  -w, --exclude-words <WORDS>  Exclude words from a comma-delimited list
   -i, --include <PATTERNS>     Include only words matching a regex pattern
   -x, --exclude <PATTERNS>     Exclude words matching a regex pattern
   -f, --format <FORMAT>        Output format [default: text] [possible values: text, json, csv]

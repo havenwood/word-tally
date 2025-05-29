@@ -53,11 +53,11 @@ pub struct Args {
     min_chars: Option<Count>,
 
     /// Exclude words appearing fewer than min times.
-    #[arg(short = 'M', long, value_name = "COUNT")]
+    #[arg(short = 'n', long, value_name = "COUNT")]
     min_count: Option<Count>,
 
     /// Exclude words from a comma-delimited list.
-    #[arg(short = 'E', long, use_value_delimiter = true, value_name = "WORDS")]
+    #[arg(short = 'w', long, use_value_delimiter = true, value_name = "WORDS")]
     exclude_words: Option<Vec<String>>,
 
     /// Include only words matching a regex pattern.
