@@ -181,7 +181,6 @@ fn test_get_options() {
         .arg("--sort=asc")
         .arg("--format=json")
         .arg("--min-chars=3")
-        .arg("--parallel")
         .arg("-v")
         .write_stdin("hello world")
         .assert();
@@ -197,7 +196,6 @@ fn test_get_options() {
 fn test_get_performance() {
     let assert = Command::cargo_bin("word-tally")
         .expect("execute operation")
-        .arg("--parallel")
         .arg("-v")
         .write_stdin("hello world")
         .assert();
@@ -279,7 +277,6 @@ fn test_args_shorthand_flags() {
         .arg("-d=,")
         .arg("-m=3")
         .arg("-M=2")
-        .arg("-p")
         .arg("-v")
         .write_stdin("hello world test")
         .assert();
@@ -475,7 +472,6 @@ fn test_args_options_comprehensive() {
         .arg("--io=buffered")
         .arg("--format=csv")
         .arg("--delimiter=;")
-        .arg("--parallel")
         .arg("-v")
         .write_stdin("Test TEST test")
         .assert()

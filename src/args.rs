@@ -34,13 +34,9 @@ pub struct Args {
     #[arg(short = 'I', long, value_enum, default_value_t = Io::Streamed, value_name = "STRATEGY")]
     io: Io,
 
-    /// Disable parallel processing (use sequential).
-    #[arg(short = 'S', long = "no-parallel", action = ArgAction::SetFalse)]
-    parallel: bool,
-
-    /// Enable parallel processing [default].
-    #[arg(short = 'p', long = "parallel", overrides_with = "parallel")]
-    _no_parallel: bool,
+    /// Use sequential processing instead of parallel.
+    #[arg(long = "no-parallel", default_value_t = false)]
+    no_parallel: bool,
 
     /// Word boundary detection encoding.
     #[arg(short = 'e', long, value_enum, default_value_t = Encoding::Unicode, value_name = "ENCODING")]
@@ -118,7 +114,7 @@ impl Args {
             Serialization::new(self.format, &self.delimiter)?,
             self.build_filters()?,
             self.io,
-            self.parallel.into(),
+            (!self.no_parallel).into(),
             Performance::from_env(),
         )
         .with_encoding(self.encoding))

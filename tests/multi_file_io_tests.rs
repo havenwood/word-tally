@@ -36,7 +36,6 @@ fn parallel_streamed_multi_file() {
 
     word_tally()
         .arg("--io=streamed")
-        .arg("--parallel")
         .arg(temp_file1.path())
         .arg(temp_file2.path())
         .assert()
@@ -55,7 +54,6 @@ fn parallel_buffered_multi_file() {
 
     word_tally()
         .arg("--io=buffered")
-        .arg("--parallel")
         .arg(temp_file1.path())
         .arg(temp_file2.path())
         .assert()
@@ -74,7 +72,6 @@ fn parallel_mmap_multi_file() {
 
     word_tally()
         .arg("--io=mmap")
-        .arg("--parallel")
         .arg(temp_file1.path())
         .arg(temp_file2.path())
         .assert()
@@ -112,7 +109,7 @@ fn large_multi_file_sets() {
         .collect();
 
     let mut cmd = word_tally();
-    cmd.arg("--io=mmap").arg("--parallel");
+    cmd.arg("--io=mmap");
 
     for temp_file in &temp_files {
         cmd.arg(temp_file.path());

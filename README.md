@@ -18,8 +18,7 @@ Arguments:
 
 Options:
   -I, --io <STRATEGY>          I/O strategy [default: streamed] [possible values: mmap, streamed, buffered]
-  -S, --no-parallel            Disable parallel processing (use sequential)
-  -p, --parallel               Enable parallel processing [default]
+      --no-parallel            Use sequential processing instead of parallel
   -e, --encoding <ENCODING>    Word boundary detection encoding [default: unicode] [possible values: unicode, ascii]
   -c, --case <FORMAT>          Case normalization [default: original] [possible values: original, upper, lower]
   -s, --sort <ORDER>           Sort order [default: desc] [possible values: desc, asc, unsorted]

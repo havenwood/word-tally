@@ -377,10 +377,7 @@ fn csv_escaping() {
 #[test]
 fn stdin_with_parallel() {
     // Test with a small input
-    let assert = word_tally()
-        .write_stdin("hope forever")
-        .arg("--parallel")
-        .assert();
+    let assert = word_tally().write_stdin("hope forever").assert();
     assert
         .success()
         .stdout(contains("hope 1"))
@@ -389,7 +386,6 @@ fn stdin_with_parallel() {
     // Test with a multi-line input
     let assert = word_tally()
         .write_stdin("hope forever\ninfinite beauty\nhope sublime")
-        .arg("--parallel")
         .assert();
     assert
         .success()
@@ -403,7 +399,7 @@ fn stdin_with_parallel() {
 #[test]
 fn stdin_with_parallel_shorthand() {
     // Test the -p shorthand flag
-    let assert = word_tally().write_stdin("hope forever").arg("-p").assert();
+    let assert = word_tally().write_stdin("hope forever").assert();
     assert
         .success()
         .stdout(contains("hope 1"))
@@ -416,7 +412,6 @@ fn parallel_with_env_vars() {
         .env("WORD_TALLY_CHUNK_SIZE", "4096")
         .env("WORD_TALLY_THREADS", "2")
         .write_stdin("hope infinite beauty forever sublime")
-        .arg("--parallel")
         .assert();
 
     assert
@@ -433,7 +428,6 @@ fn parallel_with_large_chunk() {
     let assert = word_tally()
         .env("WORD_TALLY_CHUNK_SIZE", "65536")
         .write_stdin("truth beauty certain narrow sublime forever")
-        .arg("--parallel")
         .assert();
 
     assert
@@ -558,7 +552,6 @@ fn multi_file_with_parallel() {
     fs::write(&temp_file2, "road fame").expect("write test file");
 
     let output = word_tally()
-        .arg("--parallel")
         .arg(temp_file1.path())
         .arg(temp_file2.path())
         .assert()
@@ -611,7 +604,6 @@ fn test_parallel_flags() {
     // Test explicit --parallel flag
     word_tally()
         .write_stdin("test")
-        .arg("--parallel")
         .arg("--verbose")
         .assert()
         .success()
@@ -620,7 +612,6 @@ fn test_parallel_flags() {
     // Test -p short flag
     word_tally()
         .write_stdin("test")
-        .arg("-p")
         .arg("--verbose")
         .assert()
         .success()
@@ -629,68 +620,6 @@ fn test_parallel_flags() {
     // Test --no-parallel flag
     word_tally()
         .write_stdin("test")
-        .arg("--no-parallel")
-        .arg("--verbose")
-        .assert()
-        .success()
-        .stderr(contains("processing sequential"));
-
-    // Test -S short flag
-    word_tally()
-        .write_stdin("test")
-        .arg("-S")
-        .arg("--verbose")
-        .assert()
-        .success()
-        .stderr(contains("processing sequential"));
-}
-
-#[test]
-fn test_parallel_flag_overrides() {
-    // Test --parallel --no-parallel (last wins)
-    word_tally()
-        .write_stdin("test")
-        .arg("--parallel")
-        .arg("--no-parallel")
-        .arg("--verbose")
-        .assert()
-        .success()
-        .stderr(contains("processing sequential"));
-
-    // Test --no-parallel --parallel (last wins)
-    word_tally()
-        .write_stdin("test")
-        .arg("--no-parallel")
-        .arg("--parallel")
-        .arg("--verbose")
-        .assert()
-        .success()
-        .stderr(contains("processing parallel"));
-
-    // Test -p -S (last wins)
-    word_tally()
-        .write_stdin("test")
-        .arg("-p")
-        .arg("-S")
-        .arg("--verbose")
-        .assert()
-        .success()
-        .stderr(contains("processing sequential"));
-
-    // Test -S -p (last wins)
-    word_tally()
-        .write_stdin("test")
-        .arg("-S")
-        .arg("-p")
-        .arg("--verbose")
-        .assert()
-        .success()
-        .stderr(contains("processing parallel"));
-
-    // Test mixed short and long flags
-    word_tally()
-        .write_stdin("test")
-        .arg("-p")
         .arg("--no-parallel")
         .arg("--verbose")
         .assert()
