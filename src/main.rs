@@ -2,18 +2,14 @@
 
 pub(crate) mod args;
 pub(crate) mod verbose;
-pub(crate) use word_tally::input;
-pub(crate) use word_tally::output;
 
-use crate::input::Input;
-use crate::output::Output;
+use crate::args::Args;
 use crate::verbose::Verbose;
 use anyhow::Result;
-use args::Args;
 use clap::Parser;
 use rayon::prelude::*;
 use std::process;
-use word_tally::{Io, TallyMap, WordTally, exit_code::ExitCode};
+use word_tally::{Input, Io, Output, TallyMap, WordTally, exit_code::ExitCode};
 
 fn main() {
     match run() {

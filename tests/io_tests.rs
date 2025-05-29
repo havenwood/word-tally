@@ -1,3 +1,5 @@
+//! Tests for I/O functionality.
+
 use std::io::Write;
 use word_tally::{Count, Input, Io, Options, Performance, WordTally};
 
@@ -385,60 +387,29 @@ fn test_io_serialization() {
 }
 
 #[test]
-fn test_parse_io_from_env() {
-    // Test with no environment variable (should return default)
-    unsafe {
-        std::env::remove_var(Io::ENV_IO);
-    }
-    assert_eq!(Io::from_env(), Io::default());
+fn test_parse_io_from_str_value() {
+    // Test with no value (should return default)
+    assert_eq!(Io::from_str_value(None), Io::default());
 
     // Test case-insensitive parsing
-    unsafe {
-        std::env::set_var(Io::ENV_IO, "stream");
-    }
-    assert_eq!(Io::from_env(), Io::Stream);
-
-    unsafe {
-        std::env::set_var(Io::ENV_IO, "PARALLEL-STREAM");
-    }
-    assert_eq!(Io::from_env(), Io::ParallelStream);
-
-    unsafe {
-        std::env::set_var(Io::ENV_IO, "parallel-in-memory");
-    }
-    assert_eq!(Io::from_env(), Io::ParallelInMemory);
-
-    unsafe {
-        std::env::set_var(Io::ENV_IO, "Parallel-Mmap");
-    }
-    assert_eq!(Io::from_env(), Io::ParallelMmap);
+    assert_eq!(Io::from_str_value(Some("stream")), Io::Stream);
+    assert_eq!(
+        Io::from_str_value(Some("PARALLEL-STREAM")),
+        Io::ParallelStream
+    );
+    assert_eq!(
+        Io::from_str_value(Some("parallel-in-memory")),
+        Io::ParallelInMemory
+    );
+    assert_eq!(Io::from_str_value(Some("Parallel-Mmap")), Io::ParallelMmap);
 
     // Test mmap alias
-    unsafe {
-        std::env::set_var(Io::ENV_IO, "mmap");
-    }
-    assert_eq!(Io::from_env(), Io::ParallelMmap);
-
-    unsafe {
-        std::env::set_var(Io::ENV_IO, "MMAP");
-    }
-    assert_eq!(Io::from_env(), Io::ParallelMmap);
+    assert_eq!(Io::from_str_value(Some("mmap")), Io::ParallelMmap);
+    assert_eq!(Io::from_str_value(Some("MMAP")), Io::ParallelMmap);
 
     // Test invalid values (should return default)
-    unsafe {
-        std::env::set_var(Io::ENV_IO, "invalid");
-    }
-    assert_eq!(Io::from_env(), Io::default());
-
-    unsafe {
-        std::env::set_var(Io::ENV_IO, "");
-    }
-    assert_eq!(Io::from_env(), Io::default());
-
-    // Clean up
-    unsafe {
-        std::env::remove_var(Io::ENV_IO);
-    }
+    assert_eq!(Io::from_str_value(Some("invalid")), Io::default());
+    assert_eq!(Io::from_str_value(Some("")), Io::default());
 }
 
 #[test]

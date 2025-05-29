@@ -57,10 +57,10 @@ impl Io {
     /// Environment variable name for I/O configuration.
     pub const ENV_IO: &'static str = "WORD_TALLY_IO";
 
-    /// Parse I/O strategy from `WORD_TALLY_IO` environment variable.
+    /// Parse I/O strategy from a string value.
     #[must_use]
-    pub fn from_env() -> Self {
-        match env::var(Self::ENV_IO).ok().as_deref() {
+    pub fn from_str_value(value: Option<&str>) -> Self {
+        match value {
             Some(s) if s.eq_ignore_ascii_case("stream") => Self::Stream,
             Some(s) if s.eq_ignore_ascii_case("parallel-stream") => Self::ParallelStream,
             Some(s) if s.eq_ignore_ascii_case("parallel-in-memory") => Self::ParallelInMemory,
@@ -71,6 +71,12 @@ impl Io {
             }
             _ => Self::default(),
         }
+    }
+
+    /// Parse I/O strategy from `WORD_TALLY_IO` environment variable.
+    #[must_use]
+    pub fn from_env() -> Self {
+        Self::from_str_value(env::var(Self::ENV_IO).ok().as_deref())
     }
 }
 

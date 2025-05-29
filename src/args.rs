@@ -24,7 +24,7 @@ use word_tally::{Count, Options, WordTallyError};
     about,
     long_about = "Tally word frequencies with customizable options for sorting, filtering, and output formatting"
 )]
-pub struct Args {
+pub(crate) struct Args {
     /// File paths to use as input (use "-" for stdin).
     #[arg(value_name = "PATHS", default_value = "-")]
     sources: Vec<String>,
@@ -88,22 +88,22 @@ pub struct Args {
 
 impl Args {
     /// Get the input file paths.
-    pub fn sources(&self) -> &[String] {
+    pub(crate) fn sources(&self) -> &[String] {
         &self.sources
     }
 
     /// Get the output file path.
-    pub const fn output(&self) -> Option<&PathBuf> {
+    pub(crate) const fn output(&self) -> Option<&PathBuf> {
         self.output.as_ref()
     }
 
     /// Get the verbose flag.
-    pub const fn verbose(&self) -> bool {
+    pub(crate) const fn verbose(&self) -> bool {
         self.verbose
     }
 
     /// Parse command-line arguments and convert them to word-tally `Options`.
-    pub fn to_options(&self) -> Result<Options> {
+    pub(crate) fn to_options(&self) -> Result<Options> {
         Ok(Options::new(
             self.case,
             self.sort,

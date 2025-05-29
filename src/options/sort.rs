@@ -35,9 +35,12 @@ use serde::{Deserialize, Serialize};
     Deserialize,
 )]
 pub enum Sort {
+    /// Sort by count descending.
     #[default]
     Desc,
+    /// Sort by count ascending.
     Asc,
+    /// No sorting applied.
     Unsorted,
 }
 

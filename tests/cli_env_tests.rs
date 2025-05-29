@@ -1,3 +1,5 @@
+//! Tests for CLI environment variable handling.
+
 use assert_cmd::Command;
 use predicates::str::contains;
 

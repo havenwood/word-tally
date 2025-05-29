@@ -20,9 +20,12 @@ use serde::{Deserialize, Serialize};
     Deserialize,
 )]
 pub enum Case {
+    /// Keep original case.
     #[default]
     Original,
+    /// Convert to uppercase.
     Upper,
+    /// Convert to lowercase.
     Lower,
 }
 

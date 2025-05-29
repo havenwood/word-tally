@@ -14,9 +14,13 @@ use std::sync::Arc;
 /// `Input` to read from a file, stdin, memory-mapped source, or bytes.
 #[derive(Clone, Debug)]
 pub enum Input {
+    /// Read from standard input.
     Stdin,
+    /// Read from a file.
     File(PathBuf),
+    /// Read from a memory-mapped file.
     Mmap(Arc<Mmap>, PathBuf),
+    /// Read from in-memory bytes.
     Bytes(Box<[u8]>),
 }
 
@@ -56,6 +60,7 @@ impl Input {
                 })?;
 
                 // Safety: Memory mapping requires `unsafe` per memmap2 crate
+                #[allow(unsafe_code)]
                 let mmap = unsafe { Mmap::map(&file) }.map_err(|e| WordTallyError::Io {
                     path: path_buf.display().to_string(),
                     message: "failed to create memory map".to_string(),

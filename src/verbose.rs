@@ -1,13 +1,13 @@
 //! Verbose logging functionality for word tallying operations.
 
-use crate::output::Output;
 use anyhow::{Context, Result};
 use serde::Serialize;
+use word_tally::Output;
 use word_tally::{Format, WordTally, WordTallyError};
 
 /// Handles verbose output formatting and display of word tally results.
 #[derive(Debug)]
-pub struct Verbose {
+pub(crate) struct Verbose {
     output: Output,
 }
 
@@ -102,7 +102,11 @@ impl<'a> VerboseData<'a> {
 
 impl Verbose {
     /// Writes verbose information for the word tally.
-    pub fn write_verbose_info(&mut self, word_tally: &WordTally<'_>, source: &str) -> Result<()> {
+    pub(crate) fn write_verbose_info(
+        &mut self,
+        word_tally: &WordTally<'_>,
+        source: &str,
+    ) -> Result<()> {
         let data = VerboseData::from_tally(word_tally, source);
 
         match word_tally.options().serialization().format() {

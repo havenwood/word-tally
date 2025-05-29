@@ -6,7 +6,7 @@ use word_tally::{Case, TallyMap};
 
 /// Parse word-tally output into a set of (word, count) pairs
 fn parse_output(output: &[u8]) -> HashSet<(String, usize)> {
-    std::str::from_utf8(output)
+    simdutf8::compat::from_utf8(output)
         .unwrap()
         .lines()
         .filter(|line| !line.is_empty())
@@ -94,7 +94,7 @@ fn test_unicode_min_chars() {
         .stdout
         .clone();
 
-    let words: Vec<&str> = std::str::from_utf8(&output)
+    let words: Vec<&str> = simdutf8::compat::from_utf8(&output)
         .unwrap()
         .lines()
         .filter(|line| !line.is_empty())
@@ -449,7 +449,7 @@ fn test_documented_differences() {
             .stdout
             .clone();
 
-        let unicode_words: Vec<String> = std::str::from_utf8(&unicode_output)
+        let unicode_words: Vec<String> = simdutf8::compat::from_utf8(&unicode_output)
             .unwrap()
             .lines()
             .filter(|line| !line.is_empty())
@@ -467,7 +467,7 @@ fn test_documented_differences() {
             .stdout
             .clone();
 
-        let ascii_words: Vec<String> = std::str::from_utf8(&ascii_output)
+        let ascii_words: Vec<String> = simdutf8::compat::from_utf8(&ascii_output)
             .unwrap()
             .lines()
             .filter(|line| !line.is_empty())
@@ -521,7 +521,7 @@ fn test_ascii_simplicity() {
         .stdout
         .clone();
 
-    let words: Vec<&str> = std::str::from_utf8(&output)
+    let words: Vec<&str> = simdutf8::compat::from_utf8(&output)
         .unwrap()
         .lines()
         .filter(|line| !line.is_empty())

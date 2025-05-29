@@ -34,9 +34,12 @@ pub const DEFAULT_DELIMITER: &str = " ";
     Deserialize,
 )]
 pub enum Format {
+    /// Plain text output.
     #[default]
     Text,
+    /// JSON output.
     Json,
+    /// CSV output.
     Csv,
 }
 

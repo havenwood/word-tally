@@ -61,20 +61,39 @@ debug = true
 strip = false
 
 [lints.clippy]
-cargo = "deny"
-correctness = "deny"
-nursery = "deny"
-pedantic = "warn"
-perf = "deny"
-suspicious = "deny"
+# Clippy lint groups
+cargo = { level = "deny", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+nursery = { level = "deny", priority = -1 }
+perf = { level = "deny", priority = -1 }
+suspicious = { level = "deny", priority = -1 }
+
+# Clippy nursery group allows
+redundant_pub_crate = "allow"
+
+# Clippy lints
+cast_lossless = "deny"
+implicit_clone = "deny"
+inefficient_to_string = "deny"
+large_enum_variant = "deny"
+needless_pass_by_value = "deny"
+redundant_closure_for_method_calls = "deny"
 
 [lints.rust]
+# Rust lint groups
 future_incompatible = "deny"
 let_underscore = "deny"
-missing_debug_implementations = "deny"
 nonstandard_style = "deny"
 rust_2018_compatibility = "deny"
 rust_2018_idioms = "deny"
 rust_2021_compatibility = "deny"
 rust_2024_compatibility = "deny"
 unused = "deny"
+
+# Rust lints
+elided_lifetimes_in_paths = "deny"
+missing_copy_implementations = "deny"
+missing_debug_implementations = "deny"
+unreachable_pub = "deny"
+unsafe_code = "deny"
+variant_size_differences = "deny"

@@ -6,57 +6,97 @@ use thiserror::Error;
 /// Structured error types for word-tally
 #[derive(Error, Debug)]
 pub enum Error {
+    /// Invalid command-line usage.
     #[error("usage: {0}")]
     Usage(String),
 
+    /// Memory-mapped I/O attempted on stdin.
     #[error("memory-mapped I/O requires a file, not stdin")]
     MmapStdin,
 
+    /// Byte I/O mode used with file path.
     #[error("byte I/O mode requires `Input::from_bytes()`")]
     BytesWithPath,
 
+    /// Parallel bytes mode requires bytes input.
     #[error("parallel bytes I/O mode requires bytes input")]
     BytesInputRequired,
 
+    /// UTF-8 decoding error.
     #[error("invalid UTF-8 at byte {byte}: {source}")]
     Utf8 {
+        /// Byte position of invalid UTF-8.
         byte: usize,
+        /// Underlying UTF-8 error.
         #[source]
         source: str::Utf8Error,
     },
 
+    /// Invalid regex pattern.
     #[error("invalid {kind} pattern: {message}")]
-    Pattern { kind: String, message: String },
+    Pattern {
+        /// Pattern type (include/exclude).
+        kind: String,
+        /// Error message.
+        message: String,
+    },
 
+    /// JSON serialization error.
     #[error("JSON serialization failed")]
     JsonSerialization(#[from] serde_json::Error),
 
+    /// CSV serialization error.
     #[error("CSV serialization failed")]
     CsvSerialization(#[from] csv::Error),
 
+    /// Failed to unescape string.
     #[error("failed to unescape {context}: {value}")]
-    Unescape { context: String, value: String },
+    Unescape {
+        /// Context where unescape failed.
+        context: String,
+        /// Value that failed to unescape.
+        value: String,
+    },
 
+    /// Chunk count exceeds platform limits.
     #[error("chunk count {chunks} exceeds platform limit of {}", usize::MAX)]
-    ChunkCountExceeded { chunks: u64 },
+    ChunkCountExceeded {
+        /// Number of chunks requested.
+        chunks: u64,
+    },
 
+    /// Batch size exceeds platform limits.
     #[error(
         "batch size {size} bytes exceeds platform limit of {} bytes",
         usize::MAX
     )]
-    BatchSizeExceeded { size: u64 },
+    BatchSizeExceeded {
+        /// Batch size in bytes.
+        size: u64,
+    },
 
+    /// I/O error with context.
     #[error("I/O at {path}: {message}")]
     Io {
+        /// File path where error occurred.
         path: String,
+        /// Error description.
         message: String,
+        /// Underlying I/O error.
         #[source]
         source: io::Error,
     },
 
+    /// Configuration error.
     #[error("invalid configuration: {0}")]
     Config(String),
 
+    /// Non-ASCII byte in ASCII-only mode.
     #[error("non-ASCII byte {byte:#x} at position {position} in ASCII-only mode")]
-    NonAsciiInAsciiMode { byte: u8, position: usize },
+    NonAsciiInAsciiMode {
+        /// The non-ASCII byte value.
+        byte: u8,
+        /// Byte position in input.
+        position: usize,
+    },
 }

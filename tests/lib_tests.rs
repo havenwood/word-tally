@@ -1,3 +1,5 @@
+//! Tests for library functionality.
+
 use std::sync::Arc;
 use word_tally::input::Input;
 use word_tally::output::Output;

@@ -1,3 +1,5 @@
+//! Tests for CLI pattern matching.
+
 use assert_cmd::Command;
 use predicates::prelude::*;
 

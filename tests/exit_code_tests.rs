@@ -1,3 +1,5 @@
+//! Tests for exit code handling.
+
 use anyhow::{Error, anyhow};
 use std::io;
 use word_tally::exit_code::ExitCode;

@@ -1,3 +1,5 @@
+//! Tests for command-line argument parsing.
+
 use assert_cmd::Command;
 use predicates::str::contains;
 use std::fs;

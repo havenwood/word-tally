@@ -335,9 +335,19 @@ impl TallyMap {
                     Err(e) => {
                         // Handle UTF-8 boundary case
                         if e.valid_up_to() > 0 {
-                            let valid = simdutf8::basic::from_utf8(&buffer[..e.valid_up_to()])
-                                .expect("valid UTF-8");
-                            tally.add_words_with_encoding(valid, case, encoding)?;
+                            match simdutf8::basic::from_utf8(&buffer[..e.valid_up_to()]) {
+                                Ok(valid) => {
+                                    tally.add_words_with_encoding(valid, case, encoding)?;
+                                }
+                                Err(_) => {
+                                    // This should not happen if valid_up_to() is correct
+                                    return Err(Self::create_utf8_error(
+                                        &buffer,
+                                        e.valid_up_to(),
+                                        "stream processing",
+                                    ));
+                                }
+                            }
                         }
                         // Keep invalid portion for next iteration
                         remainder.clear();
@@ -602,6 +612,24 @@ impl TallyMap {
         }
     }
 
+    /// Creates a UTF-8 error using std::str for compatible error types.
+    fn create_utf8_error(buffer: &[u8], byte_position: usize, context: &str) -> anyhow::Error {
+        let source = match str::from_utf8(buffer) {
+            Err(utf8_err) => utf8_err,
+            Ok(_) => {
+                return WordTallyError::Config(format!(
+                    "Inconsistent UTF-8 validation in {context}"
+                ))
+                .into();
+            }
+        };
+        WordTallyError::Utf8 {
+            byte: byte_position,
+            source,
+        }
+        .into()
+    }
+
     /// Find the last valid UTF-8 character boundary at or before the given position.
     fn find_valid_boundary(buffer: &[u8], valid_len: usize) -> usize {
         if valid_len == 0 {
@@ -623,24 +651,16 @@ impl TallyMap {
                 let adjusted_len = Self::find_valid_boundary(buffer, valid_up_to);
 
                 if adjusted_len == 0 {
-                    // Only call str::from_utf8 once for error details
-                    let source = str::from_utf8(buffer).unwrap_err();
-                    return Err(WordTallyError::Utf8 {
-                        byte: valid_up_to,
-                        source,
-                    }
-                    .into());
+                    return Err(Self::create_utf8_error(
+                        buffer,
+                        valid_up_to,
+                        "parse_utf8_slice",
+                    ));
                 }
 
                 // Try parsing the adjusted slice
-                simdutf8::basic::from_utf8(&buffer[..adjusted_len]).map_err(|_| {
-                    // This should rarely happen since find_valid_boundary ensures validity
-                    WordTallyError::Utf8 {
-                        byte: valid_up_to,
-                        source: str::from_utf8(buffer).unwrap_err(),
-                    }
-                    .into()
-                })
+                simdutf8::basic::from_utf8(&buffer[..adjusted_len])
+                    .map_err(|_| Self::create_utf8_error(buffer, valid_up_to, "recovery"))
             }
         }
     }

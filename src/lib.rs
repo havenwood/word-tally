@@ -114,7 +114,7 @@ use std::{borrow::Cow, slice, str};
 use anyhow::Result;
 use serde::{self, Deserialize, Serialize};
 
-pub mod error;
+mod error;
 pub mod exit_code;
 pub mod input;
 pub mod input_reader;
@@ -139,8 +139,11 @@ pub use options::{
 pub use output::Output;
 pub use tally_map::TallyMap;
 
+/// The count of occurrences for a word.
 pub type Count = usize;
+/// A word represented as a boxed string.
 pub type Word = Box<str>;
+/// A collection of word-count pairs.
 pub type Tally = Box<[(Word, Count)]>;
 
 #[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]

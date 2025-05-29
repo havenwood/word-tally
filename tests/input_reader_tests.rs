@@ -1,3 +1,5 @@
+//! Tests for input reader functionality.
+
 use std::io::{BufRead, Read};
 use tempfile::NamedTempFile;
 use word_tally::{Input, Io};
@@ -348,6 +350,7 @@ fn test_slice_reader_consistency() {
 
     // Create mmap
     let file = File::open(temp_file.path()).expect("process test");
+    #[allow(unsafe_code)]
     let mmap = unsafe { Mmap::map(&file).expect("process test") };
 
     // Test Read trait implementation consistency
@@ -416,6 +419,7 @@ fn test_slice_reader_large_buffer() {
 
     // Create mmap
     let file = File::open(temp_file.path()).expect("process test");
+    #[allow(unsafe_code)]
     let mmap = unsafe { Mmap::map(&file).expect("process test") };
 
     let mut mmap_reader = MmapReader::new(&mmap);

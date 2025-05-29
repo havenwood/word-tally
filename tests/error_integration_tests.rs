@@ -1,3 +1,5 @@
+//! Tests for error handling integration.
+
 use assert_cmd::Command;
 use predicates::prelude::*;
 use std::fs::{self, File};

@@ -1,3 +1,5 @@
+//! Tests for CLI functionality.
+
 use assert_cmd::Command;
 use predicates::prelude::PredicateBooleanExt;
 use predicates::str::{self, contains};

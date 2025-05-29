@@ -1,3 +1,5 @@
+//! Tests for input handling.
+
 use std::io::Read;
 use tempfile::NamedTempFile;
 use word_tally::{Input, Io};

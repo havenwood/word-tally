@@ -1,3 +1,5 @@
+//! Tests for hash functionality.
+
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 

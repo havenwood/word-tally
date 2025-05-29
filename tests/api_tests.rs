@@ -1,3 +1,5 @@
+//! Tests for the public API.
+
 use std::io::Write;
 use word_tally::{Count, Input, Io, Options, WordTally};
 

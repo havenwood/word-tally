@@ -1,3 +1,5 @@
+//! Tests for CLI verbose output.
+
 use assert_cmd::Command;
 use predicates::str::contains;
 

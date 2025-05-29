@@ -1,3 +1,5 @@
+//! Tests for word filtering functionality.
+
 use word_tally::InputPatterns;
 use word_tally::options::filters::{ExcludeWords, ExcludeWordsList};
 use word_tally::{Case, Filters, TallyMap};
