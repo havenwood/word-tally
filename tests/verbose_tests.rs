@@ -1,4 +1,4 @@
-use word_tally::{Case, Io, MinChars, Processing, Sort};
+use word_tally::{Case, Io, MinChars, Sort};
 
 #[test]
 fn test_format_enum_as_string() {
@@ -9,11 +9,8 @@ fn test_format_enum_as_string() {
     let sort = Sort::Desc;
     assert_eq!(sort.to_string(), "desc");
 
-    let processing = Processing::Sequential;
-    assert_eq!(processing.to_string(), "sequential");
-
-    let io = Io::Streamed;
-    assert_eq!(io.to_string(), "streamed");
+    let io = Io::ParallelStream;
+    assert_eq!(io.to_string(), "parallel-stream");
 }
 
 #[test]

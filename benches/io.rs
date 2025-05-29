@@ -1,29 +1,25 @@
-//! I/O strategy and processing mode benchmarks.
+//! I/O strategy benchmarks.
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
-use word_tally::{Input, Io, Options, Processing, WordTally};
+use word_tally::{Input, Io, Options, WordTally};
 
 #[path = "common.rs"]
 pub mod common;
 use self::common::{create_bench_group, make_shared, standard_criterion_config};
 
-/// Benchmark I/O and processing combinations for specified file size
+/// Benchmark I/O strategies for specified file size
 fn bench_io_processing_combinations(c: &mut Criterion, size_kb: usize) {
     let (temp_file, file_path) = self::common::create_benchmark_file(size_kb);
 
     let file_content = std::fs::read(&file_path).expect("Failed to read benchmark file");
 
     let io_strategies = [
-        (Io::Streamed, "streamed"),
-        (Io::Buffered, "buffered"),
-        (Io::MemoryMapped, "mmap"),
-        (Io::Bytes, "bytes"),
-    ];
-
-    let processing_strategies = [
-        (Processing::Sequential, "sequential"),
-        (Processing::Parallel, "parallel"),
+        (Io::Stream, "stream"),
+        (Io::ParallelStream, "parallel-stream"),
+        (Io::ParallelInMemory, "parallel-in-memory"),
+        (Io::ParallelMmap, "parallel-mmap"),
+        (Io::ParallelBytes, "parallel-bytes"),
     ];
 
     {
@@ -31,39 +27,36 @@ fn bench_io_processing_combinations(c: &mut Criterion, size_kb: usize) {
         let mut group = create_bench_group(c, &group_name);
 
         for (io, io_name) in &io_strategies {
-            for (processing, proc_name) in &processing_strategies {
-                let benchmark_name = format!("{io_name}_{proc_name}");
-                let options = Options::default().with_io(*io).with_processing(*processing);
-                let shared_options = make_shared(options);
+            let options = Options::default().with_io(*io);
+            let shared_options = make_shared(options);
 
-                if *io == Io::Bytes {
-                    let file_content_clone = file_content.clone();
-                    group.bench_function(&benchmark_name, |b| {
-                        b.iter_batched(
-                            || Input::from_bytes(&file_content_clone),
-                            |input| {
-                                black_box(
-                                    WordTally::new(&input, &shared_options)
-                                        .expect("Failed to create WordTally"),
-                                )
-                            },
-                            BatchSize::LargeInput,
-                        );
-                    });
-                } else {
-                    group.bench_function(&benchmark_name, |b| {
-                        b.iter_batched(
-                            || Input::new(&file_path, *io).expect("Failed to create input"),
-                            |input| {
-                                black_box(
-                                    WordTally::new(&input, &shared_options)
-                                        .expect("Failed to create WordTally"),
-                                )
-                            },
-                            BatchSize::LargeInput,
-                        );
-                    });
-                }
+            if *io == Io::ParallelBytes {
+                let file_content_clone = file_content.clone();
+                group.bench_function(*io_name, |b| {
+                    b.iter_batched(
+                        || Input::from_bytes(&file_content_clone),
+                        |input| {
+                            black_box(
+                                WordTally::new(&input, &shared_options)
+                                    .expect("Failed to create WordTally"),
+                            )
+                        },
+                        BatchSize::LargeInput,
+                    );
+                });
+            } else {
+                group.bench_function(*io_name, |b| {
+                    b.iter_batched(
+                        || Input::new(&file_path, *io).expect("Failed to create input"),
+                        |input| {
+                            black_box(
+                                WordTally::new(&input, &shared_options)
+                                    .expect("Failed to create WordTally"),
+                            )
+                        },
+                        BatchSize::LargeInput,
+                    );
+                });
             }
         }
 

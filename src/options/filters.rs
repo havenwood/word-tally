@@ -48,7 +48,7 @@ impl Filters {
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{Case, Filters, WordTally, Options, Input, Io, Processing};
+    /// use word_tally::{Case, Filters, WordTally, Options, Input, Io};
     /// use word_tally::options::patterns::InputPatterns;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// // Sample text with various words

@@ -30,7 +30,6 @@ struct VerboseData<'a> {
     delimiter: String,
     case: String,
     order: String,
-    processing: String,
     io: String,
     min_chars: Option<usize>,
     min_count: Option<usize>,
@@ -53,7 +52,6 @@ impl<'a> VerboseData<'a> {
             delimiter: format!("{:?}", serialization.delimiter()),
             case: options.case().to_string(),
             order: options.sort().to_string(),
-            processing: options.processing().to_string(),
             io: options.io().to_string(),
             min_chars: filters.min_chars(),
             min_count: filters.min_count(),
@@ -65,7 +63,7 @@ impl<'a> VerboseData<'a> {
 
     /// Get all fields as name-value pairs.
     fn field_pairs(&self) -> Vec<(&str, String)> {
-        let mut pairs = Vec::with_capacity(13);
+        let mut pairs = Vec::with_capacity(12);
         pairs.extend_from_slice(&[
             ("source", self.source.to_string()),
             ("total-words", self.total_words.to_string()),
@@ -73,7 +71,6 @@ impl<'a> VerboseData<'a> {
             ("delimiter", self.delimiter.to_string()),
             ("case", self.case.to_string()),
             ("order", self.order.to_string()),
-            ("processing", self.processing.to_string()),
             ("io", self.io.to_string()),
             (
                 "min-chars",

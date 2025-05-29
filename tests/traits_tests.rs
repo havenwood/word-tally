@@ -4,7 +4,6 @@ use word_tally::options::{
     filters::ExcludeWords,
     io::Io,
     performance::Performance,
-    processing::Processing,
     serialization::{Format, Serialization},
 };
 use word_tally::{Input, Options, WordTally};
@@ -12,13 +11,9 @@ use word_tally::{Input, Options, WordTally};
 #[test]
 fn test_display_implementations() {
     // Test Io Display
-    assert_eq!(format!("{}", Io::Streamed), "streamed");
-    assert_eq!(format!("{}", Io::Buffered), "buffered");
-    assert_eq!(format!("{}", Io::MemoryMapped), "memory-mapped");
-
-    // Test Processing Display
-    assert_eq!(format!("{}", Processing::Sequential), "sequential");
-    assert_eq!(format!("{}", Processing::Parallel), "parallel");
+    assert_eq!(format!("{}", Io::ParallelStream), "parallel-stream");
+    assert_eq!(format!("{}", Io::ParallelInMemory), "parallel-in-memory");
+    assert_eq!(format!("{}", Io::ParallelMmap), "parallel-mmap");
 
     // Test Threads Display
     // For Threads::All, expect the actual number of threads from Rayon
@@ -93,8 +88,7 @@ fn test_wordtally_deserialize() {
             "sort": "Desc",
             "serialization": {"format": "Text", "delimiter": " "},
             "filters": {"min_chars": null, "min_count": null, "exclude_words": [], "exclude_patterns": [], "include_patterns": []},
-            "io": "Streamed",
-            "processing": "Sequential",
+            "io": "ParallelStream",
             "performance": {"base_stdin_tally_capacity": 5120, "uniqueness_ratio": 10, "words_per_kb": 200, "chunk_size": 65536, "base_stdin_size": 262144, "threads": "All", "verbose": false},
             "encoding": "unicode"
         },

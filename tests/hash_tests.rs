@@ -2,7 +2,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 use word_tally::{
-    Case, Filters, Format, Input, Io, Options, Processing, Serialization, Sort, Tally, WordTally,
+    Case, Filters, Format, Input, Io, Options, Serialization, Sort, Tally, WordTally,
 };
 
 fn calculate_hash<T: Hash>(value: &T) -> u64 {
@@ -80,15 +80,14 @@ fn test_options_hash() {
         calculate_hash(&lowercase_desc_json)
     );
 
-    let lowercase_desc_parallel = Options::default()
+    let lowercase_desc_in_memory = Options::default()
         .with_case(Case::Lower)
         .with_sort(Sort::Desc)
-        .with_processing(Processing::Parallel)
-        .with_io(Io::Buffered);
+        .with_io(Io::ParallelInMemory);
 
     assert_ne!(
         calculate_hash(&lowercase_desc_alpha),
-        calculate_hash(&lowercase_desc_parallel)
+        calculate_hash(&lowercase_desc_in_memory)
     );
 }
 
@@ -146,25 +145,15 @@ fn test_components_hash() {
         calculate_hash(&ascending)
     );
 
-    let buffered_alpha = Io::Buffered;
-    let buffered_beta = Io::Buffered;
-    let streamed = Io::Streamed;
+    let in_memory_alpha = Io::ParallelInMemory;
+    let in_memory_beta = Io::ParallelInMemory;
+    let streamed = Io::ParallelStream;
 
     assert_eq!(
-        calculate_hash(&buffered_alpha),
-        calculate_hash(&buffered_beta)
+        calculate_hash(&in_memory_alpha),
+        calculate_hash(&in_memory_beta)
     );
-    assert_ne!(calculate_hash(&buffered_alpha), calculate_hash(&streamed));
-
-    let sequential_alpha = Processing::Sequential;
-    let sequential_beta = Processing::Sequential;
-    let parallel = Processing::Parallel;
-
-    assert_eq!(
-        calculate_hash(&sequential_alpha),
-        calculate_hash(&sequential_beta)
-    );
-    assert_ne!(calculate_hash(&sequential_alpha), calculate_hash(&parallel));
+    assert_ne!(calculate_hash(&in_memory_alpha), calculate_hash(&streamed));
 
     let text_alpha = Format::Text;
     let text_beta = Format::Text;
@@ -315,8 +304,7 @@ fn test_equality_and_hashing() {
                 sort,
                 serializer,
                 filters,
-                Io::Streamed,
-                Processing::Sequential,
+                Io::ParallelStream,
                 word_tally::Performance::default(),
             );
             // For tests only: create a 'static reference using Box::leak

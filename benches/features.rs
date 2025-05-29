@@ -1,8 +1,8 @@
-//! Processing strategy benchmarks.
+//! Feature benchmarks.
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use word_tally::options::encoding::Encoding;
-use word_tally::{Filters, Options, Processing};
+use word_tally::{Filters, Io, Options};
 
 #[path = "common.rs"]
 pub mod common;
@@ -15,27 +15,34 @@ use self::common::{
 fn bench_processing_comparison(c: &mut Criterion) {
     let mut group = create_bench_group(c, "features/processing_comparison");
 
-    let processing_strategies = [
-        (Processing::Sequential, "sequential"),
-        (Processing::Parallel, "parallel"),
-    ];
-
     let text_samples = [("small", small_text()), ("medium", medium_text())];
 
     for (size_name, text_sample) in &text_samples {
-        for (processing, proc_name) in &processing_strategies {
-            let options = Options::default().with_processing(*processing);
-            let shared_options = make_shared(options);
+        // Test with default (parallel) processing
+        let options = Options::default();
+        let shared_options = make_shared(options);
 
-            group.bench_function(format!("{size_name}_{proc_name}"), |b| {
-                self::common::bench_word_tally_with_string(
-                    b,
-                    text_sample,
-                    &shared_options,
-                    create_temp_input,
-                );
-            });
-        }
+        group.bench_function(format!("{size_name}_parallel"), |b| {
+            self::common::bench_word_tally_with_string(
+                b,
+                text_sample,
+                &shared_options,
+                create_temp_input,
+            );
+        });
+
+        // Test with sequential processing
+        let options = Options::default().with_io(Io::Stream);
+        let shared_options = make_shared(options);
+
+        group.bench_function(format!("{size_name}_sequential"), |b| {
+            self::common::bench_word_tally_with_string(
+                b,
+                text_sample,
+                &shared_options,
+                create_temp_input,
+            );
+        });
     }
 
     group.finish();
@@ -46,9 +53,7 @@ fn bench_regex_patterns(c: &mut Criterion) {
     let mut group = create_bench_group(c, "features/regex_patterns");
     let text_sample = medium_text();
 
-    let base_options = Options::default()
-        .with_processing(Processing::Parallel)
-        .with_filters(Filters::default());
+    let base_options = Options::default().with_filters(Filters::default());
 
     group.bench_function("patterns_0", |b| {
         self::common::bench_word_tally_with_string(
@@ -118,30 +123,37 @@ fn bench_encoding_comparison(c: &mut Criterion) {
 
     let encoding_strategies = [(Encoding::Unicode, "unicode"), (Encoding::Ascii, "ascii")];
 
-    let processing_strategies = [
-        (Processing::Sequential, "sequential"),
-        (Processing::Parallel, "parallel"),
-    ];
-
     let text_samples = [("small", small_text()), ("medium", medium_text())];
 
     for (size_name, text_sample) in &text_samples {
         for (encoding, enc_name) in &encoding_strategies {
-            for (processing, proc_name) in &processing_strategies {
-                let options = Options::default()
-                    .with_encoding(*encoding)
-                    .with_processing(*processing);
-                let shared_options = make_shared(options);
+            // Test with default (parallel) processing
+            let options = Options::default().with_encoding(*encoding);
+            let shared_options = make_shared(options);
 
-                group.bench_function(format!("{size_name}_{enc_name}_{proc_name}"), |b| {
-                    self::common::bench_word_tally_with_string(
-                        b,
-                        text_sample,
-                        &shared_options,
-                        create_temp_input,
-                    );
-                });
-            }
+            group.bench_function(format!("{size_name}_{enc_name}_parallel"), |b| {
+                self::common::bench_word_tally_with_string(
+                    b,
+                    text_sample,
+                    &shared_options,
+                    create_temp_input,
+                );
+            });
+
+            // Test with sequential processing (no-parallel)
+            let options = Options::default()
+                .with_encoding(*encoding)
+                .with_io(Io::Stream);
+            let shared_options = make_shared(options);
+
+            group.bench_function(format!("{size_name}_{enc_name}_sequential"), |b| {
+                self::common::bench_word_tally_with_string(
+                    b,
+                    text_sample,
+                    &shared_options,
+                    create_temp_input,
+                );
+            });
         }
     }
 

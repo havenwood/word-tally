@@ -4,7 +4,7 @@ use word_tally::{Input, Io};
 
 #[test]
 fn test_input_new_stdin() {
-    let input = Input::new("-", Io::Streamed).expect("create test input");
+    let input = Input::new("-", Io::ParallelStream).expect("create test input");
     assert!(matches!(input, Input::Stdin));
     assert_eq!(input.source(), "-");
     assert_eq!(input.size(), None);
@@ -16,7 +16,7 @@ fn test_input_new_file() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
-    let input = Input::new(temp_file.path(), Io::Streamed).expect("create test input");
+    let input = Input::new(temp_file.path(), Io::ParallelStream).expect("create test input");
     assert!(matches!(input, Input::File(_)));
 
     let filename = temp_file
@@ -35,7 +35,7 @@ fn test_input_new_mmap() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
-    let input = Input::new(temp_file.path(), Io::MemoryMapped).expect("create test input");
+    let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     assert!(matches!(input, Input::Mmap(_, _)));
 
     let filename = temp_file
@@ -73,12 +73,12 @@ fn test_input_display() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, b"test").expect("write test data");
 
-    let file_input = Input::new(temp_file.path(), Io::Streamed).expect("create test input");
+    let file_input = Input::new(temp_file.path(), Io::ParallelStream).expect("create test input");
     let file_display = format!("{file_input}");
     assert!(file_display.starts_with("File("));
     assert!(file_display.contains(temp_file.path().display().to_string().as_str()));
 
-    let mmap_input = Input::new(temp_file.path(), Io::MemoryMapped).expect("create test input");
+    let mmap_input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     let mmap_display = format!("{mmap_input}");
     assert!(mmap_display.starts_with("Mmap("));
     assert!(mmap_display.contains(temp_file.path().display().to_string().as_str()));
@@ -93,7 +93,7 @@ fn test_input_clone() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
-    let input = Input::new(temp_file.path(), Io::MemoryMapped).expect("create test input");
+    let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     // Need the clone to test the Clone trait implementation works correctly
     #[allow(clippy::redundant_clone)]
     let cloned = input.clone();
@@ -105,7 +105,7 @@ fn test_input_clone() {
 
 #[test]
 fn test_input_bytes_error() {
-    let result = Input::new("test.txt", Io::Bytes);
+    let result = Input::new("test.txt", Io::ParallelBytes);
     assert!(result.is_err());
     assert!(
         result
@@ -125,10 +125,10 @@ fn test_input_reader_creation() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
-    let file_input = Input::new(temp_file.path(), Io::Streamed).expect("create test input");
+    let file_input = Input::new(temp_file.path(), Io::ParallelStream).expect("create test input");
     assert!(file_input.reader().is_ok());
 
-    let mmap_input = Input::new(temp_file.path(), Io::MemoryMapped).expect("create test input");
+    let mmap_input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     assert!(mmap_input.reader().is_ok());
 
     let bytes_input = Input::from_bytes(test_data);
@@ -137,7 +137,7 @@ fn test_input_reader_creation() {
 
 #[test]
 fn test_input_nonexistent_file() {
-    let result = Input::new("/nonexistent/path/to/file.txt", Io::Streamed);
+    let result = Input::new("/nonexistent/path/to/file.txt", Io::ParallelStream);
     assert!(result.is_ok()); // Input creation succeeds
 
     let input = result.expect("process test data");
@@ -148,17 +148,17 @@ fn test_input_nonexistent_file() {
 
 #[test]
 fn test_input_mmap_nonexistent_file() {
-    let result = Input::new("/nonexistent/path/to/file.txt", Io::MemoryMapped);
+    let result = Input::new("/nonexistent/path/to/file.txt", Io::ParallelMmap);
     assert!(result.is_err()); // Mmap fails immediately on file open
 }
 
 #[test]
-fn test_input_buffered_io() {
-    let test_data = b"Buffered test data";
+fn test_input_in_memory_io() {
+    let test_data = b"In-memory test data";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
-    let input = Input::new(temp_file.path(), Io::Buffered).expect("create test input");
+    let input = Input::new(temp_file.path(), Io::ParallelInMemory).expect("create test input");
     assert!(matches!(input, Input::File(_)));
 
     let mut reader = input.reader().expect("process test");
@@ -174,7 +174,7 @@ fn test_input_source_edge_cases() {
 
     // Test with root path
     let path = std::path::Path::new("/");
-    let input = Input::new(path, Io::Streamed).expect("create test input");
+    let input = Input::new(path, Io::ParallelStream).expect("create test input");
     assert_eq!(input.source(), "/");
 
     // Test with non-UTF8 path (requires Unix-like system)
@@ -183,7 +183,7 @@ fn test_input_source_edge_cases() {
         let non_utf8_bytes = b"\xFF\xFE\xFD";
         let non_utf8_osstr = OsStr::from_bytes(non_utf8_bytes);
         let path = std::path::Path::new(non_utf8_osstr);
-        let input = Input::new(path, Io::Streamed).expect("create test input");
+        let input = Input::new(path, Io::ParallelStream).expect("create test input");
         // Should show the lossy representation of the path
         assert!(input.source().contains("���"));
     }

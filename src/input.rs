@@ -30,24 +30,24 @@ impl Input {
     /// Returns an error if:
     /// - File cannot be opened for reading (when using file-based I/O modes)
     /// - Memory mapping fails (when using memory-mapped I/O)
-    /// - `Io::Bytes` is specified (use `Input::from_bytes` instead)
+    /// - `Io::ParallelBytes` is specified (use `Input::from_bytes` instead)
     pub fn new<P: AsRef<Path>>(p: P, io: Io) -> Result<Self> {
         // Handle the stdin case
         let path_ref = p.as_ref();
         if path_ref.as_os_str() == "-" {
             match io {
-                Io::MemoryMapped => return Err(WordTallyError::MmapStdin.into()),
+                Io::ParallelMmap => return Err(WordTallyError::MmapStdin.into()),
                 _ => return Ok(Self::Stdin),
             }
         }
 
         match io {
-            Io::Streamed | Io::Buffered => {
+            Io::Stream | Io::ParallelStream | Io::ParallelInMemory => {
                 let path_buf = path_ref.to_path_buf();
 
                 Ok(Self::File(path_buf))
             }
-            Io::MemoryMapped => {
+            Io::ParallelMmap => {
                 let path_buf = path_ref.to_path_buf();
                 let file = File::open(&path_buf).map_err(|e| WordTallyError::Io {
                     path: path_buf.display().to_string(),
@@ -65,7 +65,7 @@ impl Input {
 
                 Ok(Self::Mmap(mmap_arc, path_buf))
             }
-            Io::Bytes => Err(WordTallyError::BytesWithPath.into()),
+            Io::ParallelBytes => Err(WordTallyError::BytesWithPath.into()),
         }
     }
 

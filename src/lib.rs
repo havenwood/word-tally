@@ -1,11 +1,10 @@
 //! A tally of words with a count of the number of times each appears.
 //!
-//! `WordTally` tallies the number of times words appear in source input. I/O is streamed in
-//! parallel mode by default for better performance, reasonable memory usage and flexibility with
-//! stdin and files. Memory-mapped I/O in parallel mode is typically the fastest for processing
-//! large files. Memory-mapped I/O requires a seekable file, but streamed and fully-buffered-in-memory
-//! I/O also support piped input along with files. Sequential streaming mode (via `--no-parallel`)
-//! uses the least peak memory.
+//! `WordTally` tallies the number of times words appear in source input. Parallel streaming
+//! is the default mode for balanced performance and memory usage. Memory-mapped I/O provides
+//! the fastest processing for large files but requires seekable file descriptors. Sequential
+//! streaming mode minimizes memory usage for constrained environments. All modes support both
+//! files and stdin except memory-mapped which requires files.
 //!
 //! Word boundaries are determined using the [`icu_segmenter`](https://docs.rs/icu_segmenter/)
 //! crate from ICU4X, which provides Unicode text segmentation following
@@ -29,7 +28,6 @@
 //!   - `options/mod.rs`: Common options functionality
 //!   - `options/patterns.rs`: Regular expression and pattern matching
 //!   - `options/performance.rs`: Optimization and benchmarking
-//!   - `options/processing.rs`: Text processing algorithms
 //!   - `options/serialization.rs`: Data serialization for exports
 //!   - `options/sort.rs`: Word frequency sorting strategies
 //!   - `options/threads.rs`: Thread configuration
@@ -42,14 +40,14 @@
 //! The [`Options`] struct provides a unified interface for configuring all aspects of word tallying:
 //!
 //! ```
-//! use word_tally::{Options, WordTally, Input, Io, Processing};
+//! use word_tally::{Options, WordTally, Input, Io};
 //! use anyhow::Result;
 //!
 //! # fn example() -> Result<()> {
 //! // Use default options
 //! let options = Options::default();
 //! let file_path = std::path::Path::new("example.txt");
-//! let input = Input::new(file_path, Io::Buffered)?;
+//! let input = Input::new(file_path, Io::ParallelInMemory)?;
 //! let words = WordTally::new(&input, &options)?;
 //! assert_eq!(words.count(), 9);
 //! # Ok(())
@@ -78,8 +76,7 @@
 //!
 //! Optimize execution for different workloads:
 //!
-//! * [`Processing`]: Choose between sequential or parallel processing
-//! * [`Io`]: Control the input method (streamed, buffered, or memory-mapped)
+//! * [`Io`]: Control the input method (stream, parallel-stream, parallel-in-memory, or parallel-mmap)
 //! * [`Threads`]: Control the thread pool size for parallel mode
 //! * [`Performance`]: Configure performance settings
 //!
@@ -92,7 +89,7 @@
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Case, Filters, Format, Options, Processing, Tally, WordTally, Input, Io};
+//! use word_tally::{Case, Filters, Format, Options, Tally, WordTally, Input, Io};
 //! use anyhow::Result;
 //!
 //! # fn example() -> Result<()> {
@@ -100,11 +97,10 @@
 //! let options = Options::default()
 //!     .with_case(Case::Lower)
 //!     .with_format(Format::Json)
-//!     .with_filters(Filters::default().with_min_chars(3))
-//!     .with_processing(Processing::Parallel);
+//!     .with_filters(Filters::default().with_min_chars(3));
 //!
 //! let file_path = std::path::Path::new("example_word.txt");
-//! let input = Input::new(file_path, Io::Buffered)?;
+//! let input = Input::new(file_path, Io::ParallelInMemory)?;
 //! let words = WordTally::new(&input, &options)?;
 //! let expected_tally: Tally = [("cinquedea".into(), 1)].into();
 //!
@@ -136,7 +132,6 @@ pub use options::{
     filters::{ExcludeWords, Filters, MinChars, MinCount},
     io::Io,
     performance::Performance,
-    processing::Processing,
     serialization::{Format, Serialization},
     sort::Sort,
     threads::Threads,
@@ -206,7 +201,7 @@ impl IntoIterator for WordTally<'_> {
 impl<'a> WordTally<'a> {
     /// Constructs a `WordTally` from an input source and tallying options.
     ///
-    /// This constructor handles all I/O strategies (streamed, buffered and memory-mapped).
+    /// This constructor handles all I/O strategies (stream, parallel-stream, parallel-in-memory and parallel-mmap).
     ///
     /// **Note**: For parallel processing, the thread pool should be initialized before calling
     /// this method. Use `options.init_thread_pool_if_parallel()?` to set up the thread pool.
@@ -222,14 +217,14 @@ impl<'a> WordTally<'a> {
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{Options, WordTally, Input, Io, Processing};
+    /// use word_tally::{Options, WordTally, Input, Io};
     /// use anyhow::Result;
     ///
     /// # fn example() -> Result<()> {
     /// let options = Options::default();
     /// // Initialize thread pool for parallel processing
     /// options.init_thread_pool_if_parallel()?;
-    /// let input = Input::new("document.txt", Io::Streamed)?;
+    /// let input = Input::new("document.txt", Io::ParallelStream)?;
     /// let word_tally = WordTally::new(&input, &options)?;
     /// # Ok(())
     /// # }

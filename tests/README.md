@@ -42,7 +42,6 @@ Tests for specific modules and components:
 - `output_tests.rs`: Output module tests
 - `patterns_tests.rs`: Pattern matching module tests
 - `performance_tests.rs`: Performance settings tests
-- `processing_tests.rs`: Processing mode tests
 - `serialization_tests.rs`: Serialization module tests
 - `threads_tests.rs`: Thread configuration tests
 - `traits_tests.rs`: Trait implementation tests

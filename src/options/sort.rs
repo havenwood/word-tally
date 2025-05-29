@@ -1,7 +1,7 @@
 //! Sorting options for word tallying results.
 
 use crate::WordTally;
-use crate::options::processing::Processing;
+use crate::options::io::Io;
 use clap::ValueEnum;
 use core::cmp::Reverse;
 use core::fmt::{self, Display, Formatter};
@@ -53,26 +53,32 @@ impl Display for Sort {
 
 impl Sort {
     /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
-    /// Uses unstable sort for both sequential and parallel processing.
+    /// Uses unstable sort, with parallel sorting for parallel I/O modes.
     pub fn apply(&self, w: &mut WordTally<'_>) {
-        match (self, w.options().processing()) {
+        match (self, w.options().io()) {
             // No sorting
             (Self::Unsorted, _) => {}
 
-            // Parallel unstable sorting
-            (Self::Desc, Processing::Parallel) => w
-                .tally
-                .par_sort_unstable_by_key(|&(_, count)| Reverse(count)),
-            (Self::Asc, Processing::Parallel) => {
-                w.tally.par_sort_unstable_by_key(|&(_, count)| count);
-            }
-
             // Sequential unstable sorting
-            (Self::Desc, Processing::Sequential) => {
+            (Self::Desc, Io::Stream) => {
                 w.tally.sort_unstable_by_key(|&(_, count)| Reverse(count));
             }
-            (Self::Asc, Processing::Sequential) => {
+            (Self::Asc, Io::Stream) => {
                 w.tally.sort_unstable_by_key(|&(_, count)| count);
+            }
+
+            // Parallel unstable sorting
+            (
+                Self::Desc,
+                Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes,
+            ) => w
+                .tally
+                .par_sort_unstable_by_key(|&(_, count)| Reverse(count)),
+            (
+                Self::Asc,
+                Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes,
+            ) => {
+                w.tally.par_sort_unstable_by_key(|&(_, count)| count);
             }
         }
     }

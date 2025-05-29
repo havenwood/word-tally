@@ -5,58 +5,62 @@ use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
 use std::env;
 
-/// Determines the I/O strategy for processing input, all either in parallel or sequentially.
+/// Determines the I/O strategy for processing input.
 ///
 /// Performance characteristics:
-/// - **Streamed**: Processes input in chunks without loading entire file or pipe into memory.
-///   Well-suited for memory-constrained environments and pipes/non-seekable sources.
 ///
-/// - **Buffered**: Loads entire content into memory before processing.
-///   Useful alternative when memory-mapping isn't optimal but memory is available.
+/// **Sequential processing:**
+/// - **Stream**: Single-threaded streaming with minimal memory usage.
 ///
-/// - **`MemoryMapped`**: Uses the OS virtual memory system for efficient file access.
-///   Requires a seekable file (won't work with stdin or pipes). Raises an error with non-seekable inputs.
+/// **Parallel processing:**
+/// - **`ParallelStream`**: Parallel streaming with balanced memory/performance (default).
+/// - **`ParallelInMemory`**: Loads entire content into memory for parallel processing.
+/// - **`ParallelMmap`**: Best performance via OS virtual memory (seekable files only).
 ///
 /// # Examples
 ///
 /// ```
 /// use word_tally::Io;
 ///
-/// assert_eq!(Io::default(), Io::Streamed);
-/// assert_eq!(Io::MemoryMapped.to_string(), "memory-mapped");
+/// assert_eq!(Io::default(), Io::ParallelStream);
+/// assert_eq!(Io::ParallelMmap.to_string(), "parallel-mmap");
 /// ```
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ValueEnum,
 )]
 pub enum Io {
-    /// Use memory-mapped I/O for efficient file access.
-    #[clap(name = "mmap")]
-    MemoryMapped,
+    /// Parallel streaming I/O — balanced memory/performance (default)
+    ParallelStream,
 
-    /// Process input in chunks without loading entire source into memory.
-    Streamed,
+    /// Sequential streaming I/O — minimal memory
+    Stream,
 
-    /// Read entire file into memory before processing.
-    Buffered,
+    /// Parallel memory-mapped I/O — high performance but requires files, not stdin
+    #[clap(alias = "mmap")]
+    ParallelMmap,
 
-    /// Process bytes directly from memory without file I/O.
+    /// Parallel bytes - similar to memory-mapped I/O but directly from bytes not files
     #[clap(skip)]
-    Bytes,
+    ParallelBytes,
+
+    /// Parallel in-memory from I/O — fully loaded into memory, primarily for stdin
+    ParallelInMemory,
 }
 
 impl Default for Io {
     fn default() -> Self {
-        Self::Streamed
+        Self::ParallelStream
     }
 }
 
 impl Display for Io {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Streamed => write!(f, "streamed"),
-            Self::Buffered => write!(f, "buffered"),
-            Self::MemoryMapped => write!(f, "memory-mapped"),
-            Self::Bytes => write!(f, "bytes"),
+            Self::Stream => write!(f, "stream"),
+            Self::ParallelStream => write!(f, "parallel-stream"),
+            Self::ParallelInMemory => write!(f, "parallel-in-memory"),
+            Self::ParallelMmap => write!(f, "parallel-mmap"),
+            Self::ParallelBytes => write!(f, "parallel-bytes"),
         }
     }
 }
@@ -68,10 +72,11 @@ pub const ENV_IO: &str = "WORD_TALLY_IO";
 #[must_use]
 pub fn parse_io_from_env() -> Io {
     match env::var(ENV_IO).ok().as_deref() {
-        Some(s) if s.eq_ignore_ascii_case("streamed") => Io::Streamed,
-        Some(s) if s.eq_ignore_ascii_case("buffered") => Io::Buffered,
-        Some(s) if s.eq_ignore_ascii_case("memory-mapped") || s.eq_ignore_ascii_case("mmap") => {
-            Io::MemoryMapped
+        Some(s) if s.eq_ignore_ascii_case("stream") => Io::Stream,
+        Some(s) if s.eq_ignore_ascii_case("parallel-stream") => Io::ParallelStream,
+        Some(s) if s.eq_ignore_ascii_case("parallel-in-memory") => Io::ParallelInMemory,
+        Some(s) if s.eq_ignore_ascii_case("parallel-mmap") || s.eq_ignore_ascii_case("mmap") => {
+            Io::ParallelMmap
         }
         _ => Io::default(),
     }

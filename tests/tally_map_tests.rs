@@ -183,7 +183,7 @@ fn test_from_input_streamed() {
 
     let content = b"I celebrate myself and sing myself";
     let input = Input::from_bytes(content);
-    let options = Options::default().with_io(Io::Streamed);
+    let options = Options::default().with_io(Io::ParallelStream);
 
     let result = TallyMap::from_input(&input, &options);
     assert!(result.is_ok());
@@ -194,13 +194,11 @@ fn test_from_input_streamed() {
 
 #[test]
 fn test_from_input_parallel() {
-    use word_tally::options::{io::Io, processing::Processing};
+    use word_tally::options::io::Io;
 
     let content = b"I celebrate myself and sing myself";
     let input = Input::from_bytes(content);
-    let options = Options::default()
-        .with_processing(Processing::Parallel)
-        .with_io(Io::Buffered);
+    let options = Options::default().with_io(Io::ParallelInMemory);
 
     let result = TallyMap::from_input(&input, &options);
     assert!(result.is_ok());
@@ -211,13 +209,11 @@ fn test_from_input_parallel() {
 
 #[test]
 fn test_from_input_parallel_streamed() {
-    use word_tally::options::{io::Io, processing::Processing};
+    use word_tally::options::io::Io;
 
     let content = b"I celebrate myself and sing myself";
     let input = Input::from_bytes(content);
-    let options = Options::default()
-        .with_processing(Processing::Parallel)
-        .with_io(Io::Streamed);
+    let options = Options::default().with_io(Io::ParallelStream);
 
     let result = TallyMap::from_input(&input, &options);
     assert!(result.is_ok());

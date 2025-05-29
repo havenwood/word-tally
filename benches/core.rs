@@ -1,7 +1,7 @@
 //! Core benchmarks for sorting and filtering strategies.
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use word_tally::{Filters, Options, Processing, Sort};
+use word_tally::{Filters, Io, Options, Sort};
 
 #[path = "common.rs"]
 pub mod common;
@@ -17,9 +17,7 @@ fn bench_sorting_strategies(c: &mut Criterion) {
     let sort_options = [(Sort::Unsorted, "unsorted"), (Sort::Desc, "descending")];
 
     for (sort, sort_name) in &sort_options {
-        let options = Options::default()
-            .with_sort(*sort)
-            .with_processing(Processing::Sequential);
+        let options = Options::default().with_sort(*sort).with_io(Io::Stream);
 
         let shared_options = make_shared(options);
 
@@ -55,7 +53,7 @@ fn bench_filtering_strategies(c: &mut Criterion) {
     for (filter, filter_name) in &filters {
         let options = Options::default()
             .with_filters(filter.clone())
-            .with_processing(Processing::Sequential);
+            .with_io(Io::Stream);
 
         let shared_options = make_shared(options);
 

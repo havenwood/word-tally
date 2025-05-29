@@ -21,14 +21,14 @@ fn test_args_default_input() {
 
 #[test]
 fn test_args_default_io() {
-    // Default IO should be streamed
+    // Default IO should be parallel-stream
     Command::cargo_bin("word-tally")
         .expect("execute operation")
         .arg("-v")
         .write_stdin("test")
         .assert()
         .success()
-        .stderr(contains("io streamed"));
+        .stderr(contains("io parallel-stream"));
 }
 
 #[test]
@@ -81,14 +81,14 @@ fn test_args_default_delimiter() {
 
 #[test]
 fn test_args_default_processing() {
-    // Default processing should be parallel
+    // Default I/O mode should be parallel-stream
     Command::cargo_bin("word-tally")
         .expect("execute operation")
         .arg("-v")
         .write_stdin("test")
         .assert()
         .success()
-        .stderr(contains("processing parallel"));
+        .stderr(contains("io parallel-stream"));
 }
 
 #[test]
@@ -160,8 +160,7 @@ fn test_args_defaults_with_minimal_flags() {
         .stderr(contains("delimiter \" \""))
         .stderr(contains("case original"))
         .stderr(contains("order desc"))
-        .stderr(contains("processing parallel"))
-        .stderr(contains("io streamed"))
+        .stderr(contains("io parallel-stream"))
         .stderr(contains("min-chars none"))
         .stderr(contains("min-count none"))
         .stderr(contains("exclude-words none"))
@@ -259,12 +258,12 @@ fn test_get_filters_with_patterns() {
 fn test_io_shorthand_flag() {
     let assert = Command::cargo_bin("word-tally")
         .expect("execute operation")
-        .arg("-I=buffered")
+        .arg("-I=parallel-in-memory")
         .arg("-v")
         .write_stdin("hello world")
         .assert();
 
-    assert.success().stderr(contains("io buffered"));
+    assert.success().stderr(contains("io parallel-in-memory"));
 }
 
 #[test]
@@ -469,15 +468,15 @@ fn test_args_options_comprehensive() {
         .expect("execute operation")
         .arg("--case=lower")
         .arg("--sort=desc")
-        .arg("--io=buffered")
+        .arg("--io=parallel-in-memory")
         .arg("--format=csv")
         .arg("--delimiter=;")
         .arg("-v")
         .write_stdin("Test TEST test")
         .assert()
         .success()
-        .stderr(contains("processing"))
-        .stderr(contains("parallel"));
+        .stderr(contains("io,"))
+        .stderr(contains("in-memory"));
 }
 
 //
@@ -486,8 +485,12 @@ fn test_args_options_comprehensive() {
 
 #[test]
 fn test_args_all_io_modes() {
-    // Test streamed and buffered with stdin
-    let stdin_modes = [("streamed", "streamed"), ("buffered", "buffered")];
+    // Test stream modes with stdin
+    let stdin_modes = [
+        ("stream", "stream"),
+        ("parallel-stream", "parallel-stream"),
+        ("parallel-in-memory", "parallel-in-memory"),
+    ];
 
     for (input, expected) in &stdin_modes {
         Command::cargo_bin("word-tally")
@@ -503,7 +506,7 @@ fn test_args_all_io_modes() {
     // Test mmap separately - it should fail with stdin
     Command::cargo_bin("word-tally")
         .expect("execute operation")
-        .arg("--io=mmap")
+        .arg("--io=parallel-mmap")
         .write_stdin("test")
         .assert()
         .failure()
@@ -672,4 +675,30 @@ fn test_args_environment_interaction() {
         .assert()
         .success()
         .stderr(contains("source"));
+}
+
+#[test]
+fn test_args_mmap_alias() {
+    // Test that --io=mmap is an alias for --io=parallel-mmap
+    let temp_file = NamedTempFile::new().expect("create temp file");
+    fs::write(temp_file.path(), "test content").expect("write test content");
+
+    Command::cargo_bin("word-tally")
+        .expect("execute operation")
+        .arg("--io=mmap")
+        .arg("-v")
+        .arg(temp_file.path())
+        .assert()
+        .success()
+        .stderr(contains("io parallel-mmap"));
+
+    // Test with stdin to ensure it gives the same error
+    Command::cargo_bin("word-tally")
+        .expect("execute operation")
+        .arg("--io=mmap")
+        .write_stdin("test")
+        .assert()
+        .failure()
+        .code(64)
+        .stderr(contains("memory-mapped I/O requires a file, not stdin"));
 }

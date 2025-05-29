@@ -10,14 +10,14 @@ fn word_tally() -> Command {
 }
 
 #[test]
-fn sequential_streamed_multi_file() {
+fn sequential_stream_multi_file() {
     let temp_file1 = NamedTempFile::new().expect("create temp file");
     let temp_file2 = NamedTempFile::new().expect("create temp file");
     fs::write(&temp_file1, "narrow road").expect("write test file");
     fs::write(&temp_file2, "road fame").expect("write test file");
 
     word_tally()
-        .arg("--io=streamed")
+        .arg("--io=stream")
         .arg(temp_file1.path())
         .arg(temp_file2.path())
         .assert()
@@ -28,14 +28,14 @@ fn sequential_streamed_multi_file() {
 }
 
 #[test]
-fn parallel_streamed_multi_file() {
+fn parallel_stream_multi_file() {
     let temp_file1 = NamedTempFile::new().expect("create temp file");
     let temp_file2 = NamedTempFile::new().expect("create temp file");
     fs::write(&temp_file1, "narrow road").expect("write test file");
     fs::write(&temp_file2, "road fame").expect("write test file");
 
     word_tally()
-        .arg("--io=streamed")
+        .arg("--io=parallel-stream")
         .arg(temp_file1.path())
         .arg(temp_file2.path())
         .assert()
@@ -46,14 +46,14 @@ fn parallel_streamed_multi_file() {
 }
 
 #[test]
-fn parallel_buffered_multi_file() {
+fn parallel_in_memory_multi_file() {
     let temp_file1 = NamedTempFile::new().expect("create temp file");
     let temp_file2 = NamedTempFile::new().expect("create temp file");
     fs::write(&temp_file1, "narrow road").expect("write test file");
     fs::write(&temp_file2, "road fame").expect("write test file");
 
     word_tally()
-        .arg("--io=buffered")
+        .arg("--io=parallel-in-memory")
         .arg(temp_file1.path())
         .arg(temp_file2.path())
         .assert()
@@ -71,7 +71,7 @@ fn parallel_mmap_multi_file() {
     fs::write(&temp_file2, "road fame").expect("write test file");
 
     word_tally()
-        .arg("--io=mmap")
+        .arg("--io=parallel-mmap")
         .arg(temp_file1.path())
         .arg(temp_file2.path())
         .assert()
@@ -87,7 +87,7 @@ fn multi_file_with_stdin() {
     fs::write(&temp_file, "narrow road").expect("write test file");
 
     word_tally()
-        .arg("--io=streamed")
+        .arg("--io=parallel-stream")
         .arg("-")
         .arg(temp_file.path())
         .write_stdin("road fame")
@@ -109,7 +109,7 @@ fn large_multi_file_sets() {
         .collect();
 
     let mut cmd = word_tally();
-    cmd.arg("--io=mmap");
+    cmd.arg("--io=parallel-mmap");
 
     for temp_file in &temp_files {
         cmd.arg(temp_file.path());

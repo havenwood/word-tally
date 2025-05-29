@@ -13,7 +13,7 @@ use args::Args;
 use clap::Parser;
 use rayon::prelude::*;
 use std::process;
-use word_tally::{Processing, TallyMap, WordTally, exit_code::ExitCode};
+use word_tally::{Io, TallyMap, WordTally, exit_code::ExitCode};
 
 fn main() {
     match run() {
@@ -38,15 +38,15 @@ fn run() -> Result<()> {
         .collect::<Result<Vec<_>>>()?;
 
     options.init_thread_pool_if_parallel()?;
-    let tally_map = match options.processing() {
-        Processing::Parallel => inputs
-            .par_iter()
-            .map(|input| TallyMap::from_input(input, &options))
-            .try_reduce(TallyMap::new, |acc, tally| Ok(acc.merge(tally)))?,
-        Processing::Sequential => inputs
+    let tally_map = match options.io() {
+        Io::Stream => inputs
             .iter()
             .map(|input| TallyMap::from_input(input, &options))
             .try_fold(TallyMap::new(), |acc, tally| tally.map(|t| acc.merge(t)))?,
+        Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes => inputs
+            .par_iter()
+            .map(|input| TallyMap::from_input(input, &options))
+            .try_reduce(TallyMap::new, |acc, tally| Ok(acc.merge(tally)))?,
     };
 
     // Create a `WordTally` from the merged `TallyMap`

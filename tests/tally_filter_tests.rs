@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use word_tally::{Case, Filters, Input, Io, Options, Processing, Serialization, Sort, WordTally};
+use word_tally::{Case, Filters, Input, Io, Options, Serialization, Sort, WordTally};
 
 fn make_shared<T>(value: T) -> Arc<T> {
     Arc::new(value)
@@ -19,8 +19,7 @@ fn test_excluding_words() {
         Sort::Unsorted,
         serializer,
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         word_tally::Performance::default(),
     );
     let options_arc = make_shared(options);
@@ -58,8 +57,7 @@ fn test_excluding_patterns() {
         Sort::Unsorted,
         serializer,
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         word_tally::Performance::default(),
     );
     let options_arc = make_shared(options);
@@ -104,8 +102,7 @@ fn test_including_patterns() {
         Sort::Unsorted,
         serializer,
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         word_tally::Performance::default(),
     );
     let options_arc = make_shared(options);
@@ -153,8 +150,7 @@ fn test_combining_include_exclude_patterns() {
         Sort::Unsorted,
         serializer,
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         word_tally::Performance::default(),
     );
     let options_arc = make_shared(options);
@@ -182,8 +178,7 @@ fn test_min_count_graphemes() {
         Sort::default(),
         Serialization::default(),
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         word_tally::Performance::default(),
     );
 

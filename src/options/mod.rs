@@ -11,14 +11,13 @@
 //! - **Sort** ([`Sort`]): Result ordering (unsorted, ascending, descending)
 //! - **Serialization** ([`Serialization`]): Output format (text, CSV, JSON) and delimiter
 //! - **Filters** ([`Filters`]): Word length, frequency, patterns, and exclusion filters
-//! - **Io** ([`Io`]): I/O strategy (streamed, buffered, memory-mapped)
-//! - **Processing** ([`Processing`]): Processing mode (sequential, parallel)
+//! - **Io** ([`Io`]): I/O strategy (sequential, streamed, in-memory, memory-mapped)
 //! - **Performance** ([`Performance`]): Thread pool, memory allocation, and chunk size tuning
 //!
 //! # Usage
 //!
 //! ```
-//! use word_tally::{Options, Case, Format, Io, Processing};
+//! use word_tally::{Options, Case, Format, Io};
 //!
 //! // Default options
 //! let options = Options::default();
@@ -28,9 +27,8 @@
 //! let options = Options::default()
 //!     .with_case(Case::Lower)
 //!     .with_format(Format::Json)
-//!     .with_processing(Processing::Parallel)
-//!     .with_io(Io::MemoryMapped);
-//! assert_eq!(options.io(), Io::MemoryMapped);
+//!     .with_io(Io::ParallelMmap);
+//! assert_eq!(options.io(), Io::ParallelMmap);
 //! ```
 //!
 //! # Environment Variables
@@ -48,7 +46,6 @@ pub mod filters;
 pub mod io;
 pub mod patterns;
 pub mod performance;
-pub mod processing;
 pub mod serialization;
 pub mod sort;
 pub mod threads;
@@ -58,7 +55,6 @@ use self::encoding::Encoding;
 use self::filters::Filters;
 use self::io::Io;
 use self::performance::Performance;
-use self::processing::Processing;
 use self::serialization::Format;
 use self::serialization::Serialization;
 use self::sort::Sort;
@@ -85,11 +81,8 @@ pub struct Options {
     /// Filter settings (word length, frequency, patterns, exclusions).
     filters: Filters,
 
-    /// I/O strategy (streamed, buffered, memory-mapped).
+    /// I/O strategy (sequential, streamed, in-memory, memory-mapped).
     io: Io,
-
-    /// Processing strategy (sequential, parallel).
-    processing: Processing,
 
     /// Performance tuning configuration (threads, memory allocation, chunk size).
     performance: Performance,
@@ -104,11 +97,11 @@ impl Options {
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{Options, Serialization, Filters, Performance, Case, Format, Io, Processing, Sort};
+    /// use word_tally::{Options, Serialization, Filters, Performance, Case, Format, Io, Sort};
     ///
     /// // Default configuration
     /// let options = Options::default();
-    /// assert_eq!(options.processing(), Processing::Parallel);
+    /// assert_eq!(options.io(), Io::ParallelStream);
     ///
     /// // Targeted customization with builder methods
     /// let options = Options::default()
@@ -123,7 +116,6 @@ impl Options {
         serialization: Serialization,
         filters: Filters,
         io: Io,
-        processing: Processing,
         performance: Performance,
     ) -> Self {
         Self {
@@ -132,7 +124,6 @@ impl Options {
             serialization,
             filters,
             io,
-            processing,
             performance,
             encoding: Encoding::Unicode,
         }
@@ -191,13 +182,6 @@ impl Options {
     #[must_use]
     pub const fn with_io(mut self, io: Io) -> Self {
         self.io = io;
-        self
-    }
-
-    /// Set processing strategy.
-    #[must_use]
-    pub const fn with_processing(mut self, processing: Processing) -> Self {
-        self.processing = processing;
         self
     }
 
@@ -272,29 +256,28 @@ impl Options {
         self.io
     }
 
-    /// Get the processing strategy.
-    #[must_use]
-    pub const fn processing(&self) -> Processing {
-        self.processing
-    }
-
     /// Get the word encoding strategy.
     #[must_use]
     pub const fn encoding(&self) -> Encoding {
         self.encoding
     }
 
-    /// Initialize the thread pool if parallel processing is enabled.
+    /// Initialize the thread pool if using a parallel I/O mode.
     ///
-    /// This method initializes the global thread pool when using parallel processing.
-    /// For sequential processing, this is a no-op.
+    /// This method initializes the global thread pool when using parallel I/O modes
+    /// (streamed, in-memory, or memory-mapped). For sequential mode, this is a no-op.
     ///
     /// # Errors
     ///
-    /// Returns an error if parallel mode is selected but the thread pool
+    /// Returns an error if a parallel I/O mode is selected but the thread pool
     /// cannot be initialized.
     pub fn init_thread_pool_if_parallel(&self) -> anyhow::Result<()> {
-        self.processing.initialize(&self.performance)
+        match self.io {
+            Io::Stream => Ok(()),
+            Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes => {
+                self.performance.threads().init_pool()
+            }
+        }
     }
 }
 
@@ -302,14 +285,8 @@ impl Display for Options {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Options {{ case: {}, sort: {}, serialization: {}, filters: {:?}, processing: {}, io: {}, encoding: {} }}",
-            self.case,
-            self.sort,
-            self.serialization,
-            self.filters,
-            self.processing,
-            self.io,
-            self.encoding
+            "Options {{ case: {}, sort: {}, serialization: {}, filters: {:?}, io: {}, encoding: {} }}",
+            self.case, self.sort, self.serialization, self.filters, self.io, self.encoding
         )
     }
 }

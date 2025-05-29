@@ -1,7 +1,6 @@
 use tempfile::NamedTempFile;
 use word_tally::{
-    Case, Count, Filters, Format, Input, Io, Options, Performance, Processing, Serialization, Sort,
-    WordTally,
+    Case, Count, Filters, Format, Input, Io, Options, Performance, Serialization, Sort, WordTally,
 };
 
 fn create_test_data_file() -> NamedTempFile {
@@ -33,8 +32,7 @@ fn word_tally(
         sort,
         serialization,
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         Performance::default(),
     );
 

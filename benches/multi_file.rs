@@ -3,7 +3,7 @@
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
 use tempfile::NamedTempFile;
-use word_tally::{Input, Io, Options, Processing, TallyMap};
+use word_tally::{Input, Io, Options, TallyMap};
 
 #[path = "common.rs"]
 pub mod common;
@@ -22,16 +22,16 @@ fn bench_multi_file_processing(c: &mut Criterion) {
         .collect();
 
     let io_strategies = [
-        (Io::Streamed, Processing::Sequential, "sequential_streamed"),
-        (Io::Streamed, Processing::Parallel, "parallel_streamed"),
-        (Io::Buffered, Processing::Parallel, "parallel_buffered"),
-        (Io::MemoryMapped, Processing::Parallel, "parallel_mmap"),
+        (Io::Stream, "stream"),
+        (Io::ParallelStream, "parallel-stream"),
+        (Io::ParallelInMemory, "parallel-in-memory"),
+        (Io::ParallelMmap, "parallel-mmap"),
     ];
 
     let mut group = create_bench_group(c, "multi_file_processing");
 
-    for (io, processing, name) in &io_strategies {
-        let options = Options::default().with_io(*io).with_processing(*processing);
+    for (io, name) in &io_strategies {
+        let options = Options::default().with_io(*io);
         let shared_options = make_shared(options);
 
         group.bench_function(*name, |b| {
@@ -78,13 +78,13 @@ fn bench_multi_file_scaling(c: &mut Criterion) {
         let mut group = create_bench_group(c, &group_name);
 
         let io_strategies = [
-            (Io::Streamed, Processing::Sequential, "sequential_streamed"),
-            (Io::Streamed, Processing::Parallel, "parallel_streamed"),
-            (Io::MemoryMapped, Processing::Parallel, "parallel_mmap"),
+            (Io::Stream, "stream"),
+            (Io::ParallelStream, "parallel-stream"),
+            (Io::ParallelMmap, "parallel-mmap"),
         ];
 
-        for (io, processing, name) in &io_strategies {
-            let options = Options::default().with_io(*io).with_processing(*processing);
+        for (io, name) in &io_strategies {
+            let options = Options::default().with_io(*io);
             let shared_options = make_shared(options);
 
             group.bench_function(*name, |b| {

@@ -8,7 +8,7 @@ fn test_input_reader_mmap_basic() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
-    let input = Input::new(temp_file.path(), Io::MemoryMapped).expect("create test input");
+    let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     let mut reader = input.reader().expect("process test");
 
     let mut buffer = Vec::new();
@@ -23,7 +23,7 @@ fn test_input_reader_mmap_position_tracking() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
-    let input = Input::new(temp_file.path(), Io::MemoryMapped).expect("create test input");
+    let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     let mut reader = input.reader().expect("process test");
 
     let mut buffer = [0u8; 5];
@@ -49,7 +49,7 @@ fn test_input_reader_mmap_position_tracking() {
 fn test_input_reader_mmap_empty_file() {
     let temp_file = NamedTempFile::new().expect("create temp file");
 
-    let input = Input::new(temp_file.path(), Io::MemoryMapped).expect("create test input");
+    let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     let mut reader = input.reader().expect("process test");
 
     let mut buffer = [0u8; 10];
@@ -105,7 +105,7 @@ fn test_input_reader_file() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
-    let input = Input::new(temp_file.path(), Io::Streamed).expect("create test input");
+    let input = Input::new(temp_file.path(), Io::ParallelStream).expect("create test input");
     let mut reader = input.reader().expect("process test");
 
     let mut buffer = Vec::new();
@@ -158,7 +158,7 @@ fn test_input_reader_zero_byte_read() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
-    let input = Input::new(temp_file.path(), Io::MemoryMapped).expect("create test input");
+    let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     let mut reader = input.reader().expect("process test");
 
     let mut buffer = [0u8; 0];
@@ -177,7 +177,7 @@ fn test_input_reader_multiple_eof_reads() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
-    let input = Input::new(temp_file.path(), Io::MemoryMapped).expect("create test input");
+    let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     let mut reader = input.reader().expect("process test");
 
     let mut buffer = Vec::new();
@@ -198,7 +198,7 @@ fn test_input_reader_thread_safety() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
-    let input = Input::new(temp_file.path(), Io::MemoryMapped).expect("create test input");
+    let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     let thread_input = input.clone();
 
     std::thread::spawn(move || {
@@ -222,7 +222,7 @@ fn test_mmap_reader_type() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
-    let input = Input::new(temp_file.path(), Io::MemoryMapped).expect("create test input");
+    let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     let reader = input.reader().expect("process test");
     // Just verify we can create the reader successfully
     assert!(matches!(reader, word_tally::InputReader::Mmap(_)));
@@ -264,7 +264,8 @@ fn test_bytes_reader_buffer_limit_8kb() {
 #[test]
 fn test_file_not_found_error_message() {
     let nonexistent_path = "/nonexistent/path/to/file.txt";
-    let input = Input::new(nonexistent_path, word_tally::Io::Streamed).expect("create test input");
+    let input =
+        Input::new(nonexistent_path, word_tally::Io::ParallelStream).expect("create test input");
 
     let reader_result = input.reader();
     assert!(reader_result.is_err());
@@ -295,7 +296,7 @@ fn test_permission_denied_error_message() {
         fs::set_permissions(&file_path, perms).expect("process test");
     }
 
-    let input = Input::new(&file_path, word_tally::Io::Streamed).expect("create test input");
+    let input = Input::new(&file_path, word_tally::Io::ParallelStream).expect("create test input");
     let reader_result = input.reader();
     assert!(reader_result.is_err());
 
@@ -317,7 +318,8 @@ fn test_generic_io_error_message() {
     // For now, we can at least verify the format works with our nonexistent file
 
     let nonexistent_path = "/dev/null/not_a_directory/file.txt";
-    let input = Input::new(nonexistent_path, word_tally::Io::Streamed).expect("create test input");
+    let input =
+        Input::new(nonexistent_path, word_tally::Io::ParallelStream).expect("create test input");
 
     let reader_result = input.reader();
     if reader_result.is_err() {

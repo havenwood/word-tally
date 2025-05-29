@@ -2,8 +2,8 @@ use std::sync::Arc;
 use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
-    Case, Count, ExcludeWords, Filters, Format, Io, Options, Performance, Processing,
-    Serialization, Sort, Word, WordTally,
+    Case, Count, ExcludeWords, Filters, Format, Io, Options, Performance, Serialization, Sort,
+    Word, WordTally,
 };
 
 fn make_shared<T>(value: T) -> Arc<T> {
@@ -44,8 +44,7 @@ fn word_tally(
         sort,
         serialization,
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         Performance::default(),
     );
 
@@ -390,8 +389,7 @@ fn test_excluding_words() {
         Sort::Unsorted,
         serializer,
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         Performance::default(),
     );
     let options_arc = make_shared(options);
@@ -429,8 +427,7 @@ fn test_excluding_patterns() {
         Sort::Unsorted,
         serializer,
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         Performance::default(),
     );
     let options_arc = make_shared(options);
@@ -475,8 +472,7 @@ fn test_including_patterns() {
         Sort::Unsorted,
         serializer,
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         Performance::default(),
     );
     let options_arc = make_shared(options);
@@ -524,8 +520,7 @@ fn test_combining_include_exclude_patterns() {
         Sort::Unsorted,
         serializer,
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         Performance::default(),
     );
     let options_arc = make_shared(options);
@@ -570,8 +565,7 @@ fn test_parallel_vs_sequential() {
         Sort::default(),
         Serialization::default(),
         filters.clone(),
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         seq_performance,
     );
     let seq_options_arc = make_shared(seq_options);
@@ -589,8 +583,7 @@ fn test_parallel_vs_sequential() {
         Sort::default(),
         Serialization::default(),
         filters,
-        Io::Streamed,
-        Processing::Parallel,
+        Io::ParallelStream,
         par_performance,
     );
     let par_options_arc = make_shared(par_options);
@@ -627,8 +620,7 @@ fn test_memory_mapped_vs_streamed() {
         Sort::default(),
         Serialization::default(),
         filters.clone(),
-        Io::MemoryMapped,
-        Processing::Sequential,
+        Io::ParallelMmap,
         mmap_performance,
     );
 
@@ -639,8 +631,7 @@ fn test_memory_mapped_vs_streamed() {
         Sort::default(),
         Serialization::default(),
         filters.clone(),
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         stream_performance,
     );
 
@@ -668,8 +659,7 @@ fn test_memory_mapped_vs_streamed() {
         Sort::default(),
         Serialization::default(),
         filters,
-        Io::Streamed,
-        Processing::Parallel,
+        Io::ParallelStream,
         parallel_performance,
     );
 
@@ -693,7 +683,7 @@ fn test_parallel_count() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
-    let options = Options::default().with_processing(Processing::Parallel);
+    let options = Options::default();
 
     let input = Input::new(
         temp_file.path().to_str().expect("temp file path"),
@@ -716,7 +706,7 @@ fn test_merge_maps() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
-    let options = Options::default().with_processing(Processing::Parallel);
+    let options = Options::default();
 
     let input = Input::new(
         temp_file.path().to_str().expect("temp file path"),
@@ -799,7 +789,7 @@ mod wordtally_constructor_tests {
     #[test]
     fn with_parallel_processing() {
         let (_temp_dir, file_path) = create_test_file();
-        let options = Options::default().with_processing(Processing::Parallel);
+        let options = Options::default();
         let input = Input::new(&file_path, options.io()).expect("Failed to create Input");
         let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
         assert_eq!(tally.count(), 3);
@@ -808,9 +798,7 @@ mod wordtally_constructor_tests {
     #[test]
     fn with_custom_chunk_size() {
         let (_temp_dir, file_path) = create_test_file();
-        let options = Options::default()
-            .with_processing(Processing::Parallel)
-            .with_chunk_size(32_768);
+        let options = Options::default().with_chunk_size(32_768);
 
         let input = Input::new(&file_path, options.io()).expect("Failed to create Input");
         let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
@@ -828,8 +816,7 @@ fn test_min_count_graphemes() {
         Sort::default(),
         Serialization::default(),
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         Performance::default(),
     );
 
@@ -850,8 +837,7 @@ fn test_to_json() {
         Sort::default(),
         Serialization::default(),
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         Performance::default(),
     );
 
@@ -886,8 +872,7 @@ fn test_from_json() {
         Sort::default(),
         Serialization::default(),
         filters,
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         Performance::default(),
     );
 

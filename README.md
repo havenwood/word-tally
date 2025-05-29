@@ -4,9 +4,15 @@
 [![docs.rs](https://img.shields.io/docsrs/word-tally?style=for-the-badge&link=https%3A%2F%2Fdocs.rs%2Fword-tally%2Flatest%2Fword_tally%2F)](https://docs.rs/word-tally/latest/word_tally/)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/havenwood/word-tally/rust.yml?style=for-the-badge)](https://github.com/havenwood/word-tally/actions/workflows/rust.yml)
 
-Tallies the number of times each word appears in one or more unicode input sources. Use `word-tally` as a command-line tool or `WordTally` via the Rust library interface. I/O is streamed by default. Memory-mapped and fully-buffered-in-memory I/O modes can be selected to optimize for different file sizes and workloads. Optionally take advantage of multiple CPU cores through parallelized tallying and sorting.
+Tallies the number of times each word appears in one or more unicode input sources. Use `word-tally` as a command-line tool or `WordTally` via the Rust library interface.
 
-Parallel streamed, buffered and memory-mapped I/O modes use SIMD for quick newline-based chunk boundary detection. Memory mapping is only supported for files with seekable file descriptors but is able to optimize boundary finding. Sequential streaming mode uses the least peak memory. Parallel streaming mode is the default, for a some increased performance with somewhat constrained memory usage along with flexibility handling stdin and files.
+Four I/O strategies are available:
+- **stream**: Sequential single-threaded streaming with minimal memory usage
+- **parallel-stream** (default): Parallel streaming with balanced performance and memory usage
+- **parallel-in-memory**: Load entire input into memory for parallel processing
+- **parallel-mmap**: Memory-mapped I/O for best performance with large files
+
+All parallel modes use SIMD-accelerated chunk boundary detection. Memory mapping requires seekable file descriptors and won't work with stdin or pipes.
 
 ## Usage
 
@@ -17,8 +23,7 @@ Arguments:
   [PATHS]...  File paths to use as input (use "-" for stdin) [default: -]
 
 Options:
-  -I, --io <STRATEGY>          I/O strategy [default: streamed] [possible values: mmap, streamed, buffered]
-      --no-parallel            Use sequential processing instead of parallel
+  -I, --io <STRATEGY>          I/O strategy [default: parallel-stream] [possible values: stream, parallel-stream, parallel-in-memory, parallel-mmap]
   -e, --encoding <ENCODING>    Word boundary detection encoding [default: unicode] [possible values: unicode, ascii]
   -c, --case <FORMAT>          Case normalization [default: original] [possible values: original, upper, lower]
   -s, --sort <ORDER>           Sort order [default: desc] [possible values: desc, asc, unsorted]
@@ -43,34 +48,35 @@ cargo install word-tally
 
 ## Examples
 
-### I/O & parallelization
+### I/O strategies
 
-word-tally uses parallel, streamed processing by default for better performance, reasonable memory usage and flexibility with stdin and files. Sequential processing (via `--no-parallel`) is available as a minimal-memory option. The different I/O modes (streamed, buffered, memory-mapped) have different performance and resource usage characteristics.
+Choose an I/O strategy based on your performance and memory requirements:
 
 ```sh
-# Streamed I/O with parallel processing from stdin
+# Default: Parallel streaming - balanced performance and memory
 echo "tally me" | word-tally
-
-# Streamed I/O with parallel processing from a file
 word-tally file.txt
 
-# Process multiple files with aggregated word counts
+# Sequential streaming - minimize memory usage
+word-tally --io=stream large-file.txt
+
+# Parallel in-memory - fastest for small inputs and stdin
+word-tally --io=parallel-in-memory document.txt
+
+# Parallel memory-mapped - fastest for large files
+word-tally --io=parallel-mmap large-file.txt
+```
+
+Additional features:
+```sh
+# Process multiple files
 word-tally file1.txt file2.txt file3.txt
 
 # Mix stdin and files
-cat file1.txt | word-tally - file2.txt
-
-# Memory-mapped I/O with efficient parallel processing (requires a file rather than stdin)
-word-tally --io=mmap document.txt
-
-# Buffered I/O with parallel processing
-word-tally --io=buffered document.txt
-
-# Streamed with sequential processing for minimal memory usage
-word-tally --no-parallel document.txt
+cat header.txt | word-tally - body.txt footer.txt
 ```
 
-The `--io=mmap` memory-mapped processing mode only works with files and cannot be used with piped input. Parallel processing with memory mapping can be very efficient but mmap requires a file with a seekable file descriptor.
+**Note:** Memory mapping (`parallel-mmap`) requires seekable files and cannot be used with stdin or pipes.
 
 ### Output formats
 
@@ -189,8 +195,7 @@ The following environment variables configure various aspects of the library:
 
 I/O and processing strategy configuration:
 
-- `WORD_TALLY_IO` - I/O strategy (default: streamed, options: streamed, buffered, memory-mapped)
-- `WORD_TALLY_PROCESSING` - Processing strategy (default: parallel, options: sequential, parallel)
+- `WORD_TALLY_IO` - I/O strategy (default: parallel-stream, options: stream, parallel-stream, parallel-in-memory, parallel-mmap)
 
 Memory allocation and performance:
 
@@ -238,7 +243,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parallel memory mapped
     let another_file = File::open("another-document.txt")?;
     let options = Options::default()
-        .with_io(Io::MemoryMapped);
+        .with_io(Io::ParallelMmap);
     let mmap_tally = WordTally::new(another_file, &options)?;
     assert!(mmap_tally.count() > 0);
 

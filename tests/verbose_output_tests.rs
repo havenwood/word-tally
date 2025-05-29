@@ -2,7 +2,7 @@
 mod verbose_unit_tests {
     use std::io::{Result as IoResult, Write};
     use std::sync::{Arc, Mutex};
-    use word_tally::{Case, Filters, Format, Input, Io, Options, Processing, Sort, WordTally};
+    use word_tally::{Case, Filters, Format, Input, Io, Options, Sort, WordTally};
 
     // Mock writer to capture verbose output
     #[derive(Default)]
@@ -113,15 +113,13 @@ mod verbose_unit_tests {
         let options = Options::default()
             .with_case(Case::Upper)
             .with_sort(Sort::Asc)
-            .with_processing(Processing::Sequential)
-            .with_io(Io::Streamed);
+            .with_io(Io::ParallelStream);
 
         let tally = create_test_tally(&options);
 
         assert_eq!(tally.options().case(), Case::Upper);
         assert_eq!(tally.options().sort(), Sort::Asc);
-        assert_eq!(tally.options().processing(), Processing::Sequential);
-        assert_eq!(tally.options().io(), Io::Streamed);
+        assert_eq!(tally.options().io(), Io::ParallelStream);
 
         // Verify the tally was created with the options
         assert!(tally.count() > 0);

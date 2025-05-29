@@ -1,5 +1,5 @@
 use std::io::Write;
-use word_tally::{Count, Input, Io, Options, Performance, Processing, WordTally};
+use word_tally::{Count, Input, Io, Options, Performance, WordTally};
 
 const TEST_TEXT: &str = "The quick brown fox
 jumps over the lazy dog
@@ -8,8 +8,8 @@ Pack my box with five dozen liquor jugs";
 const EXPECTED_WORD_COUNT: Count = 17;
 const EXPECTED_TOTAL_COUNT: Count = 17;
 
-fn make_options(io: Io, processing: Processing) -> Options {
-    Options::default().with_io(io).with_processing(processing)
+fn make_options(io: Io) -> Options {
+    Options::default().with_io(io)
 }
 
 fn verify_tally(tally: &WordTally<'_>) {
@@ -30,8 +30,8 @@ fn verify_tally(tally: &WordTally<'_>) {
 }
 
 #[test]
-fn test_streamed_sequential() {
-    let options = make_options(Io::Streamed, Processing::Sequential);
+fn test_parallel_stream_sequential() {
+    let options = make_options(Io::ParallelStream);
 
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
@@ -48,8 +48,8 @@ fn test_streamed_sequential() {
 }
 
 #[test]
-fn test_streamed_parallel() {
-    let options = make_options(Io::Streamed, Processing::Parallel);
+fn test_parallel_stream_parallel() {
+    let options = make_options(Io::ParallelStream);
 
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
@@ -66,8 +66,8 @@ fn test_streamed_parallel() {
 }
 
 #[test]
-fn test_buffered_sequential() {
-    let options = make_options(Io::Buffered, Processing::Sequential);
+fn test_parallel_in_memory_sequential() {
+    let options = make_options(Io::ParallelInMemory);
 
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
@@ -84,8 +84,8 @@ fn test_buffered_sequential() {
 }
 
 #[test]
-fn test_buffered_parallel() {
-    let options = make_options(Io::Buffered, Processing::Parallel);
+fn test_parallel_in_memory_parallel() {
+    let options = make_options(Io::ParallelInMemory);
 
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
@@ -107,20 +107,17 @@ fn test_new_with_io_combinations() {
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
     let file_path = temp_file.path().to_str().expect("temp file path");
 
-    let io_strategies = [Io::Streamed, Io::Buffered, Io::MemoryMapped];
-    let processing_strategies = [Processing::Sequential, Processing::Parallel];
+    let io_strategies = [Io::ParallelStream, Io::ParallelInMemory, Io::ParallelMmap];
 
     for &io in &io_strategies {
-        for &processing in &processing_strategies {
-            let options = make_options(io, processing);
-            let input = Input::new(file_path, io)
-                .unwrap_or_else(|_| panic!("input creation failed with {io:?}/{processing:?}"));
+        let options = make_options(io);
+        let input = Input::new(file_path, io)
+            .unwrap_or_else(|_| panic!("input creation failed with {io:?}"));
 
-            let tally = WordTally::new(&input, &options)
-                .unwrap_or_else(|_| panic!("new failed with {io:?}/{processing:?}"));
+        let tally =
+            WordTally::new(&input, &options).unwrap_or_else(|_| panic!("new failed with {io:?}"));
 
-            verify_tally(&tally);
-        }
+        verify_tally(&tally);
     }
 }
 
@@ -150,8 +147,8 @@ fn test_parallel_processing_with_large_text() {
     Write::write_all(&mut temp_file, LARGE_TEST_TEXT.as_bytes()).expect("process test");
     let file_path = temp_file.path().to_str().expect("temp file path");
 
-    let sequential_options = make_options(Io::Buffered, Processing::Sequential);
-    let parallel_options = make_options(Io::Buffered, Processing::Parallel);
+    let sequential_options = make_options(Io::ParallelInMemory);
+    let parallel_options = make_options(Io::ParallelInMemory);
 
     let sequential_input =
         Input::new(file_path, sequential_options.io()).expect("Failed to create sequential input");
@@ -176,28 +173,19 @@ fn test_parallel_processing_with_large_text() {
 }
 
 #[test]
-fn test_memory_mapped_with_real_file() {
+fn test_parallel_mmap_with_real_file() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
     let file_path = temp_file.path().to_str().expect("temp file path");
 
-    let mmap_sequential_options = make_options(Io::MemoryMapped, Processing::Sequential);
-    let sequential_input = Input::new(file_path, mmap_sequential_options.io())
-        .expect("Failed to create sequential memory-mapped input");
+    let mmap_options = make_options(Io::ParallelMmap);
+    let input =
+        Input::new(file_path, mmap_options.io()).expect("Failed to create memory-mapped input");
 
-    let mmap_tally = WordTally::new(&sequential_input, &mmap_sequential_options)
-        .expect("Failed to process file with memory mapping");
+    let mmap_tally =
+        WordTally::new(&input, &mmap_options).expect("Failed to process file with memory mapping");
 
     verify_tally(&mmap_tally);
-
-    let mmap_parallel_options = make_options(Io::MemoryMapped, Processing::Parallel);
-    let parallel_input = Input::new(file_path, mmap_parallel_options.io())
-        .expect("Failed to create parallel memory-mapped input");
-
-    let mmap_parallel_tally = WordTally::new(&parallel_input, &mmap_parallel_options)
-        .expect("Failed to process file with memory mapping");
-
-    verify_tally(&mmap_parallel_tally);
 }
 
 #[test]
@@ -208,8 +196,8 @@ fn test_read_trait_with_all_io_strategies() {
     let file_path = temp_dir.path().join("test_io.txt");
     std::fs::write(&file_path, TEST_TEXT).expect("process test");
 
-    let file_input = Input::new(&file_path, Io::Streamed).expect("create test input");
-    let mmap_input = Input::new(&file_path, Io::MemoryMapped).expect("create test input");
+    let file_input = Input::new(&file_path, Io::ParallelStream).expect("create test input");
+    let mmap_input = Input::new(&file_path, Io::ParallelMmap).expect("create test input");
     let bytes_input = Input::from_bytes(TEST_TEXT);
 
     let test_cases = [file_input, mmap_input, bytes_input];
@@ -227,23 +215,19 @@ fn test_read_trait_with_all_io_strategies() {
 
 #[test]
 fn test_bytes_input() {
-    let processing_strategies = [Processing::Sequential, Processing::Parallel];
+    let options = make_options(Io::ParallelBytes);
+    let input = Input::from_bytes(TEST_TEXT);
 
-    for &processing in &processing_strategies {
-        let options = make_options(Io::Bytes, processing);
-        let input = Input::from_bytes(TEST_TEXT);
+    assert_eq!(input.source(), "<bytes>");
+    assert_eq!(input.size(), Some(TEST_TEXT.len() as u64));
 
-        assert_eq!(input.source(), "<bytes>");
-        assert_eq!(input.size(), Some(TEST_TEXT.len() as u64));
-
-        let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
-        verify_tally(&tally);
-    }
+    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    verify_tally(&tally);
 }
 
 #[test]
 fn test_bytes_io_with_input_new() {
-    let result = Input::new(TEST_TEXT, Io::Bytes);
+    let result = Input::new(TEST_TEXT, Io::ParallelBytes);
     assert!(result.is_err());
     let err = result.unwrap_err().to_string();
     assert!(err.contains("byte I/O mode requires `Input::from_bytes()`"));
@@ -265,20 +249,17 @@ fn test_new_with_all_io_strategies() {
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
     let file_path = temp_file.path().to_str().expect("temp file path");
 
-    let io_strategies = [Io::Streamed, Io::Buffered, Io::MemoryMapped];
-    let processing_strategies = [Processing::Sequential, Processing::Parallel];
+    let io_strategies = [Io::ParallelStream, Io::ParallelInMemory, Io::ParallelMmap];
 
     for &io in &io_strategies {
-        for &processing in &processing_strategies {
-            let options = make_options(io, processing);
-            let input = Input::new(file_path, io)
-                .unwrap_or_else(|_| panic!("input creation failed with {io:?}/{processing:?}"));
+        let options = make_options(io);
+        let input = Input::new(file_path, io)
+            .unwrap_or_else(|_| panic!("input creation failed with {io:?}"));
 
-            let tally = WordTally::new(&input, &options)
-                .unwrap_or_else(|_| panic!("new() failed with {io:?}/{processing:?}"));
+        let tally =
+            WordTally::new(&input, &options).unwrap_or_else(|_| panic!("new() failed with {io:?}"));
 
-            verify_tally(&tally);
-        }
+        verify_tally(&tally);
     }
 }
 
@@ -294,8 +275,7 @@ fn test_utf8_boundary_handling() {
     let performance = Performance::default().with_chunk_size(small_chunk_size);
 
     let options = Options::default()
-        .with_io(Io::MemoryMapped)
-        .with_processing(Processing::Parallel)
+        .with_io(Io::ParallelMmap)
         .with_performance(performance);
 
     let input = Input::new(file_path, options.io()).expect("Failed to create input");
@@ -317,37 +297,38 @@ fn test_utf8_boundary_handling() {
 
 #[test]
 fn test_io_default() {
-    assert_eq!(Io::default(), Io::Streamed);
+    assert_eq!(Io::default(), Io::ParallelStream);
 }
 
 #[test]
 fn test_io_display_all_variants() {
-    assert_eq!(Io::Streamed.to_string(), "streamed");
-    assert_eq!(Io::Buffered.to_string(), "buffered");
-    assert_eq!(Io::MemoryMapped.to_string(), "memory-mapped");
-    assert_eq!(Io::Bytes.to_string(), "bytes");
+    assert_eq!(Io::ParallelStream.to_string(), "parallel-stream");
+    assert_eq!(Io::ParallelInMemory.to_string(), "parallel-in-memory");
+    assert_eq!(Io::ParallelMmap.to_string(), "parallel-mmap");
+    assert_eq!(Io::ParallelBytes.to_string(), "parallel-bytes");
 }
 
 #[test]
 fn test_io_traits_partial_eq() {
-    assert_eq!(Io::Streamed, Io::Streamed);
-    assert_ne!(Io::Streamed, Io::Buffered);
-    assert_ne!(Io::Buffered, Io::MemoryMapped);
-    assert_ne!(Io::MemoryMapped, Io::Bytes);
+    assert_eq!(Io::ParallelStream, Io::ParallelStream);
+    assert_ne!(Io::ParallelStream, Io::ParallelInMemory);
+    assert_ne!(Io::ParallelInMemory, Io::ParallelMmap);
+    assert_ne!(Io::ParallelMmap, Io::ParallelBytes);
 }
 
 #[test]
 fn test_io_traits_ordering() {
     use std::cmp::Ordering;
 
-    // Test PartialOrd and Ord
-    assert!(Io::MemoryMapped < Io::Streamed);
-    assert!(Io::Streamed < Io::Buffered);
-    assert!(Io::Buffered < Io::Bytes);
+    // Test PartialOrd and Ord (based on enum declaration order)
+    assert!(Io::ParallelStream < Io::Stream);
+    assert!(Io::Stream < Io::ParallelMmap);
+    assert!(Io::ParallelMmap < Io::ParallelBytes);
+    assert!(Io::ParallelBytes < Io::ParallelInMemory);
 
-    assert_eq!(Io::Streamed.cmp(&Io::Streamed), Ordering::Equal);
-    assert_eq!(Io::MemoryMapped.cmp(&Io::Streamed), Ordering::Less);
-    assert_eq!(Io::Bytes.cmp(&Io::Buffered), Ordering::Greater);
+    assert_eq!(Io::ParallelStream.cmp(&Io::ParallelStream), Ordering::Equal);
+    assert_eq!(Io::Stream.cmp(&Io::ParallelStream), Ordering::Greater);
+    assert_eq!(Io::ParallelBytes.cmp(&Io::ParallelInMemory), Ordering::Less);
 }
 
 #[test]
@@ -362,15 +343,21 @@ fn test_io_traits_hash() {
     }
 
     // Same values should have same hash
-    assert_eq!(calculate_hash(&Io::Streamed), calculate_hash(&Io::Streamed));
+    assert_eq!(
+        calculate_hash(&Io::ParallelStream),
+        calculate_hash(&Io::ParallelStream)
+    );
 
     // Different values should (likely) have different hashes
-    assert_ne!(calculate_hash(&Io::Streamed), calculate_hash(&Io::Buffered));
+    assert_ne!(
+        calculate_hash(&Io::ParallelStream),
+        calculate_hash(&Io::ParallelInMemory)
+    );
 }
 
 #[test]
 fn test_io_traits_clone_copy() {
-    let io1 = Io::MemoryMapped;
+    let io1 = Io::ParallelMmap;
     let io2 = io1; // Copy trait
     let io3 = io1; // Clone trait
 
@@ -382,16 +369,16 @@ fn test_io_traits_clone_copy() {
 #[test]
 fn test_io_serialization() {
     // Test Serialize
-    let io = Io::MemoryMapped;
+    let io = Io::ParallelMmap;
     let serialized = serde_json::to_string(&io).expect("serialize JSON");
-    assert_eq!(serialized, "\"MemoryMapped\"");
+    assert_eq!(serialized, "\"ParallelMmap\"");
 
     // Test Deserialize
-    let deserialized: Io = serde_json::from_str("\"Buffered\"").expect("deserialize JSON");
-    assert_eq!(deserialized, Io::Buffered);
+    let deserialized: Io = serde_json::from_str("\"ParallelInMemory\"").expect("deserialize JSON");
+    assert_eq!(deserialized, Io::ParallelInMemory);
 
     // Test roundtrip
-    let original = Io::Bytes;
+    let original = Io::ParallelBytes;
     let json = serde_json::to_string(&original).expect("serialize JSON");
     let roundtrip: Io = serde_json::from_str(&json).expect("deserialize JSON");
     assert_eq!(original, roundtrip);
@@ -409,30 +396,35 @@ fn test_parse_io_from_env() {
 
     // Test case-insensitive parsing
     unsafe {
-        std::env::set_var(ENV_IO, "STREAMED");
+        std::env::set_var(ENV_IO, "stream");
     }
-    assert_eq!(parse_io_from_env(), Io::Streamed);
+    assert_eq!(parse_io_from_env(), Io::Stream);
 
     unsafe {
-        std::env::set_var(ENV_IO, "buffered");
+        std::env::set_var(ENV_IO, "PARALLEL-STREAM");
     }
-    assert_eq!(parse_io_from_env(), Io::Buffered);
+    assert_eq!(parse_io_from_env(), Io::ParallelStream);
 
     unsafe {
-        std::env::set_var(ENV_IO, "Memory-Mapped");
+        std::env::set_var(ENV_IO, "parallel-in-memory");
     }
-    assert_eq!(parse_io_from_env(), Io::MemoryMapped);
+    assert_eq!(parse_io_from_env(), Io::ParallelInMemory);
+
+    unsafe {
+        std::env::set_var(ENV_IO, "Parallel-Mmap");
+    }
+    assert_eq!(parse_io_from_env(), Io::ParallelMmap);
 
     // Test mmap alias
     unsafe {
         std::env::set_var(ENV_IO, "mmap");
     }
-    assert_eq!(parse_io_from_env(), Io::MemoryMapped);
+    assert_eq!(parse_io_from_env(), Io::ParallelMmap);
 
     unsafe {
         std::env::set_var(ENV_IO, "MMAP");
     }
-    assert_eq!(parse_io_from_env(), Io::MemoryMapped);
+    assert_eq!(parse_io_from_env(), Io::ParallelMmap);
 
     // Test invalid values (should return default)
     unsafe {
@@ -462,25 +454,27 @@ fn test_env_io_constant() {
 fn test_io_exhaustive_matching() {
     // This test ensures all variants are covered
     let test_io = |io: Io| match io {
-        Io::MemoryMapped => "mmap",
-        Io::Streamed => "stream",
-        Io::Buffered => "buffer",
-        Io::Bytes => "bytes",
+        Io::Stream => "low-memory",
+        Io::ParallelMmap => "mmap",
+        Io::ParallelStream => "stream",
+        Io::ParallelInMemory => "in-memory",
+        Io::ParallelBytes => "parallel-bytes",
     };
 
-    assert_eq!(test_io(Io::MemoryMapped), "mmap");
-    assert_eq!(test_io(Io::Streamed), "stream");
-    assert_eq!(test_io(Io::Buffered), "buffer");
-    assert_eq!(test_io(Io::Bytes), "bytes");
+    assert_eq!(test_io(Io::Stream), "low-memory");
+    assert_eq!(test_io(Io::ParallelMmap), "mmap");
+    assert_eq!(test_io(Io::ParallelStream), "stream");
+    assert_eq!(test_io(Io::ParallelInMemory), "in-memory");
+    assert_eq!(test_io(Io::ParallelBytes), "parallel-bytes");
 }
 
 #[test]
 fn test_io_debug_format() {
     // Test Debug trait
-    assert_eq!(format!("{:?}", Io::Streamed), "Streamed");
-    assert_eq!(format!("{:?}", Io::Buffered), "Buffered");
-    assert_eq!(format!("{:?}", Io::MemoryMapped), "MemoryMapped");
-    assert_eq!(format!("{:?}", Io::Bytes), "Bytes");
+    assert_eq!(format!("{:?}", Io::ParallelStream), "ParallelStream");
+    assert_eq!(format!("{:?}", Io::ParallelInMemory), "ParallelInMemory");
+    assert_eq!(format!("{:?}", Io::ParallelMmap), "ParallelMmap");
+    assert_eq!(format!("{:?}", Io::ParallelBytes), "ParallelBytes");
 }
 
 //
@@ -527,13 +521,12 @@ fn test_streaming_processes_entire_file() -> anyhow::Result<()> {
         Sort::default(),
         Serialization::default(),
         Filters::default(),
-        Io::Streamed,
-        Processing::Parallel,
+        Io::ParallelStream,
         Performance::default(),
     );
 
     // Test streaming
-    let streaming_options = make_shared(base_options.clone().with_io(Io::Streamed));
+    let streaming_options = make_shared(base_options.clone().with_io(Io::ParallelStream));
     let streaming_input = Input::new(&file_path, streaming_options.io())?;
     let streaming_tally = WordTally::new(&streaming_input, &streaming_options)?;
     let streaming_count: usize = streaming_tally
@@ -541,18 +534,18 @@ fn test_streaming_processes_entire_file() -> anyhow::Result<()> {
         .find(|(w, _)| &**w == "narrow")
         .map_or(0, |(_, c)| c);
 
-    // Test buffered for comparison
-    let buffered_options = make_shared(base_options.with_io(Io::Buffered));
-    let buffered_input = Input::new(&file_path, buffered_options.io())?;
-    let buffered_tally = WordTally::new(&buffered_input, &buffered_options)?;
-    let buffered_count: usize = buffered_tally
+    // Test in-memory for comparison
+    let in_memory_options = make_shared(base_options.with_io(Io::ParallelInMemory));
+    let in_memory_input = Input::new(&file_path, in_memory_options.io())?;
+    let in_memory_tally = WordTally::new(&in_memory_input, &in_memory_options)?;
+    let in_memory_count: usize = in_memory_tally
         .into_iter()
         .find(|(w, _)| &**w == "narrow")
         .map_or(0, |(_, c)| c);
 
     assert_eq!(
-        streaming_count, buffered_count,
-        "Streaming count ({streaming_count}) differs from buffered count ({buffered_count})"
+        streaming_count, in_memory_count,
+        "Streaming count ({streaming_count}) differs from in-memory count ({in_memory_count})"
     );
 
     Ok(())
@@ -571,8 +564,7 @@ fn test_streaming_consistency_across_io_modes() -> anyhow::Result<()> {
         Sort::default(),
         Serialization::default(),
         filters.clone(),
-        Io::Streamed,
-        Processing::Parallel,
+        Io::ParallelStream,
         performance,
     );
     let streaming_options_arc = make_shared(streaming_options);
@@ -581,35 +573,34 @@ fn test_streaming_consistency_across_io_modes() -> anyhow::Result<()> {
     let streaming_tally = WordTally::new(&streaming_input, &streaming_options_arc)?;
     let streaming_results: Vec<_> = streaming_tally.into_iter().collect();
 
-    // Test with buffered
-    let buffered_options = Options::new(
+    // Test with in-memory
+    let in_memory_options = Options::new(
         Case::default(),
         Sort::default(),
         Serialization::default(),
         filters,
-        Io::Buffered,
-        Processing::Parallel,
+        Io::ParallelInMemory,
         performance,
     );
-    let buffered_options_arc = make_shared(buffered_options);
+    let in_memory_options_arc = make_shared(in_memory_options);
 
-    let buffered_input = Input::new(&file_path, buffered_options_arc.io())?;
-    let buffered_tally = WordTally::new(&buffered_input, &buffered_options_arc)?;
-    let buffered_results: Vec<_> = buffered_tally.into_iter().collect();
+    let in_memory_input = Input::new(&file_path, in_memory_options_arc.io())?;
+    let in_memory_tally = WordTally::new(&in_memory_input, &in_memory_options_arc)?;
+    let in_memory_results: Vec<_> = in_memory_tally.into_iter().collect();
 
     assert_eq!(
         streaming_results.len(),
-        buffered_results.len(),
+        in_memory_results.len(),
         "Different number of unique words"
     );
 
     // Convert to HashMap for order-independent comparison
     let streaming_map: std::collections::HashMap<_, _> = streaming_results.into_iter().collect();
-    let buffered_map: std::collections::HashMap<_, _> = buffered_results.into_iter().collect();
+    let in_memory_map: std::collections::HashMap<_, _> = in_memory_results.into_iter().collect();
 
     assert_eq!(
-        streaming_map, buffered_map,
-        "Results differ between streaming and buffered modes"
+        streaming_map, in_memory_map,
+        "Results differ between streaming and in-memory modes"
     );
 
     Ok(())

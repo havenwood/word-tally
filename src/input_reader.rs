@@ -170,7 +170,11 @@ impl<T: AsRef<[u8]>> Read for SliceReader<T> {
 }
 
 /// A streaming, buffered reader for memory maps.
+///
+/// Only included for parity. Use memory-mapped sliced I/O in parallel instead.
 pub type MmapReader<'a> = SliceReader<&'a Mmap>;
 
 /// A streaming, buffered reader for byte slices.
+///
+/// Only included for parity. Use in-memory chunked I/O in parallel instead.
 pub type BytesReader<'a> = SliceReader<&'a [u8]>;

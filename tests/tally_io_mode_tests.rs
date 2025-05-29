@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use word_tally::{Filters, Input, Io, Options, Processing, Serialization, WordTally};
+use word_tally::{Filters, Input, Io, Options, Serialization, WordTally};
 
 fn make_shared<T>(value: T) -> Arc<T> {
     Arc::new(value)
@@ -35,8 +35,7 @@ fn test_parallel_vs_sequential() {
         word_tally::Sort::default(),
         Serialization::default(),
         filters.clone(),
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         seq_performance,
     );
     let seq_options_arc = make_shared(seq_options);
@@ -54,8 +53,7 @@ fn test_parallel_vs_sequential() {
         word_tally::Sort::default(),
         Serialization::default(),
         filters,
-        Io::Streamed,
-        Processing::Parallel,
+        Io::ParallelStream,
         par_performance,
     );
     let par_options_arc = make_shared(par_options);
@@ -93,8 +91,7 @@ fn test_memory_mapped_vs_streamed() {
         word_tally::Sort::default(),
         Serialization::default(),
         filters.clone(),
-        Io::MemoryMapped,
-        Processing::Sequential,
+        Io::ParallelMmap,
         mmap_performance,
     );
 
@@ -105,8 +102,7 @@ fn test_memory_mapped_vs_streamed() {
         word_tally::Sort::default(),
         Serialization::default(),
         filters.clone(),
-        Io::Streamed,
-        Processing::Sequential,
+        Io::ParallelStream,
         stream_performance,
     );
 
@@ -140,8 +136,7 @@ fn test_memory_mapped_vs_streamed() {
         word_tally::Sort::default(),
         Serialization::default(),
         filters,
-        Io::Streamed,
-        Processing::Parallel,
+        Io::ParallelStream,
         parallel_performance,
     );
 
@@ -163,7 +158,7 @@ fn test_parallel_count() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
-    let options = Options::default().with_processing(Processing::Parallel);
+    let options = Options::default();
 
     let input = Input::new(
         temp_file.path().to_str().expect("temp file path"),
@@ -184,7 +179,7 @@ fn test_merge_maps() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
 
-    let options = Options::default().with_processing(Processing::Parallel);
+    let options = Options::default();
 
     let input = Input::new(
         temp_file.path().to_str().expect("temp file path"),

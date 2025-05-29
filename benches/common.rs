@@ -121,6 +121,6 @@ pub fn create_bench_group<'a>(
 pub fn create_temp_input(text: &str) -> (NamedTempFile, Input) {
     let mut temp_file = NamedTempFile::new().expect("create benchmark temp file");
     std::io::Write::write_all(&mut temp_file, text.as_bytes()).expect("write benchmark text");
-    let input = Input::new(temp_file.path(), Io::Buffered).expect("create benchmark input");
+    let input = Input::new(temp_file.path(), Io::ParallelInMemory).expect("create benchmark input");
     (temp_file, input)
 }

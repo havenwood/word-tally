@@ -31,7 +31,7 @@ fn verbose_without_input() {
     let assert = word_tally().arg("-v").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase original\norder desc\nprocessing parallel\nio streamed\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase original\norder desc\nio parallel-stream\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 
@@ -40,7 +40,7 @@ fn verbose_with_min_chars() {
     let assert = word_tally().arg("-v").arg("--min-chars=42").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase original\norder desc\nprocessing parallel\nio streamed\nmin-chars 42\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase original\norder desc\nio parallel-stream\nmin-chars 42\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 
@@ -49,7 +49,7 @@ fn verbose_with_min_count() {
     let assert = word_tally().arg("-v").arg("--min-count=42").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase original\norder desc\nprocessing parallel\nio streamed\nmin-chars none\nmin-count 42\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase original\norder desc\nio parallel-stream\nmin-chars none\nmin-count 42\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 
@@ -61,7 +61,7 @@ fn verbose_with_exclude_words() {
         .assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase original\norder desc\nprocessing parallel\nio streamed\nmin-chars none\nmin-count none\nexclude-words narrow,certain\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase original\norder desc\nio parallel-stream\nmin-chars none\nmin-count none\nexclude-words narrow,certain\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 
@@ -70,7 +70,7 @@ fn verbose_with_input() {
     let assert = word_tally().write_stdin("narrow").arg("-v").assert();
     assert
         .success()
-        .stderr("source -\ntotal-words 1\nunique-words 1\ndelimiter \" \"\ncase original\norder desc\nprocessing parallel\nio streamed\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n\n")
+        .stderr("source -\ntotal-words 1\nunique-words 1\ndelimiter \" \"\ncase original\norder desc\nio parallel-stream\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n\n")
         .stdout("narrow 1\n");
 }
 
@@ -300,8 +300,7 @@ fn verbose_with_json_format() {
         .stderr(contains("\"uniqueWords\":2"))
         .stderr(contains("\"case\":\"original\""))
         .stderr(contains("\"order\":\"desc\""))
-        .stderr(contains("\"processing\":\"parallel\""))
-        .stderr(contains("\"io\":\"streamed\""))
+        .stderr(contains("\"io\":\"parallel-stream\""))
         .stderr(contains("\"minChars\":null"))
         .stderr(contains("\"minCount\":null"))
         .stderr(contains("\"excludeWords\":null"))
@@ -322,8 +321,7 @@ fn verbose_with_csv_format() {
         .success()
         .stderr(contains("source,total-words,unique-words"))
         .stderr(contains("desc"))
-        .stderr(contains("parallel"))
-        .stderr(contains("streamed"))
+        .stderr(contains("parallel-stream"))
         .stdout(contains("word,count"))
         .stdout(contains("forever,1"))
         .stdout(contains("hope,1"));
@@ -531,7 +529,7 @@ fn multi_file_with_mmap() {
     fs::write(&temp_file2, "road fame").expect("write test file");
 
     let output = word_tally()
-        .arg("--io=mmap")
+        .arg("--io=parallel-mmap")
         .arg(temp_file1.path())
         .arg(temp_file2.path())
         .assert()
@@ -593,36 +591,20 @@ fn stdin_with_file_as_sources() {
 
 #[test]
 fn test_parallel_flags() {
-    // Test default is parallel
+    // Test default is parallel-stream
     word_tally()
         .write_stdin("test")
         .arg("--verbose")
         .assert()
         .success()
-        .stderr(contains("processing parallel"));
+        .stderr(contains("io parallel-stream"));
 
-    // Test explicit --parallel flag
+    // Test explicit stream mode (sequential)
     word_tally()
         .write_stdin("test")
+        .arg("--io=stream")
         .arg("--verbose")
         .assert()
         .success()
-        .stderr(contains("processing parallel"));
-
-    // Test -p short flag
-    word_tally()
-        .write_stdin("test")
-        .arg("--verbose")
-        .assert()
-        .success()
-        .stderr(contains("processing parallel"));
-
-    // Test --no-parallel flag
-    word_tally()
-        .write_stdin("test")
-        .arg("--no-parallel")
-        .arg("--verbose")
-        .assert()
-        .success()
-        .stderr(contains("processing sequential"));
+        .stderr(contains("io stream"));
 }

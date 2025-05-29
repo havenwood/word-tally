@@ -31,12 +31,8 @@ pub struct Args {
 
     // Performance options
     /// I/O strategy.
-    #[arg(short = 'I', long, value_enum, default_value_t = Io::Streamed, value_name = "STRATEGY")]
+    #[arg(short = 'I', long, value_enum, default_value_t = Io::ParallelStream, value_name = "STRATEGY")]
     io: Io,
-
-    /// Use sequential processing instead of parallel.
-    #[arg(long = "no-parallel", default_value_t = false)]
-    no_parallel: bool,
 
     /// Word boundary detection encoding.
     #[arg(short = 'e', long, value_enum, default_value_t = Encoding::Unicode, value_name = "ENCODING")]
@@ -114,7 +110,6 @@ impl Args {
             Serialization::new(self.format, &self.delimiter)?,
             self.build_filters()?,
             self.io,
-            (!self.no_parallel).into(),
             Performance::from_env(),
         )
         .with_encoding(self.encoding))

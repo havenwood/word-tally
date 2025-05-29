@@ -3,7 +3,6 @@
 use std::{
     io::{BufRead, Read},
     iter, str,
-    sync::Arc,
 };
 
 use hashbrown::{HashMap, hash_map};
@@ -11,7 +10,6 @@ use hashbrown::{HashMap, hash_map};
 use anyhow::{Context, Result};
 use icu_segmenter::{WordSegmenter, options::WordBreakInvariantOptions};
 use memchr::memchr2_iter;
-use memmap2::Mmap;
 use rayon::prelude::*;
 
 use crate::options::{
@@ -20,7 +18,6 @@ use crate::options::{
     encoding::Encoding,
     io::Io,
     performance::Performance,
-    processing::Processing,
 };
 use crate::{Count, Input, Word, WordTallyError};
 
@@ -231,47 +228,31 @@ impl TallyMap {
     /// - A configured thread pool cannot be initialized
     /// - I/O errors occur during reading
     pub fn from_input(input: &Input, options: &Options) -> Result<Self> {
-        match (options.processing(), options.io()) {
-            // Sequential processing
-            (Processing::Sequential, Io::Streamed | Io::MemoryMapped) => {
-                Self::streamed_count(input, options)
+        match options.io() {
+            Io::Stream => Self::stream_count(input, options),
+            Io::ParallelStream => Self::par_stream_count(input, options),
+            Io::ParallelInMemory => Self::par_in_memory_count(input, options),
+            Io::ParallelBytes => {
+                let Input::Bytes(bytes) = input else {
+                    return Err(anyhow::anyhow!("Bytes I/O mode requires bytes input"));
+                };
+                Self::par_memory_count(bytes, options)
             }
-            (Processing::Sequential, Io::Buffered | Io::Bytes) => {
-                Self::buffered_count(input, options)
-            }
-
-            // Parallel processing
-            (Processing::Parallel, Io::MemoryMapped) => {
+            Io::ParallelMmap => {
                 let Input::Mmap(mmap_arc, _) = input else {
                     return Err(WordTallyError::MmapStdin.into());
                 };
-                Self::par_mmap_count(mmap_arc, options)
-            }
-            (Processing::Parallel, Io::Streamed) => Self::par_streamed_count(input, options),
-            (Processing::Parallel, Io::Buffered | Io::Bytes) => {
-                Self::par_buffered_count(input, options)
+                Self::par_memory_count(mmap_arc, options)
             }
         }
     }
 
-    /// Sequential buffered word tallying.
-    ///
-    /// Reads the entire input into memory before processing sequentially.
-    fn buffered_count(input: &Input, options: &Options) -> Result<Self> {
-        let perf = options.performance();
-        let content = Self::read_input_to_string(input, perf)?;
-        let mut tally = Self::with_capacity(perf.capacity(input.size()));
-        tally.add_words_with_encoding(&content, options.case(), options.encoding())?;
-
-        Ok(tally)
-    }
-
-    /// Parallel buffered word tallying.
+    /// Parallel in-memory word tallying.
     ///
     /// Processes data in parallel with Rayon after loading entire content:
     /// - Uses memchr SIMD to find newline-aligned chunk boundaries
     /// - Trades higher memory usage for processing speed
-    fn par_buffered_count(input: &Input, options: &Options) -> Result<Self> {
+    fn par_in_memory_count(input: &Input, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let content = Self::read_input_to_string(input, perf)?;
 
@@ -284,27 +265,22 @@ impl TallyMap {
         )
     }
 
-    /// Parallel memory-mapped word tallying.
+    /// Parallel in-memory word tallying.
     ///
-    /// Processes data in parallel with Rayon using memory-mapped slicing of files:
-    /// - Uses memmap2 to access file contents without loading the entire file into memory
-    /// - Optimized chunk boundary detection using SIMD newline scanning
-    /// - Provides high performance with moderate memory usage
-    ///
-    /// # Limitations
-    ///
-    /// Memory mapping only works with seekable files (regular files on disk).
-    /// It will not work with stdin, pipes, or other non-seekable sources.
-    fn par_mmap_count(mmap: &Arc<Mmap>, options: &Options) -> Result<Self> {
+    /// Processes byte data in parallel with Rayon using direct memory access:
+    /// - Works with both memory-mapped files and byte arrays
+    /// - Validates UTF-8 once upfront using SIMD
+    /// - Uses efficient backwards search for chunk boundaries
+    fn par_memory_count(bytes: &[u8], options: &Options) -> Result<Self> {
         let perf = options.performance();
-        let content = Self::parse_utf8_slice(mmap)?;
+        let content = Self::parse_utf8_slice(bytes)?;
 
         Self::process_content_parallel(
             content,
             perf,
             options.case(),
             options.encoding(),
-            Self::mmap_boundaries,
+            Self::chunk_boundaries,
         )
     }
 
@@ -327,11 +303,11 @@ impl TallyMap {
         Ok(tally)
     }
 
-    /// Sequential streamed word tallying.
+    /// Low-memory streamed word tallying.
     ///
     /// Processes data in chunks without loading the entire input into memory.
     /// Uses chunk-based processing for better performance than line-by-line.
-    fn streamed_count(input: &Input, options: &Options) -> Result<Self> {
+    fn stream_count(input: &Input, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
         let encoding = options.encoding();
@@ -408,7 +384,7 @@ impl TallyMap {
     /// - Uses memchr SIMD to find whitespace-aligned chunk boundaries
     /// - Stream in chunks, without loading the entire input into memory
     /// - Balances performance and memory usage
-    fn par_streamed_count(input: &Input, options: &Options) -> Result<Self> {
+    fn par_stream_count(input: &Input, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
         let encoding = options.encoding();
@@ -513,32 +489,8 @@ impl TallyMap {
         Ok((batch_size, target_batch_size))
     }
 
-    /// Find chunk boundaries at whitespace with SIMD.
+    /// Find chunk boundaries using efficient backwards search from target positions.
     fn chunk_boundaries(content: &str, num_chunks: usize) -> Vec<usize> {
-        let content_len = content.len();
-        let target_chunk_size = content_len.div_ceil(num_chunks);
-
-        let mut boundaries = vec![0];
-        let mut last_boundary = 0;
-
-        for pos in memchr2_iter(b' ', b'\n', content.as_bytes()) {
-            if pos - last_boundary >= target_chunk_size {
-                let boundary = pos + 1;
-                boundaries.push(boundary);
-                last_boundary = boundary;
-            }
-        }
-
-        // Add end boundary if needed
-        if boundaries.last() != Some(&content_len) {
-            boundaries.push(content_len);
-        }
-
-        boundaries
-    }
-
-    /// Find memory-mapped chunk boundaries using SIMD whitespace detection.
-    fn mmap_boundaries(content: &str, num_chunks: usize) -> Vec<usize> {
         let content_len = content.len();
         let target_chunk_size = content_len.div_ceil(num_chunks);
 
@@ -684,25 +636,33 @@ impl TallyMap {
 
     /// Parse a UTF-8 slice with error recovery, truncating at last valid boundary on error.
     fn parse_utf8_slice(buffer: &[u8]) -> Result<&str> {
-        simdutf8::compat::from_utf8(buffer).or_else(|e| {
-            let adjusted_len = Self::find_valid_boundary(buffer, e.valid_up_to());
+        match simdutf8::compat::from_utf8(buffer) {
+            Ok(s) => Ok(s),
+            Err(e) => {
+                let valid_up_to = e.valid_up_to();
+                let adjusted_len = Self::find_valid_boundary(buffer, valid_up_to);
 
-            if adjusted_len == 0 {
-                return Err(WordTallyError::Utf8 {
-                    byte: e.valid_up_to(),
-                    source: str::from_utf8(buffer).unwrap_err(),
+                if adjusted_len == 0 {
+                    // Only call str::from_utf8 once for error details
+                    let source = str::from_utf8(buffer).unwrap_err();
+                    return Err(WordTallyError::Utf8 {
+                        byte: valid_up_to,
+                        source,
+                    }
+                    .into());
                 }
-                .into());
+
+                // Try parsing the adjusted slice
+                simdutf8::basic::from_utf8(&buffer[..adjusted_len]).map_err(|_| {
+                    // This should rarely happen since find_valid_boundary ensures validity
+                    WordTallyError::Utf8 {
+                        byte: valid_up_to,
+                        source: str::from_utf8(buffer).unwrap_err(),
+                    }
+                    .into()
+                })
             }
-
-            simdutf8::basic::from_utf8(&buffer[..adjusted_len]).map_err(|_| {
-                WordTallyError::Utf8 {
-                    byte: e.valid_up_to(),
-                    source: str::from_utf8(buffer).unwrap_err(),
-                }
-                .into()
-            })
-        })
+        }
     }
 }
 
