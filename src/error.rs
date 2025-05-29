@@ -15,6 +15,9 @@ pub enum Error {
     #[error("byte I/O mode requires `Input::from_bytes()`")]
     BytesWithPath,
 
+    #[error("parallel bytes I/O mode requires bytes input")]
+    BytesInputRequired,
+
     #[error("invalid UTF-8 at byte {byte}: {source}")]
     Utf8 {
         byte: usize,

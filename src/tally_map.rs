@@ -231,38 +231,19 @@ impl TallyMap {
         match options.io() {
             Io::Stream => Self::stream_count(input, options),
             Io::ParallelStream => Self::par_stream_count(input, options),
-            Io::ParallelInMemory => Self::par_in_memory_count(input, options),
-            Io::ParallelBytes => {
-                let Input::Bytes(bytes) = input else {
-                    return Err(anyhow::anyhow!("Bytes I/O mode requires bytes input"));
-                };
-                Self::par_memory_count(bytes, options)
+            Io::ParallelInMemory => {
+                let bytes = Self::read_input_to_bytes(input, options.performance())?;
+                Self::par_memory_count(&bytes, options)
             }
-            Io::ParallelMmap => {
-                let Input::Mmap(mmap_arc, _) = input else {
-                    return Err(WordTallyError::MmapStdin.into());
-                };
-                Self::par_memory_count(mmap_arc, options)
-            }
+            Io::ParallelBytes => match input {
+                Input::Bytes(bytes) => Self::par_memory_count(bytes, options),
+                _ => Err(WordTallyError::BytesInputRequired.into()),
+            },
+            Io::ParallelMmap => match input {
+                Input::Mmap(mmap_arc, _) => Self::par_memory_count(mmap_arc, options),
+                _ => Err(WordTallyError::MmapStdin.into()),
+            },
         }
-    }
-
-    /// Parallel in-memory word tallying.
-    ///
-    /// Processes data in parallel with Rayon after loading entire content:
-    /// - Uses memchr SIMD to find newline-aligned chunk boundaries
-    /// - Trades higher memory usage for processing speed
-    fn par_in_memory_count(input: &Input, options: &Options) -> Result<Self> {
-        let perf = options.performance();
-        let content = Self::read_input_to_string(input, perf)?;
-
-        Self::process_content_parallel(
-            &content,
-            perf,
-            options.case(),
-            options.encoding(),
-            Self::chunk_boundaries,
-        )
     }
 
     /// Parallel in-memory word tallying.
@@ -463,14 +444,13 @@ impl TallyMap {
             .try_reduce(Self::new, |acc, tally| Ok(acc.merge(tally)))
     }
 
-    /// Reads the entire input into a string buffer.
-    fn read_input_to_string(input: &Input, perf: &Performance) -> Result<String> {
-        let buffer_capacity = perf.capacity(input.size());
-        let mut buffer = String::with_capacity(buffer_capacity);
+    /// Reads the entire input into a byte buffer.
+    fn read_input_to_bytes(input: &Input, perf: &Performance) -> Result<Vec<u8>> {
+        let mut buffer = Vec::with_capacity(perf.capacity(input.size()));
         input
             .reader()
             .with_context(|| format!("failed to create reader for input: {}", input.source()))?
-            .read_to_string(&mut buffer)
+            .read_to_end(&mut buffer)
             .with_context(|| format!("failed to read input into buffer: {}", input.source()))?;
 
         Ok(buffer)

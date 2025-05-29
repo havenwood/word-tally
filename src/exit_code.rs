@@ -39,9 +39,11 @@ impl ExitCode {
     /// Convert a word-tally error to an appropriate exit code
     fn from_word_tally_error(err: &Error) -> Self {
         match err {
-            Error::Usage(_) | Error::MmapStdin | Error::BytesWithPath | Error::Config(_) => {
-                Self::Usage
-            }
+            Error::Usage(_)
+            | Error::MmapStdin
+            | Error::BytesWithPath
+            | Error::BytesInputRequired
+            | Error::Config(_) => Self::Usage,
             Error::Utf8 { .. }
             | Error::Pattern { .. }
             | Error::JsonSerialization(_)
