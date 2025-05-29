@@ -116,12 +116,24 @@ impl TallyMap {
     #[inline]
     pub fn add_words_ascii(&mut self, content: &str, case: Case) -> Result<()> {
         let bytes = content.as_bytes();
+
+        // Fast path: validate entire content is ASCII
+        if !bytes.is_ascii() {
+            // Find exact position of first non-ASCII byte
+            for (position, &byte) in bytes.iter().enumerate() {
+                if !byte.is_ascii() {
+                    return Err(crate::error::Error::NonAsciiInAsciiMode { byte, position }.into());
+                }
+            }
+        }
+
+        // Now we know all bytes are ASCII, so we can process without validation
         let mut pos = 0;
 
         while pos < bytes.len() {
             // Skip non-word characters
-            while let Some(&byte) = bytes.get(pos) {
-                Self::validate_ascii(byte, pos)?;
+            while pos < bytes.len() {
+                let byte = bytes[pos];
                 if byte.is_ascii_alphanumeric() {
                     break;
                 }
@@ -135,8 +147,8 @@ impl TallyMap {
             let word_start = pos;
 
             // Find end of word
-            while let Some(&byte) = bytes.get(pos) {
-                Self::validate_ascii(byte, pos)?;
+            while pos < bytes.len() {
+                let byte = bytes[pos];
                 if byte.is_ascii_alphanumeric() || byte == b'\'' {
                     pos += 1;
                 } else {
@@ -144,7 +156,7 @@ impl TallyMap {
                 }
             }
 
-            // We know this slice is valid UTF-8 because we checked for ASCII
+            // We know this slice is valid UTF-8 because we validated all bytes are ASCII
             let word = &content[word_start..pos];
 
             match case {
@@ -155,16 +167,6 @@ impl TallyMap {
         }
 
         Ok(())
-    }
-
-    /// Validates that a byte is ASCII, returning an error if not.
-    #[inline]
-    fn validate_ascii(byte: u8, position: usize) -> Result<()> {
-        if byte.is_ascii() {
-            Ok(())
-        } else {
-            Err(crate::error::Error::NonAsciiInAsciiMode { byte, position }.into())
-        }
     }
 
     /// Adds words based on the encoding, delegating to the appropriate method.
