@@ -53,6 +53,27 @@ impl Default for Io {
     }
 }
 
+impl Io {
+    /// Environment variable name for I/O configuration.
+    pub const ENV_IO: &'static str = "WORD_TALLY_IO";
+
+    /// Parse I/O strategy from `WORD_TALLY_IO` environment variable.
+    #[must_use]
+    pub fn from_env() -> Self {
+        match env::var(Self::ENV_IO).ok().as_deref() {
+            Some(s) if s.eq_ignore_ascii_case("stream") => Self::Stream,
+            Some(s) if s.eq_ignore_ascii_case("parallel-stream") => Self::ParallelStream,
+            Some(s) if s.eq_ignore_ascii_case("parallel-in-memory") => Self::ParallelInMemory,
+            Some(s)
+                if s.eq_ignore_ascii_case("parallel-mmap") || s.eq_ignore_ascii_case("mmap") =>
+            {
+                Self::ParallelMmap
+            }
+            _ => Self::default(),
+        }
+    }
+}
+
 impl Display for Io {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
@@ -62,22 +83,5 @@ impl Display for Io {
             Self::ParallelMmap => write!(f, "parallel-mmap"),
             Self::ParallelBytes => write!(f, "parallel-bytes"),
         }
-    }
-}
-
-/// Environment variable name for I/O configuration.
-pub const ENV_IO: &str = "WORD_TALLY_IO";
-
-/// Parse I/O strategy from `WORD_TALLY_IO` environment variable.
-#[must_use]
-pub fn parse_io_from_env() -> Io {
-    match env::var(ENV_IO).ok().as_deref() {
-        Some(s) if s.eq_ignore_ascii_case("stream") => Io::Stream,
-        Some(s) if s.eq_ignore_ascii_case("parallel-stream") => Io::ParallelStream,
-        Some(s) if s.eq_ignore_ascii_case("parallel-in-memory") => Io::ParallelInMemory,
-        Some(s) if s.eq_ignore_ascii_case("parallel-mmap") || s.eq_ignore_ascii_case("mmap") => {
-            Io::ParallelMmap
-        }
-        _ => Io::default(),
     }
 }

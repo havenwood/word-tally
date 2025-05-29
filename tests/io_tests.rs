@@ -386,68 +386,64 @@ fn test_io_serialization() {
 
 #[test]
 fn test_parse_io_from_env() {
-    use word_tally::options::io::{ENV_IO, parse_io_from_env};
-
     // Test with no environment variable (should return default)
     unsafe {
-        std::env::remove_var(ENV_IO);
+        std::env::remove_var(Io::ENV_IO);
     }
-    assert_eq!(parse_io_from_env(), Io::default());
+    assert_eq!(Io::from_env(), Io::default());
 
     // Test case-insensitive parsing
     unsafe {
-        std::env::set_var(ENV_IO, "stream");
+        std::env::set_var(Io::ENV_IO, "stream");
     }
-    assert_eq!(parse_io_from_env(), Io::Stream);
+    assert_eq!(Io::from_env(), Io::Stream);
 
     unsafe {
-        std::env::set_var(ENV_IO, "PARALLEL-STREAM");
+        std::env::set_var(Io::ENV_IO, "PARALLEL-STREAM");
     }
-    assert_eq!(parse_io_from_env(), Io::ParallelStream);
+    assert_eq!(Io::from_env(), Io::ParallelStream);
 
     unsafe {
-        std::env::set_var(ENV_IO, "parallel-in-memory");
+        std::env::set_var(Io::ENV_IO, "parallel-in-memory");
     }
-    assert_eq!(parse_io_from_env(), Io::ParallelInMemory);
+    assert_eq!(Io::from_env(), Io::ParallelInMemory);
 
     unsafe {
-        std::env::set_var(ENV_IO, "Parallel-Mmap");
+        std::env::set_var(Io::ENV_IO, "Parallel-Mmap");
     }
-    assert_eq!(parse_io_from_env(), Io::ParallelMmap);
+    assert_eq!(Io::from_env(), Io::ParallelMmap);
 
     // Test mmap alias
     unsafe {
-        std::env::set_var(ENV_IO, "mmap");
+        std::env::set_var(Io::ENV_IO, "mmap");
     }
-    assert_eq!(parse_io_from_env(), Io::ParallelMmap);
+    assert_eq!(Io::from_env(), Io::ParallelMmap);
 
     unsafe {
-        std::env::set_var(ENV_IO, "MMAP");
+        std::env::set_var(Io::ENV_IO, "MMAP");
     }
-    assert_eq!(parse_io_from_env(), Io::ParallelMmap);
+    assert_eq!(Io::from_env(), Io::ParallelMmap);
 
     // Test invalid values (should return default)
     unsafe {
-        std::env::set_var(ENV_IO, "invalid");
+        std::env::set_var(Io::ENV_IO, "invalid");
     }
-    assert_eq!(parse_io_from_env(), Io::default());
+    assert_eq!(Io::from_env(), Io::default());
 
     unsafe {
-        std::env::set_var(ENV_IO, "");
+        std::env::set_var(Io::ENV_IO, "");
     }
-    assert_eq!(parse_io_from_env(), Io::default());
+    assert_eq!(Io::from_env(), Io::default());
 
     // Clean up
     unsafe {
-        std::env::remove_var(ENV_IO);
+        std::env::remove_var(Io::ENV_IO);
     }
 }
 
 #[test]
 fn test_env_io_constant() {
-    use word_tally::options::io::ENV_IO;
-
-    assert_eq!(ENV_IO, "WORD_TALLY_IO");
+    assert_eq!(Io::ENV_IO, "WORD_TALLY_IO");
 }
 
 #[test]
