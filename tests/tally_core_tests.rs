@@ -337,28 +337,6 @@ fn test_edge_case_single_word() {
 }
 
 #[test]
-fn test_unicode_and_emoji() {
-    let input_text = "café über señor 🌟 hello 🎉 world 🌟 café".as_bytes();
-    let tally = create_test_tally_with_text(input_text, Sort::Desc);
-
-    // Emoji may not be treated as separate words
-    assert_eq!(tally.count(), 6);
-    assert_eq!(tally.uniq_count(), 5);
-
-    let tally_vec = tally.tally().to_vec();
-    assert!(
-        tally_vec
-            .iter()
-            .any(|(word, count)| word.as_ref() == "café" && *count == 2)
-    );
-    assert!(
-        tally_vec
-            .iter()
-            .any(|(word, count)| word.as_ref() == "über" && *count == 1)
-    );
-}
-
-#[test]
 fn test_numeric_sorting() {
     let input_text = b"10 100 20 30 200 1 2 3 11";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);

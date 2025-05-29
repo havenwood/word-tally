@@ -6,6 +6,7 @@ use std::path::PathBuf;
 
 use word_tally::options::{
     case::Case,
+    encoding::Encoding,
     filters::Filters,
     io::Io,
     performance::Performance,
@@ -40,6 +41,10 @@ pub struct Args {
     /// Enable parallel processing [default].
     #[arg(short = 'p', long = "parallel", overrides_with = "parallel")]
     _no_parallel: bool,
+
+    /// Word boundary detection encoding.
+    #[arg(short = 'e', long, value_enum, default_value_t = Encoding::Unicode, value_name = "ENCODING")]
+    encoding: Encoding,
 
     // Output formatting options
     /// Case normalization.
@@ -115,7 +120,8 @@ impl Args {
             self.io,
             self.parallel.into(),
             Performance::from_env(),
-        ))
+        )
+        .with_encoding(self.encoding))
     }
 
     /// Helper to create filters from arguments.

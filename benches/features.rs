@@ -1,6 +1,7 @@
 //! Processing strategy benchmarks.
 
 use criterion::{Criterion, criterion_group, criterion_main};
+use word_tally::options::encoding::Encoding;
 use word_tally::{Filters, Options, Processing};
 
 #[path = "common.rs"]
@@ -111,9 +112,46 @@ fn bench_regex_patterns(c: &mut Criterion) {
     group.finish();
 }
 
+/// Benchmark encoding strategies (Unicode vs ASCII)
+fn bench_encoding_comparison(c: &mut Criterion) {
+    let mut group = create_bench_group(c, "features/encoding_comparison");
+
+    let encoding_strategies = [(Encoding::Unicode, "unicode"), (Encoding::Ascii, "ascii")];
+
+    let processing_strategies = [
+        (Processing::Sequential, "sequential"),
+        (Processing::Parallel, "parallel"),
+    ];
+
+    let text_samples = [("small", small_text()), ("medium", medium_text())];
+
+    for (size_name, text_sample) in &text_samples {
+        for (encoding, enc_name) in &encoding_strategies {
+            for (processing, proc_name) in &processing_strategies {
+                let options = Options::default()
+                    .with_encoding(*encoding)
+                    .with_processing(*processing);
+                let shared_options = make_shared(options);
+
+                group.bench_function(format!("{size_name}_{enc_name}_{proc_name}"), |b| {
+                    self::common::bench_word_tally_with_string(
+                        b,
+                        text_sample,
+                        &shared_options,
+                        create_temp_input,
+                    );
+                });
+            }
+        }
+    }
+
+    group.finish();
+}
+
 fn run_benchmarks(c: &mut Criterion) {
     bench_processing_comparison(c);
     bench_regex_patterns(c);
+    bench_encoding_comparison(c);
 }
 
 criterion_group! {

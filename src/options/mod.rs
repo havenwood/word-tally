@@ -43,6 +43,7 @@
 //! - `WORD_TALLY_WORD_DENSITY`: Per-chunk map capacity (default: 15)
 
 pub mod case;
+pub mod encoding;
 pub mod filters;
 pub mod io;
 pub mod patterns;
@@ -53,6 +54,7 @@ pub mod sort;
 pub mod threads;
 
 use self::case::Case;
+use self::encoding::Encoding;
 use self::filters::Filters;
 use self::io::Io;
 use self::performance::Performance;
@@ -91,6 +93,9 @@ pub struct Options {
 
     /// Performance tuning configuration (threads, memory allocation, chunk size).
     performance: Performance,
+
+    /// Word encoding strategy (unicode, ascii).
+    encoding: Encoding,
 }
 
 impl Options {
@@ -129,6 +134,7 @@ impl Options {
             io,
             processing,
             performance,
+            encoding: Encoding::Unicode,
         }
     }
 
@@ -223,6 +229,13 @@ impl Options {
         self
     }
 
+    /// Set word encoding strategy.
+    #[must_use]
+    pub const fn with_encoding(mut self, encoding: Encoding) -> Self {
+        self.encoding = encoding;
+        self
+    }
+
     /// Get the case normalization setting.
     #[must_use]
     pub const fn case(&self) -> Case {
@@ -265,6 +278,12 @@ impl Options {
         self.processing
     }
 
+    /// Get the word encoding strategy.
+    #[must_use]
+    pub const fn encoding(&self) -> Encoding {
+        self.encoding
+    }
+
     /// Initialize the thread pool if parallel processing is enabled.
     ///
     /// This method initializes the global thread pool when using parallel processing.
@@ -283,8 +302,14 @@ impl Display for Options {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Options {{ case: {}, sort: {}, serialization: {}, filters: {:?}, processing: {}, io: {} }}",
-            self.case, self.sort, self.serialization, self.filters, self.processing, self.io
+            "Options {{ case: {}, sort: {}, serialization: {}, filters: {:?}, processing: {}, io: {}, encoding: {} }}",
+            self.case,
+            self.sort,
+            self.serialization,
+            self.filters,
+            self.processing,
+            self.io,
+            self.encoding
         )
     }
 }

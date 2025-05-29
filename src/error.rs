@@ -53,4 +53,7 @@ pub enum Error {
 
     #[error("invalid configuration: {0}")]
     Config(String),
+
+    #[error("non-ASCII byte {byte:#x} at position {position} in ASCII-only mode")]
+    NonAsciiInAsciiMode { byte: u8, position: usize },
 }

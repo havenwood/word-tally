@@ -17,6 +17,7 @@ use rayon::prelude::*;
 use crate::options::{
     Options,
     case::Case::{self, Lower, Original, Upper},
+    encoding::Encoding,
     io::Io,
     performance::Performance,
     processing::Processing,
@@ -78,9 +79,9 @@ impl TallyMap {
         self.inner.retain(f);
     }
 
-    /// Extends the tally map with word counts from a string slice.
+    /// Extends the tally map with word counts from a string slice using Unicode segmentation.
     #[inline]
-    pub fn add_words_from(&mut self, content: &str, case: Case) {
+    pub fn add_words(&mut self, content: &str, case: Case) {
         // Use thread-local ICU segmenter with word types to identify actual words
         WORD_SEGMENTER.with(|segmenter| {
             let mut last_boundary = 0;
@@ -108,6 +109,82 @@ impl TallyMap {
                     last_boundary = boundary;
                 });
         });
+    }
+
+    /// Extends the tally map with word counts using ASCII-only segmentation.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Error::NonAsciiInAsciiMode` if non-ASCII bytes are encountered.
+    #[inline]
+    pub fn add_words_ascii(&mut self, content: &str, case: Case) -> Result<()> {
+        let bytes = content.as_bytes();
+        let mut pos = 0;
+
+        while pos < bytes.len() {
+            // Skip non-word characters
+            while let Some(&byte) = bytes.get(pos) {
+                Self::validate_ascii(byte, pos)?;
+                if byte.is_ascii_alphanumeric() {
+                    break;
+                }
+                pos += 1;
+            }
+
+            if pos >= bytes.len() {
+                break;
+            }
+
+            let word_start = pos;
+
+            // Find end of word
+            while let Some(&byte) = bytes.get(pos) {
+                Self::validate_ascii(byte, pos)?;
+                if byte.is_ascii_alphanumeric() || byte == b'\'' {
+                    pos += 1;
+                } else {
+                    break;
+                }
+            }
+
+            // We know this slice is valid UTF-8 because we checked for ASCII
+            let word = &content[word_start..pos];
+
+            match case {
+                Original => self.increment(word),
+                Lower => self.increment_owned(word.to_ascii_lowercase().into_boxed_str()),
+                Upper => self.increment_owned(word.to_ascii_uppercase().into_boxed_str()),
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Validates that a byte is ASCII, returning an error if not.
+    #[inline]
+    fn validate_ascii(byte: u8, position: usize) -> Result<()> {
+        if byte.is_ascii() {
+            Ok(())
+        } else {
+            Err(crate::error::Error::NonAsciiInAsciiMode { byte, position }.into())
+        }
+    }
+
+    /// Adds words based on the encoding, delegating to the appropriate method.
+    #[inline]
+    fn add_words_with_encoding(
+        &mut self,
+        content: &str,
+        case: Case,
+        encoding: Encoding,
+    ) -> Result<()> {
+        match encoding {
+            Encoding::Unicode => {
+                self.add_words(content, case);
+                Ok(())
+            }
+            Encoding::Ascii => self.add_words_ascii(content, case),
+        }
     }
 
     /// Increments a word's tally by reference to avoid duplicate allocation.
@@ -184,7 +261,7 @@ impl TallyMap {
         let perf = options.performance();
         let content = Self::read_input_to_string(input, perf)?;
         let mut tally = Self::with_capacity(perf.capacity(input.size()));
-        tally.add_words_from(&content, options.case());
+        tally.add_words_with_encoding(&content, options.case(), options.encoding())?;
 
         Ok(tally)
     }
@@ -198,7 +275,13 @@ impl TallyMap {
         let perf = options.performance();
         let content = Self::read_input_to_string(input, perf)?;
 
-        Self::process_content_parallel(&content, perf, options.case(), Self::chunk_boundaries)
+        Self::process_content_parallel(
+            &content,
+            perf,
+            options.case(),
+            options.encoding(),
+            Self::chunk_boundaries,
+        )
     }
 
     /// Parallel memory-mapped word tallying.
@@ -216,7 +299,13 @@ impl TallyMap {
         let perf = options.performance();
         let content = Self::parse_utf8_slice(mmap)?;
 
-        Self::process_content_parallel(content, perf, options.case(), Self::mmap_boundaries)
+        Self::process_content_parallel(
+            content,
+            perf,
+            options.case(),
+            options.encoding(),
+            Self::mmap_boundaries,
+        )
     }
 
     /// Common logic for parallel content processing.
@@ -224,6 +313,7 @@ impl TallyMap {
         content: &str,
         perf: &Performance,
         case: Case,
+        encoding: Encoding,
         boundary_fn: fn(&str, usize) -> Vec<usize>,
     ) -> Result<Self> {
         let total_chunks = perf.total_chunks(content.len() as u64);
@@ -232,7 +322,7 @@ impl TallyMap {
                 chunks: total_chunks,
             })?;
         let boundaries = boundary_fn(content, num_chunks);
-        let tally = Self::process_chunks(content, &boundaries, case);
+        let tally = Self::process_chunks(content, &boundaries, case, encoding)?;
 
         Ok(tally)
     }
@@ -244,6 +334,7 @@ impl TallyMap {
     fn streamed_count(input: &Input, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
+        let encoding = options.encoding();
         let mut reader = input.reader()?;
 
         let (batch_size, target_batch_size) = Self::calculate_batch_sizes(input, perf)?;
@@ -281,7 +372,7 @@ impl TallyMap {
 
                 match content {
                     Ok(text) => {
-                        tally.add_words_from(text, case);
+                        tally.add_words_with_encoding(text, case, encoding)?;
                         remainder.clear();
                     }
                     Err(e) => {
@@ -289,7 +380,7 @@ impl TallyMap {
                         if e.valid_up_to() > 0 {
                             let valid = simdutf8::basic::from_utf8(&buffer[..e.valid_up_to()])
                                 .expect("valid UTF-8");
-                            tally.add_words_from(valid, case);
+                            tally.add_words_with_encoding(valid, case, encoding)?;
                         }
                         // Keep invalid portion for next iteration
                         remainder.clear();
@@ -305,7 +396,7 @@ impl TallyMap {
         if !remainder.is_empty() {
             let final_text = simdutf8::compat::from_utf8(&remainder)
                 .with_context(|| format!("invalid UTF-8 in stream from: {}", input.source()))?;
-            tally.add_words_from(final_text, case);
+            tally.add_words_with_encoding(final_text, case, encoding)?;
         }
 
         Ok(tally)
@@ -320,6 +411,7 @@ impl TallyMap {
     fn par_streamed_count(input: &Input, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
+        let encoding = options.encoding();
         let mut reader = input.reader()?;
 
         let (batch_size, target_batch_size) = Self::calculate_batch_sizes(input, perf)?;
@@ -353,6 +445,7 @@ impl TallyMap {
                     target_batch_size,
                     reached_eof,
                     case,
+                    encoding,
                     perf,
                 ) {
                     Ok(Some((tally_update, processed_bytes))) => {
@@ -373,7 +466,12 @@ impl TallyMap {
     }
 
     /// Process content in parallel using provided chunk boundaries.
-    fn process_chunks(content: &str, boundaries: &[usize], case: Case) -> Self {
+    fn process_chunks(
+        content: &str,
+        boundaries: &[usize],
+        case: Case,
+        encoding: Encoding,
+    ) -> Result<Self> {
         boundaries
             .windows(2)
             .par_bridge()
@@ -381,12 +479,12 @@ impl TallyMap {
                 let (start, end) = (window[0], window[1]);
                 (end > start).then(|| &content[start..end])
             })
-            .fold(Self::new, |mut tally, chunk| {
-                tally.add_words_from(chunk, case);
-                tally
+            .map(|chunk| {
+                let mut tally = Self::new();
+                tally.add_words_with_encoding(chunk, case, encoding)?;
+                Ok(tally)
             })
-            .reduce_with(Self::merge)
-            .unwrap_or_default()
+            .try_reduce(Self::new, |acc, tally| Ok(acc.merge(tally)))
     }
 
     /// Reads the entire input into a string buffer.
@@ -533,6 +631,7 @@ impl TallyMap {
         target_batch_size: usize,
         reached_eof: bool,
         case: Case,
+        encoding: Encoding,
         perf: &Performance,
     ) -> Result<Option<(Self, usize)>> {
         // Find all whitespace positions with SIMD search
@@ -557,14 +656,15 @@ impl TallyMap {
                 // Final chunk: process sequentially
                 let remaining = Self::parse_utf8_slice(buffer)?;
                 let mut tally = Self::with_capacity(perf.chunk_capacity(buffer.len() as u64));
-                tally.add_words_from(remaining, case);
+                tally.add_words_with_encoding(remaining, case, encoding)?;
                 Ok(Some((tally, buffer.len())))
             }
             _ => {
                 // Multiple chunks: process in parallel
                 let process_end = chunk_boundaries[chunk_boundaries.len() - 1];
                 let content = Self::parse_utf8_slice(&buffer[..process_end])?;
-                let batch_result = Self::process_chunks(content, &chunk_boundaries, case);
+                let batch_result =
+                    Self::process_chunks(content, &chunk_boundaries, case, encoding)?;
                 Ok(Some((batch_result, process_end)))
             }
         }

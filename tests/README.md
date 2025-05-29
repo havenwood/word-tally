@@ -30,6 +30,7 @@ This directory contains all tests for the word-tally project.
 
 Tests for specific modules and components:
 - `args_tests.rs`: Argument parsing tests
+- `encoding_tests.rs`: Encoding functionality tests including ASCII validation, Unicode handling, and mode comparisons
 - `exit_code_tests.rs`: Exit code definitions and handling tests
 - `filters_tests.rs`: Filter functionality tests
 - `hash_tests.rs`: Hash implementation tests

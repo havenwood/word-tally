@@ -48,7 +48,8 @@ impl ExitCode {
             | Error::CsvSerialization(_)
             | Error::Unescape { .. }
             | Error::ChunkCountExceeded { .. }
-            | Error::BatchSizeExceeded { .. } => Self::Data,
+            | Error::BatchSizeExceeded { .. }
+            | Error::NonAsciiInAsciiMode { .. } => Self::Data,
             Error::Io { source, .. } => Self::from_io_error(source),
         }
     }

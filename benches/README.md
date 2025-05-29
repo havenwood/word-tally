@@ -24,6 +24,7 @@ Benchmarks for measuring word-tally performance across different strategies.
 ### Features Benchmarks
 - **Processing comparison**: Sequential vs Parallel processing for different text sizes
 - **Regex patterns**: Performance with no patterns, few patterns, and many patterns
+- **Encoding comparison**: Unicode vs ASCII encoding performance for sequential and parallel processing
 - **Text sizes**: Small (~30KB) and Medium (~100KB) samples
 
 ### Multi-File Benchmarks
@@ -48,6 +49,7 @@ cargo bench -- core/sorting_strategies
 cargo bench -- core/filtering_strategies
 cargo bench -- features/processing_comparison
 cargo bench -- features/regex_patterns
+cargo bench -- features/encoding_comparison
 cargo bench -- io_strategies/file_size_10kb
 cargo bench -- io_strategies/file_size_75kb
 cargo bench -- multi_file/input_count

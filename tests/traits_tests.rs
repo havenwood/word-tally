@@ -95,7 +95,8 @@ fn test_wordtally_deserialize() {
             "filters": {"min_chars": null, "min_count": null, "exclude_words": [], "exclude_patterns": [], "include_patterns": []},
             "io": "Streamed",
             "processing": "Sequential",
-            "performance": {"base_stdin_tally_capacity": 5120, "uniqueness_ratio": 10, "words_per_kb": 200, "chunk_size": 65536, "base_stdin_size": 262144, "threads": "All", "verbose": false}
+            "performance": {"base_stdin_tally_capacity": 5120, "uniqueness_ratio": 10, "words_per_kb": 200, "chunk_size": 65536, "base_stdin_size": 262144, "threads": "All", "verbose": false},
+            "encoding": "unicode"
         },
         "count": 8,
         "uniqueCount": 2

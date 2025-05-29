@@ -7,7 +7,7 @@ fn tally_map_from_counts(counts: &[(&str, usize)]) -> TallyMap {
     let mut tally = TallyMap::new();
     for (word, count) in counts {
         for _ in 0..*count {
-            tally.add_words_from(word, Case::Original);
+            tally.add_words(word, Case::Original);
         }
     }
     tally
@@ -170,7 +170,7 @@ fn test_serialization_with_patterns() {
     assert!(!deserialized_include_patterns.matches("123"));
 
     let mut tally_map = TallyMap::new();
-    tally_map.add_words_from("the the the the the test test 123 123 123", Case::Original);
+    tally_map.add_words("the the the the the test test 123 123 123", Case::Original);
 
     deserialized_filters.apply(&mut tally_map, Case::Original);
 
@@ -191,7 +191,7 @@ fn test_multiple_regexp_patterns() {
         .expect("execute operation");
 
     let mut tally_map = TallyMap::new();
-    tally_map.add_words_from("apple apple apple banana banana eating eating eating eating eating orange running running running running Example Example test test test test test test", Case::Original);
+    tally_map.add_words("apple apple apple banana banana eating eating eating eating eating orange running running running running Example Example test test test test test test", Case::Original);
 
     filters.apply(&mut tally_map, Case::Original);
 
@@ -410,7 +410,7 @@ fn test_include_exclude_patterns_combination() {
 fn test_case_normalization_with_exclude_words() {
     // Create a TallyMap with case-normalized words
     let mut tally_map = TallyMap::new();
-    tally_map.add_words_from(
+    tally_map.add_words(
         "hello hello hello Hello Hello HELLO world world world world",
         Case::Lower,
     );
@@ -461,20 +461,6 @@ fn test_pattern_precedence() {
     assert!(has_word(&tally_map, "testing"));
     assert!(has_word(&tally_map, "tester"));
     assert!(has_word(&tally_map, "rest"));
-}
-
-#[test]
-fn test_unicode_min_chars() {
-    let mut tally_map = tally_map_from_counts(&[("a", 1), ("café", 1), ("naive", 1), ("naïve", 1)]);
-
-    let filters = Filters::default().with_min_chars(4);
-    filters.apply(&mut tally_map, Case::Lower);
-
-    assert_eq!(tally_map.len(), 3);
-    assert!(!has_word(&tally_map, "a"));
-    assert!(has_word(&tally_map, "café"));
-    assert!(has_word(&tally_map, "naive"));
-    assert!(has_word(&tally_map, "naïve"));
 }
 
 #[test]
