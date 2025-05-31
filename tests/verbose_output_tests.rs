@@ -16,12 +16,6 @@ mod verbose_unit_tests {
                 content: Arc::new(Mutex::new(Vec::new())),
             }
         }
-
-        #[allow(dead_code)]
-        fn content(&self) -> String {
-            let data = self.content.lock().expect("process test");
-            String::from_utf8_lossy(&data).to_string()
-        }
     }
 
     impl Write for MockWriter {

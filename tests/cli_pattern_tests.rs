@@ -7,97 +7,79 @@ fn word_tally() -> Command {
     Command::cargo_bin("word-tally").expect("process test")
 }
 
+fn test_patterns(args: &[&str], input: &str, include_words: &[&str], exclude_words: &[&str]) {
+    let mut assertion = word_tally();
+    for arg in args {
+        assertion.arg(*arg);
+    }
+
+    let mut pred = assertion.write_stdin(input).assert().success();
+
+    for word in include_words {
+        pred = pred.stdout(predicate::str::contains(format!("{word} 1")));
+    }
+
+    for word in exclude_words {
+        pred = pred.stdout(predicate::str::contains(*word).not());
+    }
+}
+
 #[test]
 fn exclude_patterns() {
-    word_tally()
-        .arg("--exclude=^t.*")
-        .write_stdin("truth tomorrow sublime narrow")
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("sublime 1")
-                .and(predicate::str::contains("narrow 1"))
-                .and(predicate::str::contains("truth").not())
-                .and(predicate::str::contains("tomorrow").not()),
-        );
+    test_patterns(
+        &["--exclude=^t.*"],
+        "truth tomorrow sublime narrow",
+        &["sublime", "narrow"],
+        &["truth", "tomorrow"],
+    );
 }
 
 #[test]
 fn include_patterns() {
-    word_tally()
-        .arg("--include=^t.*")
-        .write_stdin("truth tomorrow sublime narrow")
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("truth 1")
-                .and(predicate::str::contains("tomorrow 1"))
-                .and(predicate::str::contains("sublime").not())
-                .and(predicate::str::contains("narrow").not()),
-        );
+    test_patterns(
+        &["--include=^t.*"],
+        "truth tomorrow sublime narrow",
+        &["truth", "tomorrow"],
+        &["sublime", "narrow"],
+    );
 }
 
 #[test]
 fn multiple_exclude_patterns() {
-    word_tally()
-        .arg("--exclude=^a.*")
-        .arg("--exclude=^b.*")
-        .write_stdin("angel beauty certain delight")
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("certain 1")
-                .and(predicate::str::contains("delight 1"))
-                .and(predicate::str::contains("angel").not())
-                .and(predicate::str::contains("beauty").not()),
-        );
+    test_patterns(
+        &["--exclude=^a.*", "--exclude=^b.*"],
+        "angel beauty certain delight",
+        &["certain", "delight"],
+        &["angel", "beauty"],
+    );
 }
 
 #[test]
 fn multiple_include_patterns() {
-    word_tally()
-        .arg("--include=^a.*")
-        .arg("--include=^b.*")
-        .write_stdin("angel beauty certain delight")
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("angel 1")
-                .and(predicate::str::contains("beauty 1"))
-                .and(predicate::str::contains("certain").not())
-                .and(predicate::str::contains("delight").not()),
-        );
+    test_patterns(
+        &["--include=^a.*", "--include=^b.*"],
+        "angel beauty certain delight",
+        &["angel", "beauty"],
+        &["certain", "delight"],
+    );
 }
 
 #[test]
 fn combine_exclusions() {
-    word_tally()
-        .arg("--exclude-words=hope,soul")
-        .arg("--exclude=^a.*")
-        .write_stdin("hope soul angel beauty certain")
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("beauty 1")
-                .and(predicate::str::contains("certain 1"))
-                .and(predicate::str::contains("hope").not())
-                .and(predicate::str::contains("soul").not())
-                .and(predicate::str::contains("angel").not()),
-        );
+    test_patterns(
+        &["--exclude-words=hope,soul", "--exclude=^a.*"],
+        "hope soul angel beauty certain",
+        &["beauty", "certain"],
+        &["hope", "soul", "angel"],
+    );
 }
 
 #[test]
 fn exclude_words_list() {
-    word_tally()
-        .arg("--exclude-words=the,a,but")
-        .write_stdin("the narrow certain fame but a hope")
-        .assert()
-        .success()
-        .stdout(
-            predicate::str::contains("narrow 1").and(
-                predicate::str::contains("certain 1")
-                    .and(predicate::str::contains("fame 1"))
-                    .and(predicate::str::contains("hope 1")),
-            ),
-        );
+    test_patterns(
+        &["--exclude-words=the,a,but"],
+        "the narrow certain fame but a hope",
+        &["narrow", "certain", "fame", "hope"],
+        &["the", "but"],
+    );
 }

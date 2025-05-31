@@ -26,16 +26,16 @@ pub fn generate_sample_text(lines: usize, words_per_line: std::ops::Range<usize>
         .join("\n")
 }
 
-/// Small text sample (~30KB)
+/// Small text sample (~15KB)
 #[must_use]
 pub fn small_text() -> String {
-    generate_sample_text(300, 5..12)
+    generate_sample_text(150, 5..12)
 }
 
-/// Medium text sample (~100KB)
+/// Medium text sample (~50KB)
 #[must_use]
 pub fn medium_text() -> String {
-    generate_sample_text(800, 8..15)
+    generate_sample_text(400, 8..15)
 }
 
 /// Wrap value in Arc for sharing.
@@ -48,9 +48,9 @@ pub fn make_shared<T>(value: T) -> Arc<T> {
 pub fn standard_criterion_config() -> Criterion {
     Criterion::default()
         .configure_from_args()
-        .sample_size(60)
-        .measurement_time(Duration::from_secs(7))
-        .warm_up_time(Duration::from_secs(3))
+        .sample_size(15)
+        .measurement_time(Duration::from_secs(3))
+        .warm_up_time(Duration::from_secs(1))
 }
 
 /// Benchmark `WordTally` with string input.

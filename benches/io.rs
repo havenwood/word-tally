@@ -1,12 +1,12 @@
 //! I/O strategy benchmarks.
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use word_tally::Options;
+use word_tally::{Io, Options};
 
 #[path = "common.rs"]
 pub mod common;
 use self::common::{
-    IO_STRATEGIES, bench_io_with_file, create_bench_group, make_shared, standard_criterion_config,
+    bench_io_with_file, create_bench_group, make_shared, standard_criterion_config,
 };
 
 /// Benchmark I/O strategies for specified file size
@@ -17,7 +17,13 @@ fn bench_io_processing_combinations(c: &mut Criterion, size_kb: usize) {
     {
         let mut group = create_bench_group(c, &group_name);
 
-        for (io, io_name) in &IO_STRATEGIES {
+        let key_strategies = [
+            (Io::Stream, "stream"),
+            (Io::ParallelStream, "parallel-stream"),
+            (Io::ParallelMmap, "parallel-mmap"),
+        ];
+
+        for (io, io_name) in &key_strategies {
             let options = Options::default().with_io(*io);
             let shared_options = make_shared(options);
 
@@ -34,11 +40,9 @@ fn bench_io_processing_combinations(c: &mut Criterion, size_kb: usize) {
 fn run_benchmarks(c: &mut Criterion) {
     bench_io_processing_combinations(c, 10);
 
-    bench_io_processing_combinations(c, 75);
-
     #[cfg(not(debug_assertions))]
     {
-        bench_io_processing_combinations(c, 500);
+        bench_io_processing_combinations(c, 50);
     }
 }
 

@@ -5,92 +5,71 @@ use predicates::str::contains;
 use std::fs;
 use tempfile::NamedTempFile;
 
+fn word_tally() -> Command {
+    Command::cargo_bin("word-tally").expect("run test")
+}
+
+fn test_verbose_command(args: &[&str], stdin: &str, expected_patterns: &[&str]) {
+    let mut cmd = word_tally();
+    for arg in args {
+        cmd.arg(*arg);
+    }
+    let mut assert = cmd.write_stdin(stdin).assert().success();
+
+    for pattern in expected_patterns {
+        assert = assert.stderr(contains(*pattern));
+    }
+}
+
+fn test_basic_command(args: &[&str], stdin: &str, expected_stdout: &[&str]) {
+    let mut cmd = word_tally();
+    for arg in args {
+        cmd.arg(*arg);
+    }
+    let mut assert = cmd.write_stdin(stdin).assert().success();
+
+    for pattern in expected_stdout {
+        assert = assert.stdout(contains(*pattern));
+    }
+}
+
 //
 // Default Values Testing
 //
 
 #[test]
 fn test_args_default_input() {
-    // Default input should be stdin ("-")
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("-v")
-        .write_stdin("test")
-        .assert()
-        .success()
-        .stderr(contains("source -"));
+    test_verbose_command(&["-v"], "test", &["source -"]);
 }
 
 #[test]
 fn test_args_default_io() {
-    // Default IO should be parallel-stream
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("-v")
-        .write_stdin("test")
-        .assert()
-        .success()
-        .stderr(contains("io parallel-stream"));
+    test_verbose_command(&["-v"], "test", &["io parallel-stream"]);
 }
 
 #[test]
 fn test_args_default_case() {
-    // Default case should be original
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("-v")
-        .write_stdin("test")
-        .assert()
-        .success()
-        .stderr(contains("case original"));
+    test_verbose_command(&["-v"], "test", &["case original"]);
 }
 
 #[test]
 fn test_args_default_sort() {
-    // Default sort should be desc
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("-v")
-        .write_stdin("test")
-        .assert()
-        .success()
-        .stderr(contains("order desc"));
+    test_verbose_command(&["-v"], "test", &["order desc"]);
 }
 
 #[test]
 fn test_args_default_format() {
-    // Default format should be text (no special format in verbose output)
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("-v")
-        .write_stdin("test")
-        .assert()
-        .success()
-        .stderr(contains("delimiter \" \""));
+    test_verbose_command(&["-v"], "test", &["delimiter \" \""]);
 }
 
 #[test]
 fn test_args_default_delimiter() {
-    // Default delimiter should be a space
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("-v")
-        .write_stdin("test")
-        .assert()
-        .success()
-        .stderr(contains("delimiter \" \""));
+    test_verbose_command(&["-v"], "test", &["delimiter \" \""]);
 }
 
 #[test]
 fn test_args_default_processing() {
-    // Default I/O mode should be parallel-stream
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("-v")
-        .write_stdin("test")
-        .assert()
-        .success()
-        .stderr(contains("io parallel-stream"));
+    test_verbose_command(&["-v"], "test", &["io parallel-stream"]);
 }
 
 #[test]
@@ -134,16 +113,7 @@ fn test_args_default_output() {
 
 #[test]
 fn test_args_all_defaults() {
-    // Comprehensive test with all defaults
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .write_stdin("This is a test")
-        .assert()
-        .success()
-        .stdout(contains("This 1"))
-        .stdout(contains("is 1"))
-        .stdout(contains("a 1"))
-        .stdout(contains("test 1"));
+    test_basic_command(&[], "This is a test", &["This 1", "is 1", "a 1", "test 1"]);
 }
 
 #[test]
@@ -519,49 +489,30 @@ fn test_args_all_io_modes() {
 
 #[test]
 fn test_args_case_modes() {
-    let test_cases = ["original", "upper", "lower"];
-
-    for case in &test_cases {
-        Command::cargo_bin("word-tally")
-            .expect("arguments should be valid")
-            .arg(format!("--case={case}"))
-            .arg("-v")
-            .write_stdin("Test")
-            .assert()
-            .success()
-            .stderr(contains(format!("case {case}")));
+    for case in ["original", "upper", "lower"] {
+        test_verbose_command(
+            &[&format!("--case={case}"), "-v"],
+            "Test",
+            &[&format!("case {case}")],
+        );
     }
 }
 
 #[test]
 fn test_args_sort_modes() {
-    let test_sorts = ["unsorted", "asc", "desc"];
-
-    for sort in &test_sorts {
-        Command::cargo_bin("word-tally")
-            .expect("arguments should be valid")
-            .arg(format!("--sort={sort}"))
-            .arg("-v")
-            .write_stdin("test")
-            .assert()
-            .success()
-            .stderr(contains(format!("order {sort}")));
+    for sort in ["unsorted", "asc", "desc"] {
+        test_verbose_command(
+            &[&format!("--sort={sort}"), "-v"],
+            "test",
+            &[&format!("order {sort}")],
+        );
     }
 }
 
 #[test]
 fn test_args_format_modes() {
-    let test_formats = ["text", "json", "csv"];
-
-    for format in &test_formats {
-        Command::cargo_bin("word-tally")
-            .expect("arguments should be valid")
-            .arg(format!("--format={format}"))
-            .arg("-v")
-            .write_stdin("test")
-            .assert()
-            .success()
-            .stderr(contains("source"));
+    for format in ["text", "json", "csv"] {
+        test_verbose_command(&[&format!("--format={format}"), "-v"], "test", &["source"]);
     }
 }
 
@@ -600,8 +551,7 @@ fn test_args_delimiter_edge_cases() {
 
 #[test]
 fn test_args_io_bytes_error() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--io=bytes")
         .write_stdin("test")
         .assert()
@@ -611,9 +561,17 @@ fn test_args_io_bytes_error() {
 
 #[test]
 fn test_args_invalid_min_count() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--min-count=invalid")
+        .write_stdin("test")
+        .assert()
+        .failure()
+        .stderr(contains("invalid value"));
+}
+
+fn test_invalid_enum_value(arg: &str) {
+    word_tally()
+        .arg(arg)
         .write_stdin("test")
         .assert()
         .failure()
@@ -622,29 +580,13 @@ fn test_args_invalid_min_count() {
 
 #[test]
 fn test_args_invalid_enum_values() {
-    // Invalid case
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("--case=invalid")
-        .write_stdin("test")
-        .assert()
-        .failure()
-        .stderr(contains("invalid value"));
-
-    // Invalid sort
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("--sort=invalid")
-        .write_stdin("test")
-        .assert()
-        .failure()
-        .stderr(contains("invalid value"));
+    test_invalid_enum_value("--case=invalid");
+    test_invalid_enum_value("--sort=invalid");
 }
 
 #[test]
 fn test_args_invalid_regex_exclude() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--exclude=[")
         .write_stdin("test")
         .assert()
@@ -654,8 +596,7 @@ fn test_args_invalid_regex_exclude() {
 
 #[test]
 fn test_args_invalid_regex_include() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--include=(?P<")
         .write_stdin("test")
         .assert()
@@ -669,9 +610,7 @@ fn test_args_invalid_regex_include() {
 
 #[test]
 fn test_args_environment_interaction() {
-    // Test that args work with environment variables
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .env("WORD_TALLY_TALLY_CAPACITY", "100")
         .arg("-v")
         .write_stdin("test")
@@ -682,12 +621,10 @@ fn test_args_environment_interaction() {
 
 #[test]
 fn test_args_mmap_alias() {
-    // Test that --io=mmap is an alias for --io=parallel-mmap
     let temp_file = NamedTempFile::new().expect("create temp file");
     fs::write(temp_file.path(), "test content").expect("write test content");
 
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--io=mmap")
         .arg("-v")
         .arg(temp_file.path())
@@ -695,9 +632,7 @@ fn test_args_mmap_alias() {
         .success()
         .stderr(contains("io parallel-mmap"));
 
-    // Test with stdin to ensure it gives the same error
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--io=mmap")
         .write_stdin("test")
         .assert()

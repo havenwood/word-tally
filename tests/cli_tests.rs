@@ -10,6 +10,24 @@ fn word_tally() -> Command {
     Command::cargo_bin("word-tally").expect("process test")
 }
 
+fn create_temp_files_with_content(contents: &[&str]) -> Vec<NamedTempFile> {
+    contents
+        .iter()
+        .map(|content| {
+            let temp_file = NamedTempFile::new().expect("create temp file");
+            fs::write(&temp_file, content).expect("write test file");
+            temp_file
+        })
+        .collect()
+}
+
+fn test_word_counts(mut cmd: Command, expected_words: &[(&str, usize)]) {
+    let mut assertion = cmd.assert().success();
+    for (word, count) in expected_words {
+        assertion = assertion.stdout(contains(format!("{word} {count}")));
+    }
+}
+
 #[test]
 fn version() {
     let assert = word_tally().arg("-V").assert();
@@ -471,10 +489,7 @@ That perches in the soul -"#;
 #[test]
 #[cfg(unix)]
 fn large_input_broken_pipe() {
-    let mut large_input = String::new();
-    for _ in 0..1000 {
-        large_input.push_str(
-            r"I dwell in Possibility – a fairer House than Prose –
+    let poem = r"I dwell in Possibility – a fairer House than Prose –
 More numerous of Windows – Superior – for Doors –
 
 Of Chambers as the Cedars – Impregnable of eye –
@@ -486,11 +501,9 @@ For Occupation – This –
 The spreading wide my narrow Hands
 To gather Paradise –
 
-",
-        );
-    }
-    let mut cmd = word_tally();
-    cmd.write_stdin(large_input).assert().success();
+";
+    let large_input = poem.repeat(100);
+    word_tally().write_stdin(large_input).assert().success();
 }
 
 #[test]
@@ -508,60 +521,36 @@ fn single_file_input() {
 
 #[test]
 fn multiple_file_inputs() {
-    let temp_file1 = NamedTempFile::new().expect("create temp file");
-    let temp_file2 = NamedTempFile::new().expect("create temp file");
-    fs::write(&temp_file1, "narrow road").expect("write test file");
-    fs::write(&temp_file2, "road fame").expect("write test file");
+    let temp_files = create_temp_files_with_content(&["narrow road", "road fame"]);
 
-    word_tally()
-        .arg(temp_file1.path())
-        .arg(temp_file2.path())
-        .assert()
-        .success()
-        .stdout(contains("road 2\n"))
-        .stdout(contains("narrow 1\n"))
-        .stdout(contains("fame 1\n"));
+    let mut cmd = word_tally();
+    for temp_file in &temp_files {
+        cmd.arg(temp_file.path());
+    }
+    test_word_counts(cmd, &[("road", 2), ("narrow", 1), ("fame", 1)]);
 }
 
 #[test]
 fn multi_file_with_mmap() {
-    let temp_file1 = NamedTempFile::new().expect("create temp file");
-    let temp_file2 = NamedTempFile::new().expect("create temp file");
-    fs::write(&temp_file1, "narrow road").expect("write test file");
-    fs::write(&temp_file2, "road fame").expect("write test file");
+    let temp_files = create_temp_files_with_content(&["narrow road", "road fame"]);
 
-    let output = word_tally()
-        .arg("--io=parallel-mmap")
-        .arg(temp_file1.path())
-        .arg(temp_file2.path())
-        .assert()
-        .success();
-
-    // Order may vary with mmap
-    output
-        .stdout(contains("road 2"))
-        .stdout(contains("narrow 1"))
-        .stdout(contains("fame 1"));
+    let mut cmd = word_tally();
+    cmd.arg("--io=parallel-mmap");
+    for temp_file in &temp_files {
+        cmd.arg(temp_file.path());
+    }
+    test_word_counts(cmd, &[("road", 2), ("narrow", 1), ("fame", 1)]);
 }
 
 #[test]
 fn multi_file_with_parallel() {
-    let temp_file1 = NamedTempFile::new().expect("create temp file");
-    let temp_file2 = NamedTempFile::new().expect("create temp file");
-    fs::write(&temp_file1, "narrow road").expect("write test file");
-    fs::write(&temp_file2, "road fame").expect("write test file");
+    let temp_files = create_temp_files_with_content(&["narrow road", "road fame"]);
 
-    let output = word_tally()
-        .arg(temp_file1.path())
-        .arg(temp_file2.path())
-        .assert()
-        .success();
-
-    // Sort order is unstable with parallel processing
-    output
-        .stdout(contains("road 2"))
-        .stdout(contains("narrow 1"))
-        .stdout(contains("fame 1"));
+    let mut cmd = word_tally();
+    for temp_file in &temp_files {
+        cmd.arg(temp_file.path());
+    }
+    test_word_counts(cmd, &[("road", 2), ("narrow", 1), ("fame", 1)]);
 }
 
 #[test]

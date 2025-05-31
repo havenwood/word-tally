@@ -12,11 +12,11 @@ Performance benchmarks across different strategies.
 
 ## Benchmarks
 
-- **Core**: Sorting (unsorted vs descending) and filtering (min chars/count)
-- **I/O**: 5 strategies across file sizes (10KB, 75KB, 500KB)
-  - `stream`, `parallel-stream`, `parallel-in-memory`, `parallel-mmap`, `parallel-bytes`
-- **Features**: Sequential vs parallel, regex patterns, Unicode vs ASCII
-- **Multi-file**: Aggregation and scaling (2, 4, 8 files)
+- **Core**: Sorting (unsorted vs descending) and filtering (none vs combined)
+- **I/O**: 3 key strategies across file sizes (10KB, 50KB)
+  - `stream`, `parallel-stream`, `parallel-mmap`
+- **Features**: Sequential vs parallel, Unicode vs ASCII
+- **Multi-file**: File aggregation only
 
 ## Running Benchmarks
 
@@ -45,6 +45,6 @@ cargo bench -- multi_file_scaling/8_files
 ```
 
 ## Configuration
-- 60 samples, 7s measurement, 3s warm-up
+- 15 samples, 3s measurement, 1s warm-up
 - Uses `fake` crate for realistic test data
 - Large input batching to minimize overhead
