@@ -1,6 +1,4 @@
-use word_tally::{
-    ExcludeWords, Format, Input, Options, Output, Performance, Serialization, WordTally,
-};
+use word_tally::{ExcludeWords, Input, Options, Output, Performance, Serialization, WordTally};
 
 #[test]
 fn test_input_default() {
@@ -51,14 +49,14 @@ fn test_with_custom_chunk_size() {
 
 #[test]
 fn test_serialization_with_format() {
-    let format_only = Serialization::with_format(Format::Json);
-    assert_eq!(format_only.format(), Format::Json);
+    let format_only = Serialization::Json;
+    assert_eq!(format_only, Serialization::Json);
 }
 
 #[test]
-fn test_serialization_with_delimiter() {
-    let delim = Serialization::with_delimiter("::").expect("create delimiter");
-    assert_eq!(delim.delimiter(), "::");
+fn test_serialization_with_field_delimiter() {
+    let delim = Serialization::text().with_field_delimiter("::");
+    assert_eq!(delim.field_delimiter(), Some("::"));
 }
 
 const TEST_INPUT: &[u8] = b"test convenience constructors";

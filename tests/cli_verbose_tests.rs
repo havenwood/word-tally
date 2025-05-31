@@ -56,7 +56,7 @@ fn verbose_without_input() {
         .arg("-v")
         .assert()
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\ncase original\norder desc\nio parallel-stream\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\nentry-delimiter \"\\n\"\ncase original\norder desc\nio parallel-stream\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 
@@ -114,7 +114,8 @@ fn verbose_json_full_output() {
             ("source", serde_json::json!("-")),
             ("totalWords", serde_json::json!(0)),
             ("uniqueWords", serde_json::json!(0)),
-            ("delimiter", serde_json::json!("\" \"")),
+            ("fieldDelimiter", serde_json::json!("n/a")),
+            ("entryDelimiter", serde_json::json!("n/a")),
             ("case", serde_json::json!("original")),
             ("order", serde_json::json!("desc")),
             ("io", serde_json::json!("parallel-stream")),
@@ -208,18 +209,18 @@ fn verbose_csv_delimiter_formatting() {
         .expect("csv should have delimiter column");
     let values: Vec<&str> = lines[1].split(',').collect();
 
-    assert_eq!(values[delimiter_index], r#"""" """"#);
+    assert_eq!(values[delimiter_index], "n/a");
 
     // Test with custom delimiter
     let output = word_tally()
         .arg("-v")
         .arg("--format=csv")
-        .arg("--delimiter=|")
+        .arg("--field-delimiter=|")
         .output()
         .expect("failed to execute process");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
     let lines: Vec<&str> = stderr.lines().collect();
     let new_values: Vec<&str> = lines[1].split(',').collect();
-    assert_eq!(new_values[delimiter_index], r#""""|""""#);
+    assert_eq!(new_values[delimiter_index], "n/a");
 }

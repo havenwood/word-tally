@@ -51,7 +51,7 @@ fn delimiter_shorthand() {
 #[test]
 fn delimiter_longhand() {
     word_tally()
-        .arg("--delimiter=,")
+        .arg("--field-delimiter=,")
         .write_stdin("narrow fame narrow")
         .assert()
         .success()

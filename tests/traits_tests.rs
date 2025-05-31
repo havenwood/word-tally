@@ -1,10 +1,7 @@
 use std::path::PathBuf;
 use word_tally::Threads;
 use word_tally::options::{
-    filters::ExcludeWords,
-    io::Io,
-    performance::Performance,
-    serialization::{Format, Serialization},
+    filters::ExcludeWords, io::Io, performance::Performance, serialization::Serialization,
 };
 use word_tally::{Input, Options, WordTally};
 
@@ -56,8 +53,8 @@ fn test_thread_conversions() {
 
 #[test]
 fn test_ordering_traits() {
-    let fmt1 = Serialization::with_format(Format::Text);
-    let fmt2 = Serialization::with_format(Format::Json);
+    let fmt1 = Serialization::default();
+    let fmt2 = Serialization::Json;
     assert!(fmt1 < fmt2);
 
     // Test Performance ordering
@@ -86,7 +83,7 @@ fn test_wordtally_deserialize() {
         "options": {
             "case": "Lower",
             "sort": "Desc",
-            "serialization": {"format": "Text", "delimiter": " "},
+            "serialization": {"Text": {"field_delimiter": " ", "entry_delimiter": "\n"}},
             "filters": {"min_chars": null, "min_count": null, "exclude_words": [], "exclude_patterns": [], "include_patterns": []},
             "io": "ParallelStream",
             "performance": {"base_stdin_tally_capacity": 5120, "uniqueness_ratio": 10, "words_per_kb": 200, "chunk_size": 65536, "base_stdin_size": 262144, "threads": "All", "verbose": false},
@@ -143,6 +140,6 @@ fn test_input_display() {
 #[test]
 fn test_const_format_fn() {
     let options = Options::default();
-    let format = options.serialization().format();
-    assert_eq!(format, Format::Text);
+    let serialization = options.serialization();
+    assert!(matches!(serialization, Serialization::Text { .. }));
 }

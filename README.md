@@ -23,21 +23,22 @@ Arguments:
   [PATHS]...  File paths to use as input (use "-" for stdin) [default: -]
 
 Options:
-  -I, --io <STRATEGY>          I/O strategy [default: parallel-stream] [possible values: parallel-stream, stream, parallel-mmap, parallel-in-memory]
-  -e, --encoding <ENCODING>    Word boundary detection encoding [default: unicode] [possible values: unicode, ascii]
-  -c, --case <FORMAT>          Case normalization [default: original] [possible values: original, upper, lower]
-  -s, --sort <ORDER>           Sort order [default: desc] [possible values: desc, asc, unsorted]
-  -m, --min-chars <COUNT>      Exclude words containing fewer than min chars
-  -n, --min-count <COUNT>      Exclude words appearing fewer than min times
-  -w, --exclude-words <WORDS>  Exclude words from a comma-delimited list
-  -i, --include <PATTERNS>     Include only words matching a regex pattern
-  -x, --exclude <PATTERNS>     Exclude words matching a regex pattern
-  -f, --format <FORMAT>        Output format [default: text] [possible values: text, json, csv]
-  -d, --delimiter <VALUE>      Delimiter between keys and values [default: " "]
-  -o, --output <PATH>          Write output to file rather than stdout
-  -v, --verbose                Print verbose details
-  -h, --help                   Print help (see more with '--help')
-  -V, --version                Print version
+  -I, --io <STRATEGY>            I/O strategy [default: parallel-stream] [possible values: parallel-stream, stream, parallel-mmap, parallel-in-memory]
+  -e, --encoding <ENCODING>      Word boundary detection encoding [default: unicode] [possible values: unicode, ascii]
+  -c, --case <FORMAT>            Case normalization [default: original] [possible values: original, upper, lower]
+  -s, --sort <ORDER>             Sort order [default: desc] [possible values: desc, asc, unsorted]
+  -m, --min-chars <COUNT>        Exclude words containing fewer than min chars
+  -n, --min-count <COUNT>        Exclude words appearing fewer than min times
+  -w, --exclude-words <WORDS>    Exclude words from a comma-delimited list
+  -i, --include <PATTERNS>       Include only words matching a regex pattern
+  -x, --exclude <PATTERNS>       Exclude words matching a regex pattern
+  -f, --format <FORMAT>          Output format [default: text] [possible values: text, json, csv]
+  -d, --field-delimiter <VALUE>  Delimiter between field and value [default: " "]
+  -D, --entry-delimiter <VALUE>  Delimiter between entries [default: "\n"]
+  -o, --output <PATH>            Write output to file rather than stdout
+  -v, --verbose                  Print verbose details
+  -h, --help                     Print help (see more with '--help')
+  -V, --version                  Print version
 ```
 
 ## Installation
@@ -53,18 +54,18 @@ cargo install word-tally
 Choose an I/O strategy based on your performance and memory requirements:
 
 ```sh
-# Default: Parallel streaming - balanced performance and memory
+# Default: Parallel streaming - balanced performance and memory for files or stdin
 echo "tally me" | word-tally
 word-tally file.txt
 
-# Sequential streaming - minimize memory usage
+# Sequential streaming - minimal memory usage for files or stdin
 word-tally --io=stream large-file.txt
 
-# Parallel in-memory - fastest for small inputs and stdin
-word-tally --io=parallel-in-memory document.txt
-
-# Parallel memory-mapped - fastest for large files
+# Parallel memory-mapped - performance for files with efficient memory usage
 word-tally --io=parallel-mmap large-file.txt
+
+# Parallel in-memory - performance for stdin with high memory usage
+word-tally --io=parallel-in-memory document.txt
 ```
 
 Additional features:
@@ -74,6 +75,9 @@ word-tally file1.txt file2.txt file3.txt
 
 # Mix stdin and files
 cat header.txt | word-tally - body.txt footer.txt
+
+# ASCII-only mode (faster, fails on non-ASCII)
+word-tally --encoding=ascii document.txt
 ```
 
 **Note:** Memory mapping (`parallel-mmap`) requires seekable files and cannot be used with stdin or pipes.
@@ -87,20 +91,30 @@ cat header.txt | word-tally - body.txt footer.txt
 word-tally README.md --output=tally.txt
 
 # Custom delimiter between word and count
-word-tally README.md --delimiter=": " --output=tally.txt
+word-tally README.md --field-delimiter=": " --output=tally.txt
+
+# Custom delimiter between entries (e.g., comma-separated)
+word-tally README.md --field-delimiter=": " --entry-delimiter=", " --output=tally.txt
 
 # Pipe to other tools
 word-tally README.md | head -n10
 ```
 
+#### Custom delimiters
+
+```sh
+# Tab-separated values without escaping
+word-tally --field-delimiter="\t" README.md > tally.tsv
+
+# Custom delimiters
+word-tally --field-delimiter="|" --entry-delimiter=";" README.md
+```
+
 #### CSV
 
 ```sh
-# Using a comma delimiter (unescaped without headers)
-word-tally --delimiter="," --output="tally.csv" README.md
-
-# Using proper CSV format (escaped with headers)
-word-tally --format=csv --output="tally.csv" README.md
+# CSV with proper escaping and headers
+word-tally --format=csv README.md > tally.csv
 ```
 
 #### JSON
@@ -175,6 +189,7 @@ echo "fe fi fi fo fo fo" | word-tally --verbose
 #>> total-words 6
 #>> unique-words 3
 #>> delimiter " "
+#>> entry-delimiter "\n"
 #>> case original
 #>> order desc
 #>> processing parallel
@@ -231,33 +246,33 @@ word-tally = "0.26.0"
 ```
 
 ```rust
-use std::fs::File;
-use word_tally::{Io, Options, Processing, WordTally};
+use word_tally::{Case, Filters, Input, Io, Options, Output, Serialization, WordTally};
+use anyhow::Result;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let file = File::open("document.txt")?;
-    // Parallel streamed
-    let word_tally = WordTally::new(&file, &Options::default())?;
-    assert!(word_tally.count() > 0);
+fn main() -> Result<()> {
+    // Basic usage
+    let input = Input::new("document.txt", Io::default())?;
+    let word_tally = WordTally::new(&input, &Options::default())?;
+    println!("Total words: {}", word_tally.count());
 
-    // Parallel memory mapped
-    let another_file = File::open("another-document.txt")?;
+    // Custom configuration
     let options = Options::default()
-        .with_io(Io::ParallelMmap);
-    let mmap_tally = WordTally::new(another_file, &options)?;
-    assert!(mmap_tally.count() > 0);
+        .with_case(Case::Lower)
+        .with_filters(Filters::default().with_min_chars(3))
+        .with_serialization(Serialization::Json);
 
-    println!("Words: {} total, {} unique", mmap_tally.count(), mmap_tally.uniq_count());
+    let input = Input::new("large-file.txt", Io::ParallelMmap)?;
+    let tally = WordTally::new(&input, &options)?;
 
-    for (word, count) in mmap_tally.tally().iter().take(5) {
-        println!("{}: {}", word, count);
-    }
+    // Generate formatted output
+    let output = Output::new(&tally);
+    println!("{}", output);
 
     Ok(())
 }
 ```
 
-The library supports case normalization, sorting, filtering and I/O and processing strategies.
+The library provides full control over case normalization, sorting, filtering, I/O strategies, and output formats.
 
 ## Stability notice
 

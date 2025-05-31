@@ -6,13 +6,8 @@ use std::convert::TryFrom;
 use std::path::PathBuf;
 
 use word_tally::options::{
-    case::Case,
-    encoding::Encoding,
-    filters::Filters,
-    io::Io,
-    performance::Performance,
-    serialization::{Format, Serialization},
-    sort::Sort,
+    case::Case, encoding::Encoding, filters::Filters, io::Io, performance::Performance,
+    serialization::Serialization, sort::Sort,
 };
 use word_tally::{Count, Options, WordTallyError};
 
@@ -71,12 +66,21 @@ pub(crate) struct Args {
 
     // Output options
     /// Output format.
-    #[arg(short = 'f', long, default_value_t, value_enum, value_name = "FORMAT")]
-    format: Format,
+    #[arg(short = 'f', long, default_value = "text", value_name = "FORMAT", value_parser = ["text", "json", "csv"])]
+    format: String,
 
-    /// Delimiter between keys and values.
-    #[arg(short, long, default_value = " ", value_name = "VALUE")]
-    delimiter: String,
+    /// Delimiter between field and value.
+    #[arg(
+        short = 'd',
+        long = "field-delimiter",
+        default_value = " ",
+        value_name = "VALUE"
+    )]
+    field_delimiter: String,
+
+    /// Delimiter between entries.
+    #[arg(short = 'D', long, default_value = "\n", value_name = "VALUE")]
+    entry_delimiter: String,
 
     /// Write output to file rather than stdout.
     #[arg(short, long, value_name = "PATH")]
@@ -110,6 +114,11 @@ impl Args {
 
     /// Helper to create filters from arguments.
     fn build_filters(&self) -> Result<Filters> {
+        self.build_filters_impl()
+    }
+
+    /// Implementation of `build_filters` that works for both borrowed and owned.
+    fn build_filters_impl(&self) -> Result<Filters> {
         Ok(Filters::default())
             .map(|f| match self.min_chars {
                 Some(min) => f.with_min_chars(min),
@@ -119,9 +128,9 @@ impl Args {
                 Some(min) => f.with_min_count(min),
                 None => f,
             })
-            .and_then(|f| match &self.exclude_words {
-                Some(words) => f.with_unescaped_exclude_words(words),
-                None => Ok(f),
+            .map(|f| match &self.exclude_words {
+                Some(words) => f.with_exclude_words(words.clone()),
+                None => f,
             })
             .and_then(|f| match &self.exclude {
                 Some(patterns) => f.with_exclude_patterns(patterns).map_err(|e| {
@@ -151,10 +160,45 @@ impl TryFrom<&Args> for Options {
     type Error = anyhow::Error;
 
     fn try_from(args: &Args) -> Result<Self> {
+        let serialization = match args.format.as_str() {
+            "text" => Serialization::text()
+                .with_field_delimiter(&args.field_delimiter)
+                .with_entry_delimiter(&args.entry_delimiter),
+            "json" => Serialization::Json,
+            "csv" => Serialization::Csv,
+            _ => unreachable!("clap should validate format values"),
+        };
+
         Ok(Self::new(
             args.case,
             args.sort,
-            Serialization::new(args.format, &args.delimiter)?,
+            serialization,
+            args.build_filters()?,
+            args.io,
+            Performance::from_env(),
+        )
+        .with_encoding(args.encoding))
+    }
+}
+
+/// Converts command-line arguments to `Options` by consuming them.
+impl TryFrom<Args> for Options {
+    type Error = anyhow::Error;
+
+    fn try_from(args: Args) -> Result<Self> {
+        let serialization = match args.format.as_str() {
+            "text" => Serialization::text()
+                .with_field_delimiter(&args.field_delimiter)
+                .with_entry_delimiter(&args.entry_delimiter),
+            "json" => Serialization::Json,
+            "csv" => Serialization::Csv,
+            _ => unreachable!("clap should validate format values"),
+        };
+
+        Ok(Self::new(
+            args.case,
+            args.sort,
+            serialization,
             args.build_filters()?,
             args.io,
             Performance::from_env(),

@@ -1,5 +1,5 @@
 use std::sync::Arc;
-use word_tally::{Case, Format, Input, Options, Serialization, Sort, WordTally};
+use word_tally::{Case, Input, Options, Serialization, Sort, WordTally};
 
 fn make_shared<T>(value: T) -> Arc<T> {
     Arc::new(value)
@@ -102,14 +102,14 @@ fn test_deserialization_with_serde() {
 
 #[test]
 fn test_serialization_with_format() {
-    let format_only = Serialization::with_format(Format::Json);
-    assert_eq!(format_only.format(), Format::Json);
+    let format_only = Serialization::Json;
+    assert_eq!(format_only, Serialization::Json);
 }
 
 #[test]
-fn test_serialization_with_delimiter() {
-    let delim = Serialization::with_delimiter("::").expect("create delimiter");
-    assert_eq!(delim.delimiter(), "::");
+fn test_serialization_with_field_delimiter() {
+    let delim = Serialization::text().with_field_delimiter("::");
+    assert_eq!(delim.field_delimiter(), Some("::"));
 }
 
 #[test]
@@ -180,7 +180,7 @@ fn test_round_trip_serialization() {
     let options = Options::default()
         .with_case(Case::Upper)
         .with_sort(Sort::Asc)
-        .with_serialization(Serialization::with_format(Format::Json))
+        .with_serialization(Serialization::Json)
         .with_filters(word_tally::Filters::default().with_min_chars(2));
 
     let input = Input::new(temp_file.path(), options.io()).expect("process test");
@@ -197,8 +197,8 @@ fn test_round_trip_serialization() {
     assert_eq!(original.options().case(), deserialized.options().case());
     assert_eq!(original.options().sort(), deserialized.options().sort());
     assert_eq!(
-        original.options().serialization().format(),
-        deserialized.options().serialization().format()
+        original.options().serialization(),
+        deserialized.options().serialization()
     );
     assert_eq!(
         original.options().filters().min_chars(),

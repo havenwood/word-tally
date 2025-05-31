@@ -1,6 +1,6 @@
 //! Write trait abstractions for stdout and file serialization.
 
-use crate::options::serialization::Format;
+use crate::options::serialization::Serialization;
 use crate::{Count, Word, WordTally, WordTallyError};
 use anyhow::{Context, Result};
 use std::fmt::{self, Debug, Formatter};
@@ -137,20 +137,27 @@ impl Output {
     /// - Writing to the output fails due to I/O errors
     /// - CSV or JSON serialization encounters an error
     pub fn write_formatted_tally(&mut self, word_tally: &WordTally<'_>) -> Result<()> {
-        let format = word_tally.options().serialization().format();
-        let delimiter = word_tally.options().serialization().delimiter();
+        let serialization = word_tally.options().serialization();
         let tally = word_tally.tally();
 
-        match format {
-            Format::Text => self.write_text(tally, delimiter),
-            Format::Json => self.write_json(tally),
-            Format::Csv => self.write_csv(tally),
+        match serialization {
+            Serialization::Text {
+                field_delimiter,
+                entry_delimiter,
+            } => self.write_text(tally, field_delimiter.as_str(), entry_delimiter.as_str()),
+            Serialization::Json => self.write_json(tally),
+            Serialization::Csv => self.write_csv(tally),
         }
     }
 
-    fn write_text(&mut self, tally: &[(Word, Count)], delimiter: &str) -> Result<()> {
+    fn write_text(
+        &mut self,
+        tally: &[(Word, Count)],
+        field_delimiter: &str,
+        entry_delimiter: &str,
+    ) -> Result<()> {
         tally.iter().try_for_each(|(word, count)| {
-            self.write_chunk(&format!("{word}{delimiter}{count}\n"))
+            self.write_chunk(&format!("{word}{field_delimiter}{count}{entry_delimiter}"))
                 .context("failed to write word-count pair")
         })?;
 

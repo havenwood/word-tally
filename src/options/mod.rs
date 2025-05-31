@@ -17,7 +17,7 @@
 //! # Usage
 //!
 //! ```
-//! use word_tally::{Options, Case, Format, Io, Serialization};
+//! use word_tally::{Options, Case, Io, Serialization};
 //!
 //! // Default options
 //! let options = Options::default();
@@ -26,7 +26,7 @@
 //! // With specific settings
 //! let options = Options::default()
 //!     .with_case(Case::Lower)
-//!     .with_serialization(Serialization::with_format(Format::Json))
+//!     .with_serialization(Serialization::Json)
 //!     .with_io(Io::ParallelMmap);
 //! assert_eq!(options.io(), Io::ParallelMmap);
 //! ```
@@ -41,6 +41,7 @@
 //! - `WORD_TALLY_WORD_DENSITY`: Per-chunk map capacity (default: 15)
 
 pub mod case;
+pub mod delimiter;
 pub mod encoding;
 pub mod filters;
 pub mod io;
@@ -57,7 +58,6 @@ use self::io::Io;
 use self::performance::Performance;
 use self::serialization::Serialization;
 use self::sort::Sort;
-use crate::WordTallyError;
 use anyhow::Result;
 use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
@@ -95,7 +95,7 @@ impl Options {
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{Options, Serialization, Filters, Performance, Case, Format, Io, Sort};
+    /// use word_tally::{Options, Serialization, Filters, Performance, Case, Io, Sort};
     ///
     /// // Default configuration
     /// let options = Options::default();
@@ -104,8 +104,8 @@ impl Options {
     /// // Targeted customization with builder methods
     /// let options = Options::default()
     ///     .with_case(Case::Lower)
-    ///     .with_serialization(Serialization::with_format(Format::Json));
-    /// assert_eq!(options.serialization().format(), Format::Json);
+    ///     .with_serialization(Serialization::Json);
+    /// assert_eq!(options.serialization(), &Serialization::Json);
     /// ```
     #[must_use]
     pub const fn new(
@@ -263,40 +263,4 @@ impl AsRef<Performance> for Options {
     fn as_ref(&self) -> &Performance {
         &self.performance
     }
-}
-
-/// Unescape a string, converting escape sequences like `\t` and `\n` to their actual characters.
-///
-/// Used for parsing delimiters and exclude words from command-line arguments.
-///
-/// # Errors
-///
-/// Returns an error if the input contains a trailing backslash without a character to escape.
-pub fn unescape(input: &str, context: &str) -> Result<String> {
-    let mut result = String::with_capacity(input.len());
-    let mut chars = input.chars();
-
-    while let Some(ch) = chars.next() {
-        match ch {
-            '\\' => match chars.next() {
-                Some('t') => result.push('\t'),
-                Some('n') => result.push('\n'),
-                Some('r') => result.push('\r'),
-                Some('"') => result.push('"'),
-                Some('\'') => result.push('\''),
-                Some('\\') => result.push('\\'),
-                Some(other) => result.push(other),
-                None => {
-                    return Err(WordTallyError::Unescape {
-                        context: context.to_string(),
-                        value: input.to_string(),
-                    }
-                    .into());
-                }
-            },
-            _ => result.push(ch),
-        }
-    }
-
-    Ok(result)
 }

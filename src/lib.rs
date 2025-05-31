@@ -11,30 +11,6 @@
 //! the [Unicode Standard Annex #29](https://unicode.org/reports/tr29/) specification. The [`memchr`](https://docs.rs/memchr/)
 //! crate provides SIMD-accelerated newline detection for efficient parallel chunk processing.
 //!
-//! ## Module structure
-//!
-//! The `WordTally` library is organized into these modules:
-//! - `args.rs`: CLI argument parsing and command-line interface
-//! - `error.rs`: Error types for the library
-//! - `exit_code.rs`: Exit code definitions and handling
-//! - `input.rs`: Input source management strategies
-//! - `input_reader.rs`: Input readers implementing `Read` and `BufRead` traits
-//! - `lib.rs`: Core library functionality and API
-//! - `main.rs`: CLI entry point and execution
-//! - `options/`: Configuration and processing options
-//!   - `options/case.rs`: Text case normalization utilities
-//!   - `options/filters.rs`: Word filtering mechanisms
-//!   - `options/io.rs`: I/O operations implementation
-//!   - `options/mod.rs`: Common options functionality
-//!   - `options/patterns.rs`: Regular expression and pattern matching
-//!   - `options/performance.rs`: Optimization and benchmarking
-//!   - `options/serialization.rs`: Data serialization for exports
-//!   - `options/sort.rs`: Word frequency sorting strategies
-//!   - `options/threads.rs`: Thread configuration
-//! - `output.rs`: Output formatting and display
-//! - `tally_map.rs`: Map for tallying word counts
-//! - `verbose.rs`: Logging and diagnostic information
-//!
 //! # Options
 //!
 //! The [`Options`] struct provides a unified interface for configuring all aspects of word tallying:
@@ -54,49 +30,62 @@
 //! # }
 //! ```
 //!
-//! ## Formatting
+//! ## Word Processing
 //!
-//! Controls how words are normalized, results are ordered, and output is formatted:
+//! Configure how words are identified and normalized:
 //!
 //! * [`Case`]: Normalize word case (`Original`, `Lower`, or `Upper`)
+//! * [`options::encoding::Encoding`]: Word boundary detection (`Unicode` or `Ascii`)
+//!   - Unicode: Full Unicode text segmentation via ICU4X (default)
+//!   - ASCII: Fast ASCII-only mode, fails on non-ASCII input
+//!
+//! ## Output Formatting
+//!
+//! Control how results are sorted and serialized:
+//!
 //! * [`Sort`]: Order results by frequency (`Unsorted`, `Desc`, or `Asc`)
-//! * [`Format`]: Specify output format (`Text`, `CSV`, `JSON`)
-//! * [`Serialization`]: Configure output details like format and delimiters
+//! * [`Serialization`]: Output format with configurable delimiters
+//!   - `Text`: Customizable word/count and entry delimiters
+//!   - `Csv`: Standard CSV format
+//!   - `Json`: JSON object format
 //!
-//! ## Filters
+//! ## Filtering
 //!
-//! Determine which words appear in the final tally:
+//! Select which words appear in the final tally:
 //!
-//! * Length filters: [`MinChars`] excludes words shorter than specified
-//! * Frequency filters: [`MinCount`] includes only words appearing more than N times
-//! * Pattern matching: [`IncludeSet`] and [`ExcludeSet`] for regex-based filtering
-//! * Word lists: [`ExcludeWords`] for explicit exclusion of specific terms
+//! * [`Filters`]: Comprehensive filtering system
+//!   - [`MinChars`]: Exclude words shorter than specified length
+//!   - [`MinCount`]: Include only words appearing above threshold
+//!   - [`IncludeSet`] and [`ExcludeSet`]: Regex-based pattern matching
+//!   - [`ExcludeWords`]: Explicit word exclusion list
 //!
-//! ## Performance
+//! ## Performance Tuning
 //!
 //! Optimize execution for different workloads:
 //!
-//! * [`Io`]: Control the input method (stream, parallel-stream, parallel-in-memory, or parallel-mmap)
-//! * [`Threads`]: Control the thread pool size for parallel mode
-//! * [`Performance`]: Configure performance settings
+//! * [`Io`]: I/O strategy selection
+//!   - `Stream`: Sequential processing, minimal memory
+//!   - `ParallelStream`: Parallel chunk processing (default)
+//!   - `ParallelInMemory`: Load entire file, process in parallel
+//!   - `ParallelMmap`: Memory-mapped file access (often fastest for large files)
+//! * [`Threads`]: Configure thread pool size for parallel modes
+//! * [`Performance`]: Advanced settings (chunk size, capacity hints)
 //!
-//! ## Output
+//! ## Output Generation
 //!
-//! Output the results:
-//!
-//! * [`Output`]: Generate formatted output based on the specified format in `Serialization`
+//! * [`Output`]: Formatted output generation based on configured serialization
 //!
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Case, Filters, Format, Options, Serialization, Tally, WordTally, Input, Io};
+//! use word_tally::{Case, Filters, Options, Serialization, Tally, WordTally, Input, Io};
 //! use anyhow::Result;
 //!
 //! # fn example() -> Result<()> {
 //! // Create options with case normalization, output format, and other settings
 //! let options = Options::default()
 //!     .with_case(Case::Lower)
-//!     .with_serialization(Serialization::with_format(Format::Json))
+//!     .with_serialization(Serialization::Json)
 //!     .with_filters(Filters::default().with_min_chars(3));
 //!
 //! let file_path = std::path::Path::new("example_word.txt");
@@ -132,7 +121,7 @@ pub use options::{
     filters::{ExcludeWords, Filters, MinChars, MinCount},
     io::Io,
     performance::Performance,
-    serialization::{Format, Serialization},
+    serialization::Serialization,
     sort::Sort,
     threads::Threads,
 };

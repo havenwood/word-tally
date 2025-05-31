@@ -1,72 +1,75 @@
-# Test organization
+# Test Organization
 
-This directory contains all tests for the word-tally project.
+All tests for word-tally are located in this directory, organized by functionality.
 
-## Structure
+## Test Files
 
-- **CLI Tests** (`cli_*.rs`): Tests for command-line interface functionality
-  - `cli_basic_tests.rs`: Basic commands (version, help)
-  - `cli_case_sort_tests.rs`: Case and sort options
-  - `cli_env_tests.rs`: Environment variable tests
-  - `cli_format_tests.rs`: Output format options (JSON, CSV, text)
-  - `cli_pattern_tests.rs`: Pattern matching and filtering
-  - `cli_verbose_tests.rs`: Verbose output tests
-  - `cli_tests.rs`: General CLI tests including output and pipe handling
+### CLI Tests (`cli_*.rs`)
+Command-line interface tests using `assert_cmd`:
+- `cli_delimiter_output_tests.rs` - Delimiter output formatting
+- `cli_env_tests.rs` - Environment variable handling
+- `cli_pattern_tests.rs` - Pattern matching (include/exclude)
+- `cli_serialization_tests.rs` - Output formats (JSON, CSV, text)
+- `cli_tests.rs` - General CLI functionality
+- `cli_verbose_tests.rs` - Verbose output formatting
 
-- **Library Tests** (`tally_*.rs`): Tests for the core library functionality
-  - `tally_core_tests.rs`: Core WordTally functionality
-  - `tally_defaults_tests.rs`: Default implementations
-  - `tally_filter_tests.rs`: Pattern and word filtering
-  - `tally_io_mode_tests.rs`: I/O mode comparison tests
-  - `tally_iterator_tests.rs`: Iterator implementation
-  - `tally_map_tests.rs`: TallyMap data structure tests
-  - `tally_serialization_tests.rs`: JSON/serde tests
+### Core Library Tests (`tally_*.rs`)
+Tests for the WordTally struct and core functionality:
+- `tally_core_tests.rs` - Core operations (sorting, filtering)
+- `tally_defaults_tests.rs` - Default implementations
+- `tally_filter_tests.rs` - Word filtering logic
+- `tally_io_mode_tests.rs` - I/O mode comparisons
+- `tally_iterator_tests.rs` - Iterator implementations
+- `tally_map_tests.rs` - TallyMap operations
+- `tally_serialization_tests.rs` - Serialization/deserialization
 
-- **API Tests** (`api_tests.rs`): Public API integration tests
-- **Error Tests** (`error_integration_tests.rs`): Error handling integration tests
-- **Core Library Tests** (`lib_tests.rs`): Comprehensive tests for core WordTally functionality including case handling, sorting, filtering, I/O modes, processing strategies, and serialization
+### Module Tests (`{module}_tests.rs`)
+Tests for specific modules:
+- `args_tests.rs` - CLI argument parsing
+- `delimiter_tests.rs` - Delimiter escaping/unescaping
+- `encoding_tests.rs` - ASCII/Unicode handling
+- `exit_code_tests.rs` - Exit code mappings
+- `filters_tests.rs` - Filter configurations
+- `hash_tests.rs` - Hash implementations
+- `input_tests.rs` - Input sources
+- `input_reader_tests.rs` - Buffer reading
+- `io_tests.rs` - I/O strategies
+- `options_tests.rs` - Options configuration
+- `output_tests.rs` - Output destinations
+- `patterns_tests.rs` - Regex patterns
+- `performance_tests.rs` - Performance settings
+- `serialization_tests.rs` - Serialization formats
+- `threads_tests.rs` - Thread configuration
+- `verbose_tests.rs` - Verbose output logic
 
-## Module-specific tests
+### Integration Tests
+- `api_tests.rs` - Public API usage examples
+- `error_integration_tests.rs` - Error handling scenarios
+- `lib_tests.rs` - Comprehensive library tests
+- `multi_file_io_tests.rs` - Multiple file handling
+- `traits_tests.rs` - Trait implementations
+- `verbose_output_tests.rs` - Verbose output integration
 
-Tests for specific modules and components:
-- `args_tests.rs`: Argument parsing tests
-- `encoding_tests.rs`: Encoding functionality tests including ASCII validation, Unicode handling, and mode comparisons
-- `exit_code_tests.rs`: Exit code definitions and handling tests
-- `filters_tests.rs`: Filter functionality tests
-- `hash_tests.rs`: Hash implementation tests
-- `input_tests.rs`: Input module tests
-- `input_reader_tests.rs`: InputReader module tests
-- `io_tests.rs`: I/O strategy tests
-- `multi_file_io_tests.rs`: Multiple file input handling tests
-- `options_tests.rs`: Options configuration tests
-- `output_tests.rs`: Output module tests
-- `patterns_tests.rs`: Pattern matching module tests
-- `performance_tests.rs`: Performance settings tests
-- `serialization_tests.rs`: Serialization module tests
-- `threads_tests.rs`: Thread configuration tests
-- `traits_tests.rs`: Trait implementation tests
-- `verbose_tests.rs`: Verbose formatting tests
-- `verbose_output_tests.rs`: Verbose output functionality tests
-
-## Test utilities
-
-Each test file is self-contained with local helper functions. This approach ensures simple compilation and avoids complex module dependencies. Common patterns include:
-- `word_tally()` function for CLI command building
-- `make_shared()` function for Arc wrapper creation
-- Test-specific helper functions as needed
-
-## Running tests
+## Running Tests
 
 ```bash
-# Run all tests
+# All tests
 cargo test
 
-# Run specific test file
-cargo test --test cli_basic_tests
+# Specific test file
+cargo test --test delimiter_tests
 
-# Run tests with verbose output
+# With output
 cargo test -- --nocapture
 
-# Run tests in release mode
+# In release mode
 cargo test --release
 ```
+
+## Test Guidelines
+
+- Each test file is self-contained
+- Helper functions are defined locally
+- No shared test utilities module
+- Tests are named descriptively
+- Doctests are minimal

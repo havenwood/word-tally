@@ -501,20 +501,18 @@ fn test_complex_filter_combination() {
 }
 
 #[test]
-fn test_with_unescaped_exclude_words() {
-    let escaped_words = vec!["\\n".to_string(), "\\t".to_string(), "\\r".to_string()];
+fn test_with_exclude_words() {
+    let words = vec!["the".to_string(), "and".to_string(), "is".to_string()];
 
-    let filters = Filters::default()
-        .with_unescaped_exclude_words(&escaped_words)
-        .expect("execute operation");
+    let filters = Filters::default().with_exclude_words(words);
 
     let exclude_words = filters.exclude_words().expect("process test");
     let words_list = exclude_words.as_ref();
 
     assert_eq!(words_list.len(), 3);
-    assert_eq!(words_list[0], "\n");
-    assert_eq!(words_list[1], "\t");
-    assert_eq!(words_list[2], "\r");
+    assert_eq!(words_list[0], "the");
+    assert_eq!(words_list[1], "and");
+    assert_eq!(words_list[2], "is");
 }
 
 #[test]

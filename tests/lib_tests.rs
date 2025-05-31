@@ -4,8 +4,8 @@ use std::sync::Arc;
 use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
-    Case, Count, ExcludeWords, Filters, Format, Io, Options, Performance, Serialization, Sort,
-    Word, WordTally,
+    Case, Count, ExcludeWords, Filters, Io, Options, Performance, Serialization, Sort, Word,
+    WordTally,
 };
 
 fn make_shared<T>(value: T) -> Arc<T> {
@@ -58,7 +58,7 @@ fn word_tally(
 }
 
 fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFields<'_>) {
-    let serialization = Serialization::with_format(Format::Text);
+    let serialization = Serialization::default();
     let word_tally = word_tally(case, sort, serialization, filters);
     assert_eq!(word_tally.count(), fields.count);
     assert_eq!(word_tally.uniq_count(), fields.uniq_count);
@@ -730,14 +730,14 @@ mod serialization_tests {
 
     #[test]
     fn with_format() {
-        let format_only = Serialization::with_format(Format::Json);
-        assert_eq!(format_only.format(), Format::Json);
+        let format_only = Serialization::Json;
+        assert_eq!(format_only, Serialization::Json);
     }
 
     #[test]
-    fn with_delimiter() {
-        let delim = Serialization::with_delimiter("::").expect("create delimiter");
-        assert_eq!(delim.delimiter(), "::");
+    fn with_field_delimiter() {
+        let delim = Serialization::text().with_field_delimiter("::");
+        assert_eq!(delim.field_delimiter(), Some("::"));
     }
 }
 

@@ -1,155 +1,136 @@
 //! Serialization format options and settings.
 
-use crate::options::unescape;
-use anyhow::Result;
-use clap::ValueEnum;
+use crate::options::delimiter::Delimiter;
 use core::fmt::{self, Display, Formatter};
-use serde::{self, Deserialize, Serialize};
-
-/// Default delimiter used between word and count in text output.
-pub const DEFAULT_DELIMITER: &str = " ";
+use serde::{Deserialize, Serialize};
 
 /// Serialization format options.
-///
-/// # Examples
-///
-/// ```
-/// use word_tally::Format;
-///
-/// assert_eq!(Format::default(), Format::Text);
-/// assert_eq!(Format::Json.to_string(), "json");
-/// ```
-#[derive(
-    Clone,
-    Copy,
-    Debug,
-    Default,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    Serialize,
-    Deserialize,
-    ValueEnum,
-)]
-pub enum Format {
-    /// Plain text output.
-    #[default]
-    Text,
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub enum Serialization {
+    /// Plain text output has a delimiter between field/value and a per-entry delimiter.
+    Text {
+        field_delimiter: Delimiter,
+        entry_delimiter: Delimiter,
+    },
     /// JSON output.
     Json,
     /// CSV output.
     Csv,
 }
 
-impl Display for Format {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Text => write!(f, "text"),
-            Self::Json => write!(f, "json"),
-            Self::Csv => write!(f, "csv"),
+impl Serialization {
+    /// Create a text format with default delimiters.
+    pub fn text() -> Self {
+        Self::Text {
+            field_delimiter: Delimiter::from_literal(Delimiter::DEFAULT_FIELD),
+            entry_delimiter: Delimiter::from_literal(Delimiter::DEFAULT_ENTRY),
+        }
+    }
+
+    /// Set the field delimiter if this is a text format, otherwise return self unchanged.
+    pub fn with_field_delimiter(self, field_delimiter: &str) -> Self {
+        if let Self::Text {
+            entry_delimiter, ..
+        } = self
+        {
+            Self::Text {
+                field_delimiter: Delimiter::from_escaped(field_delimiter),
+                entry_delimiter,
+            }
+        } else {
+            self
+        }
+    }
+
+    /// Set the entry delimiter if this is a text format, otherwise return self unchanged.
+    pub fn with_entry_delimiter(self, entry_delimiter: &str) -> Self {
+        if let Self::Text {
+            field_delimiter, ..
+        } = self
+        {
+            Self::Text {
+                field_delimiter,
+                entry_delimiter: Delimiter::from_escaped(entry_delimiter),
+            }
+        } else {
+            self
+        }
+    }
+
+    /// Get the field delimiter if this is text format.
+    #[must_use]
+    pub fn field_delimiter(&self) -> Option<&str> {
+        if let Self::Text {
+            field_delimiter, ..
+        } = self
+        {
+            Some(field_delimiter.as_str())
+        } else {
+            None
+        }
+    }
+
+    /// Get the entry delimiter if this is text format.
+    #[must_use]
+    pub fn entry_delimiter(&self) -> Option<&str> {
+        if let Self::Text {
+            entry_delimiter, ..
+        } = self
+        {
+            Some(entry_delimiter.as_str())
+        } else {
+            None
+        }
+    }
+
+    /// Get the field delimiter formatted for display, or "n/a" if not text format.
+    #[must_use]
+    pub fn field_delimiter_display(&self) -> String {
+        if let Self::Text {
+            field_delimiter, ..
+        } = self
+        {
+            field_delimiter.display_quoted()
+        } else {
+            "n/a".to_string()
+        }
+    }
+
+    /// Get the entry delimiter formatted for display, or "n/a" if not text format.
+    #[must_use]
+    pub fn entry_delimiter_display(&self) -> String {
+        if let Self::Text {
+            entry_delimiter, ..
+        } = self
+        {
+            entry_delimiter.display_quoted()
+        } else {
+            "n/a".to_string()
         }
     }
 }
 
-/// Serialization settings for word tallying.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Serialization {
-    /// Output serialization format (text, json, csv).
-    pub format: Format,
-
-    /// Delimiter between word and count in text output.
-    pub delimiter: String,
-}
-
 impl Default for Serialization {
     fn default() -> Self {
-        Self {
-            format: Format::default(),
-            delimiter: DEFAULT_DELIMITER.to_string(),
-        }
+        Self::text()
     }
 }
 
 impl Display for Serialization {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "Serialization {{ format: {}, delimiter: \"{}\" }}",
-            self.format, self.delimiter
-        )
-    }
-}
-
-impl Serialization {
-    /// Helper function to unescape a delimiter string.
-    fn format_delimiter(delimiter: &str) -> Result<String> {
-        unescape(delimiter, "delimiter")
-    }
-
-    /// Create a new Serialize instance with specified settings.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the delimiter cannot be unescaped.
-    pub fn new(format: Format, delimiter: &str) -> Result<Self> {
-        let formatted_delimiter = Self::format_delimiter(delimiter)?;
-
-        Ok(Self {
-            format,
-            delimiter: formatted_delimiter,
-        })
-    }
-
-    /// Create a Serialize with custom format.
-    #[must_use]
-    pub fn with_format(format: Format) -> Self {
-        Self {
-            format,
-            ..Default::default()
+        match self {
+            Self::Text {
+                field_delimiter,
+                entry_delimiter,
+            } => {
+                write!(
+                    f,
+                    "text[field={}, entry={}]",
+                    field_delimiter, entry_delimiter
+                )
+            }
+            Self::Json => write!(f, "json"),
+            Self::Csv => write!(f, "csv"),
         }
-    }
-
-    /// Create a Serialize with custom delimiter.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if the delimiter cannot be unescaped.
-    pub fn with_delimiter(delimiter: &str) -> Result<Self> {
-        let formatted_delimiter = Self::format_delimiter(delimiter)?;
-
-        Ok(Self {
-            delimiter: formatted_delimiter,
-            ..Default::default()
-        })
-    }
-
-    /// Set the format option and return a new instance.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use word_tally::{Format, Serialization};
-    ///
-    /// let serialization = Serialization::default().set_format(Format::Json);
-    /// assert_eq!(serialization.format(), Format::Json);
-    /// ```
-    #[must_use]
-    pub const fn set_format(mut self, format: Format) -> Self {
-        self.format = format;
-        self
-    }
-
-    /// Get the format setting.
-    #[must_use]
-    pub const fn format(&self) -> Format {
-        self.format
-    }
-
-    /// Get the delimiter.
-    #[must_use]
-    pub fn delimiter(&self) -> &str {
-        &self.delimiter
     }
 }

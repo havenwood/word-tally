@@ -3,7 +3,7 @@
 use anyhow::{Context, Result};
 use serde::Serialize;
 use word_tally::Output;
-use word_tally::{Format, WordTally, WordTallyError};
+use word_tally::{Serialization, WordTally, WordTallyError};
 
 /// Handles verbose output formatting and display of word tally results.
 #[derive(Debug)]
@@ -27,7 +27,8 @@ struct VerboseData<'a> {
     source: &'a str,
     total_words: usize,
     unique_words: usize,
-    delimiter: String,
+    field_delimiter: String,
+    entry_delimiter: String,
     case: String,
     order: String,
     io: String,
@@ -49,7 +50,8 @@ impl<'a> VerboseData<'a> {
             source,
             total_words: tally.count(),
             unique_words: tally.uniq_count(),
-            delimiter: format!("{:?}", serialization.delimiter()),
+            field_delimiter: serialization.field_delimiter_display(),
+            entry_delimiter: serialization.entry_delimiter_display(),
             case: options.case().to_string(),
             order: options.sort().to_string(),
             io: options.io().to_string(),
@@ -67,7 +69,8 @@ impl<'a> VerboseData<'a> {
             ("source", self.source.to_string()),
             ("total-words", self.total_words.to_string()),
             ("unique-words", self.unique_words.to_string()),
-            ("delimiter", self.delimiter.to_string()),
+            ("delimiter", self.field_delimiter.to_string()),
+            ("entry-delimiter", self.entry_delimiter.to_string()),
             ("case", self.case.to_string()),
             ("order", self.order.to_string()),
             ("io", self.io.to_string()),
@@ -104,12 +107,13 @@ impl Verbose {
     pub(crate) fn write_info(&mut self, word_tally: &WordTally<'_>, source: &str) -> Result<()> {
         let data = VerboseData::from_tally(word_tally, source);
 
-        match word_tally.options().serialization().format() {
-            Format::Json => self.write_json(&data),
-            Format::Csv => self.write_csv(&data),
-            Format::Text => {
-                self.write_text(&data, word_tally.options().serialization().delimiter())
-            }
+        match word_tally.options().serialization() {
+            Serialization::Json => self.write_json(&data),
+            Serialization::Csv => self.write_csv(&data),
+            Serialization::Text {
+                field_delimiter,
+                entry_delimiter,
+            } => self.write_text(&data, field_delimiter.as_str(), entry_delimiter.as_str()),
         }
     }
 
@@ -137,11 +141,16 @@ impl Verbose {
     }
 
     /// Write verbose info in text format.
-    fn write_text(&mut self, data: &VerboseData<'_>, delimiter: &str) -> Result<()> {
+    fn write_text(
+        &mut self,
+        data: &VerboseData<'_>,
+        delimiter: &str,
+        entry_delimiter: &str,
+    ) -> Result<()> {
         // Write each field as key-value pairs
         data.field_pairs().try_for_each(|(field_name, value)| {
             self.output
-                .write_chunk(&format!("{field_name}{delimiter}{value}\n"))
+                .write_chunk(&format!("{field_name}{delimiter}{value}{entry_delimiter}"))
         })?;
 
         // Add separator if needed

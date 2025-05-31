@@ -49,15 +49,6 @@ pub enum Error {
     #[error("CSV serialization failed")]
     CsvSerialization(#[from] csv::Error),
 
-    /// Failed to unescape string.
-    #[error("failed to unescape {context}: {value}")]
-    Unescape {
-        /// Context where unescape failed.
-        context: String,
-        /// Value that failed to unescape.
-        value: String,
-    },
-
     /// Chunk count exceeds platform limits.
     #[error("chunk count {chunks} exceeds platform limit of {}", usize::MAX)]
     ChunkCountExceeded {

@@ -1,51 +1,57 @@
-use word_tally::{Case, Filters, Format, Io, Options, Performance, Serialization, Sort, Threads};
+use word_tally::{Case, Filters, Io, Options, Performance, Serialization, Sort, Threads};
 
 #[test]
 fn test_options_format_default() {
     let options = Options::default();
-    assert_eq!(options.serialization().format(), Format::Text);
+    assert!(matches!(
+        options.serialization(),
+        Serialization::Text { .. }
+    ));
 }
 
 #[test]
 fn test_options_with_format() {
-    let options = Options::default().with_serialization(Serialization::with_format(Format::Json));
-    assert_eq!(options.serialization().format(), Format::Json);
+    let options = Options::default().with_serialization(Serialization::Json);
+    assert_eq!(options.serialization(), &Serialization::Json);
 
     let options = Options::default()
-        .with_serialization(Serialization::with_format(Format::Csv))
+        .with_serialization(Serialization::Csv)
         .with_case(Case::Upper);
 
-    assert_eq!(options.serialization().format(), Format::Csv);
+    assert_eq!(options.serialization(), &Serialization::Csv);
     assert_eq!(options.case(), Case::Upper);
 }
 
 #[test]
 fn test_options_display_includes_format() {
-    let options = Options::default().with_serialization(Serialization::with_format(Format::Json));
+    let options = Options::default().with_serialization(Serialization::Json);
     let display_string = options.to_string();
 
     assert!(display_string.contains("serialization:"));
-    assert!(display_string.contains("format: json"));
+    assert!(display_string.contains("serialization: json"));
 }
 
 #[test]
 fn test_format_field_in_struct() {
     let options = Options::default();
-    assert_eq!(options.serialization().format(), Format::Text);
+    assert!(matches!(
+        options.serialization(),
+        Serialization::Text { .. }
+    ));
 
-    let options2 = Options::default().with_serialization(Serialization::with_format(Format::Json));
-    assert_eq!(options2.serialization().format(), Format::Json);
+    let options2 = Options::default().with_serialization(Serialization::Json);
+    assert_eq!(options2.serialization(), &Serialization::Json);
 }
 
 #[test]
 fn test_format_serialization() {
-    let options = Options::default().with_serialization(Serialization::with_format(Format::Json));
+    let options = Options::default().with_serialization(Serialization::Json);
     let serialized = serde_json::to_string(&options).expect("serialize JSON");
 
-    assert!(serialized.contains("\"format\":\"Json\""));
+    assert!(serialized.contains("\"serialization\":\"Json\""));
 
     let deserialized: Options = serde_json::from_str(&serialized).expect("deserialize JSON");
-    assert_eq!(deserialized.serialization().format(), Format::Json);
+    assert_eq!(deserialized.serialization(), &Serialization::Json);
 }
 
 #[test]
@@ -53,7 +59,7 @@ fn test_comprehensive_options_serialization() {
     let options = Options::default()
         .with_case(Case::Upper)
         .with_sort(Sort::Desc)
-        .with_serialization(Serialization::with_format(Format::Json))
+        .with_serialization(Serialization::Json)
         .with_io(Io::ParallelMmap)
         .with_filters(Filters::default().with_min_chars(3).with_min_count(2));
 
@@ -72,10 +78,7 @@ fn test_comprehensive_options_serialization() {
         options.filters().min_count(),
         deserialized.filters().min_count()
     );
-    assert_eq!(
-        options.serialization().format(),
-        deserialized.serialization().format()
-    );
+    assert_eq!(options.serialization(), deserialized.serialization());
 }
 
 #[test]
@@ -131,10 +134,9 @@ fn test_with_sort() {
 
 #[test]
 fn test_with_serialization() {
-    let serialization =
-        Serialization::new(Format::Json, ",").expect("should create valid serialization");
+    let serialization = Serialization::Json;
     let options = Options::default().with_serialization(serialization);
-    assert_eq!(options.serialization().format(), Format::Json);
+    assert_eq!(options.serialization(), &Serialization::Json);
 }
 
 #[test]
@@ -152,10 +154,10 @@ fn test_with_performance() {
 }
 
 #[test]
-fn test_with_delimiter() {
-    let options = Options::default()
-        .with_serialization(Serialization::with_delimiter("::").expect("create delimiter"));
-    assert_eq!(options.serialization().delimiter(), "::");
+fn test_with_field_delimiter() {
+    let options =
+        Options::default().with_serialization(Serialization::text().with_field_delimiter("::"));
+    assert_eq!(options.serialization().field_delimiter(), Some("::"));
 }
 
 #[test]
@@ -200,7 +202,10 @@ fn test_getters() {
 
     assert_eq!(options.case(), Case::Lower);
     assert_eq!(options.sort(), Sort::Asc);
-    assert_eq!(options.serialization().format(), Format::Text);
+    assert!(matches!(
+        options.serialization(),
+        Serialization::Text { .. }
+    ));
     assert!(matches!(options.filters(), _));
     assert!(matches!(options.performance(), _));
     assert_eq!(options.io(), Io::ParallelStream);
@@ -211,7 +216,7 @@ fn test_builder_chaining() {
     let options = Options::default()
         .with_case(Case::Upper)
         .with_sort(Sort::Desc)
-        .with_serialization(Serialization::new(Format::Json, "||").expect("create serialization"))
+        .with_serialization(Serialization::Json)
         .with_io(Io::ParallelInMemory)
         .with_performance(
             Performance::default()
@@ -223,8 +228,8 @@ fn test_builder_chaining() {
 
     assert_eq!(options.case(), Case::Upper);
     assert_eq!(options.sort(), Sort::Desc);
-    assert_eq!(options.serialization().format(), Format::Json);
-    assert_eq!(options.serialization().delimiter(), "||");
+    assert_eq!(options.serialization(), &Serialization::Json);
+    assert_eq!(options.serialization().field_delimiter(), None);
     assert_eq!(options.io(), Io::ParallelInMemory);
     assert_eq!(options.performance().threads.count(), 4);
     assert_eq!(options.performance().uniqueness_ratio, 80);
@@ -234,9 +239,9 @@ fn test_builder_chaining() {
 
 #[test]
 fn test_as_ref_serialization() {
-    let options = Options::default().with_serialization(Serialization::with_format(Format::Csv));
+    let options = Options::default().with_serialization(Serialization::Csv);
     let serialization_ref: &Serialization = options.as_ref();
-    assert_eq!(serialization_ref.format(), Format::Csv);
+    assert_eq!(serialization_ref, &Serialization::Csv);
 }
 
 #[test]
@@ -259,7 +264,7 @@ fn test_options_serde_full() {
     let options = Options::default()
         .with_case(Case::Upper)
         .with_sort(Sort::Desc)
-        .with_serialization(Serialization::with_format(Format::Json))
+        .with_serialization(Serialization::Json)
         .with_io(Io::ParallelInMemory);
 
     let serialized = serde_json::to_string(&options).expect("serialize JSON");
@@ -267,101 +272,6 @@ fn test_options_serde_full() {
 
     assert_eq!(deserialized.case(), options.case());
     assert_eq!(deserialized.sort(), options.sort());
-    assert_eq!(
-        deserialized.serialization().format(),
-        options.serialization().format()
-    );
+    assert_eq!(deserialized.serialization(), options.serialization());
     assert_eq!(deserialized.io(), options.io());
-}
-
-#[test]
-fn test_unescape_basic_sequences() {
-    use word_tally::options::unescape;
-
-    assert_eq!(
-        unescape("\\t", "test").expect("should unescape tab character"),
-        "\t"
-    );
-    assert_eq!(
-        unescape("\\n", "test").expect("should unescape newline character"),
-        "\n"
-    );
-    assert_eq!(
-        unescape("\\r", "test").expect("should unescape carriage return"),
-        "\r"
-    );
-    assert_eq!(
-        unescape("\\\"", "test").expect("should unescape double quote"),
-        "\""
-    );
-    assert_eq!(
-        unescape("\\'", "test").expect("should unescape single quote"),
-        "'"
-    );
-    assert_eq!(
-        unescape("\\\\", "test").expect("should unescape backslash"),
-        "\\"
-    );
-}
-
-#[test]
-fn test_unescape_mixed_content() {
-    use word_tally::options::unescape;
-
-    assert_eq!(
-        unescape("Hello\\nWorld", "test").expect("should unescape mixed content with newline"),
-        "Hello\nWorld"
-    );
-    assert_eq!(
-        unescape("Tab\\tSeparated\\tValues", "test").expect("should unescape tab-separated values"),
-        "Tab\tSeparated\tValues"
-    );
-    assert_eq!(
-        unescape("Path\\\\to\\\\file", "test").expect("should unescape path with backslashes"),
-        "Path\\to\\file"
-    );
-}
-
-#[test]
-fn test_unescape_unknown_sequences() {
-    use word_tally::options::unescape;
-
-    assert_eq!(
-        unescape("\\x", "test").expect("should handle unknown escape sequence \\x"),
-        "x"
-    );
-    assert_eq!(
-        unescape("\\u1234", "test").expect("should handle unknown escape sequence \\u1234"),
-        "u1234"
-    );
-    assert_eq!(
-        unescape("\\0", "test").expect("should handle unknown escape sequence \\0"),
-        "0"
-    );
-}
-
-#[test]
-fn test_unescape_trailing_backslash() {
-    use word_tally::options::unescape;
-
-    assert!(unescape("\\", "test").is_err());
-    assert!(unescape("hello\\", "test").is_err());
-}
-
-#[test]
-fn test_unescape_no_escapes() {
-    use word_tally::options::unescape;
-
-    assert_eq!(
-        unescape("", "test").expect("should handle empty string"),
-        ""
-    );
-    assert_eq!(
-        unescape("plain text", "test").expect("should handle plain text without escapes"),
-        "plain text"
-    );
-    assert_eq!(
-        unescape("12345", "test").expect("should handle numeric string"),
-        "12345"
-    );
 }

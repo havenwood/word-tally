@@ -2,7 +2,6 @@
 
 use crate::options::case::Case;
 use crate::options::patterns::{ExcludeSet, IncludeSet, PatternList};
-use crate::options::unescape;
 use crate::{Count, TallyMap};
 
 use anyhow::Result;
@@ -135,21 +134,9 @@ impl Filters {
 
     /// Set words to exclude.
     #[must_use]
-    pub fn with_exclude_words(mut self, words: ExcludeWordsList) -> Self {
+    pub fn with_exclude_words(mut self, words: Vec<String>) -> Self {
         self.exclude_words = Some(ExcludeWords(words));
         self
-    }
-
-    /// Set words to exclude, unescaping them first.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if unescaping of any word fails.
-    pub fn with_unescaped_exclude_words(mut self, words: &[String]) -> Result<Self> {
-        let unescaped_words = Self::format_exclude_words(words)?;
-        self.exclude_words = Some(ExcludeWords(unescaped_words));
-
-        Ok(self)
     }
 
     /// Helper method to set patterns on filters.
@@ -252,11 +239,6 @@ impl Filters {
         if let Some(input_patterns) = self.include_patterns() {
             tally_map.retain(|word, _| input_patterns.matches(word));
         }
-    }
-
-    /// Helper function to unescape a list of words
-    fn format_exclude_words(words: &[String]) -> Result<ExcludeWordsList> {
-        words.iter().map(|w| unescape(w, "exclude word")).collect()
     }
 }
 

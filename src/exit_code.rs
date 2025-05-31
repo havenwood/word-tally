@@ -56,7 +56,6 @@ impl From<&Error> for ExitCode {
             | Error::Pattern { .. }
             | Error::JsonSerialization(_)
             | Error::CsvSerialization(_)
-            | Error::Unescape { .. }
             | Error::ChunkCountExceeded { .. }
             | Error::BatchSizeExceeded { .. }
             | Error::NonAsciiInAsciiMode { .. } => Self::Data,

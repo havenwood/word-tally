@@ -3,9 +3,7 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-use word_tally::{
-    Case, Filters, Format, Input, Io, Options, Serialization, Sort, Tally, WordTally,
-};
+use word_tally::{Case, Filters, Input, Io, Options, Serialization, Sort, Tally, WordTally};
 
 fn calculate_hash<T: Hash>(value: &T) -> u64 {
     let mut hasher = DefaultHasher::new();
@@ -75,7 +73,7 @@ fn test_options_hash() {
     let lowercase_desc_json = Options::default()
         .with_case(Case::Lower)
         .with_sort(Sort::Desc)
-        .with_serialization(Serialization::with_format(Format::Json));
+        .with_serialization(Serialization::Json);
 
     assert_ne!(
         calculate_hash(&lowercase_desc_alpha),
@@ -157,9 +155,9 @@ fn test_components_hash() {
     );
     assert_ne!(calculate_hash(&in_memory_alpha), calculate_hash(&streamed));
 
-    let text_alpha = Format::Text;
-    let text_beta = Format::Text;
-    let json = Format::Json;
+    let text_alpha = Serialization::default();
+    let text_beta = Serialization::default();
+    let json = Serialization::Json;
 
     assert_eq!(calculate_hash(&text_alpha), calculate_hash(&text_beta));
     assert_ne!(calculate_hash(&text_alpha), calculate_hash(&json));
@@ -188,12 +186,12 @@ fn test_hash_collisions() {
     let lowercase_asc_text = Options::default()
         .with_case(Case::Lower)
         .with_sort(Sort::Asc)
-        .with_serialization(Serialization::with_format(Format::Text));
+        .with_serialization(Serialization::default());
 
     let uppercase_desc_json = Options::default()
         .with_case(Case::Upper)
         .with_sort(Sort::Desc)
-        .with_serialization(Serialization::with_format(Format::Json));
+        .with_serialization(Serialization::Json);
 
     assert_ne!(
         calculate_hash(&lowercase_asc_text),
@@ -299,7 +297,7 @@ fn test_equality_and_hashing() {
     let tallies: Vec<WordTally<'static>> = cases_and_sorts
         .iter()
         .map(|&(case, sort)| {
-            let serializer = Serialization::with_format(Format::Text);
+            let serializer = Serialization::default();
             let filters = Filters::default();
             let options = Options::new(
                 case,

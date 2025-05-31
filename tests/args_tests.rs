@@ -443,7 +443,7 @@ fn test_args_options_comprehensive() {
         .arg("--sort=desc")
         .arg("--io=parallel-in-memory")
         .arg("--format=csv")
-        .arg("--delimiter=;")
+        .arg("--field-delimiter=;")
         .arg("-v")
         .write_stdin("Test TEST test")
         .assert()
@@ -525,7 +525,7 @@ fn test_args_delimiter_edge_cases() {
     // Empty delimiter
     Command::cargo_bin("word-tally")
         .expect("arguments should be valid")
-        .arg("--delimiter=")
+        .arg("--field-delimiter=")
         .arg("--format=text")
         .write_stdin("test word")
         .assert()
@@ -536,7 +536,7 @@ fn test_args_delimiter_edge_cases() {
     // Multi-char delimiter
     Command::cargo_bin("word-tally")
         .expect("arguments should be valid")
-        .arg("--delimiter= => ")
+        .arg("--field-delimiter= => ")
         .arg("--format=text")
         .write_stdin("test word")
         .assert()

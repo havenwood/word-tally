@@ -1,6 +1,6 @@
 use tempfile::NamedTempFile;
 use word_tally::{
-    Case, Count, Filters, Format, Input, Io, Options, Performance, Serialization, Sort, WordTally,
+    Case, Count, Filters, Input, Io, Options, Performance, Serialization, Sort, WordTally,
 };
 
 fn create_test_data_file() -> NamedTempFile {
@@ -44,7 +44,7 @@ fn word_tally(
 }
 
 fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFields<'_>) {
-    let serialization = Serialization::with_format(Format::Text);
+    let serialization = Serialization::default();
     let word_tally = word_tally(case, sort, serialization, filters);
     assert_eq!(word_tally.count(), fields.count);
     assert_eq!(word_tally.uniq_count(), fields.uniq_count);
