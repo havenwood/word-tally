@@ -42,9 +42,9 @@ fn test_parallel_stream_sequential() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
 
     verify_tally(&tally);
 }
@@ -60,9 +60,9 @@ fn test_parallel_stream_parallel() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
 
     verify_tally(&tally);
 }
@@ -78,9 +78,9 @@ fn test_parallel_in_memory_sequential() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
 
     verify_tally(&tally);
 }
@@ -96,9 +96,9 @@ fn test_parallel_in_memory_parallel() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
 
     verify_tally(&tally);
 }
@@ -153,14 +153,14 @@ fn test_parallel_processing_with_large_text() {
     let parallel_options = make_options(Io::ParallelInMemory);
 
     let sequential_input =
-        Input::new(file_path, sequential_options.io()).expect("Failed to create sequential input");
+        Input::new(file_path, sequential_options.io()).expect("create sequential input");
     let parallel_input =
-        Input::new(file_path, parallel_options.io()).expect("Failed to create parallel input");
+        Input::new(file_path, parallel_options.io()).expect("create parallel input");
 
     let sequential_tally = WordTally::new(&sequential_input, &sequential_options)
-        .expect("Failed to create sequential WordTally");
-    let parallel_tally = WordTally::new(&parallel_input, &parallel_options)
-        .expect("Failed to create parallel WordTally");
+        .expect("create sequential WordTally");
+    let parallel_tally =
+        WordTally::new(&parallel_input, &parallel_options).expect("create parallel WordTally");
 
     assert_eq!(sequential_tally.count(), parallel_tally.count());
     assert_eq!(sequential_tally.uniq_count(), parallel_tally.uniq_count());
@@ -181,11 +181,10 @@ fn test_parallel_mmap_with_real_file() {
     let file_path = temp_file.path().to_str().expect("temp file path");
 
     let mmap_options = make_options(Io::ParallelMmap);
-    let input =
-        Input::new(file_path, mmap_options.io()).expect("Failed to create memory-mapped input");
+    let input = Input::new(file_path, mmap_options.io()).expect("create memory-mapped input");
 
     let mmap_tally =
-        WordTally::new(&input, &mmap_options).expect("Failed to process file with memory mapping");
+        WordTally::new(&input, &mmap_options).expect("process file with memory mapping");
 
     verify_tally(&mmap_tally);
 }
@@ -205,11 +204,9 @@ fn test_read_trait_with_all_io_strategies() {
     let test_cases = [file_input, mmap_input, bytes_input];
 
     for input in &test_cases {
-        let mut reader = input.reader().expect("Failed to create reader");
+        let mut reader = input.reader().expect("create reader");
         let mut content = String::new();
-        reader
-            .read_to_string(&mut content)
-            .expect("Failed to read content");
+        reader.read_to_string(&mut content).expect("read content");
 
         assert_eq!(content.trim(), TEST_TEXT.trim());
     }
@@ -223,7 +220,7 @@ fn test_bytes_input() {
     assert_eq!(input.source(), "<bytes>");
     assert_eq!(input.size(), Some(TEST_TEXT.len() as u64));
 
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
     verify_tally(&tally);
 }
 
@@ -231,7 +228,9 @@ fn test_bytes_input() {
 fn test_bytes_io_with_input_new() {
     let result = Input::new(TEST_TEXT, Io::ParallelBytes);
     assert!(result.is_err());
-    let err = result.unwrap_err().to_string();
+    let err = result
+        .expect_err("bytes I/O mode with Input::new should fail")
+        .to_string();
     assert!(err.contains("byte I/O mode requires `Input::from_bytes()`"));
 }
 
@@ -280,8 +279,8 @@ fn test_utf8_boundary_handling() {
         .with_io(Io::ParallelMmap)
         .with_performance(performance);
 
-    let input = Input::new(file_path, options.io()).expect("Failed to create input");
-    let tally = WordTally::new(&input, &options).expect("WordTally creation failed");
+    let input = Input::new(file_path, options.io()).expect("create input");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
 
     assert!(
         tally
@@ -410,6 +409,35 @@ fn test_parse_io_from_str_value() {
     // Test invalid values (should return default)
     assert_eq!(Io::from_str_value(Some("invalid")), Io::default());
     assert_eq!(Io::from_str_value(Some("")), Io::default());
+}
+
+#[test]
+fn test_io_from_str_trait() {
+    use std::str::FromStr;
+
+    // Test valid values
+    assert_eq!(Io::from_str("stream"), Ok(Io::Stream));
+    assert_eq!(Io::from_str("STREAM"), Ok(Io::Stream));
+    assert_eq!(Io::from_str("parallel-stream"), Ok(Io::ParallelStream));
+    assert_eq!(Io::from_str("PARALLEL-STREAM"), Ok(Io::ParallelStream));
+    assert_eq!(Io::from_str("parallel-in-memory"), Ok(Io::ParallelInMemory));
+    assert_eq!(Io::from_str("Parallel-In-Memory"), Ok(Io::ParallelInMemory));
+    assert_eq!(Io::from_str("parallel-mmap"), Ok(Io::ParallelMmap));
+    assert_eq!(Io::from_str("PARALLEL-MMAP"), Ok(Io::ParallelMmap));
+    assert_eq!(Io::from_str("mmap"), Ok(Io::ParallelMmap));
+    assert_eq!(Io::from_str("MMAP"), Ok(Io::ParallelMmap));
+    assert_eq!(Io::from_str("parallel-bytes"), Ok(Io::ParallelBytes));
+    assert_eq!(Io::from_str("PARALLEL-BYTES"), Ok(Io::ParallelBytes));
+
+    // Test invalid values
+    assert!(Io::from_str("invalid").is_err());
+    assert!(Io::from_str("").is_err());
+    assert!(Io::from_str("stream-parallel").is_err());
+
+    // Test parse() method works too
+    assert_eq!("stream".parse::<Io>(), Ok(Io::Stream));
+    assert_eq!("parallel-mmap".parse::<Io>(), Ok(Io::ParallelMmap));
+    assert!("invalid".parse::<Io>().is_err());
 }
 
 #[test]

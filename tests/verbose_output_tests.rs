@@ -2,7 +2,7 @@
 mod verbose_unit_tests {
     use std::io::{Result as IoResult, Write};
     use std::sync::{Arc, Mutex};
-    use word_tally::{Case, Filters, Format, Input, Io, Options, Sort, WordTally};
+    use word_tally::{Case, Filters, Format, Input, Io, Options, Serialization, Sort, WordTally};
 
     // Mock writer to capture verbose output
     #[derive(Default)]
@@ -56,7 +56,8 @@ mod verbose_unit_tests {
     #[test]
     fn test_verbose_json_format() {
         let _mock = MockWriter::new();
-        let options = Options::default().with_format(Format::Json);
+        let options =
+            Options::default().with_serialization(Serialization::with_format(Format::Json));
         let tally = create_test_tally(&options);
 
         // We can't directly test handle_output since it's not public
@@ -74,7 +75,8 @@ mod verbose_unit_tests {
     #[test]
     fn test_verbose_csv_format() {
         let _mock = MockWriter::new();
-        let options = Options::default().with_format(Format::Csv);
+        let options =
+            Options::default().with_serialization(Serialization::with_format(Format::Csv));
         let tally = create_test_tally(&options);
 
         // Test CSV serialization of the tally itself

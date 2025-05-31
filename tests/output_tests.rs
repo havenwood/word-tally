@@ -178,6 +178,11 @@ mod output_tests {
         };
         let flush_result = writer.flush();
         assert!(flush_result.is_err());
-        assert_eq!(flush_result.unwrap_err().kind(), io::ErrorKind::Other);
+        assert_eq!(
+            flush_result
+                .expect_err("flush should fail when FailingWriter is configured to fail")
+                .kind(),
+            io::ErrorKind::Other
+        );
     }
 }

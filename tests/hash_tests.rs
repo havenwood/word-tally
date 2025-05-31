@@ -75,7 +75,7 @@ fn test_options_hash() {
     let lowercase_desc_json = Options::default()
         .with_case(Case::Lower)
         .with_sort(Sort::Desc)
-        .with_format(Format::Json);
+        .with_serialization(Serialization::with_format(Format::Json));
 
     assert_ne!(
         calculate_hash(&lowercase_desc_alpha),
@@ -188,12 +188,12 @@ fn test_hash_collisions() {
     let lowercase_asc_text = Options::default()
         .with_case(Case::Lower)
         .with_sort(Sort::Asc)
-        .with_format(Format::Text);
+        .with_serialization(Serialization::with_format(Format::Text));
 
     let uppercase_desc_json = Options::default()
         .with_case(Case::Upper)
         .with_sort(Sort::Desc)
-        .with_format(Format::Json);
+        .with_serialization(Serialization::with_format(Format::Json));
 
     assert_ne!(
         calculate_hash(&lowercase_asc_text),
@@ -312,9 +312,9 @@ fn test_equality_and_hashing() {
             // For tests only: create a 'static reference using Box::leak
             let options_static = Box::leak(Box::new(options));
 
-            let input = Input::new(file_path, options_static.io()).expect("Failed to create Input");
+            let input = Input::new(file_path, options_static.io()).expect("create input");
 
-            WordTally::new(&input, options_static).expect("Failed to create WordTally")
+            WordTally::new(&input, options_static).expect("create word tally")
         })
         .collect();
 

@@ -1,6 +1,6 @@
 //! Tests for word filtering functionality.
 
-use word_tally::InputPatterns;
+use word_tally::PatternList;
 use word_tally::options::filters::{ExcludeWords, ExcludeWordsList};
 use word_tally::{Case, Filters, TallyMap};
 
@@ -25,8 +25,8 @@ fn test_filters_new() {
     let min_chars = Some(3);
     let min_count = Some(2);
     let exclude_words: Option<ExcludeWordsList> = Some(vec!["the".to_string(), "and".to_string()]);
-    let exclude_patterns: Option<InputPatterns> = None;
-    let include_patterns: Option<InputPatterns> = None;
+    let exclude_patterns: Option<PatternList> = None;
+    let include_patterns: Option<PatternList> = None;
 
     let filters = Filters::new(
         min_chars,
@@ -43,7 +43,7 @@ fn test_filters_new() {
     assert!(filters.exclude_patterns().is_none());
     assert!(filters.include_patterns().is_none());
 
-    let exclude_patterns: Option<InputPatterns> = Some(vec!["^t.*".to_string()]);
+    let exclude_patterns: Option<PatternList> = Some(vec!["^t.*".to_string()]);
     let filters = Filters::new(
         min_chars,
         min_count,
@@ -59,8 +59,8 @@ fn test_filters_new() {
     assert!(filters.exclude_patterns().is_some());
     assert!(filters.include_patterns().is_none());
 
-    let exclude_patterns: Option<InputPatterns> = None;
-    let include_patterns: Option<InputPatterns> = Some(vec!["^a.*".to_string()]);
+    let exclude_patterns: Option<PatternList> = None;
+    let include_patterns: Option<PatternList> = Some(vec!["^a.*".to_string()]);
     let filters = Filters::new(
         min_chars,
         min_count,
@@ -76,7 +76,7 @@ fn test_filters_new() {
     assert!(filters.exclude_patterns().is_none());
     assert!(filters.include_patterns().is_some());
 
-    let exclude_patterns: Option<InputPatterns> = Some(vec!["^t.*".to_string()]);
+    let exclude_patterns: Option<PatternList> = Some(vec!["^t.*".to_string()]);
     let include_patterns = Some(vec!["^a.*".to_string()]);
     let filters = Filters::new(
         min_chars,
@@ -93,7 +93,7 @@ fn test_filters_new() {
     assert!(filters.exclude_patterns().is_some());
     assert!(filters.include_patterns().is_some());
 
-    let exclude_patterns: Option<InputPatterns> = Some(vec!["[".to_string()]);
+    let exclude_patterns: Option<PatternList> = Some(vec!["[".to_string()]);
     let result = Filters::new(
         min_chars,
         min_count,
@@ -109,8 +109,8 @@ fn test_filters_with_empty_patterns() {
     let min_chars = Some(3);
     let min_count = Some(2);
     let exclude_words: Option<ExcludeWordsList> = Some(vec!["the".to_string(), "and".to_string()]);
-    let exclude_patterns: Option<InputPatterns> = Some(vec![]);
-    let include_patterns: Option<InputPatterns> = Some(vec![]);
+    let exclude_patterns: Option<PatternList> = Some(vec![]);
+    let include_patterns: Option<PatternList> = Some(vec![]);
 
     let filters = Filters::new(
         min_chars,
@@ -308,9 +308,9 @@ fn test_filter_combination() {
 
 #[test]
 fn test_invalid_include_patterns() {
-    use word_tally::InputPatterns;
+    use word_tally::PatternList;
 
-    let invalid_pattern: InputPatterns = vec![r"[".to_string()];
+    let invalid_pattern: PatternList = vec![r"[".to_string()];
     let result = Filters::default().with_include_patterns(&invalid_pattern);
     assert!(result.is_err());
 }

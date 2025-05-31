@@ -18,9 +18,9 @@ fn test_to_json() {
         temp_file.path().to_str().expect("temp file path"),
         shared_options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let expected = WordTally::new(&input, &shared_options).expect("Failed to create WordTally");
+    let expected = WordTally::new(&input, &shared_options).expect("create word tally");
     let serialized = serde_json::to_string(&expected).expect("serialize JSON");
 
     assert!(serialized.contains("\"tally\":[[\"wombat\",2],[\"bat\",1]]"));
@@ -42,9 +42,9 @@ fn test_from_json() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let original = WordTally::new(&input, &options).expect("create word tally");
     let json = serde_json::to_string(&original).expect("serialize JSON");
     let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
 
@@ -66,9 +66,9 @@ fn test_json_field_renamed() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let original = WordTally::new(&input, &options).expect("create word tally");
     let json = serde_json::to_string(&original).expect("serialize JSON");
 
     assert!(json.contains("uniqueCount"));
@@ -86,9 +86,9 @@ fn test_deserialization_with_serde() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let original = WordTally::new(&input, &options).expect("create word tally");
     let json = serde_json::to_string(&original).expect("serialize JSON");
     let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
 
@@ -180,7 +180,7 @@ fn test_round_trip_serialization() {
     let options = Options::default()
         .with_case(Case::Upper)
         .with_sort(Sort::Asc)
-        .with_format(Format::Json)
+        .with_serialization(Serialization::with_format(Format::Json))
         .with_filters(word_tally::Filters::default().with_min_chars(2));
 
     let input = Input::new(temp_file.path(), options.io()).expect("process test");

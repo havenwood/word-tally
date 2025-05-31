@@ -17,7 +17,7 @@
 //! # Usage
 //!
 //! ```
-//! use word_tally::{Options, Case, Format, Io};
+//! use word_tally::{Options, Case, Format, Io, Serialization};
 //!
 //! // Default options
 //! let options = Options::default();
@@ -26,7 +26,7 @@
 //! // With specific settings
 //! let options = Options::default()
 //!     .with_case(Case::Lower)
-//!     .with_format(Format::Json)
+//!     .with_serialization(Serialization::with_format(Format::Json))
 //!     .with_io(Io::ParallelMmap);
 //! assert_eq!(options.io(), Io::ParallelMmap);
 //! ```
@@ -55,10 +55,8 @@ use self::encoding::Encoding;
 use self::filters::Filters;
 use self::io::Io;
 use self::performance::Performance;
-use self::serialization::Format;
 use self::serialization::Serialization;
 use self::sort::Sort;
-use self::threads::Threads;
 use crate::WordTallyError;
 use anyhow::Result;
 use core::fmt::{self, Display, Formatter};
@@ -67,7 +65,7 @@ use serde::{Deserialize, Serialize};
 /// Unified configuration for word tallying operations.
 ///
 /// `Options` consolidates all configuration aspects of word tallying into a single structure.
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Default, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Options {
     /// Case handling strategy (original, lower, upper).
     case: Case,
@@ -106,7 +104,7 @@ impl Options {
     /// // Targeted customization with builder methods
     /// let options = Options::default()
     ///     .with_case(Case::Lower)
-    ///     .with_format(Format::Json);
+    ///     .with_serialization(Serialization::with_format(Format::Json));
     /// assert_eq!(options.serialization().format(), Format::Json);
     /// ```
     #[must_use]
@@ -164,52 +162,10 @@ impl Options {
         self
     }
 
-    /// Set output format while preserving other options.
-    #[must_use]
-    pub fn with_format(mut self, format: Format) -> Self {
-        self.serialization = self.serialization.set_format(format);
-        self
-    }
-
-    /// Set delimiter for text output.
-    #[must_use]
-    pub fn with_delimiter(mut self, delimiter: impl Into<String>) -> Self {
-        self.serialization.delimiter = delimiter.into();
-        self
-    }
-
     /// Set I/O strategy.
     #[must_use]
     pub const fn with_io(mut self, io: Io) -> Self {
         self.io = io;
-        self
-    }
-
-    /// Set thread count for parallel processing.
-    #[must_use]
-    pub const fn with_threads(mut self, threads: Threads) -> Self {
-        self.performance = self.performance.with_threads(threads);
-        self
-    }
-
-    /// Set uniqueness ratio for capacity estimation.
-    #[must_use]
-    pub const fn with_uniqueness_ratio(mut self, ratio: u16) -> Self {
-        self.performance = self.performance.with_uniqueness_ratio(ratio);
-        self
-    }
-
-    /// Set words-per-kilobyte for capacity estimation.
-    #[must_use]
-    pub const fn with_words_per_kb(mut self, words_per_kb: u16) -> Self {
-        self.performance = self.performance.with_words_per_kb(words_per_kb);
-        self
-    }
-
-    /// Set chunk size for parallel processing.
-    #[must_use]
-    pub const fn with_chunk_size(mut self, size: u64) -> Self {
-        self.performance = self.performance.with_chunk_size(size);
         self
     }
 
@@ -271,7 +227,7 @@ impl Options {
     ///
     /// Returns an error if a parallel I/O mode is selected but the thread pool
     /// cannot be initialized.
-    pub fn init_thread_pool_if_parallel(&self) -> anyhow::Result<()> {
+    pub fn init_thread_pool_if_parallel(&self) -> Result<()> {
         match self.io {
             Io::Stream => Ok(()),
             Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes => {

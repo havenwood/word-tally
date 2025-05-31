@@ -1,11 +1,7 @@
 //! Sorting options for word tallying results.
 
-use crate::WordTally;
-use crate::options::io::Io;
 use clap::ValueEnum;
-use core::cmp::Reverse;
 use core::fmt::{self, Display, Formatter};
-use rayon::slice::ParallelSliceMut;
 use serde::{Deserialize, Serialize};
 
 /// Sort order by count.
@@ -25,14 +21,14 @@ use serde::{Deserialize, Serialize};
     Copy,
     Debug,
     Default,
-    Eq,
     PartialEq,
+    Eq,
     PartialOrd,
     Ord,
     Hash,
-    ValueEnum,
     Serialize,
     Deserialize,
+    ValueEnum,
 )]
 pub enum Sort {
     /// Sort by count descending.
@@ -55,34 +51,15 @@ impl Display for Sort {
 }
 
 impl Sort {
-    /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
-    /// Uses unstable sort, with parallel sorting for parallel I/O modes.
-    pub fn apply(&self, w: &mut WordTally<'_>) {
-        match (self, w.options().io()) {
-            // No sorting
-            (Self::Unsorted, _) => {}
+    /// Returns true if sorting should be applied.
+    #[must_use]
+    pub const fn should_sort(&self) -> bool {
+        !matches!(self, Self::Unsorted)
+    }
 
-            // Sequential unstable sorting
-            (Self::Desc, Io::Stream) => {
-                w.tally.sort_unstable_by_key(|&(_, count)| Reverse(count));
-            }
-            (Self::Asc, Io::Stream) => {
-                w.tally.sort_unstable_by_key(|&(_, count)| count);
-            }
-
-            // Parallel unstable sorting
-            (
-                Self::Desc,
-                Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes,
-            ) => w
-                .tally
-                .par_sort_unstable_by_key(|&(_, count)| Reverse(count)),
-            (
-                Self::Asc,
-                Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes,
-            ) => {
-                w.tally.par_sort_unstable_by_key(|&(_, count)| count);
-            }
-        }
+    /// Returns true if sorting should be in descending order.
+    #[must_use]
+    pub const fn is_descending(&self) -> bool {
+        matches!(self, Self::Desc)
     }
 }

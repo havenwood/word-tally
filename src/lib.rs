@@ -69,7 +69,7 @@
 //!
 //! * Length filters: [`MinChars`] excludes words shorter than specified
 //! * Frequency filters: [`MinCount`] includes only words appearing more than N times
-//! * Pattern matching: [`IncludePatterns`] and [`ExcludePatterns`] for regex-based filtering
+//! * Pattern matching: [`IncludeSet`] and [`ExcludeSet`] for regex-based filtering
 //! * Word lists: [`ExcludeWords`] for explicit exclusion of specific terms
 //!
 //! ## Performance
@@ -89,14 +89,14 @@
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Case, Filters, Format, Options, Tally, WordTally, Input, Io};
+//! use word_tally::{Case, Filters, Format, Options, Serialization, Tally, WordTally, Input, Io};
 //! use anyhow::Result;
 //!
 //! # fn example() -> Result<()> {
 //! // Create options with case normalization, output format, and other settings
 //! let options = Options::default()
 //!     .with_case(Case::Lower)
-//!     .with_format(Format::Json)
+//!     .with_serialization(Serialization::with_format(Format::Json))
 //!     .with_filters(Filters::default().with_min_chars(3));
 //!
 //! let file_path = std::path::Path::new("example_word.txt");
@@ -125,7 +125,7 @@ pub mod tally_map;
 pub use error::Error as WordTallyError;
 pub use input::Input;
 pub use input_reader::InputReader;
-pub use options::patterns::{ExcludePatterns, IncludePatterns, InputPatterns};
+pub use options::patterns::{ExcludeSet, IncludeSet, PatternList};
 pub use options::{
     Options,
     case::Case,
@@ -146,7 +146,7 @@ pub type Word = Box<str>;
 /// A collection of word-count pairs.
 pub type Tally = Box<[(Word, Count)]>;
 
-#[derive(Clone, Debug, Hash, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 /// A tally of word frequencies and counts, along with processing options.
 pub struct WordTally<'a> {
@@ -165,13 +165,6 @@ pub struct WordTally<'a> {
     uniq_count: Count,
 }
 
-/// Converts a `WordTally` into a `Vec<(Word, Count)>`.
-impl<'a> From<WordTally<'a>> for Vec<(Word, Count)> {
-    fn from(word_tally: WordTally<'a>) -> Self {
-        word_tally.into_tally().into_vec()
-    }
-}
-
 /// An explicit `iter` method for `WordTally`.
 impl WordTally<'_> {
     /// Returns an iterator over references to the words and counts.
@@ -180,13 +173,10 @@ impl WordTally<'_> {
     }
 }
 
-/// Makes `WordTally` reference available directly in a for loop.
-impl<'i> IntoIterator for &'i WordTally<'_> {
-    type Item = &'i (Word, Count);
-    type IntoIter = slice::Iter<'i, (Word, Count)>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
+/// Converts a `WordTally` into a `Vec<(Word, Count)>`.
+impl<'a> From<WordTally<'a>> for Vec<(Word, Count)> {
+    fn from(word_tally: WordTally<'a>) -> Self {
+        word_tally.into_tally().into_vec()
     }
 }
 
@@ -197,6 +187,16 @@ impl IntoIterator for WordTally<'_> {
 
     fn into_iter(self) -> Self::IntoIter {
         self.tally.into_iter()
+    }
+}
+
+/// Makes `WordTally` reference available directly in a for loop.
+impl<'i> IntoIterator for &'i WordTally<'_> {
+    type Item = &'i (Word, Count);
+    type IntoIter = slice::Iter<'i, (Word, Count)>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 
@@ -306,6 +306,35 @@ impl<'a> WordTally<'a> {
 
     /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
     pub fn sort(&mut self) {
-        self.options.sort().apply(self);
+        use core::cmp::Reverse;
+        use rayon::slice::ParallelSliceMut;
+
+        match (self.options.sort(), self.options.io()) {
+            // No sorting
+            (Sort::Unsorted, _) => {}
+
+            // Sequential unstable sorting
+            (Sort::Desc, Io::Stream) => {
+                self.tally
+                    .sort_unstable_by_key(|&(_, count)| Reverse(count));
+            }
+            (Sort::Asc, Io::Stream) => {
+                self.tally.sort_unstable_by_key(|&(_, count)| count);
+            }
+
+            // Parallel unstable sorting
+            (
+                Sort::Desc,
+                Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes,
+            ) => self
+                .tally
+                .par_sort_unstable_by_key(|&(_, count)| Reverse(count)),
+            (
+                Sort::Asc,
+                Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes,
+            ) => {
+                self.tally.par_sort_unstable_by_key(|&(_, count)| count);
+            }
+        }
     }
 }

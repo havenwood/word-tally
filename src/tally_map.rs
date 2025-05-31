@@ -26,7 +26,7 @@ thread_local! {
 }
 
 /// Map for tracking word counts with non-deterministic iteration order.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct TallyMap {
     inner: HashMap<Word, Count>,
 }
@@ -69,11 +69,11 @@ impl TallyMap {
     }
 
     /// Retains only the elements specified by the predicate.
-    pub fn retain<F>(&mut self, f: F)
+    pub fn retain<F>(&mut self, predicate: F)
     where
         F: FnMut(&Word, &mut Count) -> bool,
     {
-        self.inner.retain(f);
+        self.inner.retain(predicate);
     }
 
     /// Extends the tally map with word counts from a string slice using Unicode segmentation.
@@ -614,8 +614,10 @@ impl TallyMap {
         }
     }
 
-    /// Creates a UTF-8 error using std::str for compatible error types.
+    /// Creates a UTF-8 error using `simdutf8` for compatible error types.
     fn create_utf8_error(buffer: &[u8], byte_position: usize, context: &str) -> anyhow::Error {
+        // We need std::str::Utf8Error for the error type, so we use std here
+        // even though we use simdutf8 elsewhere for performance
         let source = match str::from_utf8(buffer) {
             Err(utf8_err) => utf8_err,
             Ok(_) => {

@@ -1,36 +1,22 @@
 # Word-Tally Benchmarks
 
-Benchmarks for measuring word-tally performance across different strategies.
+Performance benchmarks across different strategies.
 
 ## Benchmark Structure
 
 - `common.rs` - Shared benchmark utilities and text generation functions
 - `core.rs` - Benchmarks for sorting and filtering strategies
-- `io.rs` - I/O and processing strategy benchmarks (Streamed, Buffered, Memory-mapped)
+- `io.rs` - I/O strategy benchmarks (Stream, Parallel Stream, Parallel In-Memory, Parallel Mmap, Parallel Bytes)
 - `features.rs` - Processing strategy benchmarks (Sequential vs Parallel)
 - `multi_file.rs` - Multiple file input benchmarks
 
-## What's Being Benchmarked
+## Benchmarks
 
-### Core Benchmarks
-- **Sorting strategies**: Unsorted vs Descending sort performance
-- **Filtering strategies**: Min characters, min count, and combined filters
-
-### I/O Benchmarks
-- **I/O strategies**: Performance comparison between Streamed, Buffered, and Memory-mapped I/O
-- **Processing strategies**: Sequential vs Parallel processing for each I/O method
-- **File sizes**: Small (10KB), Medium (75KB), and Large (500KB) in release mode
-
-### Features Benchmarks
-- **Processing comparison**: Sequential vs Parallel processing for different text sizes
-- **Regex patterns**: Performance with no patterns, few patterns, and many patterns
-- **Encoding comparison**: Unicode vs ASCII encoding performance for sequential and parallel processing
-- **Text sizes**: Small (~30KB) and Medium (~100KB) samples
-
-### Multi-File Benchmarks
-- **Multiple inputs**: Performance with varying numbers of input files
-- **Aggregation**: Combining word counts across multiple input sources
-- **Processing strategies**: Sequential vs Parallel for multi-file processing
+- **Core**: Sorting (unsorted vs descending) and filtering (min chars/count)
+- **I/O**: 5 strategies across file sizes (10KB, 75KB, 500KB)
+  - `stream`, `parallel-stream`, `parallel-in-memory`, `parallel-mmap`, `parallel-bytes`
+- **Features**: Sequential vs parallel, regex patterns, Unicode vs ASCII
+- **Multi-file**: Aggregation and scaling (2, 4, 8 files)
 
 ## Running Benchmarks
 
@@ -52,16 +38,13 @@ cargo bench -- features/regex_patterns
 cargo bench -- features/encoding_comparison
 cargo bench -- io_strategies/file_size_10kb
 cargo bench -- io_strategies/file_size_75kb
-cargo bench -- multi_file/input_count
+cargo bench -- multi_file_processing
+cargo bench -- multi_file_scaling/2_files
+cargo bench -- multi_file_scaling/4_files
+cargo bench -- multi_file_scaling/8_files
 ```
 
-## Benchmark Generation
-- Uses the `fake` crate to generate semirealistic test data with random words
-- Creates temporary files of specified sizes for I/O testing
-- Wraps options in `Arc` for efficient sharing between benchmark iterations
-
-## Standard Configuration
-- 60 samples per benchmark
-- 7 second measurement time
-- 3 second warm-up time
+## Configuration
+- 60 samples, 7s measurement, 3s warm-up
+- Uses `fake` crate for realistic test data
 - Large input batching to minimize overhead

@@ -1,12 +1,13 @@
 //! Core benchmarks for sorting and filtering strategies.
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use word_tally::{Filters, Io, Options, Sort};
+use word_tally::{Filters, Io, Options};
 
 #[path = "common.rs"]
 pub mod common;
 use self::common::{
-    create_bench_group, create_temp_input, make_shared, small_text, standard_criterion_config,
+    SORT_OPTIONS, create_bench_group, create_temp_input, make_shared, small_text,
+    standard_criterion_config,
 };
 
 /// Benchmark sorting strategies
@@ -14,9 +15,7 @@ fn bench_sorting_strategies(c: &mut Criterion) {
     let mut group = create_bench_group(c, "core/sorting_strategies");
     let text_sample = small_text();
 
-    let sort_options = [(Sort::Unsorted, "unsorted"), (Sort::Desc, "descending")];
-
-    for (sort, sort_name) in &sort_options {
+    for (sort, sort_name) in &SORT_OPTIONS {
         let options = Options::default().with_sort(*sort).with_io(Io::Stream);
 
         let shared_options = make_shared(options);

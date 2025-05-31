@@ -1,7 +1,7 @@
 //! Filtering words based on length, frequency, patterns and exclusion lists.
 
 use crate::options::case::Case;
-use crate::options::patterns::{ExcludePatterns, IncludePatterns, InputPatterns};
+use crate::options::patterns::{ExcludeSet, IncludeSet, PatternList};
 use crate::options::unescape;
 use crate::{Count, TallyMap};
 
@@ -22,7 +22,7 @@ pub type MinCount = Count;
 pub type ExcludeWordsList = Vec<String>;
 
 /// Filters for which words should be tallied.
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize, Hash)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Filters {
     /// Minimum characters required for a word.
     min_chars: Option<MinChars>,
@@ -35,11 +35,11 @@ pub struct Filters {
 
     /// List of regex patterns to exclude words matching the patterns.
     #[serde(rename = "excludePatterns")]
-    exclude_patterns: Option<ExcludePatterns>,
+    exclude_patterns: Option<ExcludeSet>,
 
     /// List of regex patterns to include only words matching the patterns.
     #[serde(rename = "includePatterns")]
-    include_patterns: Option<IncludePatterns>,
+    include_patterns: Option<IncludeSet>,
 }
 
 impl Filters {
@@ -49,7 +49,7 @@ impl Filters {
     ///
     /// ```
     /// use word_tally::{Case, Filters, WordTally, Options, Input, Io};
-    /// use word_tally::options::patterns::InputPatterns;
+    /// use word_tally::options::patterns::PatternList;
     /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
     /// // Sample text with various words
     /// let text = "My life closed twice before its close; \
@@ -80,14 +80,14 @@ impl Filters {
     ///
     /// # Errors
     ///
-    /// Returns a `regex::Error` if any of the provided patterns cannot be compiled into valid regular expressions.
+    /// Returns an error if any of the provided patterns cannot be compiled into valid regular expressions.
     pub fn new(
         min_chars: Option<MinChars>,
         min_count: Option<MinCount>,
         exclude_words: Option<ExcludeWordsList>,
-        exclude_patterns: Option<InputPatterns>,
-        include_patterns: Option<InputPatterns>,
-    ) -> Result<Self, regex::Error> {
+        exclude_patterns: Option<PatternList>,
+        include_patterns: Option<PatternList>,
+    ) -> Result<Self> {
         // Create initial filters
         let mut filters = Self {
             min_chars,
@@ -157,8 +157,8 @@ impl Filters {
         mut self,
         input_patterns: &[String],
         setter: impl FnOnce(&mut Self, Option<T>),
-        converter: impl FnOnce(&[String]) -> Result<T, regex::Error>,
-    ) -> Result<Self, regex::Error> {
+        converter: impl FnOnce(&[String]) -> Result<T>,
+    ) -> Result<Self> {
         let pattern = if input_patterns.is_empty() {
             None
         } else {
@@ -174,15 +174,12 @@ impl Filters {
     ///
     /// # Errors
     ///
-    /// Returns a `regex::Error` if any pattern cannot be compiled into a valid regular expression.
-    pub fn with_exclude_patterns(
-        self,
-        input_patterns: &InputPatterns,
-    ) -> Result<Self, regex::Error> {
+    /// Returns an error if any pattern cannot be compiled into a valid regular expression.
+    pub fn with_exclude_patterns(self, input_patterns: &PatternList) -> Result<Self> {
         self.with_patterns(
             input_patterns,
             |s, p| s.exclude_patterns = p,
-            |patterns| patterns.try_into(),
+            |patterns| ExcludeSet::new(patterns.to_vec()),
         )
     }
 
@@ -190,15 +187,12 @@ impl Filters {
     ///
     /// # Errors
     ///
-    /// Returns a `regex::Error` if any pattern cannot be compiled into a valid regular expression.
-    pub fn with_include_patterns(
-        self,
-        input_patterns: &InputPatterns,
-    ) -> Result<Self, regex::Error> {
+    /// Returns an error if any pattern cannot be compiled into a valid regular expression.
+    pub fn with_include_patterns(self, input_patterns: &PatternList) -> Result<Self> {
         self.with_patterns(
             input_patterns,
             |s, p| s.include_patterns = p,
-            |patterns| patterns.try_into(),
+            |patterns| IncludeSet::new(patterns.to_vec()),
         )
     }
 
@@ -222,13 +216,13 @@ impl Filters {
 
     /// Get the excluded patterns.
     #[must_use]
-    pub const fn exclude_patterns(&self) -> Option<&ExcludePatterns> {
+    pub const fn exclude_patterns(&self) -> Option<&ExcludeSet> {
         self.exclude_patterns.as_ref()
     }
 
     /// Get the included patterns.
     #[must_use]
-    pub const fn include_patterns(&self) -> Option<&IncludePatterns> {
+    pub const fn include_patterns(&self) -> Option<&IncludeSet> {
         self.include_patterns.as_ref()
     }
 
@@ -267,7 +261,7 @@ impl Filters {
 }
 
 /// A list of words that should be omitted from the tally.
-#[derive(Clone, Debug, Default, Eq, PartialEq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct ExcludeWords(pub ExcludeWordsList);
 
 impl Display for ExcludeWords {

@@ -52,10 +52,9 @@ fn word_tally(
 
     let options_static = Box::leak(Box::new(options));
 
-    let input =
-        Input::new(file_path, options_static.io()).expect("Failed to create input from test file");
+    let input = Input::new(file_path, options_static.io()).expect("create input from test file");
 
-    WordTally::new(&input, options_static).expect("Failed to create WordTally")
+    WordTally::new(&input, options_static).expect("create word tally")
 }
 
 fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFields<'_>) {
@@ -300,9 +299,9 @@ fn test_into_tally() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
 
     // Use `tally()` to get a reference to the slice.
     let tally = word_tally.tally();
@@ -338,9 +337,9 @@ fn test_iterator() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
 
     let expected: Vec<(Word, Count)> = vec![(Box::from("double"), 2), (Box::from("trouble"), 1)];
 
@@ -364,9 +363,9 @@ fn test_iterator_for_loop() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
 
     let expected: Vec<(Word, Count)> = vec![(Box::from("llama"), 2), (Box::from("pajamas"), 1)];
 
@@ -400,9 +399,9 @@ fn test_excluding_words() {
         temp_file.path().to_str().expect("temp file path"),
         options_arc.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let tally = WordTally::new(&input, &options_arc).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options_arc).expect("create word tally");
     let result = tally.tally();
 
     assert!(result.iter().any(|(word, _)| word.as_ref() == "tree"));
@@ -438,9 +437,9 @@ fn test_excluding_patterns() {
         temp_file.path().to_str().expect("temp file path"),
         options_arc.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let tally = WordTally::new(&input, &options_arc).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options_arc).expect("create word tally");
     let result = tally.tally();
 
     // These should be present
@@ -479,9 +478,9 @@ fn test_including_patterns() {
     );
     let options_arc = make_shared(options);
 
-    let input = Input::new(file_path, options_arc.io()).expect("Failed to create Input");
+    let input = Input::new(file_path, options_arc.io()).expect("create input");
 
-    let tally = WordTally::new(&input, &options_arc).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options_arc).expect("create word tally");
     let result = tally.tally();
 
     // These should be present (words starting with `'h'`)
@@ -527,9 +526,9 @@ fn test_combining_include_exclude_patterns() {
     );
     let options_arc = make_shared(options);
 
-    let input = Input::new(file_path, options_arc.io()).expect("Failed to create Input");
+    let input = Input::new(file_path, options_arc.io()).expect("create input");
 
-    let tally = WordTally::new(&input, &options_arc).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options_arc).expect("create word tally");
     let result = tally.tally();
 
     // `'heaven'` should be the only word present (starts with `'h'` but isn't `'hell'`)
@@ -572,11 +571,10 @@ fn test_parallel_vs_sequential() {
     );
     let seq_options_arc = make_shared(seq_options);
 
-    let seq_input =
-        Input::new(file_path, seq_options_arc.io()).expect("Failed to create sequential input");
+    let seq_input = Input::new(file_path, seq_options_arc.io()).expect("create sequential input");
 
-    let sequential = WordTally::new(&seq_input, &seq_options_arc)
-        .expect("Failed to create sequential WordTally");
+    let sequential =
+        WordTally::new(&seq_input, &seq_options_arc).expect("create sequential word tally");
 
     // Parallel processing
     let par_performance = Performance::default();
@@ -590,11 +588,10 @@ fn test_parallel_vs_sequential() {
     );
     let par_options_arc = make_shared(par_options);
 
-    let par_input =
-        Input::new(file_path, par_options_arc.io()).expect("Failed to create parallel input");
+    let par_input = Input::new(file_path, par_options_arc.io()).expect("create parallel input");
 
     let parallel =
-        WordTally::new(&par_input, &par_options_arc).expect("Failed to create parallel WordTally");
+        WordTally::new(&par_input, &par_options_arc).expect("create parallel word tally");
 
     assert_eq!(sequential.count(), parallel.count());
     assert_eq!(sequential.uniq_count(), parallel.uniq_count());
@@ -638,15 +635,14 @@ fn test_memory_mapped_vs_streamed() {
     );
 
     // Create inputs with the different I/O modes
-    let mmap_input =
-        Input::new(file_path, mmap_options.io()).expect("Failed to create memory-mapped input");
-    let stream_input =
-        Input::new(file_path, stream_options.io()).expect("Failed to create streamed input");
+    let mmap_input = Input::new(file_path, mmap_options.io()).expect("create memory-mapped input");
+    let stream_input = Input::new(file_path, stream_options.io()).expect("create streamed input");
 
     // Create WordTally instances with the different I/O modes
-    let memory_mapped = WordTally::new(&mmap_input, &mmap_options).expect("Memory mapping failed");
-    let streamed = WordTally::new(&stream_input, &stream_options)
-        .expect("Failed to create streamed WordTally");
+    let memory_mapped =
+        WordTally::new(&mmap_input, &mmap_options).expect("create memory mapped word tally");
+    let streamed =
+        WordTally::new(&stream_input, &stream_options).expect("create streamed word tally");
 
     // Verify results are the same regardless of I/O mode
     assert_eq!(memory_mapped.count(), streamed.count());
@@ -667,11 +663,11 @@ fn test_memory_mapped_vs_streamed() {
 
     // Create input for parallel streamed processing
     let parallel_input =
-        Input::new(file_path, parallel_options.io()).expect("Failed to create parallel input");
+        Input::new(file_path, parallel_options.io()).expect("create parallel input");
 
     // Create WordTally instance with parallel streamed processing
     let parallel_stream = WordTally::new(&parallel_input, &parallel_options)
-        .expect("Failed to create parallel stream WordTally");
+        .expect("create parallel stream word tally");
 
     // Verify the parallel processing worked
     assert!(parallel_stream.count() > 0);
@@ -691,9 +687,9 @@ fn test_parallel_count() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let parallel = WordTally::new(&input, &options).expect("Failed to create parallel WordTally");
+    let parallel = WordTally::new(&input, &options).expect("create parallel word tally");
 
     // Only check the counts are positive numbers (actual counts may vary by implementation)
     assert!(parallel.count() > 0);
@@ -714,9 +710,9 @@ fn test_merge_maps() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
 
     assert_eq!(tally.count(), 9);
     assert_eq!(tally.uniq_count(), 9);
@@ -783,8 +779,8 @@ mod wordtally_constructor_tests {
     fn with_defaults() {
         let (_temp_dir, file_path) = create_test_file();
         let options = Options::default();
-        let input = Input::new(&file_path, options.io()).expect("Failed to create Input");
-        let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+        let input = Input::new(&file_path, options.io()).expect("create input");
+        let tally = WordTally::new(&input, &options).expect("create word tally");
         assert_eq!(tally.count(), 3);
     }
 
@@ -792,18 +788,19 @@ mod wordtally_constructor_tests {
     fn with_parallel_processing() {
         let (_temp_dir, file_path) = create_test_file();
         let options = Options::default();
-        let input = Input::new(&file_path, options.io()).expect("Failed to create Input");
-        let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+        let input = Input::new(&file_path, options.io()).expect("create input");
+        let tally = WordTally::new(&input, &options).expect("create word tally");
         assert_eq!(tally.count(), 3);
     }
 
     #[test]
     fn with_custom_chunk_size() {
         let (_temp_dir, file_path) = create_test_file();
-        let options = Options::default().with_chunk_size(32_768);
+        let options =
+            Options::default().with_performance(Performance::default().with_chunk_size(32_768));
 
-        let input = Input::new(&file_path, options.io()).expect("Failed to create Input");
-        let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+        let input = Input::new(&file_path, options.io()).expect("create input");
+        let tally = WordTally::new(&input, &options).expect("create word tally");
         assert_eq!(tally.count(), 3);
     }
 }
@@ -823,7 +820,7 @@ fn test_min_count_graphemes() {
     );
 
     let input = Input::from_bytes(input_text);
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
 
     assert_eq!(tally.count(), 0);
 }
@@ -849,9 +846,9 @@ fn test_to_json() {
         temp_file.path().to_str().expect("temp file path"),
         shared_options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let expected = WordTally::new(&input, &shared_options).expect("Failed to create WordTally");
+    let expected = WordTally::new(&input, &shared_options).expect("create word tally");
     let serialized = serde_json::to_string(&expected).expect("serialize JSON");
 
     assert!(serialized.contains("\"tally\":[[\"wombat\",2],[\"bat\",1]]"));
@@ -882,9 +879,9 @@ fn test_from_json() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let original = WordTally::new(&input, &options).expect("create word tally");
     let json = serde_json::to_string(&original).expect("serialize JSON");
     let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
 
@@ -906,9 +903,9 @@ fn test_deserialization_with_serde() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let original = WordTally::new(&input, &options).expect("create word tally");
     let json = serde_json::to_string(&original).expect("serialize JSON");
     let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
 
@@ -934,9 +931,9 @@ fn test_json_field_renamed() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let original = WordTally::new(&input, &options).expect("create word tally");
     let json = serde_json::to_string(&original).expect("serialize JSON");
 
     // Check that the JSON contains `"uniqueCount"` instead of `"uniq_count"`
@@ -955,9 +952,9 @@ fn test_json_field_camel_case_deserialization() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let original = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let original = WordTally::new(&input, &options).expect("create word tally");
     let serialized = serde_json::to_string(&original).expect("serialize JSON");
 
     assert!(serialized.contains("\"uniqueCount\":"));

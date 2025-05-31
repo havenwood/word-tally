@@ -1,5 +1,7 @@
 //! Regular expression pattern matching for word filtering.
 
+use crate::WordTallyError;
+use anyhow::Result;
 use core::fmt::{self, Display, Formatter};
 use regex::RegexSet;
 use serde::{Deserialize, Serialize};
@@ -7,7 +9,7 @@ use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
 
 /// Collection of regex pattern strings.
-pub type InputPatterns = Vec<String>;
+pub type PatternList = Vec<String>;
 
 /// Base struct for regex pattern filtering.
 ///
@@ -15,7 +17,7 @@ pub type InputPatterns = Vec<String>;
 #[derive(Clone, Debug)]
 struct Patterns {
     /// Original pattern strings.
-    input_patterns: InputPatterns,
+    input_patterns: PatternList,
     /// Compiled regex set for matching.
     regex_set: RegexSet,
 }
@@ -69,8 +71,11 @@ impl AsRef<[String]> for Patterns {
 
 impl Patterns {
     /// Creates a pattern set and compiles the `RegexSet`.
-    fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
-        let regex_set = RegexSet::new(&input_patterns)?;
+    fn new(input_patterns: PatternList) -> Result<Self> {
+        let regex_set = RegexSet::new(&input_patterns).map_err(|e| WordTallyError::Pattern {
+            kind: "regex".to_string(),
+            message: e.to_string(),
+        })?;
 
         Ok(Self {
             input_patterns,
@@ -79,7 +84,7 @@ impl Patterns {
     }
 
     /// Creates a pattern set from a slice of strings.
-    fn from_slice(input_patterns: &[String]) -> Result<Self, regex::Error> {
+    fn from_slice(input_patterns: &[String]) -> Result<Self> {
         Self::new(input_patterns.to_vec())
     }
 
@@ -102,39 +107,39 @@ impl Patterns {
 /// # Examples
 ///
 /// ```
-/// use word_tally::ExcludePatterns;
+/// use word_tally::ExcludeSet;
 ///
 /// // Create a pattern to exclude words ending with "ly"
-/// let patterns = ExcludePatterns::new(vec!["ly$".to_string()]).unwrap();
+/// let patterns = ExcludeSet::new(vec!["ly$".to_string()]).unwrap();
 ///
 /// // Test matching
 /// assert!(patterns.matches("quickly"));
 /// assert!(!patterns.matches("quick"));
 /// ```
 #[derive(Clone, Debug, Default)]
-pub struct ExcludePatterns(Patterns);
+pub struct ExcludeSet(Patterns);
 
-impl ExcludePatterns {
+impl ExcludeSet {
     /// Creates patterns from owned pattern strings.
     ///
     /// # Examples
     ///
     /// ```
-    /// use word_tally::ExcludePatterns;
+    /// use word_tally::ExcludeSet;
     ///
     /// // Create pattern for excluding numeric words
-    /// let patterns = ExcludePatterns::new(vec![r"^\d+$".to_string()]).unwrap();
+    /// let patterns = ExcludeSet::new(vec![r"^\d+$".to_string()]).unwrap();
     /// assert_eq!(patterns.len(), 1);
     ///
     /// // Test empty patterns
-    /// let empty = ExcludePatterns::default();
+    /// let empty = ExcludeSet::default();
     /// assert!(empty.is_empty());
     /// ```
     ///
     /// # Errors
     ///
-    /// Returns a `regex::Error` if any pattern cannot be compiled into a valid regular expression.
-    pub fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
+    /// Returns an error if any pattern cannot be compiled into a valid regular expression.
+    pub fn new(input_patterns: PatternList) -> Result<Self> {
         Ok(Self(Patterns::new(input_patterns)?))
     }
 
@@ -163,21 +168,21 @@ impl ExcludePatterns {
     }
 }
 
-impl<'a> TryFrom<&'a [String]> for ExcludePatterns {
-    type Error = regex::Error;
+impl<'a> TryFrom<&'a [String]> for ExcludeSet {
+    type Error = anyhow::Error;
 
-    fn try_from(input_patterns: &'a [String]) -> Result<Self, Self::Error> {
+    fn try_from(input_patterns: &'a [String]) -> Result<Self> {
         Ok(Self(Patterns::from_slice(input_patterns)?))
     }
 }
 
-impl AsRef<[String]> for ExcludePatterns {
+impl AsRef<[String]> for ExcludeSet {
     fn as_ref(&self) -> &[String] {
         self.0.as_ref()
     }
 }
 
-impl Serialize for ExcludePatterns {
+impl Serialize for ExcludeSet {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -186,46 +191,46 @@ impl Serialize for ExcludePatterns {
     }
 }
 
-impl<'de> Deserialize<'de> for ExcludePatterns {
+impl<'de> Deserialize<'de> for ExcludeSet {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         use serde::de::Error;
-        let input_patterns: InputPatterns = Vec::deserialize(deserializer)?;
+        let input_patterns: PatternList = Vec::deserialize(deserializer)?;
 
         Self::new(input_patterns)
             .map_err(|e| D::Error::custom(format!("failed to compile exclude regex patterns: {e}")))
     }
 }
 
-impl PartialEq for ExcludePatterns {
+impl PartialEq for ExcludeSet {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
     }
 }
 
-impl Eq for ExcludePatterns {}
+impl Eq for ExcludeSet {}
 
-impl PartialOrd for ExcludePatterns {
+impl PartialOrd for ExcludeSet {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for ExcludePatterns {
+impl Ord for ExcludeSet {
     fn cmp(&self, other: &Self) -> Ordering {
         self.0.cmp(&other.0)
     }
 }
 
-impl Hash for ExcludePatterns {
+impl Hash for ExcludeSet {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
     }
 }
 
-impl Display for ExcludePatterns {
+impl Display for ExcludeSet {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
@@ -236,28 +241,28 @@ impl Display for ExcludePatterns {
 /// # Examples
 ///
 /// ```
-/// use word_tally::IncludePatterns;
+/// use word_tally::IncludeSet;
 ///
 /// // Create a pattern to include only words containing vowels.
-/// let patterns = IncludePatterns::new(vec![r"[aeiou]".to_string()]).unwrap();
+/// let patterns = IncludeSet::new(vec![r"[aeiou]".to_string()]).unwrap();
 ///
 /// // Test matching
 /// assert!(patterns.matches("test"));     // Contains 'e'
 /// assert!(!patterns.matches("rhythm"));  // No vowels
 /// ```
 #[derive(Clone, Debug, Default)]
-pub struct IncludePatterns(Patterns);
+pub struct IncludeSet(Patterns);
 
-impl IncludePatterns {
+impl IncludeSet {
     /// Creates patterns from owned pattern strings.
     ///
     /// # Examples
     ///
     /// ```
-    /// use word_tally::IncludePatterns;
+    /// use word_tally::IncludeSet;
     ///
     /// // Create patterns for including words with specific prefixes.
-    /// let patterns = IncludePatterns::new(vec![
+    /// let patterns = IncludeSet::new(vec![
     ///     r"^pre".to_string(),
     ///     r"^un".to_string()
     /// ]).unwrap();
@@ -270,8 +275,8 @@ impl IncludePatterns {
     ///
     /// # Errors
     ///
-    /// Returns a `regex::Error` if any pattern cannot be compiled into a valid regular expression.
-    pub fn new(input_patterns: InputPatterns) -> Result<Self, regex::Error> {
+    /// Returns an error if any pattern cannot be compiled into a valid regular expression.
+    pub fn new(input_patterns: PatternList) -> Result<Self> {
         Ok(Self(Patterns::new(input_patterns)?))
     }
 
@@ -300,21 +305,21 @@ impl IncludePatterns {
     }
 }
 
-impl<'a> TryFrom<&'a [String]> for IncludePatterns {
-    type Error = regex::Error;
+impl<'a> TryFrom<&'a [String]> for IncludeSet {
+    type Error = anyhow::Error;
 
-    fn try_from(input_patterns: &'a [String]) -> Result<Self, Self::Error> {
+    fn try_from(input_patterns: &'a [String]) -> Result<Self> {
         Ok(Self(Patterns::from_slice(input_patterns)?))
     }
 }
 
-impl AsRef<[String]> for IncludePatterns {
+impl AsRef<[String]> for IncludeSet {
     fn as_ref(&self) -> &[String] {
         self.0.as_ref()
     }
 }
 
-impl Serialize for IncludePatterns {
+impl Serialize for IncludeSet {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -323,46 +328,46 @@ impl Serialize for IncludePatterns {
     }
 }
 
-impl<'de> Deserialize<'de> for IncludePatterns {
+impl<'de> Deserialize<'de> for IncludeSet {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
         use serde::de::Error;
-        let input_patterns: InputPatterns = Vec::deserialize(deserializer)?;
+        let input_patterns: PatternList = Vec::deserialize(deserializer)?;
 
         Self::new(input_patterns)
             .map_err(|e| D::Error::custom(format!("failed to compile include regex patterns: {e}")))
     }
 }
 
-impl PartialEq for IncludePatterns {
+impl PartialEq for IncludeSet {
     fn eq(&self, other: &Self) -> bool {
         self.0 == other.0
     }
 }
 
-impl Eq for IncludePatterns {}
+impl Eq for IncludeSet {}
 
-impl PartialOrd for IncludePatterns {
+impl PartialOrd for IncludeSet {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for IncludePatterns {
+impl Ord for IncludeSet {
     fn cmp(&self, other: &Self) -> Ordering {
         self.0.cmp(&other.0)
     }
 }
 
-impl Hash for IncludePatterns {
+impl Hash for IncludeSet {
     fn hash<H: Hasher>(&self, state: &mut H) {
         self.0.hash(state);
     }
 }
 
-impl Display for IncludePatterns {
+impl Display for IncludeSet {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }

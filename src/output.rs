@@ -16,18 +16,18 @@ pub struct Output {
     writer: Writer,
 }
 
+impl Default for Output {
+    /// Default output is stdout.
+    fn default() -> Self {
+        Self::stdout()
+    }
+}
+
 impl Debug for Output {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("Output")
             .field("writer", &"<dyn Write>")
             .finish()
-    }
-}
-
-impl Default for Output {
-    /// Default output is stdout.
-    fn default() -> Self {
-        Self::stdout()
     }
 }
 

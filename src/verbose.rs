@@ -21,7 +21,7 @@ impl Default for Verbose {
 }
 
 /// Verbose data that can be serialized to both JSON and CSV.
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct VerboseData<'a> {
     source: &'a str,
@@ -34,8 +34,8 @@ struct VerboseData<'a> {
     min_chars: Option<usize>,
     min_count: Option<usize>,
     exclude_words: Option<&'a word_tally::ExcludeWords>,
-    exclude_patterns: Option<&'a word_tally::ExcludePatterns>,
-    include_patterns: Option<&'a word_tally::IncludePatterns>,
+    exclude_patterns: Option<&'a word_tally::ExcludeSet>,
+    include_patterns: Option<&'a word_tally::IncludeSet>,
 }
 
 impl<'a> VerboseData<'a> {
@@ -62,9 +62,8 @@ impl<'a> VerboseData<'a> {
     }
 
     /// Get all fields as name-value pairs.
-    fn field_pairs(&self) -> Vec<(&str, String)> {
-        let mut pairs = Vec::with_capacity(12);
-        pairs.extend_from_slice(&[
+    fn field_pairs(&self) -> impl Iterator<Item = (&'static str, String)> + '_ {
+        [
             ("source", self.source.to_string()),
             ("total-words", self.total_words.to_string()),
             ("unique-words", self.unique_words.to_string()),
@@ -95,18 +94,14 @@ impl<'a> VerboseData<'a> {
                 self.include_patterns
                     .map_or("none".to_string(), std::string::ToString::to_string),
             ),
-        ]);
-        pairs
+        ]
+        .into_iter()
     }
 }
 
 impl Verbose {
-    /// Writes verbose information for the word tally.
-    pub(crate) fn write_verbose_info(
-        &mut self,
-        word_tally: &WordTally<'_>,
-        source: &str,
-    ) -> Result<()> {
+    /// Writes information for the word tally.
+    pub(crate) fn write_info(&mut self, word_tally: &WordTally<'_>, source: &str) -> Result<()> {
         let data = VerboseData::from_tally(word_tally, source);
 
         match word_tally.options().serialization().format() {
@@ -130,7 +125,7 @@ impl Verbose {
     /// Write verbose info in CSV format.
     fn write_csv(&mut self, data: &VerboseData<'_>) -> Result<()> {
         let mut writer = csv::Writer::from_writer(Vec::new());
-        let field_pairs = data.field_pairs();
+        let field_pairs: Vec<_> = data.field_pairs().collect();
 
         // Write headers directly from iterator
         writer.write_record(field_pairs.iter().map(|(name, _)| *name))?;
@@ -144,12 +139,10 @@ impl Verbose {
     /// Write verbose info in text format.
     fn write_text(&mut self, data: &VerboseData<'_>, delimiter: &str) -> Result<()> {
         // Write each field as key-value pairs
-        data.field_pairs()
-            .into_iter()
-            .try_for_each(|(field_name, value)| {
-                self.output
-                    .write_chunk(&format!("{field_name}{delimiter}{value}\n"))
-            })?;
+        data.field_pairs().try_for_each(|(field_name, value)| {
+            self.output
+                .write_chunk(&format!("{field_name}{delimiter}{value}\n"))
+        })?;
 
         // Add separator if needed
         if data.total_words > 0 {

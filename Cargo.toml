@@ -66,18 +66,22 @@ cargo = { level = "deny", priority = -1 }
 correctness = { level = "deny", priority = -1 }
 nursery = { level = "deny", priority = -1 }
 perf = { level = "deny", priority = -1 }
+style = { level = "deny", priority = -1 }
 suspicious = { level = "deny", priority = -1 }
 
 # Clippy nursery group allows
 redundant_pub_crate = "allow"
 
-# Clippy lints
+# Clippy pedantic lints (cherry-picked)
 cast_lossless = "deny"
-implicit_clone = "deny"
-inefficient_to_string = "deny"
-large_enum_variant = "deny"
-needless_pass_by_value = "deny"
-redundant_closure_for_method_calls = "deny"
+cast_possible_truncation = "deny"
+cast_possible_wrap = "deny"
+cloned_instead_of_copied = "deny"
+doc_markdown = "deny"
+module_name_repetitions = "deny"
+
+# Clippy restriction lints (cherry-picked)
+unwrap_used = { level = "deny", priority = -1 }
 
 [lints.rust]
 # Rust lint groups
@@ -91,9 +95,15 @@ rust_2024_compatibility = "deny"
 unused = "deny"
 
 # Rust lints
+edition_2024_expr_fragment_specifier = "deny"
 elided_lifetimes_in_paths = "deny"
+impl_trait_redundant_captures = "deny"
 missing_copy_implementations = "deny"
 missing_debug_implementations = "deny"
+single_use_lifetimes = "deny"
+trivial_casts = "deny"
+trivial_numeric_casts = "deny"
 unreachable_pub = "deny"
 unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
 variant_size_differences = "deny"

@@ -1,4 +1,6 @@
-use word_tally::{ExcludeWords, Format, Input, Options, Output, Serialization, WordTally};
+use word_tally::{
+    ExcludeWords, Format, Input, Options, Output, Performance, Serialization, WordTally,
+};
 
 #[test]
 fn test_input_default() {
@@ -22,8 +24,8 @@ fn test_words_exclude_from() {
 fn test_with_defaults() {
     let (_temp_dir, file_path) = create_test_file();
     let options = Options::default();
-    let input = Input::new(&file_path, options.io()).expect("Failed to create Input");
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let input = Input::new(&file_path, options.io()).expect("create input");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
     assert_eq!(tally.count(), 3);
 }
 
@@ -31,18 +33,19 @@ fn test_with_defaults() {
 fn test_with_parallel_processing() {
     let (_temp_dir, file_path) = create_test_file();
     let options = Options::default();
-    let input = Input::new(&file_path, options.io()).expect("Failed to create Input");
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let input = Input::new(&file_path, options.io()).expect("create input");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
     assert_eq!(tally.count(), 3);
 }
 
 #[test]
 fn test_with_custom_chunk_size() {
     let (_temp_dir, file_path) = create_test_file();
-    let options = Options::default().with_chunk_size(32_768);
+    let options =
+        Options::default().with_performance(Performance::default().with_chunk_size(32_768));
 
-    let input = Input::new(&file_path, options.io()).expect("Failed to create Input");
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let input = Input::new(&file_path, options.io()).expect("create input");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
     assert_eq!(tally.count(), 3);
 }
 

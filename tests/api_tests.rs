@@ -31,9 +31,9 @@ fn test_api_streamed_sequential() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
     verify_api_example_tally(&word_tally);
 }
 
@@ -49,9 +49,9 @@ fn test_api_in_memory_sequential() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
     verify_api_example_tally(&word_tally);
 }
 
@@ -66,9 +66,9 @@ fn test_api_streamed_parallel() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
     verify_api_example_tally(&word_tally);
 }
 
@@ -83,9 +83,9 @@ fn test_api_in_memory_parallel() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
     verify_api_example_tally(&word_tally);
 }
 
@@ -101,9 +101,9 @@ fn test_api_memory_mapped() {
         file_path.to_str().expect("create test input"),
         Io::ParallelMmap,
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
     verify_api_example_tally(&word_tally);
 }
 
@@ -119,9 +119,9 @@ fn test_api_memory_mapped_parallel() {
         file_path.to_str().expect("create test input"),
         Io::ParallelMmap,
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
     verify_api_example_tally(&word_tally);
 }
 
@@ -145,37 +145,36 @@ fn test_api_comprehensive_example() {
 
     let options_mmap_par = Options::default().with_io(Io::ParallelMmap);
 
-    let input_streamed_seq = Input::new(file_path_str, Io::ParallelStream)
-        .expect("Failed to create streamed sequential input");
+    let input_streamed_seq =
+        Input::new(file_path_str, Io::ParallelStream).expect("create streamed sequential input");
 
-    let input_in_memory_seq = Input::new(file_path_str, Io::ParallelInMemory)
-        .expect("Failed to create in-memory sequential input");
+    let input_in_memory_seq =
+        Input::new(file_path_str, Io::ParallelInMemory).expect("create in-memory sequential input");
 
-    let input_streamed_par = Input::new(file_path_str, Io::ParallelStream)
-        .expect("Failed to create streamed parallel input");
+    let input_streamed_par =
+        Input::new(file_path_str, Io::ParallelStream).expect("create streamed parallel input");
 
-    let input_in_memory_par = Input::new(file_path_str, Io::ParallelInMemory)
-        .expect("Failed to create in-memory parallel input");
+    let input_in_memory_par =
+        Input::new(file_path_str, Io::ParallelInMemory).expect("create in-memory parallel input");
 
-    let input_mmap_seq = Input::new(file_path_str, Io::ParallelMmap)
-        .expect("Failed to create memory-mapped sequential input");
+    let input_mmap_seq =
+        Input::new(file_path_str, Io::ParallelMmap).expect("create memory-mapped sequential input");
 
-    let input_mmap_par = Input::new(file_path_str, Io::ParallelMmap)
-        .expect("Failed to create memory-mapped parallel input");
+    let input_mmap_par =
+        Input::new(file_path_str, Io::ParallelMmap).expect("create memory-mapped parallel input");
 
     let count_checks = [
         WordTally::new(&input_streamed_seq, &options_streamed_seq)
-            .expect("Failed with streamed sequential"),
+            .expect("process streamed sequential"),
         WordTally::new(&input_in_memory_seq, &options_in_memory_seq)
-            .expect("Failed with in-memory sequential"),
+            .expect("process in-memory sequential"),
         WordTally::new(&input_streamed_par, &options_streamed_par)
-            .expect("Failed with streamed parallel"),
+            .expect("process streamed parallel"),
         WordTally::new(&input_in_memory_par, &options_in_memory_par)
-            .expect("Failed with in-memory parallel"),
+            .expect("process in-memory parallel"),
         WordTally::new(&input_mmap_seq, &options_mmap_seq)
-            .expect("Failed with memory-mapped sequential"),
-        WordTally::new(&input_mmap_par, &options_mmap_par)
-            .expect("Failed with memory-mapped parallel"),
+            .expect("process memory-mapped sequential"),
+        WordTally::new(&input_mmap_par, &options_mmap_par).expect("process memory-mapped parallel"),
     ];
 
     let expected_count = count_checks[0].count();
@@ -203,9 +202,8 @@ fn test_from_bytes_api() {
 
     let options_par = Options::default().with_io(Io::ParallelBytes);
 
-    let seq_tally =
-        WordTally::new(&bytes_input, &options_seq).expect("Failed with bytes sequential");
-    let par_tally = WordTally::new(&bytes_input, &options_par).expect("Failed with bytes parallel");
+    let seq_tally = WordTally::new(&bytes_input, &options_seq).expect("process bytes sequential");
+    let par_tally = WordTally::new(&bytes_input, &options_par).expect("process bytes parallel");
 
     verify_api_example_tally(&seq_tally);
     verify_api_example_tally(&par_tally);

@@ -24,14 +24,14 @@ pub const DEFAULT_DELIMITER: &str = " ";
     Copy,
     Debug,
     Default,
-    Eq,
     PartialEq,
+    Eq,
     PartialOrd,
     Ord,
     Hash,
-    ValueEnum,
     Serialize,
     Deserialize,
+    ValueEnum,
 )]
 pub enum Format {
     /// Plain text output.

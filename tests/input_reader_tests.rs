@@ -272,10 +272,10 @@ fn test_file_not_found_error_message() {
     let reader_result = input.reader();
     assert!(reader_result.is_err());
 
-    let error = reader_result.unwrap_err();
+    let error = reader_result.expect_err("reader should fail for nonexistent file");
     assert_eq!(
         error.to_string(),
-        "no such file: /nonexistent/path/to/file.txt"
+        "I/O at /nonexistent/path/to/file.txt: no such file: /nonexistent/path/to/file.txt"
     );
 }
 
@@ -302,8 +302,11 @@ fn test_permission_denied_error_message() {
     let reader_result = input.reader();
     assert!(reader_result.is_err());
 
-    let error = reader_result.unwrap_err();
-    assert!(error.to_string().starts_with("permission denied: "));
+    let error = reader_result.expect_err("reader should fail for nonexistent file");
+    assert!(
+        error.to_string().starts_with("I/O at ")
+            && error.to_string().contains("permission denied: ")
+    );
 
     // Clean up
     let metadata = fs::metadata(&file_path).expect("process test");
@@ -325,13 +328,14 @@ fn test_generic_io_error_message() {
 
     let reader_result = input.reader();
     if reader_result.is_err() {
-        let error = reader_result.unwrap_err();
+        let error = reader_result.expect_err("reader should fail for nonexistent file");
         let error_string = error.to_string();
         // Should either be our specific error or fall back to generic format
         assert!(
-            error_string.starts_with("no such file: ")
-                || error_string.starts_with("permission denied: ")
-                || error_string.starts_with("failed to open file: ")
+            error_string.starts_with("I/O at ")
+                && (error_string.contains("no such file: ")
+                    || error_string.contains("permission denied: ")
+                    || error_string.contains("failed to open file: "))
         );
     }
 }

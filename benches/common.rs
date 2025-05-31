@@ -11,7 +11,7 @@ use fake::Fake;
 use fake::faker::lorem::en::Words;
 use tempfile::NamedTempFile;
 
-use word_tally::{Input, Io, Options, WordTally};
+use word_tally::{Input, Io, Options, Sort, WordTally};
 
 /// Generate random text for benchmarks.
 #[must_use]
@@ -83,7 +83,7 @@ pub fn bench_word_tally_with_string<F>(
 /// - Failed to flush the file
 #[must_use]
 pub fn create_benchmark_file(size_kb: usize) -> (NamedTempFile, PathBuf) {
-    let mut temp_file = NamedTempFile::new().expect("Failed to create temp file");
+    let mut temp_file = NamedTempFile::new().expect("create temp file");
 
     let text_size = size_kb * 1024;
     let approx_chars_per_line = 80;
@@ -94,8 +94,8 @@ pub fn create_benchmark_file(size_kb: usize) -> (NamedTempFile, PathBuf) {
 
     temp_file
         .write_all(content.as_bytes())
-        .expect("Failed to write to temp file");
-    temp_file.flush().expect("Failed to flush temp file");
+        .expect("write to temp file");
+    temp_file.flush().expect("flush temp file");
 
     let path = temp_file.path().to_path_buf();
     (temp_file, path)
@@ -123,4 +123,54 @@ pub fn create_temp_input(text: &str) -> (NamedTempFile, Input) {
     std::io::Write::write_all(&mut temp_file, text.as_bytes()).expect("write benchmark text");
     let input = Input::new(temp_file.path(), Io::ParallelInMemory).expect("create benchmark input");
     (temp_file, input)
+}
+
+/// Common I/O strategies for benchmarks.
+pub const IO_STRATEGIES: [(Io, &str); 5] = [
+    (Io::Stream, "stream"),
+    (Io::ParallelStream, "parallel-stream"),
+    (Io::ParallelInMemory, "parallel-in-memory"),
+    (Io::ParallelMmap, "parallel-mmap"),
+    (Io::ParallelBytes, "parallel-bytes"),
+];
+
+/// Common I/O strategies without bytes.
+pub const IO_STRATEGIES_NO_BYTES: [(Io, &str); 4] = [
+    (Io::Stream, "stream"),
+    (Io::ParallelStream, "parallel-stream"),
+    (Io::ParallelInMemory, "parallel-in-memory"),
+    (Io::ParallelMmap, "parallel-mmap"),
+];
+
+/// Common sort options for benchmarks.
+pub const SORT_OPTIONS: [(Sort, &str); 2] =
+    [(Sort::Unsorted, "unsorted"), (Sort::Desc, "descending")];
+
+/// Large text sample (~300KB)
+#[must_use]
+pub fn large_text() -> String {
+    generate_sample_text(2400, 10..20)
+}
+
+/// Benchmark I/O strategy with file.
+pub fn bench_io_with_file(
+    b: &mut criterion::Bencher<'_>,
+    file_path: &std::path::Path,
+    io: Io,
+    options: &Arc<Options>,
+) {
+    if io == Io::ParallelBytes {
+        let file_content = std::fs::read(file_path).expect("read benchmark file");
+        b.iter_batched(
+            || Input::from_bytes(&file_content),
+            |input| black_box(WordTally::new(&input, options).expect("create word tally")),
+            BatchSize::LargeInput,
+        );
+    } else {
+        b.iter_batched(
+            || Input::new(file_path, io).expect("create input"),
+            |input| black_box(WordTally::new(&input, options).expect("create word tally")),
+            BatchSize::LargeInput,
+        );
+    }
 }

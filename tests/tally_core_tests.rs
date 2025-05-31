@@ -38,10 +38,9 @@ fn word_tally(
 
     let options_static = Box::leak(Box::new(options));
 
-    let input =
-        Input::new(file_path, options_static.io()).expect("Failed to create input from test file");
+    let input = Input::new(file_path, options_static.io()).expect("create input from test file");
 
-    WordTally::new(&input, options_static).expect("Failed to create WordTally")
+    WordTally::new(&input, options_static).expect("create word tally")
 }
 
 fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFields<'_>) {
@@ -231,8 +230,8 @@ fn create_test_tally_with_text(input_text: &[u8], sort: Sort) -> WordTally<'stat
     let options = Options::default().with_sort(sort);
     let options_static = Box::leak(Box::new(options));
 
-    let input = Input::new(file_path, options_static.io()).expect("Failed to create input");
-    WordTally::new(&input, options_static).expect("Failed to create WordTally")
+    let input = Input::new(file_path, options_static.io()).expect("create input");
+    WordTally::new(&input, options_static).expect("create word tally")
 }
 
 #[test]

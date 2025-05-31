@@ -6,7 +6,7 @@ use std::fmt::{self, Display, Formatter};
 
 /// Determines how word boundaries are detected.
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ValueEnum,
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ValueEnum,
 )]
 #[serde(rename_all = "camelCase")]
 #[value(rename_all = "lower")]

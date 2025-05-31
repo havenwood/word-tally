@@ -16,7 +16,7 @@ fn main() {
         Ok(()) => process::exit(ExitCode::Success.into()),
         Err(err) => {
             eprintln!("Error: {err}");
-            process::exit(ExitCode::from_error(&err).into());
+            process::exit(ExitCode::from(&err).into());
         }
     }
 }
@@ -50,9 +50,9 @@ fn run() -> Result<()> {
 
     // Optional verbose output
     if args.verbose() {
-        let paths: Vec<_> = inputs.iter().map(word_tally::Input::source).collect();
+        let paths: Vec<_> = inputs.iter().map(Input::source).collect();
         let mut verbose = Verbose::default();
-        verbose.write_verbose_info(&word_tally, &paths.join(", "))?;
+        verbose.write_info(&word_tally, &paths.join(", "))?;
     }
 
     // Primary output

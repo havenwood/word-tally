@@ -111,7 +111,7 @@ fn test_input_bytes_error() {
     assert!(result.is_err());
     assert!(
         result
-            .unwrap_err()
+            .expect_err("Input::new with ParallelBytes should fail")
             .to_string()
             .contains("byte I/O mode requires `Input::from_bytes()`")
     );
@@ -207,4 +207,30 @@ fn test_input_from_bytes_various_types() {
     let string_data = String::from("Hello, world!");
     let input = Input::from_bytes(string_data.as_bytes());
     assert_eq!(input.size(), Some(13));
+}
+
+#[test]
+fn test_input_from_trait_box_u8() {
+    let data: Box<[u8]> = vec![1, 2, 3, 4, 5].into_boxed_slice();
+    let input = Input::from(data.clone());
+    assert!(matches!(input, Input::Bytes(_)));
+    assert_eq!(input.size(), Some(5));
+    assert_eq!(input.source(), "<bytes>");
+
+    // Test that it works the same as `from_bytes`
+    let input_from_bytes = Input::from_bytes(data);
+    assert_eq!(input.size(), input_from_bytes.size());
+}
+
+#[test]
+fn test_input_from_trait_vec_u8() {
+    let data: Vec<u8> = vec![1, 2, 3, 4, 5];
+    let input = Input::from(data.clone());
+    assert!(matches!(input, Input::Bytes(_)));
+    assert_eq!(input.size(), Some(5));
+    assert_eq!(input.source(), "<bytes>");
+
+    // Test that it works the same as `from_bytes`
+    let input_from_bytes = Input::from_bytes(data);
+    assert_eq!(input.size(), input_from_bytes.size());
 }

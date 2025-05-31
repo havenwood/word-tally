@@ -7,7 +7,6 @@ use anyhow::Result;
 use memmap2::Mmap;
 use std::fmt::{self, Formatter};
 use std::fs::{self, File};
-use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -35,9 +34,9 @@ impl Input {
     /// - File cannot be opened for reading (when using file-based I/O modes)
     /// - Memory mapping fails (when using memory-mapped I/O)
     /// - `Io::ParallelBytes` is specified (use `Input::from_bytes` instead)
-    pub fn new<P: AsRef<Path>>(p: P, io: Io) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(path: P, io: Io) -> Result<Self> {
         // Handle the stdin case
-        let path_ref = p.as_ref();
+        let path_ref = path.as_ref();
         if path_ref.as_os_str() == "-" {
             match io {
                 Io::ParallelMmap => return Err(WordTallyError::MmapStdin.into()),
@@ -87,7 +86,7 @@ impl Input {
     /// - File cannot be opened for reading
     /// - Standard input cannot be accessed
     /// - Any other I/O error occurs during reader creation
-    pub fn reader(&self) -> io::Result<InputReader<'_>> {
+    pub fn reader(&self) -> Result<InputReader<'_>, WordTallyError> {
         InputReader::new(self)
     }
 
@@ -117,6 +116,18 @@ impl Input {
 impl Default for Input {
     fn default() -> Self {
         Self::Stdin
+    }
+}
+
+impl From<Box<[u8]>> for Input {
+    fn from(bytes: Box<[u8]>) -> Self {
+        Self::Bytes(bytes)
+    }
+}
+
+impl From<Vec<u8>> for Input {
+    fn from(bytes: Vec<u8>) -> Self {
+        Self::Bytes(bytes.into_boxed_slice())
     }
 }
 

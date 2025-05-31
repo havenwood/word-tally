@@ -73,8 +73,7 @@ fn verbose_json_full_output() {
     let stderr = String::from_utf8_lossy(&output.stderr);
 
     // Parse JSON and verify structure
-    let json: serde_json::Value =
-        serde_json::from_str(&stderr).expect("Failed to parse verbose JSON output");
+    let json: serde_json::Value = serde_json::from_str(&stderr).expect("parse verbose json output");
 
     // Check all expected fields exist
     assert_eq!(json["source"], "-");
@@ -104,8 +103,7 @@ fn verbose_json_with_options() {
         .expect("failed to execute process");
 
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let json: serde_json::Value =
-        serde_json::from_str(&stderr).expect("Failed to parse verbose JSON output");
+    let json: serde_json::Value = serde_json::from_str(&stderr).expect("parse verbose json output");
 
     // Check metrics after filtering
     assert_eq!(json["totalWords"], 2); // Only "hope hope"
@@ -197,7 +195,10 @@ fn verbose_csv_delimiter_formatting() {
     let lines: Vec<&str> = stderr.lines().collect();
     // Find the delimiter column
     let headers: Vec<&str> = lines[0].split(',').collect();
-    let delimiter_index = headers.iter().position(|&h| h == "delimiter").unwrap();
+    let delimiter_index = headers
+        .iter()
+        .position(|&h| h == "delimiter")
+        .expect("csv should have delimiter column");
     let values: Vec<&str> = lines[1].split(',').collect();
 
     assert_eq!(values[delimiter_index], r#"""" """"#);

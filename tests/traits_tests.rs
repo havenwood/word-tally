@@ -66,8 +66,8 @@ fn test_ordering_traits() {
     assert!(perf1 < perf2);
 
     // Test Options ordering
-    let opt1 = Options::default().with_chunk_size(1000);
-    let opt2 = Options::default().with_chunk_size(2000);
+    let opt1 = Options::default().with_performance(Performance::default().with_chunk_size(1000));
+    let opt2 = Options::default().with_performance(Performance::default().with_chunk_size(2000));
     assert!(opt1 < opt2);
 }
 

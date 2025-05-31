@@ -5,7 +5,7 @@ use clap::error::ErrorKind as ClapErrorKind;
 use std::io;
 
 /// Exit codes following Unix sysexits.h convention
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ExitCode {
     /// Successful termination
     Success = 0,
@@ -26,8 +26,15 @@ pub enum ExitCode {
 }
 
 impl ExitCode {
-    /// Convert a Clap error to an appropriate exit code
-    fn from_clap_error(err: &clap::Error) -> Self {
+    /// Converts an error to an appropriate exit code.
+    #[must_use]
+    pub fn from_error(err: &anyhow::Error) -> Self {
+        Self::from(err)
+    }
+}
+
+impl From<&clap::Error> for ExitCode {
+    fn from(err: &clap::Error) -> Self {
         match err.kind() {
             // Successful `--help` or `--version` display
             ClapErrorKind::DisplayHelp | ClapErrorKind::DisplayVersion => Self::Success,
@@ -35,9 +42,10 @@ impl ExitCode {
             _ => Self::Usage,
         }
     }
+}
 
-    /// Convert a word-tally error to an appropriate exit code
-    fn from_word_tally_error(err: &Error) -> Self {
+impl From<&Error> for ExitCode {
+    fn from(err: &Error) -> Self {
         match err {
             Error::Usage(_)
             | Error::MmapStdin
@@ -52,12 +60,13 @@ impl ExitCode {
             | Error::ChunkCountExceeded { .. }
             | Error::BatchSizeExceeded { .. }
             | Error::NonAsciiInAsciiMode { .. } => Self::Data,
-            Error::Io { source, .. } => Self::from_io_error(source),
+            Error::Io { source, .. } => Self::from(source),
         }
     }
+}
 
-    /// Convert an I/O error to an appropriate exit code
-    fn from_io_error(err: &io::Error) -> Self {
+impl From<&io::Error> for ExitCode {
+    fn from(err: &io::Error) -> Self {
         match err.kind() {
             io::ErrorKind::NotFound => Self::NoInput,
             io::ErrorKind::PermissionDenied => Self::NoPermission,
@@ -65,26 +74,22 @@ impl ExitCode {
             _ => Self::Io,
         }
     }
+}
 
-    /// Converts an error to an appropriate exit code.
-    #[must_use]
-    pub fn from_error(err: &anyhow::Error) -> Self {
-        // Clap errors
+impl From<&anyhow::Error> for ExitCode {
+    fn from(err: &anyhow::Error) -> Self {
         if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
-            return Self::from_clap_error(clap_err);
+            return Self::from(clap_err);
         }
 
-        // Tallying errors
         if let Some(wt_err) = err.downcast_ref::<Error>() {
-            return Self::from_word_tally_error(wt_err);
+            return Self::from(wt_err);
         }
 
-        // I/O errors
         if let Some(io_err) = err.downcast_ref::<io::Error>() {
-            return Self::from_io_error(io_err);
+            return Self::from(io_err);
         }
 
-        // Any other errors
         Self::Failure
     }
 }

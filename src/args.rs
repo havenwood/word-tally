@@ -2,6 +2,7 @@
 
 use anyhow::Result;
 use clap::{ArgAction, Parser};
+use std::convert::TryFrom;
 use std::path::PathBuf;
 
 use word_tally::options::{
@@ -16,7 +17,7 @@ use word_tally::options::{
 use word_tally::{Count, Options, WordTallyError};
 
 /// A utility for tallying word frequencies in text.
-#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Parser)]
+#[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Parser)]
 #[command(
     name = "word-tally",
     author,
@@ -104,15 +105,7 @@ impl Args {
 
     /// Parse command-line arguments and convert them to word-tally `Options`.
     pub(crate) fn to_options(&self) -> Result<Options> {
-        Ok(Options::new(
-            self.case,
-            self.sort,
-            Serialization::new(self.format, &self.delimiter)?,
-            self.build_filters()?,
-            self.io,
-            Performance::from_env(),
-        )
-        .with_encoding(self.encoding))
+        Options::try_from(self)
     }
 
     /// Helper to create filters from arguments.
@@ -150,5 +143,22 @@ impl Args {
                 }),
                 None => Ok(f),
             })
+    }
+}
+
+/// Converts command-line arguments to `Options`.
+impl TryFrom<&Args> for Options {
+    type Error = anyhow::Error;
+
+    fn try_from(args: &Args) -> Result<Self> {
+        Ok(Self::new(
+            args.case,
+            args.sort,
+            Serialization::new(args.format, &args.delimiter)?,
+            args.build_filters()?,
+            args.io,
+            Performance::from_env(),
+        )
+        .with_encoding(args.encoding))
     }
 }

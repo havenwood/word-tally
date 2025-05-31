@@ -7,13 +7,18 @@ use word_tally::{Case, TallyMap};
 /// Parse word-tally output into a set of (word, count) pairs
 fn parse_output(output: &[u8]) -> HashSet<(String, usize)> {
     simdutf8::compat::from_utf8(output)
-        .unwrap()
+        .expect("output should be valid UTF-8")
         .lines()
         .filter(|line| !line.is_empty())
         .map(|line| {
             let parts: Vec<&str> = line.split_whitespace().collect();
             assert_eq!(parts.len(), 2, "Invalid output line: {line}");
-            (parts[0].to_string(), parts[1].parse::<usize>().unwrap())
+            (
+                parts[0].to_string(),
+                parts[1]
+                    .parse::<usize>()
+                    .expect("second part should be a valid count"),
+            )
         })
         .collect()
 }
@@ -52,13 +57,13 @@ fn test_unicode_words() {
     let input_text = "café über señor hello world café";
 
     let output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=unicode")
         .arg("--case=lower")
         .arg("--sort=desc")
         .write_stdin(input_text)
         .output()
-        .expect("Failed to execute word-tally");
+        .expect("execute word-tally");
 
     assert!(output.status.success());
 
@@ -69,7 +74,10 @@ fn test_unicode_words() {
     let mut word_counts = std::collections::HashMap::new();
     for line in &lines {
         if let Some((word, count)) = line.split_once(char::is_whitespace) {
-            let count: usize = count.trim().parse().unwrap();
+            let count: usize = count
+                .trim()
+                .parse()
+                .expect("count should be a valid number");
             word_counts.insert(word.trim(), count);
         }
     }
@@ -85,7 +93,7 @@ fn test_unicode_words() {
 fn test_unicode_min_chars() {
     // Test that Unicode character length is calculated correctly
     let output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--min-chars=4")
         .write_stdin("a café naive naïve")
         .assert()
@@ -95,10 +103,14 @@ fn test_unicode_min_chars() {
         .clone();
 
     let words: Vec<&str> = simdutf8::compat::from_utf8(&output)
-        .unwrap()
+        .expect("output should be valid UTF-8")
         .lines()
         .filter(|line| !line.is_empty())
-        .map(|line| line.split_whitespace().next().unwrap())
+        .map(|line| {
+            line.split_whitespace()
+                .next()
+                .expect("line should have at least one word")
+        })
         .collect();
 
     assert!(!words.contains(&"a")); // 1 char
@@ -116,7 +128,7 @@ fn test_basic_ascii_parity() {
     let input = "hello world test data hello";
 
     let unicode_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=unicode")
         .write_stdin(input)
         .assert()
@@ -126,7 +138,7 @@ fn test_basic_ascii_parity() {
         .clone();
 
     let ascii_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=ascii")
         .write_stdin(input)
         .assert()
@@ -146,7 +158,7 @@ fn test_contractions_parity() {
     let input = "don't can't it's we're I'll they'll";
 
     let unicode_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=unicode")
         .write_stdin(input)
         .assert()
@@ -156,7 +168,7 @@ fn test_contractions_parity() {
         .clone();
 
     let ascii_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=ascii")
         .write_stdin(input)
         .assert()
@@ -179,7 +191,7 @@ fn test_alphanumeric_parity() {
     let input = "test123 456test hello2world 2fast2furious";
 
     let unicode_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=unicode")
         .write_stdin(input)
         .assert()
@@ -189,7 +201,7 @@ fn test_alphanumeric_parity() {
         .clone();
 
     let ascii_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=ascii")
         .write_stdin(input)
         .assert()
@@ -212,7 +224,7 @@ fn test_punctuation_parity() {
     let input = "hello, world! How are you? I'm fine... Really!";
 
     let unicode_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=unicode")
         .write_stdin(input)
         .assert()
@@ -222,7 +234,7 @@ fn test_punctuation_parity() {
         .clone();
 
     let ascii_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=ascii")
         .write_stdin(input)
         .assert()
@@ -246,7 +258,7 @@ fn test_case_handling_parity() {
 
     // Test with original case
     let unicode_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=unicode")
         .arg("--case=original")
         .write_stdin(input)
@@ -257,7 +269,7 @@ fn test_case_handling_parity() {
         .clone();
 
     let ascii_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=ascii")
         .arg("--case=original")
         .write_stdin(input)
@@ -275,7 +287,7 @@ fn test_case_handling_parity() {
 
     // Test with lowercase
     let unicode_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=unicode")
         .arg("--case=lower")
         .write_stdin(input)
@@ -286,7 +298,7 @@ fn test_case_handling_parity() {
         .clone();
 
     let ascii_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=ascii")
         .arg("--case=lower")
         .write_stdin(input)
@@ -321,7 +333,7 @@ fn test_edge_cases_parity() {
 
     for input in test_cases {
         let unicode_output = Command::cargo_bin("word-tally")
-            .unwrap()
+            .expect("word-tally binary should be available")
             .arg("--encoding=unicode")
             .write_stdin(input)
             .assert()
@@ -331,7 +343,7 @@ fn test_edge_cases_parity() {
             .clone();
 
         let ascii_output = Command::cargo_bin("word-tally")
-            .unwrap()
+            .expect("word-tally binary should be available")
             .arg("--encoding=ascii")
             .write_stdin(input)
             .assert()
@@ -354,7 +366,7 @@ fn test_multiple_apostrophes() {
     let input = "'twas rock'n'roll y'all ma'am";
 
     let unicode_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=unicode")
         .write_stdin(input)
         .assert()
@@ -364,7 +376,7 @@ fn test_multiple_apostrophes() {
         .clone();
 
     let ascii_output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=ascii")
         .write_stdin(input)
         .assert()
@@ -440,7 +452,7 @@ fn test_documented_differences() {
 
         // Get Unicode output
         let unicode_output = Command::cargo_bin("word-tally")
-            .unwrap()
+            .expect("word-tally binary should be available")
             .arg("--encoding=unicode")
             .write_stdin(input)
             .assert()
@@ -450,15 +462,20 @@ fn test_documented_differences() {
             .clone();
 
         let unicode_words: Vec<String> = simdutf8::compat::from_utf8(&unicode_output)
-            .unwrap()
+            .expect("output should be valid UTF-8")
             .lines()
             .filter(|line| !line.is_empty())
-            .map(|line| line.split_whitespace().next().unwrap().to_string())
+            .map(|line| {
+                line.split_whitespace()
+                    .next()
+                    .expect("line should have at least one word")
+                    .to_string()
+            })
             .collect();
 
         // Get ASCII output
         let ascii_output = Command::cargo_bin("word-tally")
-            .unwrap()
+            .expect("word-tally binary should be available")
             .arg("--encoding=ascii")
             .write_stdin(input)
             .assert()
@@ -468,10 +485,15 @@ fn test_documented_differences() {
             .clone();
 
         let ascii_words: Vec<String> = simdutf8::compat::from_utf8(&ascii_output)
-            .unwrap()
+            .expect("output should be valid UTF-8")
             .lines()
             .filter(|line| !line.is_empty())
-            .map(|line| line.split_whitespace().next().unwrap().to_string())
+            .map(|line| {
+                line.split_whitespace()
+                    .next()
+                    .expect("line should have at least one word")
+                    .to_string()
+            })
             .collect();
 
         // Sort for comparison since order may differ
@@ -510,7 +532,7 @@ fn test_ascii_simplicity() {
     let input = "test@example.com, hello-world, 3.14, 'quoted', test's, rock'n'roll";
 
     let output = Command::cargo_bin("word-tally")
-        .unwrap()
+        .expect("word-tally binary should be available")
         .arg("--encoding=ascii")
         .arg("--case=lower")
         .arg("--sort=asc")
@@ -522,10 +544,14 @@ fn test_ascii_simplicity() {
         .clone();
 
     let words: Vec<&str> = simdutf8::compat::from_utf8(&output)
-        .unwrap()
+        .expect("output should be valid UTF-8")
         .lines()
         .filter(|line| !line.is_empty())
-        .map(|line| line.split_whitespace().next().unwrap())
+        .map(|line| {
+            line.split_whitespace()
+                .next()
+                .expect("line should have at least one word")
+        })
         .collect();
 
     // ASCII splits on all non-alphanumeric except apostrophes

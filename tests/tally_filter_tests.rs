@@ -28,9 +28,9 @@ fn test_excluding_words() {
         temp_file.path().to_str().expect("temp file path"),
         options_arc.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let tally = WordTally::new(&input, &options_arc).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options_arc).expect("create word tally");
     let result = tally.tally();
 
     assert!(result.iter().any(|(word, _)| word.as_ref() == "tree"));
@@ -66,9 +66,9 @@ fn test_excluding_patterns() {
         temp_file.path().to_str().expect("temp file path"),
         options_arc.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let tally = WordTally::new(&input, &options_arc).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options_arc).expect("create word tally");
     let result = tally.tally();
 
     // These should be present
@@ -107,9 +107,9 @@ fn test_including_patterns() {
     );
     let options_arc = make_shared(options);
 
-    let input = Input::new(file_path, options_arc.io()).expect("Failed to create Input");
+    let input = Input::new(file_path, options_arc.io()).expect("create input");
 
-    let tally = WordTally::new(&input, &options_arc).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options_arc).expect("create word tally");
     let result = tally.tally();
 
     // These should be present (words starting with 'h')
@@ -155,9 +155,9 @@ fn test_combining_include_exclude_patterns() {
     );
     let options_arc = make_shared(options);
 
-    let input = Input::new(file_path, options_arc.io()).expect("Failed to create Input");
+    let input = Input::new(file_path, options_arc.io()).expect("create input");
 
-    let tally = WordTally::new(&input, &options_arc).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options_arc).expect("create word tally");
     let result = tally.tally();
 
     // 'heaven' should be the only word present (starts with 'h' but isn't 'hell')
@@ -183,7 +183,7 @@ fn test_min_count_graphemes() {
     );
 
     let input = Input::from_bytes(input_text);
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
 
     assert_eq!(tally.count(), 0);
 }

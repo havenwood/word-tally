@@ -7,7 +7,9 @@ use word_tally::{Input, Io, Options, TallyMap};
 
 #[path = "common.rs"]
 pub mod common;
-use self::common::{create_bench_group, make_shared, standard_criterion_config};
+use self::common::{
+    IO_STRATEGIES_NO_BYTES, create_bench_group, make_shared, standard_criterion_config,
+};
 
 fn bench_multi_file_processing(c: &mut Criterion) {
     let file_sizes_kb = [10, 20, 15];
@@ -18,19 +20,15 @@ fn bench_multi_file_processing(c: &mut Criterion) {
 
     let file_paths: Vec<&str> = temp_files_and_paths
         .iter()
-        .map(|(_, path)| path.to_str().unwrap())
+        .map(|(_, path)| {
+            path.to_str()
+                .expect("benchmark file path should be valid UTF-8")
+        })
         .collect();
-
-    let io_strategies = [
-        (Io::Stream, "stream"),
-        (Io::ParallelStream, "parallel-stream"),
-        (Io::ParallelInMemory, "parallel-in-memory"),
-        (Io::ParallelMmap, "parallel-mmap"),
-    ];
 
     let mut group = create_bench_group(c, "multi_file_processing");
 
-    for (io, name) in &io_strategies {
+    for (io, name) in &IO_STRATEGIES_NO_BYTES {
         let options = Options::default().with_io(*io);
         let shared_options = make_shared(options);
 
@@ -39,7 +37,7 @@ fn bench_multi_file_processing(c: &mut Criterion) {
                 || {
                     file_paths
                         .iter()
-                        .map(|path| Input::new(path, *io).expect("Failed to create input"))
+                        .map(|path| Input::new(path, *io).expect("create input"))
                         .collect::<Vec<_>>()
                 },
                 |inputs| {
@@ -49,7 +47,7 @@ fn bench_multi_file_processing(c: &mut Criterion) {
                         .try_fold(TallyMap::new(), |acc, result| {
                             result.map(|tally| acc.merge(tally))
                         })
-                        .expect("Failed to process inputs");
+                        .expect("process inputs");
                     black_box(tally_map)
                 },
                 BatchSize::LargeInput,
@@ -71,19 +69,22 @@ fn bench_multi_file_scaling(c: &mut Criterion) {
 
         let file_paths: Vec<&str> = temp_files_and_paths
             .iter()
-            .map(|(_, path)| path.to_str().unwrap())
+            .map(|(_, path)| {
+                path.to_str()
+                    .expect("benchmark file path should be valid UTF-8")
+            })
             .collect();
 
         let group_name = format!("multi_file_scaling/{count}_files");
         let mut group = create_bench_group(c, &group_name);
 
-        let io_strategies = [
+        let scaling_strategies = [
             (Io::Stream, "stream"),
             (Io::ParallelStream, "parallel-stream"),
             (Io::ParallelMmap, "parallel-mmap"),
         ];
 
-        for (io, name) in &io_strategies {
+        for (io, name) in &scaling_strategies {
             let options = Options::default().with_io(*io);
             let shared_options = make_shared(options);
 
@@ -92,7 +93,7 @@ fn bench_multi_file_scaling(c: &mut Criterion) {
                     || {
                         file_paths
                             .iter()
-                            .map(|path| Input::new(path, *io).expect("Failed to create input"))
+                            .map(|path| Input::new(path, *io).expect("create input"))
                             .collect::<Vec<_>>()
                     },
                     |inputs| {
@@ -102,7 +103,7 @@ fn bench_multi_file_scaling(c: &mut Criterion) {
                             .try_fold(TallyMap::new(), |acc, result| {
                                 result.map(|tally| acc.merge(tally))
                             })
-                            .expect("Failed to process inputs");
+                            .expect("process inputs");
                         black_box(tally_map)
                     },
                     BatchSize::LargeInput,

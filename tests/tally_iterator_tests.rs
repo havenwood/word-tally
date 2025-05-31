@@ -33,9 +33,9 @@ fn test_into_tally() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
 
     // Use `tally()` to get a reference to the slice.
     let tally = word_tally.tally();
@@ -54,7 +54,7 @@ fn test_into_tally() {
 
     assert_eq!(tally.len(), expected_counts.len());
     for (word, count) in tally {
-        let expected_count = expected_counts.get(word.as_ref()).expect("Unexpected word");
+        let expected_count = expected_counts.get(word.as_ref()).expect("unexpected word");
         assert_eq!(count, expected_count);
     }
 }
@@ -70,9 +70,9 @@ fn test_iterator() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
 
     let expected: Vec<(Word, Count)> = vec![(Box::from("double"), 2), (Box::from("trouble"), 1)];
 
@@ -96,9 +96,9 @@ fn test_iterator_for_loop() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let word_tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let word_tally = WordTally::new(&input, &options).expect("create word tally");
 
     let expected: Vec<(Word, Count)> = vec![(Box::from("llama"), 2), (Box::from("pajamas"), 1)];
 

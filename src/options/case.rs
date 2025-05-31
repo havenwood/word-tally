@@ -10,14 +10,14 @@ use serde::{Deserialize, Serialize};
     Copy,
     Debug,
     Default,
-    Eq,
     PartialEq,
+    Eq,
     PartialOrd,
     Ord,
     Hash,
-    ValueEnum,
     Serialize,
     Deserialize,
+    ValueEnum,
 )]
 pub enum Case {
     /// Keep original case.

@@ -40,11 +40,10 @@ fn test_parallel_vs_sequential() {
     );
     let seq_options_arc = make_shared(seq_options);
 
-    let seq_input =
-        Input::new(file_path, seq_options_arc.io()).expect("Failed to create sequential input");
+    let seq_input = Input::new(file_path, seq_options_arc.io()).expect("create sequential input");
 
-    let sequential = WordTally::new(&seq_input, &seq_options_arc)
-        .expect("Failed to create sequential WordTally");
+    let sequential =
+        WordTally::new(&seq_input, &seq_options_arc).expect("create sequential WordTally");
 
     // Parallel processing
     let par_performance = word_tally::Performance::default();
@@ -58,11 +57,10 @@ fn test_parallel_vs_sequential() {
     );
     let par_options_arc = make_shared(par_options);
 
-    let par_input =
-        Input::new(file_path, par_options_arc.io()).expect("Failed to create parallel input");
+    let par_input = Input::new(file_path, par_options_arc.io()).expect("create parallel input");
 
     let parallel =
-        WordTally::new(&par_input, &par_options_arc).expect("Failed to create parallel WordTally");
+        WordTally::new(&par_input, &par_options_arc).expect("create parallel word tally");
 
     assert_eq!(sequential.count(), parallel.count());
     assert_eq!(sequential.uniq_count(), parallel.uniq_count());
@@ -107,15 +105,14 @@ fn test_memory_mapped_vs_streamed() {
     );
 
     // Create inputs with the different I/O modes
-    let mmap_input =
-        Input::new(file_path, mmap_options.io()).expect("Failed to create memory-mapped input");
-    let stream_input =
-        Input::new(file_path, stream_options.io()).expect("Failed to create streamed input");
+    let mmap_input = Input::new(file_path, mmap_options.io()).expect("create memory-mapped input");
+    let stream_input = Input::new(file_path, stream_options.io()).expect("create streamed input");
 
     // Create WordTally instances with the different I/O modes
-    let memory_mapped = WordTally::new(&mmap_input, &mmap_options).expect("Memory mapping failed");
-    let streamed = WordTally::new(&stream_input, &stream_options)
-        .expect("Failed to create streamed WordTally");
+    let memory_mapped =
+        WordTally::new(&mmap_input, &mmap_options).expect("create memory mapped word tally");
+    let streamed =
+        WordTally::new(&stream_input, &stream_options).expect("create streamed WordTally");
 
     // Verify results are the same regardless of I/O mode
     assert_eq!(memory_mapped.count(), streamed.count());
@@ -141,10 +138,10 @@ fn test_memory_mapped_vs_streamed() {
     );
 
     let parallel_input =
-        Input::new(file_path, parallel_options.io()).expect("Failed to create parallel input");
+        Input::new(file_path, parallel_options.io()).expect("create parallel input");
 
     let parallel_stream = WordTally::new(&parallel_input, &parallel_options)
-        .expect("Failed to create parallel stream WordTally");
+        .expect("create parallel stream WordTally");
 
     // Verify the parallel processing worked
     assert!(parallel_stream.count() > 0);
@@ -164,9 +161,9 @@ fn test_parallel_count() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let parallel = WordTally::new(&input, &options).expect("Failed to create parallel WordTally");
+    let parallel = WordTally::new(&input, &options).expect("create parallel word tally");
 
     assert!(parallel.count() > 0);
     assert!(parallel.uniq_count() > 0);
@@ -185,9 +182,9 @@ fn test_merge_maps() {
         temp_file.path().to_str().expect("temp file path"),
         options.io(),
     )
-    .expect("Failed to create Input");
+    .expect("create input");
 
-    let tally = WordTally::new(&input, &options).expect("Failed to create WordTally");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
 
     assert_eq!(tally.count(), 9);
     assert_eq!(tally.uniq_count(), 9);

@@ -4,6 +4,7 @@ use clap::ValueEnum;
 use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
 use std::env;
+use std::str::FromStr;
 
 /// Determines the I/O strategy for processing input.
 ///
@@ -26,7 +27,7 @@ use std::env;
 /// assert_eq!(Io::ParallelMmap.to_string(), "parallel-mmap");
 /// ```
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ValueEnum,
+    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ValueEnum,
 )]
 pub enum Io {
     /// Parallel streaming I/O — balanced memory/performance (default)
@@ -60,17 +61,7 @@ impl Io {
     /// Parse I/O strategy from a string value.
     #[must_use]
     pub fn from_str_value(value: Option<&str>) -> Self {
-        match value {
-            Some(s) if s.eq_ignore_ascii_case("stream") => Self::Stream,
-            Some(s) if s.eq_ignore_ascii_case("parallel-stream") => Self::ParallelStream,
-            Some(s) if s.eq_ignore_ascii_case("parallel-in-memory") => Self::ParallelInMemory,
-            Some(s)
-                if s.eq_ignore_ascii_case("parallel-mmap") || s.eq_ignore_ascii_case("mmap") =>
-            {
-                Self::ParallelMmap
-            }
-            _ => Self::default(),
-        }
+        value.and_then(|s| s.parse().ok()).unwrap_or_default()
     }
 
     /// Parse I/O strategy from `WORD_TALLY_IO` environment variable.
@@ -89,5 +80,22 @@ impl Display for Io {
             Self::ParallelMmap => write!(f, "parallel-mmap"),
             Self::ParallelBytes => write!(f, "parallel-bytes"),
         }
+    }
+}
+
+impl FromStr for Io {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            _ if s.eq_ignore_ascii_case("stream") => Self::Stream,
+            _ if s.eq_ignore_ascii_case("parallel-stream") => Self::ParallelStream,
+            _ if s.eq_ignore_ascii_case("parallel-in-memory") => Self::ParallelInMemory,
+            _ if s.eq_ignore_ascii_case("parallel-mmap") || s.eq_ignore_ascii_case("mmap") => {
+                Self::ParallelMmap
+            }
+            _ if s.eq_ignore_ascii_case("parallel-bytes") => Self::ParallelBytes,
+            _ => return Err(()),
+        })
     }
 }

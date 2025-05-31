@@ -1,6 +1,6 @@
 //! Input readers implementing Read and `BufRead` traits.
 
-use crate::input::Input;
+use crate::{WordTallyError, input::Input};
 use memmap2::Mmap;
 use std::cmp;
 use std::fs::File;
@@ -25,27 +25,41 @@ impl<'a> InputReader<'a> {
     /// - Standard input is not accessible
     /// - Permission is denied when accessing a file
     /// - The file does not exist
-    pub fn new(input: &'a Input) -> io::Result<Self> {
+    pub fn new(input: &'a Input) -> Result<Self, WordTallyError> {
         match input {
             Input::Stdin => Ok(Self::Stdin(BufReader::new(io::stdin()))),
             Input::File(path) => {
-                let file = File::open(path).map_err(|e| match e.kind() {
-                    io::ErrorKind::NotFound => {
-                        io::Error::new(e.kind(), format!("no such file: {}", path.display()))
+                let file = File::open(path).map_err(|source| {
+                    let message = match source.kind() {
+                        io::ErrorKind::NotFound => format!("no such file: {}", path.display()),
+                        io::ErrorKind::PermissionDenied => {
+                            format!("permission denied: {}", path.display())
+                        }
+                        _ => format!("failed to open file: {}", path.display()),
+                    };
+
+                    WordTallyError::Io {
+                        path: path.display().to_string(),
+                        message,
+                        source,
                     }
-                    io::ErrorKind::PermissionDenied => {
-                        io::Error::new(e.kind(), format!("permission denied: {}", path.display()))
-                    }
-                    _ => io::Error::new(
-                        e.kind(),
-                        format!("failed to open file: {} ({})", path.display(), e),
-                    ),
                 })?;
 
                 Ok(Self::File(BufReader::new(file)))
             }
             Input::Mmap(mmap, _) => Ok(Self::Mmap(MmapReader::new(mmap.as_ref()))),
             Input::Bytes(bytes) => Ok(Self::Bytes(BytesReader::new(bytes.as_ref()))),
+        }
+    }
+}
+
+impl Read for InputReader<'_> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        match self {
+            Self::Stdin(reader) => reader.read(buf),
+            Self::File(reader) => reader.read(buf),
+            Self::Mmap(reader) => reader.read(buf),
+            Self::Bytes(reader) => reader.read(buf),
         }
     }
 }
@@ -67,17 +81,6 @@ impl BufRead for InputReader<'_> {
             Self::File(reader) => reader.consume(amt),
             Self::Mmap(reader) => reader.consume(amt),
             Self::Bytes(reader) => reader.consume(amt),
-        }
-    }
-}
-
-impl Read for InputReader<'_> {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        match self {
-            Self::Stdin(reader) => reader.read(buf),
-            Self::File(reader) => reader.read(buf),
-            Self::Mmap(reader) => reader.read(buf),
-            Self::Bytes(reader) => reader.read(buf),
         }
     }
 }
@@ -143,6 +146,17 @@ impl<T: AsRef<[u8]>> SliceReader<T> {
     }
 }
 
+/// Reads bytes by copying them from slice-based sources.
+impl<T: AsRef<[u8]>> Read for SliceReader<T> {
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if self.is_exhausted() {
+            return Ok(0);
+        }
+
+        Ok(self.read_into(buf))
+    }
+}
+
 /// A buffered-for-streaming, zero-copy reader for slice-based sources.
 impl<T: AsRef<[u8]>> BufRead for SliceReader<T> {
     fn fill_buf(&mut self) -> io::Result<&[u8]> {
@@ -155,17 +169,6 @@ impl<T: AsRef<[u8]>> BufRead for SliceReader<T> {
 
     fn consume(&mut self, amt: usize) {
         self.consume(amt);
-    }
-}
-
-/// Reads bytes by copying them from slice-based sources.
-impl<T: AsRef<[u8]>> Read for SliceReader<T> {
-    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        if self.is_exhausted() {
-            return Ok(0);
-        }
-
-        Ok(self.read_into(buf))
     }
 }
 
