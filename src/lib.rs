@@ -98,7 +98,7 @@
 //! # }
 //! ```
 
-use std::{borrow::Cow, slice, str};
+use std::{slice, str};
 
 use anyhow::Result;
 use serde::{self, Deserialize, Serialize};
@@ -138,13 +138,12 @@ pub type Tally = Box<[(Word, Count)]>;
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[non_exhaustive]
 /// A tally of word frequencies and counts, along with processing options.
-pub struct WordTally<'a> {
+pub struct WordTally {
     /// Ordered pairs of words and the count of times they appear.
     tally: Tally,
 
     /// All of the options specified for how to tally.
-    #[serde(borrow)]
-    options: Cow<'a, Options>,
+    options: Options,
 
     /// The sum of all words tallied.
     count: Count,
@@ -155,7 +154,7 @@ pub struct WordTally<'a> {
 }
 
 /// An explicit `iter` method for `WordTally`.
-impl WordTally<'_> {
+impl WordTally {
     /// Returns an iterator over references to the words and counts.
     pub fn iter(&self) -> slice::Iter<'_, (Word, Count)> {
         self.tally.iter()
@@ -163,14 +162,14 @@ impl WordTally<'_> {
 }
 
 /// Converts a `WordTally` into a `Vec<(Word, Count)>`.
-impl<'a> From<WordTally<'a>> for Vec<(Word, Count)> {
-    fn from(word_tally: WordTally<'a>) -> Self {
+impl From<WordTally> for Vec<(Word, Count)> {
+    fn from(word_tally: WordTally) -> Self {
         word_tally.into_tally().into_vec()
     }
 }
 
 /// Allows consuming the `WordTally` in a for loop, yielding owned pairs.
-impl IntoIterator for WordTally<'_> {
+impl IntoIterator for WordTally {
     type Item = (Word, Count);
     type IntoIter = <Box<[(Word, Count)]> as IntoIterator>::IntoIter;
 
@@ -180,7 +179,7 @@ impl IntoIterator for WordTally<'_> {
 }
 
 /// Makes `WordTally` reference available directly in a for loop.
-impl<'i> IntoIterator for &'i WordTally<'_> {
+impl<'i> IntoIterator for &'i WordTally {
     type Item = &'i (Word, Count);
     type IntoIter = slice::Iter<'i, (Word, Count)>;
 
@@ -190,7 +189,7 @@ impl<'i> IntoIterator for &'i WordTally<'_> {
 }
 
 /// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
-impl<'a> WordTally<'a> {
+impl WordTally {
     /// Constructs a `WordTally` from an input source and tallying options.
     ///
     /// This constructor handles all I/O strategies (stream, parallel-stream, parallel-in-memory and parallel-mmap).
@@ -221,7 +220,7 @@ impl<'a> WordTally<'a> {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn new(input: &Input, options: &'a Options) -> Result<Self> {
+    pub fn new(input: &Input, options: &Options) -> Result<Self> {
         // Generate the tally map from the input
         let tally_map = TallyMap::from_input(input, options)?;
 
@@ -230,7 +229,7 @@ impl<'a> WordTally<'a> {
 
     /// Creates a `WordTally` instance from a `TallyMap` and `Options`.
     #[must_use]
-    pub fn from_tally_map(mut tally_map: TallyMap, options: &'a Options) -> Self {
+    pub fn from_tally_map(mut tally_map: TallyMap, options: &Options) -> Self {
         options.filters().apply(&mut tally_map, options.case());
 
         let count = tally_map.values().sum();
@@ -238,7 +237,7 @@ impl<'a> WordTally<'a> {
         let uniq_count = tally.len();
 
         let mut instance = Self {
-            options: Cow::Borrowed(options),
+            options: options.clone(),
             tally,
             count,
             uniq_count,
@@ -261,23 +260,9 @@ impl<'a> WordTally<'a> {
         self.tally
     }
 
-    /// Converts to owned data with an appropriate lifetime.
-    #[must_use]
-    pub fn into_owned<'b>(self) -> WordTally<'b>
-    where
-        'a: 'b,
-    {
-        WordTally {
-            tally: self.tally,
-            options: Cow::Owned(self.options.into_owned()),
-            count: self.count,
-            uniq_count: self.uniq_count,
-        }
-    }
-
     /// Gets a reference to the `options`.
     #[must_use]
-    pub fn options(&self) -> &Options {
+    pub const fn options(&self) -> &Options {
         &self.options
     }
 

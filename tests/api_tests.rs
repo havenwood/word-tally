@@ -7,7 +7,7 @@ const API_EXAMPLE_TEXT: &str = "I taste a liquor never brewed";
 const EXPECTED_API_WORD_COUNT: Count = 6;
 const EXPECTED_API_UNIQ_COUNT: Count = 6;
 
-fn verify_api_example_tally(tally: &WordTally<'_>) {
+fn verify_api_example_tally(tally: &WordTally) {
     assert_eq!(
         tally.count(),
         EXPECTED_API_WORD_COUNT,

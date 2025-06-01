@@ -271,11 +271,11 @@ fn test_wordtally_hash_fields() {
 
 #[test]
 fn test_equality_and_hashing() {
-    fn assert_hash_eq(tally_a: &WordTally<'_>, tally_b: &WordTally<'_>) {
+    fn assert_hash_eq(tally_a: &WordTally, tally_b: &WordTally) {
         assert_eq!(tally_a, tally_b);
     }
 
-    fn assert_hash_ne(tally_a: &WordTally<'_>, tally_b: &WordTally<'_>) {
+    fn assert_hash_ne(tally_a: &WordTally, tally_b: &WordTally) {
         assert_ne!(tally_a, tally_b);
     }
 
@@ -294,7 +294,7 @@ fn test_equality_and_hashing() {
     std::io::Write::write_all(&mut temp_file, test_text).expect("write test data");
     let file_path = temp_file.path().to_str().expect("temp file path");
 
-    let tallies: Vec<WordTally<'static>> = cases_and_sorts
+    let tallies: Vec<WordTally> = cases_and_sorts
         .iter()
         .map(|&(case, sort)| {
             let serializer = Serialization::default();

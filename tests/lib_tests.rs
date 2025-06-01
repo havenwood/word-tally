@@ -32,12 +32,7 @@ fn create_test_data_file() -> tempfile::NamedTempFile {
     temp_file
 }
 
-fn word_tally(
-    case: Case,
-    sort: Sort,
-    serialization: Serialization,
-    filters: Filters,
-) -> WordTally<'static> {
+fn word_tally(case: Case, sort: Sort, serialization: Serialization, filters: Filters) -> WordTally {
     let test_file = Box::leak(Box::new(create_test_data_file()));
     let file_path = test_file.path().to_str().expect("temp file path");
 
@@ -883,7 +878,7 @@ fn test_from_json() {
 
     let original = WordTally::new(&input, &options).expect("create word tally");
     let json = serde_json::to_string(&original).expect("serialize JSON");
-    let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
+    let deserialized: WordTally = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
@@ -907,7 +902,7 @@ fn test_deserialization_with_serde() {
 
     let original = WordTally::new(&input, &options).expect("create word tally");
     let json = serde_json::to_string(&original).expect("serialize JSON");
-    let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
+    let deserialized: WordTally = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
@@ -960,125 +955,7 @@ fn test_json_field_camel_case_deserialization() {
     assert!(serialized.contains("\"uniqueCount\":"));
     assert!(!serialized.contains("\"uniq_count\":"));
 
-    let deserialized: WordTally<'_> = serde_json::from_str(&serialized).expect("deserialize JSON");
+    let deserialized: WordTally = serde_json::from_str(&serialized).expect("deserialize JSON");
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
-}
-
-#[test]
-fn test_into_owned_converts_borrowed_to_owned() {
-    let content = b"apple banana cherry";
-    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
-
-    let options = Options::default();
-    let input = Input::new(temp_file.path(), options.io()).expect("process test");
-    let word_tally = WordTally::new(&input, &options).expect("create word tally");
-
-    // Store original values before consuming
-    let original_count = word_tally.count();
-    let original_uniq_count = word_tally.uniq_count();
-    let original_tally_len = word_tally.tally().len();
-    let original_case = word_tally.options().case();
-
-    // Convert to owned
-    let owned_tally = word_tally.into_owned();
-
-    // Verify that all data is preserved
-    assert_eq!(owned_tally.count(), original_count);
-    assert_eq!(owned_tally.uniq_count(), original_uniq_count);
-    assert_eq!(owned_tally.tally().len(), original_tally_len);
-    assert_eq!(owned_tally.options().case(), original_case);
-}
-
-#[test]
-fn test_into_owned_preserves_all_data() {
-    let content = b"one two three one two one";
-    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
-
-    let options = Options::default()
-        .with_case(Case::Upper)
-        .with_sort(Sort::Desc)
-        .with_filters(
-            Filters::default()
-                .with_min_chars(2)
-                .with_exclude_words(vec!["ONE".to_string()]),
-        );
-
-    let input = Input::new(temp_file.path(), options.io()).expect("process test");
-    let original = WordTally::new(&input, &options).expect("create word tally");
-
-    // Store original values
-    let original_count = original.count();
-    let original_uniq_count = original.uniq_count();
-    let original_tally: Vec<_> = original.tally().to_vec();
-    let original_case = original.options().case();
-    let original_sort = original.options().sort();
-    let original_min_chars = original.options().filters().min_chars();
-
-    // Convert to owned
-    let owned = original.into_owned();
-
-    // Verify all data is preserved
-    assert_eq!(owned.count(), original_count);
-    assert_eq!(owned.uniq_count(), original_uniq_count);
-    assert_eq!(owned.tally(), &original_tally[..]);
-    assert_eq!(owned.options().case(), original_case);
-    assert_eq!(owned.options().sort(), original_sort);
-    assert_eq!(owned.options().filters().min_chars(), original_min_chars);
-}
-
-#[test]
-fn test_into_owned_multiple_conversions() {
-    // Test that we can convert to owned multiple times
-    let content = b"test multiple conversions";
-    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
-
-    let options = Options::default();
-    let input = Input::new(temp_file.path(), options.io()).expect("process test");
-    let word_tally = WordTally::new(&input, &options).expect("create word tally");
-
-    // First conversion
-    let owned1 = word_tally.into_owned();
-    assert_eq!(owned1.count(), 3);
-
-    // Second conversion (already owned, but should still work)
-    let owned2 = owned1.into_owned();
-    assert_eq!(owned2.count(), 3);
-    assert_eq!(owned2.uniq_count(), 3);
-}
-
-#[test]
-fn test_into_owned_with_custom_options() {
-    let content = b"HELLO WORLD HELLO RUST WORLD HELLO";
-    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
-
-    let options = Options::default()
-        .with_case(Case::Lower)
-        .with_sort(Sort::Asc)
-        .with_filters(Filters::default().with_min_count(2));
-
-    let input = Input::new(temp_file.path(), options.io()).expect("process test");
-    let original = WordTally::new(&input, &options).expect("create word tally");
-
-    // Verify original state (min_count filter applies)
-    // Only `"world"` (2) and `"hello"` (3) remain; `"rust"` (1) is filtered out
-    assert_eq!(original.count(), 5); // Total words after filtering
-    assert_eq!(original.uniq_count(), 2); // Unique words after filtering
-
-    // Convert to owned
-    let owned = original.into_owned();
-
-    // Verify owned version maintains the same state
-    assert_eq!(owned.count(), 5);
-    assert_eq!(owned.uniq_count(), 2);
-    assert_eq!(owned.options().case(), Case::Lower);
-    assert_eq!(owned.options().sort(), Sort::Asc);
-
-    // The tally should be sorted ascending by count and filtered by min_count
-    let tally = owned.tally();
-    assert_eq!(tally.len(), 2); // Filtered by min_count
 }

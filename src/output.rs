@@ -136,7 +136,7 @@ impl Output {
     /// Returns an error if:
     /// - Writing to the output fails due to I/O errors
     /// - CSV or JSON serialization encounters an error
-    pub fn write_formatted_tally(&mut self, word_tally: &WordTally<'_>) -> Result<()> {
+    pub fn write_formatted_tally(&mut self, word_tally: &WordTally) -> Result<()> {
         let serialization = word_tally.options().serialization();
         let tally = word_tally.tally();
 

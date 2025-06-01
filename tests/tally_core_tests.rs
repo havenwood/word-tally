@@ -18,12 +18,7 @@ And opens further on -";
     temp_file
 }
 
-fn word_tally(
-    case: Case,
-    sort: Sort,
-    serialization: Serialization,
-    filters: Filters,
-) -> WordTally<'static> {
+fn word_tally(case: Case, sort: Sort, serialization: Serialization, filters: Filters) -> WordTally {
     let test_file = Box::leak(Box::new(create_test_data_file()));
     let file_path = test_file.path().to_str().expect("temp file path");
 
@@ -221,7 +216,7 @@ struct ExpectedFields<'a> {
     tally: Vec<(&'a str, Count)>,
 }
 
-fn create_test_tally_with_text(input_text: &[u8], sort: Sort) -> WordTally<'static> {
+fn create_test_tally_with_text(input_text: &[u8], sort: Sort) -> WordTally {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
     let temp_file_static = Box::leak(Box::new(temp_file));

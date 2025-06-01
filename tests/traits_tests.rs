@@ -94,7 +94,7 @@ fn test_wordtally_deserialize() {
     }"#;
 
     // Deserialize directly into WordTally
-    let word_tally: WordTally<'_> = serde_json::from_str(json).expect("deserialize JSON");
+    let word_tally: WordTally = serde_json::from_str(json).expect("deserialize JSON");
 
     // Verify the values
     assert_eq!(word_tally.count(), 8);

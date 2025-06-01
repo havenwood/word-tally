@@ -7,7 +7,7 @@ fn make_shared<T>(value: T) -> Arc<T> {
     Arc::new(value)
 }
 
-fn create_test_tally_with_text(text: &[u8], sort: Sort) -> WordTally<'static> {
+fn create_test_tally_with_text(text: &[u8], sort: Sort) -> WordTally {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     temp_file.write_all(text).expect("write test data");
 

@@ -46,7 +46,7 @@ fn test_from_json() {
 
     let original = WordTally::new(&input, &options).expect("create word tally");
     let json = serde_json::to_string(&original).expect("serialize JSON");
-    let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
+    let deserialized: WordTally = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
@@ -90,7 +90,7 @@ fn test_deserialization_with_serde() {
 
     let original = WordTally::new(&input, &options).expect("create word tally");
     let json = serde_json::to_string(&original).expect("serialize JSON");
-    let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
+    let deserialized: WordTally = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
@@ -115,7 +115,7 @@ fn test_serialization_with_field_delimiter() {
 #[test]
 fn test_deserialization_errors() {
     let invalid_json = "this is not json";
-    let result: Result<WordTally<'_>, _> = serde_json::from_str(invalid_json);
+    let result: Result<WordTally, _> = serde_json::from_str(invalid_json);
     assert!(result.is_err());
 
     let missing_fields_json = r#"{
@@ -123,7 +123,7 @@ fn test_deserialization_errors() {
     }
     "#;
 
-    let result: Result<WordTally<'_>, _> = serde_json::from_str(missing_fields_json);
+    let result: Result<WordTally, _> = serde_json::from_str(missing_fields_json);
     assert!(result.is_err());
 }
 
@@ -142,7 +142,7 @@ fn test_comprehensive_wordtally_serialization() {
 
     let json = serde_json::to_string(&tally).expect("serialize JSON");
 
-    let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
+    let deserialized: WordTally = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(tally.count(), deserialized.count());
     assert_eq!(tally.uniq_count(), deserialized.uniq_count());
@@ -188,7 +188,7 @@ fn test_round_trip_serialization() {
 
     let json = serde_json::to_string(&original).expect("serialize JSON");
 
-    let deserialized: WordTally<'_> = serde_json::from_str(&json).expect("deserialize JSON");
+    let deserialized: WordTally = serde_json::from_str(&json).expect("deserialize JSON");
 
     assert_eq!(original.count(), deserialized.count());
     assert_eq!(original.uniq_count(), deserialized.uniq_count());

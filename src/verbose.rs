@@ -41,7 +41,7 @@ struct VerboseData<'a> {
 
 impl<'a> VerboseData<'a> {
     /// Create from `WordTally` and source.
-    fn from_tally(tally: &'a WordTally<'a>, source: &'a str) -> Self {
+    fn from_tally(tally: &'a WordTally, source: &'a str) -> Self {
         let options = tally.options();
         let filters = options.filters();
         let serialization = options.serialization();
@@ -104,7 +104,7 @@ impl<'a> VerboseData<'a> {
 
 impl Verbose {
     /// Writes information for the word tally.
-    pub(crate) fn write_info(&mut self, word_tally: &WordTally<'_>, source: &str) -> Result<()> {
+    pub(crate) fn write_info(&mut self, word_tally: &WordTally, source: &str) -> Result<()> {
         let data = VerboseData::from_tally(word_tally, source);
 
         match word_tally.options().serialization() {

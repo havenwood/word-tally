@@ -33,7 +33,7 @@ mod verbose_unit_tests {
     }
 
     // Helper function to create test WordTally
-    fn create_test_tally(options: &Options) -> WordTally<'_> {
+    fn create_test_tally(options: &Options) -> WordTally {
         let test_text = b"hope is the thing with feathers that perches";
         let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
         std::io::Write::write_all(&mut temp_file, test_text).expect("write test data");

@@ -14,7 +14,7 @@ fn make_options(io: Io) -> Options {
     Options::default().with_io(io)
 }
 
-fn verify_tally(tally: &WordTally<'_>) {
+fn verify_tally(tally: &WordTally) {
     if tally.count() != EXPECTED_TOTAL_COUNT || tally.uniq_count() != EXPECTED_WORD_COUNT {
         println!("Words found: {:?}", tally.tally());
     }
