@@ -66,6 +66,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// `Options` consolidates all configuration aspects of word tallying into a single structure.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Options {
     /// Case handling strategy (original, lower, upper).
     case: Case,

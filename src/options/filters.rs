@@ -22,6 +22,7 @@ pub type ExcludeWordsList = Vec<String>;
 
 /// Filters for which words should be tallied.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Filters {
     /// Minimum characters required for a word.
     min_chars: Option<MinChars>,
@@ -33,11 +34,9 @@ pub struct Filters {
     exclude_words: Option<ExcludeWords>,
 
     /// List of regex patterns to exclude words matching the patterns.
-    #[serde(rename = "excludePatterns")]
     exclude_patterns: Option<ExcludeSet>,
 
     /// List of regex patterns to include only words matching the patterns.
-    #[serde(rename = "includePatterns")]
     include_patterns: Option<IncludeSet>,
 }
 

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// Serialization format options.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum Serialization {
     /// Plain text output has a delimiter between field/value and a per-entry delimiter.
     Text {

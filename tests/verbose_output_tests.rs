@@ -60,7 +60,7 @@ mod verbose_unit_tests {
         // However, we can test that the WordTally serializes properly to JSON
         let json = serde_json::to_string(&tally).expect("serialize JSON");
         assert!(json.contains("\"count\":"));
-        assert!(json.contains("\"uniqueCount\":"));
+        assert!(json.contains("\"uniqCount\":"));
         assert!(json.contains("\"tally\":"));
     }
 
@@ -180,7 +180,7 @@ mod verbose_unit_tests {
         // Test that empty tally still serializes correctly
         let json = serde_json::to_string(&tally).expect("serialize JSON");
         assert!(json.contains("\"count\":0"));
-        assert!(json.contains("\"uniqueCount\":0"));
+        assert!(json.contains("\"uniqCount\":0"));
     }
 
     // Test verbose with special characters

@@ -25,7 +25,7 @@ fn test_to_json() {
 
     assert!(serialized.contains("\"tally\":[[\"wombat\",2],[\"bat\",1]]"));
     assert!(serialized.contains("\"count\":3"));
-    assert!(serialized.contains("\"uniqueCount\":2"));
+    assert!(serialized.contains("\"uniqCount\":2"));
     assert!(!serialized.contains("\"uniq_count\":"));
     assert!(serialized.contains("\"options\":"));
     assert!(serialized.contains("\"filters\":"));
@@ -71,7 +71,7 @@ fn test_json_field_renamed() {
     let original = WordTally::new(&input, &options).expect("create word tally");
     let json = serde_json::to_string(&original).expect("serialize JSON");
 
-    assert!(json.contains("uniqueCount"));
+    assert!(json.contains("uniqCount"));
     assert!(!json.contains("uniq_count"));
 }
 
@@ -164,7 +164,7 @@ fn test_json_field_names() {
 
     let json = serde_json::to_string(&tally).expect("serialize JSON");
 
-    assert!(json.contains("\"uniqueCount\""));
+    assert!(json.contains("\"uniqCount\""));
     assert!(!json.contains("\"uniq_count\""));
 
     assert!(json.contains("\"options\""));

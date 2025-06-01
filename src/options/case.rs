@@ -19,6 +19,7 @@ use serde::{Deserialize, Serialize};
     Deserialize,
     ValueEnum,
 )]
+#[serde(rename_all = "camelCase")]
 pub enum Case {
     /// Keep original case.
     #[default]

@@ -372,10 +372,10 @@ fn test_io_serialization() {
     // Test Serialize
     let io = Io::ParallelMmap;
     let serialized = serde_json::to_string(&io).expect("serialize JSON");
-    assert_eq!(serialized, "\"ParallelMmap\"");
+    assert_eq!(serialized, "\"parallelMmap\"");
 
     // Test Deserialize
-    let deserialized: Io = serde_json::from_str("\"ParallelInMemory\"").expect("deserialize JSON");
+    let deserialized: Io = serde_json::from_str("\"parallelInMemory\"").expect("deserialize JSON");
     assert_eq!(deserialized, Io::ParallelInMemory);
 
     // Test roundtrip

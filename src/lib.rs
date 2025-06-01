@@ -136,6 +136,7 @@ pub type Word = Box<str>;
 pub type Tally = Box<[(Word, Count)]>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 /// A tally of word frequencies and counts, along with processing options.
 pub struct WordTally {
@@ -149,7 +150,6 @@ pub struct WordTally {
     count: Count,
 
     /// The sum of unique words tallied.
-    #[serde(rename = "uniqueCount")]
     uniq_count: Count,
 }
 

@@ -30,6 +30,7 @@ use serde::{Deserialize, Serialize};
     Deserialize,
     ValueEnum,
 )]
+#[serde(rename_all = "camelCase")]
 pub enum Sort {
     /// Sort by count descending.
     #[default]

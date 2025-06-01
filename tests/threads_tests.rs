@@ -104,11 +104,11 @@ fn test_threads_serialization() {
     // Test serialization
     let threads = Threads::Count(4);
     let json = serde_json::to_string(&threads).expect("serialize JSON");
-    assert_eq!(json, r#"{"Count":4}"#);
+    assert_eq!(json, r#"{"count":4}"#);
 
     let threads_all = Threads::All;
     let json_all = serde_json::to_string(&threads_all).expect("serialize JSON");
-    assert_eq!(json_all, r#""All""#);
+    assert_eq!(json_all, r#""all""#);
 
     // Test deserialization
     let deserialized: Threads = serde_json::from_str(&json).expect("deserialize JSON");

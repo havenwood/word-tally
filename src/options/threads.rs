@@ -8,6 +8,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 /// Thread count configuration for parallel processing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub enum Threads {
     /// Use all available cores.
     All,

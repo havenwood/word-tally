@@ -48,7 +48,7 @@ fn test_format_serialization() {
     let options = Options::default().with_serialization(Serialization::Json);
     let serialized = serde_json::to_string(&options).expect("serialize JSON");
 
-    assert!(serialized.contains("\"serialization\":\"Json\""));
+    assert!(serialized.contains("\"serialization\":\"json\""));
 
     let deserialized: Options = serde_json::from_str(&serialized).expect("deserialize JSON");
     assert_eq!(deserialized.serialization(), &Serialization::Json);

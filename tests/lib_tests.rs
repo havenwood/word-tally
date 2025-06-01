@@ -848,7 +848,7 @@ fn test_to_json() {
 
     assert!(serialized.contains("\"tally\":[[\"wombat\",2],[\"bat\",1]]"));
     assert!(serialized.contains("\"count\":3"));
-    assert!(serialized.contains("\"uniqueCount\":2"));
+    assert!(serialized.contains("\"uniqCount\":2"));
     assert!(!serialized.contains("\"uniq_count\":"));
     assert!(serialized.contains("\"options\":"));
     assert!(serialized.contains("\"filters\":"));
@@ -931,8 +931,8 @@ fn test_json_field_renamed() {
     let original = WordTally::new(&input, &options).expect("create word tally");
     let json = serde_json::to_string(&original).expect("serialize JSON");
 
-    // Check that the JSON contains `"uniqueCount"` instead of `"uniq_count"`
-    assert!(json.contains("uniqueCount"));
+    // Check that the JSON contains `"uniqCount"` instead of `"uniq_count"`
+    assert!(json.contains("uniqCount"));
     assert!(!json.contains("uniq_count"));
 }
 
@@ -952,7 +952,7 @@ fn test_json_field_camel_case_deserialization() {
     let original = WordTally::new(&input, &options).expect("create word tally");
     let serialized = serde_json::to_string(&original).expect("serialize JSON");
 
-    assert!(serialized.contains("\"uniqueCount\":"));
+    assert!(serialized.contains("\"uniqCount\":"));
     assert!(!serialized.contains("\"uniq_count\":"));
 
     let deserialized: WordTally = serde_json::from_str(&serialized).expect("deserialize JSON");

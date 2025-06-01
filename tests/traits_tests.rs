@@ -81,16 +81,16 @@ fn test_wordtally_deserialize() {
     let json = r#"{
         "tally": [["hello", 5], ["world", 3]],
         "options": {
-            "case": "Lower",
-            "sort": "Desc",
-            "serialization": {"Text": {"field_delimiter": " ", "entry_delimiter": "\n"}},
-            "filters": {"min_chars": null, "min_count": null, "exclude_words": [], "exclude_patterns": [], "include_patterns": []},
-            "io": "ParallelStream",
-            "performance": {"base_stdin_tally_capacity": 5120, "uniqueness_ratio": 10, "words_per_kb": 200, "chunk_size": 65536, "base_stdin_size": 262144, "threads": "All", "verbose": false},
+            "case": "lower",
+            "sort": "desc",
+            "serialization": {"text": {"field_delimiter": " ", "entry_delimiter": "\n"}},
+            "filters": {"minChars": null, "minCount": null, "excludeWords": [], "excludePatterns": [], "includePatterns": []},
+            "io": "parallelStream",
+            "performance": {"uniquenessRatio": 10, "wordsPerKb": 200, "chunkSize": 65536, "baseStdinSize": 262144, "threads": "all"},
             "encoding": "unicode"
         },
         "count": 8,
-        "uniqueCount": 2
+        "uniqCount": 2
     }"#;
 
     // Deserialize directly into WordTally

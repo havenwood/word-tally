@@ -29,6 +29,7 @@ use std::str::FromStr;
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ValueEnum,
 )]
+#[serde(rename_all = "camelCase")]
 pub enum Io {
     /// Parallel streaming I/O — balanced memory/performance (default)
     ParallelStream,

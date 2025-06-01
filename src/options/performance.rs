@@ -9,6 +9,7 @@ use std::sync::OnceLock;
 
 /// Performance tuning configuration parameters.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Performance {
     /// Ratio used to estimate number of unique words based on input size.
     pub uniqueness_ratio: u16,
