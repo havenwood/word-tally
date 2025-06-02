@@ -3,6 +3,7 @@
 use clap::ValueEnum;
 use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 
 /// Word case normalization options.
 #[derive(
@@ -41,13 +42,47 @@ impl Display for Case {
 }
 
 impl Case {
-    /// Create a string from the uppercase, lowercase or original.
+    /// Normalize text using Unicode case conversion, returning a reference if already normalized or owned if conversion needed.
     #[must_use]
-    pub fn normalize(&self, content: &str) -> String {
+    pub fn normalize_unicode<'a>(&self, content: &'a str) -> Cow<'a, str> {
         match self {
-            Self::Lower => content.to_lowercase(),
-            Self::Upper => content.to_uppercase(),
-            Self::Original => content.to_string(),
+            Self::Lower => {
+                if content.chars().all(|c| !c.is_uppercase()) {
+                    Cow::Borrowed(content)
+                } else {
+                    Cow::Owned(content.to_lowercase())
+                }
+            }
+            Self::Upper => {
+                if content.chars().all(|c| !c.is_lowercase()) {
+                    Cow::Borrowed(content)
+                } else {
+                    Cow::Owned(content.to_uppercase())
+                }
+            }
+            Self::Original => Cow::Borrowed(content),
+        }
+    }
+
+    /// ASCII-specific normalization for better performance, returning a reference if already normalized or owned if conversion needed.
+    #[must_use]
+    pub fn normalize_ascii<'a>(&self, content: &'a str) -> Cow<'a, str> {
+        match self {
+            Self::Lower => {
+                if content.bytes().all(|b| !b.is_ascii_uppercase()) {
+                    Cow::Borrowed(content)
+                } else {
+                    Cow::Owned(content.to_ascii_lowercase())
+                }
+            }
+            Self::Upper => {
+                if content.bytes().all(|b| !b.is_ascii_lowercase()) {
+                    Cow::Borrowed(content)
+                } else {
+                    Cow::Owned(content.to_ascii_uppercase())
+                }
+            }
+            Self::Original => Cow::Borrowed(content),
         }
     }
 }

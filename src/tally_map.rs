@@ -1,6 +1,7 @@
 //! A collection for tallying word counts using `HashMap`.
 
 use std::{
+    borrow::Cow,
     io::{BufRead, Read},
     iter,
 };
@@ -12,13 +13,7 @@ use icu_segmenter::{WordSegmenter, options::WordBreakInvariantOptions};
 use memchr::memchr2_iter;
 use rayon::prelude::*;
 
-use crate::options::{
-    Options,
-    case::Case::{self, Lower, Original, Upper},
-    encoding::Encoding,
-    io::Io,
-    performance::Performance,
-};
+use crate::options::{Options, case::Case, encoding::Encoding, io::Io, performance::Performance};
 use crate::{Count, Input, Word, WordTallyError};
 
 thread_local! {
@@ -89,18 +84,9 @@ impl TallyMap {
                 .for_each(|(boundary, word_type)| {
                     if word_type.is_word_like() {
                         let word = &content[last_boundary..boundary];
-                        match case {
-                            // Avoid duplicate allocation
-                            Original => self.increment(word),
-                            Lower => {
-                                if word.chars().all(|c| !c.is_uppercase()) {
-                                    // Also avoid duplicate allocation when already all lowercase
-                                    self.increment(word);
-                                } else {
-                                    self.increment_owned(word.to_lowercase().into_boxed_str());
-                                }
-                            }
-                            Upper => self.increment_owned(word.to_uppercase().into_boxed_str()),
+                        match case.normalize_unicode(word) {
+                            Cow::Borrowed(word) => self.increment(word),
+                            Cow::Owned(word) => self.increment_owned(word.into_boxed_str()),
                         }
                     }
                     last_boundary = boundary;
@@ -159,17 +145,9 @@ impl TallyMap {
             // We know this slice is valid UTF-8 because we validated all bytes are ASCII
             let word = &content[word_start..pos];
 
-            match case {
-                Original => self.increment(word),
-                Lower => {
-                    if word.bytes().all(|b| !b.is_ascii_uppercase()) {
-                        // Already all lowercase ASCII
-                        self.increment(word);
-                    } else {
-                        self.increment_owned(word.to_ascii_lowercase().into_boxed_str());
-                    }
-                }
-                Upper => self.increment_owned(word.to_ascii_uppercase().into_boxed_str()),
+            match case.normalize_ascii(word) {
+                Cow::Borrowed(word) => self.increment(word),
+                Cow::Owned(word) => self.increment_owned(word.into_boxed_str()),
             }
         }
 

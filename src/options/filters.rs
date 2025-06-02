@@ -226,7 +226,7 @@ impl Filters {
         if let Some(exclude_words) = self.exclude_words() {
             let discard: HashSet<Box<str>> = exclude_words
                 .iter()
-                .map(|word| case.normalize(word).into())
+                .map(|word| case.normalize_unicode(word).into_owned().into())
                 .collect();
             tally_map.retain(|word, _| !discard.contains(word));
         }
