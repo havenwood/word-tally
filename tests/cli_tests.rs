@@ -96,30 +96,34 @@ fn verbose_with_input() {
 
 #[test]
 fn output_longhand() {
+    let temp_file = NamedTempFile::new().expect("process test");
+    let temp_path = temp_file.path().to_str().expect("process test");
+
     let assert = word_tally()
         .write_stdin("narrow")
-        .arg("--output=test.txt")
+        .arg(&format!("--output={}", temp_path))
         .assert();
     assert.success().stdout("");
     assert_eq!(
         "narrow 1\n",
-        fs::read_to_string("test.txt").expect("process test")
+        fs::read_to_string(temp_path).expect("process test")
     );
-    fs::remove_file("test.txt").expect("process test");
 }
 
 #[test]
 fn output_shorthand() {
+    let temp_file = NamedTempFile::new().expect("process test");
+    let temp_path = temp_file.path().to_str().expect("process test");
+
     let assert = word_tally()
         .write_stdin("narrow")
-        .arg("-o=test2.txt")
+        .arg(&format!("-o={}", temp_path))
         .assert();
     assert.success().stdout("");
     assert_eq!(
         "narrow 1\n",
-        fs::read_to_string("test2.txt").expect("process test")
+        fs::read_to_string(temp_path).expect("process test")
     );
-    fs::remove_file("test2.txt").expect("process test");
 }
 
 #[test]
