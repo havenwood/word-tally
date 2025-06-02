@@ -162,7 +162,7 @@ impl Performance {
     #[must_use]
     pub const fn chunk_capacity(&self, byte_size: u64) -> usize {
         let kb_size = byte_size / 1024;
-        let estimated_words = kb_size * self.words_per_kb as u64;
+        let estimated_words = kb_size.saturating_mul(self.words_per_kb as u64);
         let capacity = estimated_words / self.uniqueness_ratio as u64;
 
         Self::saturating_cast(capacity)
@@ -180,8 +180,8 @@ impl Performance {
     /// Default configuration value for export.
     #[must_use]
     pub const fn base_stdin_tally_capacity() -> usize {
-        let capacity = (Self::BASE_STDIN_SIZE / 1024) * (Self::WORDS_PER_KB as u64)
-            / (Self::UNIQUENESS_RATIO as u64);
+        let capacity = (Self::BASE_STDIN_SIZE / 1024).saturating_mul(Self::WORDS_PER_KB as u64)
+            / Self::UNIQUENESS_RATIO as u64;
         Self::saturating_cast(capacity)
     }
 
@@ -199,7 +199,9 @@ impl Performance {
     #[must_use]
     pub fn stream_batch_size() -> u64 {
         let thread_count = rayon::current_num_threads() as u64;
-        u64::from(Self::PAR_CHUNKS_PER_THREAD) * thread_count * Self::PAR_CHUNK_SIZE
+        u64::from(Self::PAR_CHUNKS_PER_THREAD)
+            .saturating_mul(thread_count)
+            .saturating_mul(Self::PAR_CHUNK_SIZE)
     }
 
     /// Calculate total number of chunks for streaming based on thread count.
