@@ -2,7 +2,7 @@
 
 use std::{
     io::{BufRead, Read},
-    iter, str,
+    iter,
 };
 
 use hashbrown::{HashMap, hash_map};
@@ -161,7 +161,14 @@ impl TallyMap {
 
             match case {
                 Original => self.increment(word),
-                Lower => self.increment_owned(word.to_ascii_lowercase().into_boxed_str()),
+                Lower => {
+                    if word.bytes().all(|b| !b.is_ascii_uppercase()) {
+                        // Already all lowercase ASCII
+                        self.increment(word);
+                    } else {
+                        self.increment_owned(word.to_ascii_lowercase().into_boxed_str());
+                    }
+                }
                 Upper => self.increment_owned(word.to_ascii_uppercase().into_boxed_str()),
             }
         }
@@ -316,7 +323,9 @@ impl TallyMap {
             let process_until = if reached_eof {
                 buffer.len()
             } else {
-                memchr::memrchr2(b' ', b'\n', &buffer).map_or(0, |pos| pos + 1)
+                Self::find_whitespace_boundary(&buffer, buffer.len())
+                    .min(buffer.len())
+                    .max(0)
             };
 
             if process_until > 0 {
@@ -335,25 +344,15 @@ impl TallyMap {
                         remainder.clear();
                     }
                     Err(e) => {
-                        // Handle UTF-8 boundary case
-                        if e.valid_up_to() > 0 {
-                            match simdutf8::basic::from_utf8(&buffer[..e.valid_up_to()]) {
-                                Ok(valid) => {
-                                    tally.add_words_with_encoding(valid, case, encoding)?;
-                                }
-                                Err(_) => {
-                                    // This should not happen if valid_up_to() is correct
-                                    return Err(Self::create_utf8_error(
-                                        &buffer,
-                                        e.valid_up_to(),
-                                        "stream processing",
-                                    ));
-                                }
-                            }
-                        }
-                        // Keep invalid portion for next iteration
-                        remainder.clear();
-                        remainder.extend_from_slice(&buffer[e.valid_up_to()..process_until]);
+                        Self::handle_utf8_error(
+                            e,
+                            &mut tally,
+                            case,
+                            encoding,
+                            &mut remainder,
+                            &buffer,
+                            process_until,
+                        )?;
                     }
                 }
 
@@ -481,27 +480,26 @@ impl TallyMap {
         Ok((batch_size, target_batch_size))
     }
 
+    /// Find whitespace-aligned boundary at or before the target position.
+    fn find_whitespace_boundary(content_bytes: &[u8], target_pos: usize) -> usize {
+        if target_pos >= content_bytes.len() {
+            return content_bytes.len();
+        }
+        let search_region = &content_bytes[..target_pos];
+        memchr::memrchr2(b' ', b'\n', search_region).map_or(target_pos, |pos| pos + 1)
+    }
+
     /// Find chunk boundaries using efficient backwards search from target positions.
     fn chunk_boundaries(content: &str, num_chunks: usize) -> Vec<usize> {
         let content_len = content.len();
         let target_chunk_size = content_len.div_ceil(num_chunks);
+        let content_bytes = content.as_bytes();
 
         let mut boundaries = Vec::with_capacity(num_chunks + 1);
-        boundaries.extend(
-            iter::once(0).chain((1..=num_chunks).map(|i| i * target_chunk_size).map(
-                |target_pos| {
-                    if target_pos >= content_len {
-                        // Last boundary is end of file if the proposed chunk is past the end
-                        content_len
-                    } else {
-                        // Search backwards for whitespace (space or newline) with SIMD
-                        let search_region = &content.as_bytes()[..target_pos];
-                        memchr::memrchr2(b' ', b'\n', search_region)
-                            .map_or(target_pos, |pos| pos + 1)
-                    }
-                },
-            )),
-        );
+        boundaries.extend(iter::once(0).chain((1..=num_chunks).map(|i| {
+            let target_pos = i * target_chunk_size;
+            Self::find_whitespace_boundary(content_bytes, target_pos)
+        })));
         boundaries
     }
 
@@ -513,13 +511,29 @@ impl TallyMap {
         reached_eof: bool,
     ) -> Vec<usize> {
         let chunk_size = target_batch_size / Performance::PAR_CHUNKS_PER_THREAD as usize;
+        let mut boundaries =
+            Self::calculate_boundaries_from_positions(whitespace_positions, chunk_size, 0);
 
-        let mut boundaries: Vec<usize> = iter::once(0)
+        // Add the end of buffer at end of file if needed
+        if reached_eof && boundaries.last() < Some(&buffer.len()) {
+            boundaries.push(buffer.len());
+        }
+
+        boundaries
+    }
+
+    /// Calculate boundaries from positions based on minimum chunk size.
+    fn calculate_boundaries_from_positions(
+        positions: &[usize],
+        min_chunk_size: usize,
+        start_pos: usize,
+    ) -> Vec<usize> {
+        iter::once(start_pos)
             .chain(
-                whitespace_positions
+                positions
                     .iter()
-                    .scan(0, |last_boundary, &pos| {
-                        if pos - *last_boundary >= chunk_size {
+                    .scan(start_pos, |last_boundary, &pos| {
+                        if pos - *last_boundary >= min_chunk_size {
                             *last_boundary = pos + 1;
                             Some(Some(pos + 1))
                         } else {
@@ -528,14 +542,7 @@ impl TallyMap {
                     })
                     .flatten(),
             )
-            .collect();
-
-        // Add the end of buffer at end of file if needed
-        if reached_eof && boundaries.last() < Some(&buffer.len()) {
-            boundaries.push(buffer.len());
-        }
-
-        boundaries
+            .collect()
     }
 
     /// Fill the buffer with data from the stream reader up to the target size.
@@ -614,22 +621,23 @@ impl TallyMap {
         }
     }
 
-    /// Creates a UTF-8 error using `simdutf8` for compatible error types.
+    /// Creates a UTF-8 error using `simdutf8` for consistent error handling.
     fn create_utf8_error(buffer: &[u8], byte_position: usize, context: &str) -> anyhow::Error {
-        // We need std::str::Utf8Error for the error type, so we use std here
-        // even though we use simdutf8 elsewhere for performance
-        let source = match str::from_utf8(buffer) {
-            Err(utf8_err) => utf8_err,
-            Ok(_) => {
-                return WordTallyError::Config(format!(
-                    "Inconsistent UTF-8 validation in {context}"
-                ))
-                .into();
-            }
+        let message = match simdutf8::basic::from_utf8(buffer) {
+            Err(_) => format!(
+                "UTF-8 validation failed at byte {}: invalid UTF-8 sequence",
+                byte_position
+            ),
+            Ok(_) => format!("Inconsistent UTF-8 validation in {context}"),
         };
-        WordTallyError::Utf8 {
-            byte: byte_position,
-            source,
+
+        if message.starts_with("UTF-8 validation failed") {
+            WordTallyError::Utf8 {
+                byte: byte_position,
+                message,
+            }
+        } else {
+            WordTallyError::Config(message)
         }
         .into()
     }
@@ -667,6 +675,38 @@ impl TallyMap {
                     .map_err(|_| Self::create_utf8_error(buffer, valid_up_to, "recovery"))
             }
         }
+    }
+
+    /// Handle UTF-8 decoding errors by processing valid portion and preserving invalid bytes.
+    fn handle_utf8_error(
+        e: simdutf8::compat::Utf8Error,
+        tally: &mut Self,
+        case: Case,
+        encoding: Encoding,
+        remainder: &mut Vec<u8>,
+        buffer: &[u8],
+        process_until: usize,
+    ) -> Result<()> {
+        // Handle UTF-8 boundary case
+        if e.valid_up_to() > 0 {
+            match simdutf8::basic::from_utf8(&buffer[..e.valid_up_to()]) {
+                Ok(valid) => {
+                    tally.add_words_with_encoding(valid, case, encoding)?;
+                }
+                Err(_) => {
+                    // This should not happen if valid_up_to() is correct
+                    return Err(Self::create_utf8_error(
+                        buffer,
+                        e.valid_up_to(),
+                        "stream processing",
+                    ));
+                }
+            }
+        }
+        // Keep invalid portion for next iteration
+        remainder.clear();
+        remainder.extend_from_slice(&buffer[e.valid_up_to()..process_until]);
+        Ok(())
     }
 }
 

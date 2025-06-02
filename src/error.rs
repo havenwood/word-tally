@@ -1,6 +1,6 @@
 //! Error types for word-tally
 
-use std::{io, str};
+use std::io;
 use thiserror::Error;
 
 /// Structured error types for word-tally
@@ -23,13 +23,12 @@ pub enum Error {
     BytesInputRequired,
 
     /// UTF-8 decoding error.
-    #[error("invalid UTF-8 at byte {byte}: {source}")]
+    #[error("invalid UTF-8 at byte {byte}: {message}")]
     Utf8 {
         /// Byte position of invalid UTF-8.
         byte: usize,
-        /// Underlying UTF-8 error.
-        #[source]
-        source: str::Utf8Error,
+        /// Error message.
+        message: String,
     },
 
     /// Invalid regex pattern.
