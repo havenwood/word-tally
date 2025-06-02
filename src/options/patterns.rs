@@ -4,6 +4,7 @@ use crate::WordTallyError;
 use anyhow::Result;
 use core::fmt::{self, Display, Formatter};
 use regex::RegexSet;
+use serde::de::Error;
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
 use std::hash::{Hash, Hasher};
@@ -196,7 +197,6 @@ impl<'de> Deserialize<'de> for ExcludeSet {
     where
         D: serde::Deserializer<'de>,
     {
-        use serde::de::Error;
         let input_patterns: PatternList = Vec::deserialize(deserializer)?;
 
         Self::new(input_patterns)
@@ -333,7 +333,6 @@ impl<'de> Deserialize<'de> for IncludeSet {
     where
         D: serde::Deserializer<'de>,
     {
-        use serde::de::Error;
         let input_patterns: PatternList = Vec::deserialize(deserializer)?;
 
         Self::new(input_patterns)

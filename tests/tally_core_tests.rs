@@ -242,13 +242,20 @@ fn test_sort_mutates_tally() {
     assert_eq!(desc_tally[0].0.as_ref(), "narrow");
     assert_eq!(desc_tally[0].1, 5);
 
-    // Test unsorted remains unsorted
+    // Test unsorted has all expected words regardless of order
     let tally_unsorted = create_test_tally_with_text(input_text, Sort::Unsorted);
-    let mut tally_unsorted_mut = tally_unsorted;
-    let unsorted_before = tally_unsorted_mut.tally().to_vec();
-    tally_unsorted_mut.sort();
-    let unsorted_after = tally_unsorted_mut.tally().to_vec();
-    assert_eq!(unsorted_before, unsorted_after);
+    assert_eq!(tally_unsorted.count(), 10);
+    assert_eq!(tally_unsorted.uniq_count(), 3);
+
+    // Verify all words are present with correct counts
+    let unsorted_map: HashMap<_, _> = tally_unsorted
+        .tally()
+        .iter()
+        .map(|(word, count)| (word.as_ref(), *count))
+        .collect();
+    assert_eq!(unsorted_map.get("narrow"), Some(&5));
+    assert_eq!(unsorted_map.get("revery"), Some(&3));
+    assert_eq!(unsorted_map.get("circuit"), Some(&2));
 }
 
 #[test]

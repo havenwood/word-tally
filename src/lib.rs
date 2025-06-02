@@ -279,36 +279,9 @@ impl WordTally {
     }
 
     /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
-    pub fn sort(&mut self) {
-        use core::cmp::Reverse;
-        use rayon::slice::ParallelSliceMut;
-
-        match (self.options.sort(), self.options.io()) {
-            // No sorting
-            (Sort::Unsorted, _) => {}
-
-            // Sequential unstable sorting
-            (Sort::Desc, Io::Stream) => {
-                self.tally
-                    .sort_unstable_by_key(|&(_, count)| Reverse(count));
-            }
-            (Sort::Asc, Io::Stream) => {
-                self.tally.sort_unstable_by_key(|&(_, count)| count);
-            }
-
-            // Parallel unstable sorting
-            (
-                Sort::Desc,
-                Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes,
-            ) => self
-                .tally
-                .par_sort_unstable_by_key(|&(_, count)| Reverse(count)),
-            (
-                Sort::Asc,
-                Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes,
-            ) => {
-                self.tally.par_sort_unstable_by_key(|&(_, count)| count);
-            }
-        }
+    fn sort(&mut self) {
+        self.options
+            .sort()
+            .apply(&mut self.tally, self.options.io());
     }
 }
