@@ -711,11 +711,13 @@ impl Extend<(Word, Count)> for TallyMap {
         let (lower_bound, _) = iter.size_hint();
 
         self.inner.reserve(lower_bound);
-        iter.for_each(|(word, count)| {
-            self.inner
-                .entry(word)
-                .and_modify(|c| *c += count)
-                .or_insert(count);
+        iter.for_each(|(word, count)| match self.inner.entry_ref(word.as_ref()) {
+            hash_map::EntryRef::Occupied(mut entry) => {
+                *entry.get_mut() += count;
+            }
+            hash_map::EntryRef::Vacant(_) => {
+                self.inner.insert(word, count);
+            }
         });
     }
 }
