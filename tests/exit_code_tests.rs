@@ -113,10 +113,10 @@ fn test_exit_code_from_clap_error_trait() {
 #[test]
 fn test_exit_code_from_anyhow_error_trait() {
     let io_err = io::Error::new(io::ErrorKind::NotFound, "test");
-    let anyhow_err: anyhow::Error = io_err.into();
+    let anyhow_err: Error = io_err.into();
     assert_eq!(ExitCode::from(&anyhow_err), ExitCode::NoInput);
 
-    let generic_err: anyhow::Error = anyhow!("generic error");
+    let generic_err: Error = anyhow!("generic error");
     assert_eq!(ExitCode::from(&generic_err), ExitCode::Failure);
 
     // Test that `from_error` still works and delegates to `From` trait

@@ -1,3 +1,6 @@
+use std::collections::{HashMap, HashSet};
+use std::io::Write;
+
 use tempfile::NamedTempFile;
 use word_tally::{
     Case, Count, Filters, Input, Io, Options, Performance, Serialization, Sort, WordTally,
@@ -14,7 +17,7 @@ The Grass divides as with a Comb -\n\
 A spotted Shaft is seen -\n\
 And then it closes at your feet\n\
 And opens further on -";
-    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
+    Write::write_all(&mut temp_file, content).expect("write test data");
     temp_file
 }
 
@@ -45,9 +48,8 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
     assert_eq!(word_tally.uniq_count(), fields.uniq_count);
 
     if sort == Sort::Unsorted {
-        let expected_set: std::collections::HashSet<(&str, Count)> =
-            fields.tally.iter().copied().collect();
-        let actual_set: std::collections::HashSet<(&str, Count)> = word_tally
+        let expected_set: HashSet<(&str, Count)> = fields.tally.iter().copied().collect();
+        let actual_set: HashSet<(&str, Count)> = word_tally
             .tally()
             .iter()
             .map(|(word, count)| (word.as_ref(), *count))
@@ -65,14 +67,12 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
 
         assert_eq!(expected_counts, actual_counts);
 
-        let mut expected_by_count: std::collections::HashMap<Count, Vec<&str>> =
-            std::collections::HashMap::new();
+        let mut expected_by_count: HashMap<Count, Vec<&str>> = HashMap::new();
         for &(word, count) in &fields.tally {
             expected_by_count.entry(count).or_default().push(word);
         }
 
-        let mut actual_by_count: std::collections::HashMap<Count, Vec<Box<str>>> =
-            std::collections::HashMap::new();
+        let mut actual_by_count: HashMap<Count, Vec<Box<str>>> = HashMap::new();
         for (word, count) in actual_tally {
             actual_by_count
                 .entry(*count)
@@ -82,10 +82,7 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
 
         for (count, expected_words) in expected_by_count {
             if let Some(actual_words) = actual_by_count.get(&count) {
-                let actual_set: std::collections::HashSet<&str> = actual_words
-                    .iter()
-                    .map(std::convert::AsRef::as_ref)
-                    .collect();
+                let actual_set: HashSet<&str> = actual_words.iter().map(AsRef::as_ref).collect();
                 for expected_word in expected_words {
                     assert!(
                         actual_set.contains(expected_word),
@@ -218,7 +215,7 @@ struct ExpectedFields<'a> {
 
 fn create_test_tally_with_text(input_text: &[u8], sort: Sort) -> WordTally {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
     let temp_file_static = Box::leak(Box::new(temp_file));
     let file_path = temp_file_static.path().to_str().expect("temp file path");
 
@@ -264,7 +261,7 @@ fn test_tally_with_punctuation() {
 
     let tally_vec = tally.tally().to_vec();
     // All words have count 2, so we check they exist with correct counts
-    let word_counts: std::collections::HashMap<_, _> = tally_vec
+    let word_counts: HashMap<_, _> = tally_vec
         .iter()
         .map(|(word, count)| (word.as_ref(), *count))
         .collect();

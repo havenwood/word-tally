@@ -1,3 +1,5 @@
+use std::fs;
+
 use word_tally::{ExcludeWords, Input, Options, Output, Performance, Serialization, WordTally};
 
 #[test]
@@ -64,7 +66,7 @@ const TEST_INPUT: &[u8] = b"test convenience constructors";
 fn create_test_file() -> (tempfile::TempDir, String) {
     let temp_dir = tempfile::tempdir().expect("process test");
     let file_path = temp_dir.path().join("test_input.txt");
-    std::fs::write(&file_path, TEST_INPUT).expect("process test");
+    fs::write(&file_path, TEST_INPUT).expect("process test");
     (
         temp_dir,
         file_path.to_str().expect("process test").to_string(),

@@ -182,7 +182,7 @@ mod output_tests {
             flush_result
                 .expect_err("flush should fail when FailingWriter is configured to fail")
                 .kind(),
-            io::ErrorKind::Other
+            ErrorKind::Other
         );
     }
 }

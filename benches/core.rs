@@ -21,7 +21,7 @@ fn bench_sorting_strategies(c: &mut Criterion) {
         let shared_options = make_shared(options);
 
         group.bench_function(*sort_name, |b| {
-            self::common::bench_word_tally_with_string(
+            common::bench_word_tally_with_string(
                 b,
                 &text_sample,
                 &shared_options,
@@ -54,7 +54,7 @@ fn bench_filtering_strategies(c: &mut Criterion) {
         let shared_options = make_shared(options);
 
         group.bench_function(*filter_name, |b| {
-            self::common::bench_word_tally_with_string(
+            common::bench_word_tally_with_string(
                 b,
                 &text_sample,
                 &shared_options,

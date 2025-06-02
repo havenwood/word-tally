@@ -124,11 +124,7 @@ impl Display for Serialization {
                 field_delimiter,
                 entry_delimiter,
             } => {
-                write!(
-                    f,
-                    "text[field={}, entry={}]",
-                    field_delimiter, entry_delimiter
-                )
+                write!(f, "text[field={field_delimiter}, entry={entry_delimiter}]")
             }
             Self::Json => write!(f, "json"),
             Self::Csv => write!(f, "csv"),

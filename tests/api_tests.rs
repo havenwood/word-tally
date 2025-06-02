@@ -1,6 +1,8 @@
 //! Tests for the public API.
 
+use std::fs;
 use std::io::Write;
+
 use word_tally::{Count, Input, Io, Options, WordTally};
 
 const API_EXAMPLE_TEXT: &str = "I taste a liquor never brewed";
@@ -25,7 +27,7 @@ fn test_api_streamed_sequential() {
     let options = Options::default().with_io(Io::ParallelStream);
 
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).expect("process test");
+    Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).expect("process test");
 
     let input = Input::new(
         temp_file.path().to_str().expect("temp file path"),
@@ -43,7 +45,7 @@ fn test_api_in_memory_sequential() {
 
     // Create a temporary file with our text
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).expect("process test");
+    Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).expect("process test");
 
     let input = Input::new(
         temp_file.path().to_str().expect("temp file path"),
@@ -60,7 +62,7 @@ fn test_api_streamed_parallel() {
     let options = Options::default().with_io(Io::ParallelStream);
 
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).expect("process test");
+    Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).expect("process test");
 
     let input = Input::new(
         temp_file.path().to_str().expect("temp file path"),
@@ -93,7 +95,7 @@ fn test_api_in_memory_parallel() {
 fn test_api_memory_mapped() {
     let temp_dir = tempfile::tempdir().expect("process test");
     let file_path = temp_dir.path().join("example.txt");
-    std::fs::write(&file_path, API_EXAMPLE_TEXT).expect("process test");
+    fs::write(&file_path, API_EXAMPLE_TEXT).expect("process test");
 
     let options = Options::default().with_io(Io::ParallelMmap);
 
@@ -111,7 +113,7 @@ fn test_api_memory_mapped() {
 fn test_api_memory_mapped_parallel() {
     let temp_dir = tempfile::tempdir().expect("process test");
     let file_path = temp_dir.path().join("example_parallel.txt");
-    std::fs::write(&file_path, API_EXAMPLE_TEXT).expect("process test");
+    fs::write(&file_path, API_EXAMPLE_TEXT).expect("process test");
 
     let options = Options::default().with_io(Io::ParallelMmap);
 
@@ -130,7 +132,7 @@ fn test_api_comprehensive_example() {
     let text = "Example text for API demonstration";
     let temp_dir = tempfile::tempdir().expect("process test");
     let file_path = temp_dir.path().join("test_example.txt");
-    std::fs::write(&file_path, text).expect("process test");
+    fs::write(&file_path, text).expect("process test");
     let file_path_str = file_path.to_str().expect("process test");
 
     let options_streamed_seq = Options::default().with_io(Io::ParallelStream);

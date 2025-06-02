@@ -602,10 +602,9 @@ impl TallyMap {
     /// Creates a UTF-8 error using `simdutf8` for consistent error handling.
     fn create_utf8_error(buffer: &[u8], byte_position: usize, context: &str) -> anyhow::Error {
         let message = match simdutf8::basic::from_utf8(buffer) {
-            Err(_) => format!(
-                "UTF-8 validation failed at byte {}: invalid UTF-8 sequence",
-                byte_position
-            ),
+            Err(_) => {
+                format!("UTF-8 validation failed at byte {byte_position}: invalid UTF-8 sequence")
+            }
             Ok(_) => format!("Inconsistent UTF-8 validation in {context}"),
         };
 

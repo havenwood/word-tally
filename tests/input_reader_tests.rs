@@ -266,8 +266,7 @@ fn test_bytes_reader_buffer_limit_8kb() {
 #[test]
 fn test_file_not_found_error_message() {
     let nonexistent_path = "/nonexistent/path/to/file.txt";
-    let input =
-        Input::new(nonexistent_path, word_tally::Io::ParallelStream).expect("create test input");
+    let input = Input::new(nonexistent_path, Io::ParallelStream).expect("create test input");
 
     let reader_result = input.reader();
     assert!(reader_result.is_err());
@@ -298,7 +297,7 @@ fn test_permission_denied_error_message() {
         fs::set_permissions(&file_path, perms).expect("process test");
     }
 
-    let input = Input::new(&file_path, word_tally::Io::ParallelStream).expect("create test input");
+    let input = Input::new(&file_path, Io::ParallelStream).expect("create test input");
     let reader_result = input.reader();
     assert!(reader_result.is_err());
 
@@ -323,8 +322,7 @@ fn test_generic_io_error_message() {
     // For now, we can at least verify the format works with our nonexistent file
 
     let nonexistent_path = "/dev/null/not_a_directory/file.txt";
-    let input =
-        Input::new(nonexistent_path, word_tally::Io::ParallelStream).expect("create test input");
+    let input = Input::new(nonexistent_path, Io::ParallelStream).expect("create test input");
 
     let reader_result = input.reader();
     if reader_result.is_err() {

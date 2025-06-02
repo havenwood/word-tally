@@ -1,7 +1,8 @@
 //! Tests for encoding functionality (ASCII and Unicode modes)
 
+use std::collections::{HashMap, HashSet};
+
 use assert_cmd::Command;
-use std::collections::HashSet;
 use word_tally::{Case, TallyMap};
 
 fn word_tally() -> Command {
@@ -104,7 +105,7 @@ fn test_unicode_words() {
         .stdout
         .clone();
 
-    let word_counts: std::collections::HashMap<&str, usize> = simdutf8::compat::from_utf8(&output)
+    let word_counts: HashMap<&str, usize> = simdutf8::compat::from_utf8(&output)
         .expect("output should be valid UTF-8")
         .lines()
         .filter_map(|line| {

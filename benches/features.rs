@@ -20,12 +20,7 @@ fn bench_processing_comparison(c: &mut Criterion) {
     let shared_options = make_shared(options);
 
     group.bench_function("parallel", |b| {
-        self::common::bench_word_tally_with_string(
-            b,
-            &text_sample,
-            &shared_options,
-            create_temp_input,
-        );
+        common::bench_word_tally_with_string(b, &text_sample, &shared_options, create_temp_input);
     });
 
     // Test with sequential processing
@@ -33,12 +28,7 @@ fn bench_processing_comparison(c: &mut Criterion) {
     let shared_options = make_shared(options);
 
     group.bench_function("sequential", |b| {
-        self::common::bench_word_tally_with_string(
-            b,
-            &text_sample,
-            &shared_options,
-            create_temp_input,
-        );
+        common::bench_word_tally_with_string(b, &text_sample, &shared_options, create_temp_input);
     });
 
     group.finish();
@@ -56,7 +46,7 @@ fn bench_encoding_comparison(c: &mut Criterion) {
         let shared_options = make_shared(options);
 
         group.bench_function(*enc_name, |b| {
-            self::common::bench_word_tally_with_string(
+            common::bench_word_tally_with_string(
                 b,
                 &text_sample,
                 &shared_options,

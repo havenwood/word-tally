@@ -85,17 +85,17 @@ impl<'a> VerboseData<'a> {
             (
                 "exclude-words",
                 self.exclude_words
-                    .map_or("none".to_string(), std::string::ToString::to_string),
+                    .map_or("none".to_string(), ToString::to_string),
             ),
             (
                 "exclude-patterns",
                 self.exclude_patterns
-                    .map_or("none".to_string(), std::string::ToString::to_string),
+                    .map_or("none".to_string(), ToString::to_string),
             ),
             (
                 "include-patterns",
                 self.include_patterns
-                    .map_or("none".to_string(), std::string::ToString::to_string),
+                    .map_or("none".to_string(), ToString::to_string),
             ),
         ]
         .into_iter()

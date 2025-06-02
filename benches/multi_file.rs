@@ -1,7 +1,9 @@
 //! Multi-file processing benchmarks.
 
-use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use std::hint::black_box;
+use std::path::PathBuf;
+
+use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use tempfile::NamedTempFile;
 use word_tally::{Input, Options, TallyMap};
 
@@ -13,7 +15,7 @@ use self::common::{
 
 fn bench_multi_file_processing(c: &mut Criterion) {
     let file_sizes_kb = [5, 8, 7];
-    let temp_files_and_paths: Vec<(NamedTempFile, std::path::PathBuf)> = file_sizes_kb
+    let temp_files_and_paths: Vec<(NamedTempFile, PathBuf)> = file_sizes_kb
         .iter()
         .map(|&size| common::create_benchmark_file(size))
         .collect();

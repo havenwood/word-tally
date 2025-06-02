@@ -1,6 +1,9 @@
 //! Tests for I/O functionality.
 
+use std::collections::HashMap;
+use std::fs;
 use std::io::Write;
+
 use word_tally::{Count, Input, Io, Options, Performance, WordTally};
 
 const TEST_TEXT: &str = "The quick brown fox
@@ -168,8 +171,8 @@ fn test_parallel_processing_with_large_text() {
     let sequential_words: Vec<_> = sequential_tally.tally().to_vec();
     let parallel_words: Vec<_> = parallel_tally.tally().to_vec();
 
-    let seq_map: std::collections::HashMap<_, _> = sequential_words.into_iter().collect();
-    let par_map: std::collections::HashMap<_, _> = parallel_words.into_iter().collect();
+    let seq_map: HashMap<_, _> = sequential_words.into_iter().collect();
+    let par_map: HashMap<_, _> = parallel_words.into_iter().collect();
 
     assert_eq!(seq_map, par_map);
 }
@@ -195,7 +198,7 @@ fn test_read_trait_with_all_io_strategies() {
 
     let temp_dir = tempfile::tempdir().expect("process test");
     let file_path = temp_dir.path().join("test_io.txt");
-    std::fs::write(&file_path, TEST_TEXT).expect("process test");
+    fs::write(&file_path, TEST_TEXT).expect("process test");
 
     let file_input = Input::new(&file_path, Io::ParallelStream).expect("create test input");
     let mmap_input = Input::new(&file_path, Io::ParallelMmap).expect("create test input");
@@ -590,8 +593,8 @@ fn test_streaming_consistency_across_io_modes() -> anyhow::Result<()> {
     );
 
     // Convert to HashMap for order-independent comparison
-    let streaming_map: std::collections::HashMap<_, _> = streaming_results.into_iter().collect();
-    let in_memory_map: std::collections::HashMap<_, _> = in_memory_results.into_iter().collect();
+    let streaming_map: HashMap<_, _> = streaming_results.into_iter().collect();
+    let in_memory_map: HashMap<_, _> = in_memory_results.into_iter().collect();
 
     assert_eq!(
         streaming_map, in_memory_map,

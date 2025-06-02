@@ -1,5 +1,6 @@
 //! Shared benchmark utilities.
 
+use std::fs;
 use std::hint::black_box;
 use std::io::Write;
 use std::path::PathBuf;
@@ -120,7 +121,7 @@ pub fn create_bench_group<'a>(
 #[must_use]
 pub fn create_temp_input(text: &str) -> (NamedTempFile, Input) {
     let mut temp_file = NamedTempFile::new().expect("create benchmark temp file");
-    std::io::Write::write_all(&mut temp_file, text.as_bytes()).expect("write benchmark text");
+    Write::write_all(&mut temp_file, text.as_bytes()).expect("write benchmark text");
     let input = Input::new(temp_file.path(), Io::ParallelInMemory).expect("create benchmark input");
     (temp_file, input)
 }
@@ -160,7 +161,7 @@ pub fn bench_io_with_file(
     options: &Arc<Options>,
 ) {
     if io == Io::ParallelBytes {
-        let file_content = std::fs::read(file_path).expect("read benchmark file");
+        let file_content = fs::read(file_path).expect("read benchmark file");
         b.iter_batched(
             || Input::from_bytes(&file_content),
             |input| black_box(WordTally::new(&input, options).expect("create word tally")),

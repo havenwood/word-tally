@@ -131,7 +131,7 @@ impl From<Vec<u8>> for Input {
     }
 }
 
-impl std::fmt::Display for Input {
+impl fmt::Display for Input {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             Self::Stdin => write!(f, "Stdin"),

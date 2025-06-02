@@ -2,7 +2,6 @@
 
 use anyhow::Result;
 use clap::{ArgAction, Parser};
-use std::convert::TryFrom;
 use std::path::PathBuf;
 
 use word_tally::options::{

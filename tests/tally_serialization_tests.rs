@@ -1,4 +1,6 @@
+use std::io::Write;
 use std::sync::Arc;
+
 use word_tally::{Case, Input, Options, Serialization, Sort, WordTally};
 
 fn make_shared<T>(value: T) -> Arc<T> {
@@ -9,7 +11,7 @@ fn make_shared<T>(value: T) -> Arc<T> {
 fn test_to_json() {
     let input_text = b"wombat wombat bat";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
     let shared_options = make_shared(options);
@@ -35,7 +37,7 @@ fn test_to_json() {
 fn test_from_json() {
     let input_text = b"wombat wombat bat";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
     let input = Input::new(
@@ -59,7 +61,7 @@ fn test_from_json() {
 fn test_json_field_renamed() {
     let input_text = b"test json field renaming";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
     let input = Input::new(
@@ -79,7 +81,7 @@ fn test_json_field_renamed() {
 fn test_deserialization_with_serde() {
     let input_text = b"wombat wombat bat";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
     let input = Input::new(
@@ -131,7 +133,7 @@ fn test_deserialization_errors() {
 fn test_comprehensive_wordtally_serialization() {
     let content = b"apple banana apple cherry banana apple";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
+    Write::write_all(&mut temp_file, content).expect("write test data");
 
     let options = Options::default()
         .with_case(Case::Lower)
@@ -156,7 +158,7 @@ fn test_comprehensive_wordtally_serialization() {
 fn test_json_field_names() {
     let content = b"test words for json";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
+    Write::write_all(&mut temp_file, content).expect("write test data");
 
     let options = Options::default();
     let input = Input::new(temp_file.path(), options.io()).expect("process test");
@@ -175,7 +177,7 @@ fn test_json_field_names() {
 fn test_round_trip_serialization() {
     let content = b"one two three one two one";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
+    Write::write_all(&mut temp_file, content).expect("write test data");
 
     let options = Options::default()
         .with_case(Case::Upper)

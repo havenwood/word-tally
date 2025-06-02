@@ -1,4 +1,6 @@
+use std::io::Write;
 use std::sync::Arc;
+
 use word_tally::{Case, Filters, Input, Io, Options, Serialization, Sort, WordTally};
 
 fn make_shared<T>(value: T) -> Arc<T> {
@@ -9,7 +11,7 @@ fn make_shared<T>(value: T) -> Arc<T> {
 fn test_excluding_words() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let words = vec!["heaven".to_string(), "hell".to_string()];
     let serializer = Serialization::default();
@@ -42,7 +44,7 @@ fn test_excluding_words() {
 fn test_excluding_patterns() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let serializer = Serialization::default();
 
@@ -86,7 +88,7 @@ fn test_excluding_patterns() {
 fn test_including_patterns() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
     let file_path = temp_file.path().to_str().expect("temp file path");
 
     let serializer = Serialization::default();
@@ -130,7 +132,7 @@ fn test_including_patterns() {
 fn test_combining_include_exclude_patterns() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
     let file_path = temp_file.path().to_str().expect("temp file path");
 
     let serializer = Serialization::default();

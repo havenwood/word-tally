@@ -36,7 +36,7 @@ mod verbose_unit_tests {
     fn create_test_tally(options: &Options) -> WordTally {
         let test_text = b"hope is the thing with feathers that perches";
         let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-        std::io::Write::write_all(&mut temp_file, test_text).expect("write test data");
+        Write::write_all(&mut temp_file, test_text).expect("write test data");
 
         let input = Input::new(
             temp_file.path().to_str().expect("temp file path"),
@@ -164,7 +164,7 @@ mod verbose_unit_tests {
     fn test_verbose_with_empty_input() {
         let test_text = b"";
         let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-        std::io::Write::write_all(&mut temp_file, test_text).expect("write test data");
+        Write::write_all(&mut temp_file, test_text).expect("write test data");
 
         let options = Options::default();
         let input = Input::new(
@@ -188,7 +188,7 @@ mod verbose_unit_tests {
     fn test_verbose_with_special_characters() {
         let test_text = b"test \"quoted\" text & special <chars>";
         let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-        std::io::Write::write_all(&mut temp_file, test_text).expect("write test data");
+        Write::write_all(&mut temp_file, test_text).expect("write test data");
 
         let options = Options::default();
         let input = Input::new(

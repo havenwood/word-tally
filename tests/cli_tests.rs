@@ -37,13 +37,13 @@ fn version() {
 #[test]
 fn help() {
     let assert = word_tally().arg("-h").assert();
-    assert.success().stdout(str::contains("\nUsage"));
+    assert.success().stdout(contains("\nUsage"));
 }
 
 #[test]
 fn help_long() {
     let assert = word_tally().arg("--help").assert();
-    assert.success().stdout(str::contains("\nUsage"));
+    assert.success().stdout(contains("\nUsage"));
 }
 
 #[test]
@@ -101,7 +101,7 @@ fn output_longhand() {
 
     let assert = word_tally()
         .write_stdin("narrow")
-        .arg(&format!("--output={}", temp_path))
+        .arg(format!("--output={temp_path}"))
         .assert();
     assert.success().stdout("");
     assert_eq!(
@@ -117,7 +117,7 @@ fn output_shorthand() {
 
     let assert = word_tally()
         .write_stdin("narrow")
-        .arg(&format!("-o={}", temp_path))
+        .arg(format!("-o={temp_path}"))
         .assert();
     assert.success().stdout("");
     assert_eq!(

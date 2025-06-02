@@ -1,5 +1,8 @@
 //! Tests for library functionality.
 
+use std::collections::HashSet;
+use std::fs;
+use std::io::Write;
 use std::sync::Arc;
 use word_tally::input::Input;
 use word_tally::output::Output;
@@ -28,7 +31,7 @@ fn create_test_data_file() -> tempfile::NamedTempFile {
                     d C d d d D D D D\n\
                     c D c c c c c c C C C C C C\n\
                     123\n";
-    std::io::Write::write_all(&mut temp_file, content).expect("write test data");
+    Write::write_all(&mut temp_file, content).expect("write test data");
     temp_file
 }
 
@@ -66,8 +69,8 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
         .into_boxed_slice();
 
     if sort == Sort::Unsorted {
-        let expected_words: std::collections::HashSet<_> = expected_tally.iter().collect();
-        let actual_words: std::collections::HashSet<_> = word_tally.tally().iter().collect();
+        let expected_words: HashSet<_> = expected_tally.iter().collect();
+        let actual_words: HashSet<_> = word_tally.tally().iter().collect();
         assert_eq!(expected_words, actual_words);
     } else {
         assert_eq!(word_tally.tally(), expected_tally.as_ref());
@@ -287,7 +290,7 @@ fn vec_from() {
 fn test_into_tally() {
     let input_text = b"Hope is the thing with feathers that perches in the soul";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
     let input = Input::new(
@@ -325,7 +328,7 @@ fn test_into_tally() {
 fn test_iterator() {
     let input_text = b"double trouble double";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
     let input = Input::new(
@@ -351,7 +354,7 @@ fn test_iterator() {
 fn test_iterator_for_loop() {
     let input_text = b"llama llama pajamas";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
     let input = Input::new(
@@ -375,7 +378,7 @@ fn test_iterator_for_loop() {
 fn test_excluding_words() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let words = vec!["heaven".to_string(), "hell".to_string()];
     let serializer = Serialization::default();
@@ -408,7 +411,7 @@ fn test_excluding_words() {
 fn test_excluding_patterns() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let serializer = Serialization::default();
 
@@ -452,7 +455,7 @@ fn test_excluding_patterns() {
 fn test_including_patterns() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
     let file_path = temp_file.path().to_str().expect("temp file path");
 
     let serializer = Serialization::default();
@@ -496,7 +499,7 @@ fn test_including_patterns() {
 fn test_combining_include_exclude_patterns() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
     let file_path = temp_file.path().to_str().expect("temp file path");
 
     let serializer = Serialization::default();
@@ -550,7 +553,7 @@ fn test_input_size() {
 fn test_parallel_vs_sequential() {
     let input_text = b"I taste a liquor never brewed. I taste a liquor.";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
     let file_path = temp_file.path().to_str().expect("temp file path");
 
     // Sequential processing
@@ -674,7 +677,7 @@ fn test_parallel_count() {
     // Instead of using environment variables, just test the parallel function works
     let input_text = b"Test with default settings for chunk size and thread count";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
 
@@ -697,7 +700,7 @@ fn test_parallel_count() {
 fn test_merge_maps() {
     let input_text = b"This is a test of the map merging functionality";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
 
@@ -762,7 +765,7 @@ mod wordtally_constructor_tests {
     fn create_test_file() -> (tempfile::TempDir, String) {
         let temp_dir = tempfile::tempdir().expect("process test");
         let file_path = temp_dir.path().join("test_input.txt");
-        std::fs::write(&file_path, TEST_INPUT).expect("process test");
+        fs::write(&file_path, TEST_INPUT).expect("process test");
         (
             temp_dir,
             file_path.to_str().expect("process test").to_string(),
@@ -824,7 +827,7 @@ fn test_min_count_graphemes() {
 fn test_to_json() {
     let input_text = b"wombat wombat bat";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
     let filters = Filters::default();
     let options = Options::new(
         Case::default(),
@@ -858,7 +861,7 @@ fn test_to_json() {
 fn test_from_json() {
     let input_text = b"wombat wombat bat";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let filters = Filters::default();
     let options = Options::new(
@@ -891,7 +894,7 @@ fn test_from_json() {
 fn test_deserialization_with_serde() {
     let input_text = b"wombat wombat bat";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
     let input = Input::new(
@@ -918,7 +921,7 @@ fn test_deserialization_with_serde() {
 fn test_json_field_renamed() {
     let input_text = b"test json field renaming";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     // Test that the field renaming in the serialization works correctly
     let options = Options::default();
@@ -940,7 +943,7 @@ fn test_json_field_renamed() {
 fn test_json_field_camel_case_deserialization() {
     let input_text = b"test";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
     let input = Input::new(

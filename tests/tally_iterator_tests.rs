@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::io::Write;
 use std::sync::Arc;
 use tempfile::NamedTempFile;
@@ -25,8 +26,8 @@ fn create_test_tally_with_text(text: &[u8], sort: Sort) -> WordTally {
 #[test]
 fn test_into_tally() {
     let input_text = b"Hope is the thing with feathers that perches in the soul";
-    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    let mut temp_file = NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
     let input = Input::new(
@@ -40,7 +41,7 @@ fn test_into_tally() {
     // Use `tally()` to get a reference to the slice.
     let tally = word_tally.tally();
 
-    let mut expected_counts = std::collections::HashMap::new();
+    let mut expected_counts = HashMap::new();
     expected_counts.insert("the", 2);
     expected_counts.insert("Hope", 1);
     expected_counts.insert("is", 1);
@@ -62,8 +63,8 @@ fn test_into_tally() {
 #[test]
 fn test_iterator() {
     let input_text = b"double trouble double";
-    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    let mut temp_file = NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
     let input = Input::new(
@@ -88,8 +89,8 @@ fn test_iterator() {
 #[test]
 fn test_iterator_for_loop() {
     let input_text = b"llama llama pajamas";
-    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, input_text).expect("write test data");
+    let mut temp_file = NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
     let input = Input::new(

@@ -65,6 +65,7 @@ strip = false
 cargo = { level = "deny", priority = -1 }
 correctness = { level = "deny", priority = -1 }
 nursery = { level = "deny", priority = -1 }
+pedantic = { level = "deny", priority = -1 }
 perf = { level = "deny", priority = -1 }
 style = { level = "deny", priority = -1 }
 suspicious = { level = "deny", priority = -1 }
@@ -72,16 +73,16 @@ suspicious = { level = "deny", priority = -1 }
 # Clippy nursery group allows
 redundant_pub_crate = "allow"
 
-# Clippy pedantic lints (cherry-picked)
-cast_lossless = "deny"
-cast_possible_truncation = "deny"
-cast_possible_wrap = "deny"
-cloned_instead_of_copied = "deny"
-doc_markdown = "deny"
-module_name_repetitions = "deny"
+# Clippy pedantic group allows
+missing_panics_doc = "allow"
+must_use_candidate = "allow"
+return_self_not_must_use = "allow"
 
 # Clippy restriction lints (cherry-picked)
-unwrap_used = { level = "deny", priority = -1 }
+boxed_local = "deny"
+clone_on_copy = "deny"
+cognitive_complexity = "deny"
+unwrap_used = "deny"
 
 [lints.rust]
 # Rust lint groups
@@ -95,15 +96,20 @@ rust_2024_compatibility = "deny"
 unused = "deny"
 
 # Rust lints
+absolute_paths_not_starting_with_crate = "deny"
 edition_2024_expr_fragment_specifier = "deny"
 elided_lifetimes_in_paths = "deny"
 impl_trait_redundant_captures = "deny"
 missing_copy_implementations = "deny"
 missing_debug_implementations = "deny"
+redundant_imports = "deny"
 single_use_lifetimes = "deny"
 trivial_casts = "deny"
 trivial_numeric_casts = "deny"
 unreachable_pub = "deny"
 unsafe_code = "deny"
 unsafe_op_in_unsafe_fn = "deny"
+unused_extern_crates = "deny"
+unused_macro_rules = "deny"
+unused_qualifications = "deny"
 variant_size_differences = "deny"

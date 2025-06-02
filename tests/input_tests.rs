@@ -1,6 +1,7 @@
 //! Tests for input handling.
 
-use std::io::Read;
+use std::io::{Read, Write};
+
 use tempfile::NamedTempFile;
 use word_tally::{Input, Io};
 
@@ -16,7 +17,7 @@ fn test_input_new_stdin() {
 fn test_input_new_file() {
     let test_data = b"File test data";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
+    Write::write_all(&mut temp_file, test_data).expect("write test data");
 
     let input = Input::new(temp_file.path(), Io::ParallelStream).expect("create test input");
     assert!(matches!(input, Input::File(_)));
@@ -35,7 +36,7 @@ fn test_input_new_file() {
 fn test_input_new_mmap() {
     let test_data = b"Memory mapped test data";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
+    Write::write_all(&mut temp_file, test_data).expect("write test data");
 
     let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     assert!(matches!(input, Input::Mmap(_, _)));
@@ -73,7 +74,7 @@ fn test_input_display() {
     assert_eq!(format!("{stdin_input}"), "Stdin");
 
     let mut temp_file = NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, b"test").expect("write test data");
+    Write::write_all(&mut temp_file, b"test").expect("write test data");
 
     let file_input = Input::new(temp_file.path(), Io::ParallelStream).expect("create test input");
     let file_display = format!("{file_input}");
@@ -93,7 +94,7 @@ fn test_input_display() {
 fn test_input_clone() {
     let test_data = b"Clone test data";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
+    Write::write_all(&mut temp_file, test_data).expect("write test data");
 
     let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     // Need the clone to test the Clone trait implementation works correctly
@@ -125,7 +126,7 @@ fn test_input_reader_creation() {
 
     let test_data = b"test";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
+    Write::write_all(&mut temp_file, test_data).expect("write test data");
 
     let file_input = Input::new(temp_file.path(), Io::ParallelStream).expect("create test input");
     assert!(file_input.reader().is_ok());
@@ -158,7 +159,7 @@ fn test_input_mmap_nonexistent_file() {
 fn test_input_in_memory_io() {
     let test_data = b"In-memory test data";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
-    std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
+    Write::write_all(&mut temp_file, test_data).expect("write test data");
 
     let input = Input::new(temp_file.path(), Io::ParallelInMemory).expect("create test input");
     assert!(matches!(input, Input::File(_)));

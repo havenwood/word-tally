@@ -192,9 +192,7 @@ fn test_delimiter_only_affects_output_not_input() {
     for (word, count) in &words_default {
         assert!(
             words_comma.iter().any(|(w, c)| w == word && c == count),
-            "Word '{}' with count {} not found in comma-delimited output",
-            word,
-            count
+            "Word '{word}' with count {count} not found in comma-delimited output"
         );
     }
 }

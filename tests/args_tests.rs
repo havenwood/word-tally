@@ -300,7 +300,7 @@ fn test_args_multiple_exclude_patterns() {
 
 #[test]
 fn test_args_output_file_shorthand() {
-    let temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    let temp_file = NamedTempFile::new().expect("create temp file");
 
     Command::cargo_bin("word-tally")
         .expect("arguments should be valid")
@@ -310,8 +310,7 @@ fn test_args_output_file_shorthand() {
         .assert()
         .success();
 
-    let content =
-        std::fs::read_to_string(temp_file.path()).expect("output file should be readable");
+    let content = fs::read_to_string(temp_file.path()).expect("output file should be readable");
     assert!(content.contains("test"));
     assert!(content.contains("word"));
 }

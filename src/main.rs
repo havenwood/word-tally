@@ -3,12 +3,14 @@
 pub(crate) mod args;
 pub(crate) mod verbose;
 
+use std::path::PathBuf;
+use std::process;
+
 use crate::args::Args;
 use crate::verbose::Verbose;
 use anyhow::Result;
 use clap::Parser;
 use rayon::prelude::*;
-use std::process;
 use word_tally::{Input, Io, Output, TallyMap, WordTally, exit_code::ExitCode};
 
 fn main() {
@@ -56,7 +58,7 @@ fn run() -> Result<()> {
     }
 
     // Primary output
-    let mut output = Output::new(args.output().map(std::path::PathBuf::as_path))?;
+    let mut output = Output::new(args.output().map(PathBuf::as_path))?;
     output.write_formatted_tally(&word_tally)?;
 
     Ok(())

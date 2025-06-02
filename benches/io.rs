@@ -11,7 +11,7 @@ use self::common::{
 
 /// Benchmark I/O strategies for specified file size
 fn bench_io_processing_combinations(c: &mut Criterion, size_kb: usize) {
-    let (temp_file, file_path) = self::common::create_benchmark_file(size_kb);
+    let (temp_file, file_path) = common::create_benchmark_file(size_kb);
 
     let group_name = format!("io_strategies/file_size_{size_kb}kb");
     {

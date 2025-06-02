@@ -101,7 +101,7 @@
 use std::{slice, str};
 
 use anyhow::Result;
-use serde::{self, Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 mod error;
 pub mod exit_code;
