@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs;
 use std::io::Write;
 
+use anyhow::Context;
 use word_tally::{Count, Input, Io, Options, Performance, WordTally};
 
 const TEST_TEXT: &str = "The quick brown fox
@@ -18,14 +19,12 @@ fn make_options(io: Io) -> Options {
 }
 
 fn verify_tally(tally: &WordTally) {
-    if tally.count() != EXPECTED_TOTAL_COUNT || tally.uniq_count() != EXPECTED_WORD_COUNT {
-        println!("Words found: {:?}", tally.tally());
-    }
-
     assert_eq!(
         tally.count(),
         EXPECTED_TOTAL_COUNT,
-        "Total word count mismatch"
+        "Total word count mismatch. Expected {} words, found {}",
+        EXPECTED_TOTAL_COUNT,
+        tally.count()
     );
     assert_eq!(
         tally.uniq_count(),
@@ -107,23 +106,28 @@ fn test_parallel_in_memory_parallel() {
 }
 
 #[test]
-fn test_new_with_io_combinations() {
-    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
-    let file_path = temp_file.path().to_str().expect("temp file path");
+fn test_new_with_io_combinations() -> anyhow::Result<()> {
+    let mut temp_file = tempfile::NamedTempFile::new()?;
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes())?;
+    let file_path = temp_file
+        .path()
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("invalid temp file path"))?;
 
     let io_strategies = [Io::ParallelStream, Io::ParallelInMemory, Io::ParallelMmap];
 
     for &io in &io_strategies {
         let options = make_options(io);
         let input = Input::new(file_path, io)
-            .unwrap_or_else(|_| panic!("input creation failed with {io:?}"));
+            .with_context(|| format!("input creation failed with `{io:?}`"))?;
 
-        let tally =
-            WordTally::new(&input, &options).unwrap_or_else(|_| panic!("new failed with {io:?}"));
+        let tally = WordTally::new(&input, &options)
+            .with_context(|| format!("`new()` failed with `{io:?}`"))?;
 
         verify_tally(&tally);
     }
+
+    Ok(())
 }
 
 const LARGE_TEST_TEXT: &str = "
@@ -248,23 +252,28 @@ fn test_nonexistent_file_handling() {
 }
 
 #[test]
-fn test_new_with_all_io_strategies() {
-    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
-    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
-    let file_path = temp_file.path().to_str().expect("temp file path");
+fn test_new_with_all_io_strategies() -> anyhow::Result<()> {
+    let mut temp_file = tempfile::NamedTempFile::new()?;
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes())?;
+    let file_path = temp_file
+        .path()
+        .to_str()
+        .ok_or_else(|| anyhow::anyhow!("invalid temp file path"))?;
 
     let io_strategies = [Io::ParallelStream, Io::ParallelInMemory, Io::ParallelMmap];
 
     for &io in &io_strategies {
         let options = make_options(io);
         let input = Input::new(file_path, io)
-            .unwrap_or_else(|_| panic!("input creation failed with {io:?}"));
+            .with_context(|| format!("input creation failed with `{io:?}`"))?;
 
-        let tally =
-            WordTally::new(&input, &options).unwrap_or_else(|_| panic!("new() failed with {io:?}"));
+        let tally = WordTally::new(&input, &options)
+            .with_context(|| format!("`new()` failed with `{io:?}`"))?;
 
         verify_tally(&tally);
     }
+
+    Ok(())
 }
 
 #[test]

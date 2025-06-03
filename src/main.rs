@@ -17,7 +17,8 @@ fn main() {
     match run() {
         Ok(()) => process::exit(ExitCode::Success.into()),
         Err(err) => {
-            eprintln!("Error: {err}");
+            let mut stderr = Output::stderr();
+            stderr.write_chunk(&format!("Error: {err}\n")).ok();
             process::exit(ExitCode::from(&err).into());
         }
     }

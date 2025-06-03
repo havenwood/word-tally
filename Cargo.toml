@@ -73,15 +73,14 @@ suspicious = { level = "deny", priority = -1 }
 # Clippy nursery group allows
 redundant_pub_crate = "allow"
 
-# Clippy pedantic group allows
-missing_panics_doc = "allow"
-must_use_candidate = "allow"
-return_self_not_must_use = "allow"
-
 # Clippy restriction lints (cherry-picked)
 boxed_local = "deny"
 clone_on_copy = "deny"
 cognitive_complexity = "deny"
+float_arithmetic = "deny"
+panic = "deny"
+print_stdout = "deny"
+print_stderr = "deny"
 unwrap_used = "deny"
 
 [lints.rust]
@@ -95,21 +94,12 @@ rust_2021_compatibility = "deny"
 rust_2024_compatibility = "deny"
 unused = "deny"
 
-# Rust lints
-absolute_paths_not_starting_with_crate = "deny"
-edition_2024_expr_fragment_specifier = "deny"
-elided_lifetimes_in_paths = "deny"
-impl_trait_redundant_captures = "deny"
+# Rust lints (not covered by groups above)
 missing_copy_implementations = "deny"
 missing_debug_implementations = "deny"
-redundant_imports = "deny"
 single_use_lifetimes = "deny"
 trivial_casts = "deny"
 trivial_numeric_casts = "deny"
 unreachable_pub = "deny"
 unsafe_code = "deny"
-unsafe_op_in_unsafe_fn = "deny"
-unused_extern_crates = "deny"
-unused_macro_rules = "deny"
-unused_qualifications = "deny"
 variant_size_differences = "deny"

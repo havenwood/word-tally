@@ -21,6 +21,7 @@ pub enum Serialization {
 
 impl Serialization {
     /// Create a text format with default delimiters.
+    #[must_use]
     pub fn text() -> Self {
         Self::Text {
             field_delimiter: Delimiter::from_literal(Delimiter::DEFAULT_FIELD),
@@ -29,6 +30,7 @@ impl Serialization {
     }
 
     /// Set the field delimiter if this is a text format, otherwise return self unchanged.
+    #[must_use]
     pub fn with_field_delimiter(self, field_delimiter: &str) -> Self {
         if let Self::Text {
             entry_delimiter, ..
@@ -44,6 +46,7 @@ impl Serialization {
     }
 
     /// Set the entry delimiter if this is a text format, otherwise return self unchanged.
+    #[must_use]
     pub fn with_entry_delimiter(self, entry_delimiter: &str) -> Self {
         if let Self::Text {
             field_delimiter, ..

@@ -20,6 +20,7 @@ impl Delimiter {
     }
 
     /// Create from an escaped string.
+    #[must_use]
     pub fn from_escaped(s: &str) -> Self {
         Self(Self::unescape(s))
     }

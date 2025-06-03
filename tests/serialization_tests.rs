@@ -5,13 +5,10 @@ mod serialization_tests {
     #[test]
     fn test_serialization_text() {
         let serialization = Serialization::text();
-        match &serialization {
-            Serialization::Text {
-                field_delimiter: delim,
-                ..
-            } => assert_eq!(delim.as_str(), " "),
-            _ => panic!("Expected Text variant"),
-        }
+        assert!(matches!(
+            &serialization,
+            Serialization::Text { field_delimiter, .. } if field_delimiter.as_str() == " "
+        ));
         assert_eq!(serialization.field_delimiter(), Some(" "));
     }
 
@@ -38,13 +35,10 @@ mod serialization_tests {
     #[test]
     fn test_serialization_default() {
         let serialization = Serialization::text();
-        match &serialization {
-            Serialization::Text {
-                field_delimiter: delim,
-                ..
-            } => assert_eq!(delim.as_str(), " "),
-            _ => panic!("Expected Text variant with default delimiter"),
-        }
+        assert!(matches!(
+            &serialization,
+            Serialization::Text { field_delimiter, .. } if field_delimiter.as_str() == " "
+        ));
     }
 
     #[test]
@@ -52,16 +46,11 @@ mod serialization_tests {
         let serialization = Serialization::text()
             .with_field_delimiter("\t")
             .with_entry_delimiter(";");
-        match &serialization {
-            Serialization::Text {
-                field_delimiter,
-                entry_delimiter,
-            } => {
-                assert_eq!(field_delimiter.as_str(), "\t");
-                assert_eq!(entry_delimiter.as_str(), ";");
-            }
-            _ => panic!("Expected Text variant"),
-        }
+        assert!(matches!(
+            &serialization,
+            Serialization::Text { field_delimiter, entry_delimiter }
+            if field_delimiter.as_str() == "\t" && entry_delimiter.as_str() == ";"
+        ));
         assert_eq!(serialization.field_delimiter(), Some("\t"));
         assert_eq!(serialization.entry_delimiter(), Some(";"));
     }
@@ -79,16 +68,11 @@ mod serialization_tests {
             .with_entry_delimiter(";;")
             .with_field_delimiter("::");
 
-        match &serialization {
-            Serialization::Text {
-                field_delimiter,
-                entry_delimiter,
-            } => {
-                assert_eq!(field_delimiter.as_str(), "::");
-                assert_eq!(entry_delimiter.as_str(), ";;");
-            }
-            _ => panic!("Expected Text variant"),
-        }
+        assert!(matches!(
+            &serialization,
+            Serialization::Text { field_delimiter, entry_delimiter }
+            if field_delimiter.as_str() == "::" && entry_delimiter.as_str() == ";;"
+        ));
     }
 
     #[test]
@@ -98,16 +82,11 @@ mod serialization_tests {
             .with_field_delimiter("::")
             .with_entry_delimiter(";;");
 
-        match &serialization {
-            Serialization::Text {
-                field_delimiter,
-                entry_delimiter,
-            } => {
-                assert_eq!(field_delimiter.as_str(), "::");
-                assert_eq!(entry_delimiter.as_str(), ";;");
-            }
-            _ => panic!("Expected Text variant"),
-        }
+        assert!(matches!(
+            &serialization,
+            Serialization::Text { field_delimiter, entry_delimiter }
+            if field_delimiter.as_str() == "::" && entry_delimiter.as_str() == ";;"
+        ));
     }
 
     #[test]
@@ -118,16 +97,11 @@ mod serialization_tests {
             .with_field_delimiter("second")
             .with_entry_delimiter("entry2");
 
-        match &serialization {
-            Serialization::Text {
-                field_delimiter,
-                entry_delimiter,
-            } => {
-                assert_eq!(field_delimiter.as_str(), "second");
-                assert_eq!(entry_delimiter.as_str(), "entry2");
-            }
-            _ => panic!("Expected Text variant"),
-        }
+        assert!(matches!(
+            &serialization,
+            Serialization::Text { field_delimiter, entry_delimiter }
+            if field_delimiter.as_str() == "second" && entry_delimiter.as_str() == "entry2"
+        ));
     }
 
     #[test]

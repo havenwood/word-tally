@@ -145,10 +145,10 @@ mod output_tests {
 
         let write_result = stdin.write_all(b"data to write");
 
-        match write_result {
-            Err(e) if e.kind() == ErrorKind::BrokenPipe => {}
-            _ => panic!("Expected broken pipe error"),
-        }
+        assert!(
+            matches!(write_result, Err(ref e) if e.kind() == ErrorKind::BrokenPipe),
+            "Expected broken pipe error, got {write_result:?}"
+        );
     }
 
     #[test]

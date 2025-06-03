@@ -154,6 +154,13 @@ pub fn large_text() -> String {
 }
 
 /// Benchmark I/O strategy with file.
+///
+/// # Panics
+///
+/// Panics if:
+/// - The benchmark file cannot be read
+/// - Input creation fails
+/// - Word tally creation fails
 pub fn bench_io_with_file(
     b: &mut criterion::Bencher<'_>,
     file_path: &std::path::Path,
