@@ -1,4 +1,4 @@
-//! Write trait abstractions for stdout and file serialization.
+//! Output writing for stdout and file serialization.
 
 use crate::options::serialization::Serialization;
 use crate::{Count, Word, WordTally, WordTallyError};
@@ -73,6 +73,23 @@ impl Write for Output {
 impl Output {
     /// Creates an `Output` from optional arguments, choosing between file or stdout.
     ///
+    /// # Examples
+    ///
+    /// ```
+    /// use word_tally::Output;
+    /// use std::path::Path;
+    ///
+    /// // Write to stdout (default)
+    /// let stdout = Output::new(None)?;
+    ///
+    /// // Explicitly write to stdout with "-"
+    /// let explicit_stdout = Output::new(Some(Path::new("-")))?;
+    ///
+    /// // Write to a file
+    /// let file_output = Output::new(Some(Path::new("results.txt")))?;
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
+    ///
     /// # Errors
     ///
     /// Returns an error if the output file path is provided but the file cannot be created.
@@ -130,6 +147,22 @@ impl Output {
     }
 
     /// Writes word tally data in the specified format.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use word_tally::{WordTally, Input, Output, Options, Serialization};
+    ///
+    /// // Create a tally and write it as JSON to stdout
+    /// let input = Input::from_bytes("hello world hello");
+    /// let options = Options::default()
+    ///     .with_serialization(Serialization::Json);
+    /// let tally = WordTally::new(&input, &options)?;
+    ///
+    /// let mut output = Output::new(None)?; // Write to stdout
+    /// output.write_formatted_tally(&tally)?;
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     ///
     /// # Errors
     ///

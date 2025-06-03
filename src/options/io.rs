@@ -21,10 +21,22 @@ use std::str::FromStr;
 /// # Examples
 ///
 /// ```
-/// use word_tally::Io;
+/// use word_tally::{Io, Input};
 ///
-/// assert_eq!(Io::default(), Io::ParallelStream);
-/// assert_eq!(Io::ParallelMmap.to_string(), "parallel-mmap");
+/// # fn example() -> anyhow::Result<()> {
+/// // Default: balanced performance and memory
+/// let input = Input::new("file.txt", Io::default())?;
+///
+/// // Low memory: process huge files on constrained systems
+/// let input = Input::new("10gb_file.txt", Io::Stream)?;
+///
+/// // Maximum speed: best for local files
+/// let input = Input::new("large_file.txt", Io::ParallelMmap)?;
+///
+/// // Stdin processing: mmap not available
+/// let input = Input::new("-", Io::ParallelInMemory)?;
+/// # Ok(())
+/// # }
 /// ```
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ValueEnum,

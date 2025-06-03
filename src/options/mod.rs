@@ -1,44 +1,51 @@
 //! Configuration options for word tallying.
 //!
-//! This module provides the [`Options`] struct, a unified container for all
-//! word-tally configuration settings.
+//! The [`Options`] struct provides a builder API for configuring word tallying behavior.
 //!
-//! # Structure
-//!
-//! Core configuration components:
-//!
-//! - **Case** ([`Case`]): Word case handling (original, lowercase, uppercase)
-//! - **Sort** ([`Sort`]): Result ordering (unsorted, ascending, descending)
-//! - **Serialization** ([`Serialization`]): Output format (text, CSV, JSON) and delimiter
-//! - **Filters** ([`Filters`]): Word length, frequency, patterns, and exclusion filters
-//! - **Io** ([`Io`]): I/O strategy (sequential, streamed, in-memory, memory-mapped)
-//! - **Performance** ([`Performance`]): Thread pool, memory allocation, and chunk size tuning
-//!
-//! # Usage
+//! # Common Patterns
 //!
 //! ```
-//! use word_tally::{Options, Case, Io, Serialization};
+//! use word_tally::{Options, Case, Io, Serialization, Filters};
 //!
-//! // Default options
-//! let options = Options::default();
-//! assert_eq!(options.case(), Case::Original);
-//!
-//! // With specific settings
-//! let options = Options::default()
-//!     .with_case(Case::Lower)
-//!     .with_serialization(Serialization::Json)
+//! // Fast processing of large files
+//! let fast = Options::default()
 //!     .with_io(Io::ParallelMmap);
-//! assert_eq!(options.io(), Io::ParallelMmap);
+//!
+//! // Memory-constrained environment
+//! let low_memory = Options::default()
+//!     .with_io(Io::Stream);
+//!
+//! // Case-insensitive frequency analysis
+//! let frequency = Options::default()
+//!     .with_case(Case::Lower)
+//!     .with_filters(Filters::default().with_min_count(2));
+//!
+//! // Export for data analysis
+//! let export = Options::default()
+//!     .with_serialization(Serialization::Csv)
+//!     .with_filters(Filters::default().with_min_chars(4));
 //! ```
+//!
+//! # Components
+//!
+//! - [`Case`] - Word case normalization
+//! - [`encoding::Encoding`] - Word boundary detection
+//! - [`Sort`] - Result ordering
+//! - [`Serialization`] - Output format
+//! - [`Filters`] - Word filtering rules
+//! - [`Io`] - I/O strategy
+//! - [`Performance`] - Performance tuning
 //!
 //! # Environment Variables
 //!
-//! Performance settings can be controlled via environment variables:
-//!
-//! - `WORD_TALLY_CHUNK_SIZE`: Chunk size for parallel processing (default: 16384)
-//! - `WORD_TALLY_THREADS`: Thread count (default: all available cores)
-//! - `WORD_TALLY_UNIQUENESS_RATIO`: Capacity estimation (default: 10)
-//! - `WORD_TALLY_WORD_DENSITY`: Per-chunk map capacity (default: 15)
+//! - `WORD_TALLY_IO` (default: `parallel-stream`)
+//! - `WORD_TALLY_THREADS` (default: all cores)
+//! - `WORD_TALLY_CHUNK_SIZE` (default: 65536)
+//! - `WORD_TALLY_UNIQUENESS_RATIO` (default: 256)
+//! - `WORD_TALLY_WORD_DENSITY` (default: 15)
+//! - `WORD_TALLY_WORDS_PER_KB` (default: 128)
+//! - `WORD_TALLY_STDIN_BUFFER_SIZE` (default: 262144)
+//! - `WORD_TALLY_DEFAULT_CAPACITY` (default: 1024)
 
 pub mod case;
 pub mod delimiter;

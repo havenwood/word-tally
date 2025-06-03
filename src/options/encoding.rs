@@ -5,6 +5,22 @@ use serde::{Deserialize, Serialize};
 use std::fmt::{self, Display, Formatter};
 
 /// Determines how word boundaries are detected.
+///
+/// # Examples
+///
+/// ```
+/// use word_tally::options::encoding::Encoding;
+///
+/// // Unicode: handles international text
+/// // "café" → ["café"] (preserves accents)
+/// // "naïve" → ["naïve"] (handles diacritics)
+/// let unicode = Encoding::Unicode;
+///
+/// // ASCII: same word splitting, rejects non-ASCII
+/// // "café" → error (non-ASCII rejected)
+/// // "naïve" → error (non-ASCII rejected)
+/// let ascii = Encoding::Ascii;
+/// ```
 #[derive(
     Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ValueEnum,
 )]

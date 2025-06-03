@@ -1,4 +1,4 @@
-//! Error types for word-tally
+//! Error types for word-tally.
 
 use std::io;
 use thiserror::Error;

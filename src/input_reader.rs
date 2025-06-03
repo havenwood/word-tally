@@ -1,4 +1,4 @@
-//! Input readers implementing Read and `BufRead` traits.
+//! Input readers implementing `Read` and `BufRead` traits.
 
 use crate::{WordTallyError, input::Input};
 use memmap2::Mmap;

@@ -11,78 +11,34 @@
 //! the [Unicode Standard Annex #29](https://unicode.org/reports/tr29/) specification. The [`memchr`](https://docs.rs/memchr/)
 //! crate provides SIMD-accelerated newline detection for efficient parallel chunk processing.
 //!
-//! # Options
+//! # Configuration
 //!
-//! The [`Options`] struct provides a unified interface for configuring all aspects of word tallying:
+//! The [`Options`] struct provides a unified interface for configuring all aspects of word tallying.
+//! See the [`options`] module for detailed configuration documentation.
+//!
+//! # Examples
 //!
 //! ```
 //! use word_tally::{Options, WordTally, Input, Io};
 //! use anyhow::Result;
 //!
 //! # fn example() -> Result<()> {
-//! // Use default options
+//! // Basic usage with default options
 //! let options = Options::default();
 //! let file_path = std::path::Path::new("example.txt");
-//! let input = Input::new(file_path, Io::ParallelInMemory)?;
+//! let input = Input::new(file_path, Io::ParallelStream)?;
 //! let words = WordTally::new(&input, &options)?;
 //! assert_eq!(words.count(), 9);
 //! # Ok(())
 //! # }
 //! ```
 //!
-//! ## Word Processing
-//!
-//! Configure how words are identified and normalized:
-//!
-//! * [`Case`]: Normalize word case (`Original`, `Lower`, or `Upper`)
-//! * [`options::encoding::Encoding`]: Word boundary detection (`Unicode` or `Ascii`)
-//!   - Unicode: Full Unicode text segmentation via ICU4X (default)
-//!   - ASCII: Fast ASCII-only mode, fails on non-ASCII input
-//!
-//! ## Output Formatting
-//!
-//! Control how results are sorted and serialized:
-//!
-//! * [`Sort`]: Order results by frequency (`Unsorted`, `Desc`, or `Asc`)
-//! * [`Serialization`]: Output format with configurable delimiters
-//!   - `Text`: Customizable word/count and entry delimiters
-//!   - `Csv`: Standard CSV format
-//!   - `Json`: JSON object format
-//!
-//! ## Filtering
-//!
-//! Select which words appear in the final tally:
-//!
-//! * [`Filters`]: Comprehensive filtering system
-//!   - [`MinChars`]: Exclude words shorter than specified length
-//!   - [`MinCount`]: Include only words appearing above threshold
-//!   - [`IncludeSet`] and [`ExcludeSet`]: Regex-based pattern matching
-//!   - [`ExcludeWords`]: Explicit word exclusion list
-//!
-//! ## Performance Tuning
-//!
-//! Optimize execution for different workloads:
-//!
-//! * [`Io`]: I/O strategy selection
-//!   - `Stream`: Sequential processing, minimal memory
-//!   - `ParallelStream`: Parallel chunk processing (default)
-//!   - `ParallelInMemory`: Load entire file, process in parallel
-//!   - `ParallelMmap`: Memory-mapped file access (often fastest for large files)
-//! * [`Threads`]: Configure thread pool size for parallel modes
-//! * [`Performance`]: Advanced settings (chunk size, capacity hints)
-//!
-//! ## Output Generation
-//!
-//! * [`Output`]: Formatted output generation based on configured serialization
-//!
-//! # Examples
-//!
 //! ```
 //! use word_tally::{Case, Filters, Options, Serialization, Tally, WordTally, Input, Io};
 //! use anyhow::Result;
 //!
 //! # fn example() -> Result<()> {
-//! // Create options with case normalization, output format, and other settings
+//! // Advanced configuration
 //! let options = Options::default()
 //!     .with_case(Case::Lower)
 //!     .with_serialization(Serialization::Json)
@@ -156,6 +112,26 @@ pub struct WordTally {
 /// An explicit `iter` method for `WordTally`.
 impl WordTally {
     /// Returns an iterator over references to the words and counts.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use word_tally::{WordTally, Input, Options};
+    ///
+    /// let input = Input::from_bytes("hello world hello");
+    /// let tally = WordTally::new(&input, &Options::default())?;
+    ///
+    /// // Iterate over results (sorted by frequency desc by default)
+    /// for (word, count) in tally.iter() {
+    ///     println!("{}: {}", word, count);
+    /// }
+    ///
+    /// // Or use the reference directly
+    /// for (word, count) in &tally {
+    ///     println!("{}: {}", word, count);
+    /// }
+    /// # Ok::<(), anyhow::Error>(())
+    /// ```
     pub fn iter(&self) -> slice::Iter<'_, (Word, Count)> {
         self.tally.iter()
     }

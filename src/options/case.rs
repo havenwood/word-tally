@@ -6,6 +6,21 @@ use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
 
 /// Word case normalization options.
+///
+/// # Examples
+///
+/// ```
+/// use word_tally::Case;
+///
+/// // "Hello" and "hello" counted separately
+/// let original = Case::Original;
+///
+/// // "Hello" and "hello" both become "hello"
+/// let lower = Case::Lower;
+///
+/// // "Hello" and "hello" both become "HELLO"
+/// let upper = Case::Upper;
+/// ```
 #[derive(
     Clone,
     Copy,

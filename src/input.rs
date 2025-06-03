@@ -1,4 +1,4 @@
-//! Read trait abstractions for files, stdin or memory-mapped I/O.
+//! Input sources for files, stdin and memory-mapped I/O.
 
 use crate::WordTallyError;
 use crate::input_reader::InputReader;
@@ -27,6 +27,24 @@ impl Input {
     /// Construct an `Input` from a file path or stdin (designated by "-").
     ///
     /// For bytes data, use `Input::from_bytes` instead.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use word_tally::{Input, Io};
+    ///
+    /// # fn example() -> anyhow::Result<()> {
+    /// // Read from a file with default parallel stream
+    /// let file_input = Input::new("document.txt", Io::default())?;
+    ///
+    /// // Read from stdin
+    /// let stdin_input = Input::new("-", Io::default())?;
+    ///
+    /// // Fast processing with memory mapping
+    /// let mmap_input = Input::new("large_file.txt", Io::ParallelMmap)?;
+    /// # Ok(())
+    /// # }
+    /// ```
     ///
     /// # Errors
     ///
@@ -74,6 +92,15 @@ impl Input {
     }
 
     /// Create an `Input` from byte data.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use word_tally::Input;
+    ///
+    /// let text = "hello world hello";
+    /// let input = Input::from_bytes(text);
+    /// ```
     pub fn from_bytes<B: AsRef<[u8]>>(bytes: B) -> Self {
         Self::Bytes(bytes.as_ref().into())
     }

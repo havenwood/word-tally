@@ -1,4 +1,4 @@
-//! Exit codes for word-tally following Unix sysexits.h convention
+//! Exit codes following Unix sysexits.h conventions.
 
 use crate::error::Error;
 use clap::error::ErrorKind as ClapErrorKind;

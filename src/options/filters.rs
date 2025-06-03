@@ -1,4 +1,4 @@
-//! Filtering words based on length, frequency, patterns and exclusion lists.
+//! Word filtering based on length, frequency, patterns and exclusion lists.
 
 use crate::options::case::Case;
 use crate::options::patterns::{ExcludeSet, IncludeSet, PatternList};
@@ -46,32 +46,22 @@ impl Filters {
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{Case, Filters, WordTally, Options, Input, Io};
-    /// use word_tally::options::patterns::PatternList;
-    /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
-    /// // Sample text with various words
-    /// let text = "My life closed twice before its close; \
-    ///             It yet remains to see";
+    /// use word_tally::Filters;
     ///
-    /// // Create minimal filters with just min_chars (no include patterns needed)
+    /// # fn example() -> anyhow::Result<()> {
+    /// // Filter out common words and focus on content
     /// let filters = Filters::default()
-    ///     .with_min_chars(4);
+    ///     .with_min_chars(4)
+    ///     .with_exclude_words(vec!["the".to_string(), "and".to_string(), "for".to_string(), "with".to_string()]);
     ///
-    /// // Create input directly from text bytes
-    /// let input = Input::from_bytes(text);
-    /// let options = Options::default().with_filters(filters);
-    /// let words = WordTally::new(&input, &options)?;
+    /// // Analyze only capitalized words (names, places)
+    /// let name_filter = Filters::default()
+    ///     .with_include_patterns(&vec!["^[A-Z]".to_string()])?;
     ///
-    /// let tally = words.tally();
-    ///
-    /// // Verify words with 'o' and 4+ chars are included
-    /// assert!(tally.iter().any(|(word, _)| word.as_ref() == "life"));
-    /// assert!(tally.iter().any(|(word, _)| word.as_ref() == "before"));
-    /// assert!(tally.iter().any(|(word, _)| word.as_ref() == "close"));
-    ///
-    /// // Verify short words are excluded
-    /// assert!(!tally.iter().any(|(word, _)| word.as_ref() == "my"));
-    /// assert!(!tally.iter().any(|(word, _)| word.as_ref() == "it"));
+    /// // Focus on frequently used terms
+    /// let frequent = Filters::default()
+    ///     .with_min_count(5)
+    ///     .with_min_chars(3);
     /// # Ok(())
     /// # }
     /// ```
