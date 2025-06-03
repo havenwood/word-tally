@@ -24,7 +24,7 @@ Arguments:
 
 Options:
   -I, --io <STRATEGY>            I/O strategy [default: parallel-stream] [possible values: parallel-stream, stream, parallel-mmap, parallel-in-memory]
-  -e, --encoding <ENCODING>      Word boundary detection encoding [default: unicode] [possible values: unicode, ascii]
+  -e, --encoding <ENCODING>      Text encoding mode [default: unicode] [possible values: unicode, ascii]
   -c, --case <FORMAT>            Case normalization [default: original] [possible values: original, upper, lower]
   -s, --sort <ORDER>             Sort order [default: desc] [possible values: desc, asc, unsorted]
   -m, --min-chars <COUNT>        Exclude words containing fewer than min chars
@@ -76,8 +76,13 @@ word-tally file1.txt file2.txt file3.txt
 # Mix stdin and files
 cat header.txt | word-tally - body.txt footer.txt
 
-# ASCII-only mode (faster, fails on non-ASCII)
+# ASCII encoding mode - validates input is ASCII-only, fails on non-ASCII bytes
+# Uses simple ASCII word boundaries (faster than Unicode)
 word-tally --encoding=ascii document.txt
+
+# Unicode encoding mode (default) - accepts any UTF-8 text
+# Uses ICU4X for proper Unicode word boundary detection
+word-tally --encoding=unicode document.txt
 ```
 
 **Note:** Memory mapping (`parallel-mmap`) requires seekable files and cannot be used with stdin or pipes.
@@ -136,6 +141,27 @@ Format and pipe the JSON output to the [wordcloud_cli](https://github.com/amuell
 word-tally --format=json README.md | jq -r 'map(.[0] + " ") | join(" ")' | wordcloud_cli --imagefile wordcloud.png
 ```
 
+### Encoding modes
+
+The `--encoding` flag controls both text validation and word boundary detection:
+
+**Unicode mode (default)**
+- Accepts any valid UTF-8 text
+- Uses ICU4X for Unicode-compliant word segmentation & case conversion
+
+**ASCII mode**
+- Accepts only ASCII text
+- Uses simple ASCII word boundaries (alphanumeric + apostrophes)
+- Faster processing for ASCII-only text
+
+```sh
+# Unicode mode - handles any UTF-8 text
+echo "café naïve 你好" | word-tally --encoding=unicode
+
+# ASCII mode - rejects non-ASCII input
+echo "café" | word-tally --encoding=ascii  # Error: non-ASCII byte at position 3
+```
+
 ### Case normalization
 
 ```sh
@@ -192,12 +218,13 @@ echo "fe fi fi fo fo fo" | word-tally --verbose
 #>> entry-delimiter "\n"
 #>> case original
 #>> order desc
-#>> processing parallel
-#>> io streamed
+#>> io parallel-stream
+#>> encoding unicode
 #>> min-chars none
 #>> min-count none
 #>> exclude-words none
 #>> exclude-patterns none
+#>> include-patterns none
 #>>
 #>> fo 3
 #>> fi 2

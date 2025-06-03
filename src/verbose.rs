@@ -32,6 +32,7 @@ struct VerboseData<'a> {
     case: String,
     order: String,
     io: String,
+    encoding: String,
     min_chars: Option<usize>,
     min_count: Option<usize>,
     exclude_words: Option<&'a word_tally::ExcludeWords>,
@@ -55,6 +56,7 @@ impl<'a> VerboseData<'a> {
             case: options.case().to_string(),
             order: options.sort().to_string(),
             io: options.io().to_string(),
+            encoding: options.encoding().to_string(),
             min_chars: filters.min_chars(),
             min_count: filters.min_count(),
             exclude_words: filters.exclude_words(),
@@ -74,6 +76,7 @@ impl<'a> VerboseData<'a> {
             ("case", self.case.to_string()),
             ("order", self.order.to_string()),
             ("io", self.io.to_string()),
+            ("encoding", self.encoding.to_string()),
             (
                 "min-chars",
                 self.min_chars.map_or("none".to_string(), |v| v.to_string()),

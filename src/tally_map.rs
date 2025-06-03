@@ -9,16 +9,11 @@ use std::{
 use hashbrown::{HashMap, hash_map};
 
 use anyhow::{Context, Result};
-use icu_segmenter::{WordSegmenter, options::WordBreakInvariantOptions};
 use memchr::memchr2_iter;
 use rayon::prelude::*;
 
 use crate::options::{Options, case::Case, encoding::Encoding, io::Io, performance::Performance};
 use crate::{Count, Input, Word, WordTallyError};
-
-thread_local! {
-    static WORD_SEGMENTER: WordSegmenter = WordSegmenter::new_dictionary(WordBreakInvariantOptions::default()).static_to_owned();
-}
 
 /// Map for tracking word counts with non-deterministic iteration order.
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
@@ -64,111 +59,21 @@ impl TallyMap {
     }
 
     /// Retains only the elements specified by the predicate.
-    pub fn retain<F>(&mut self, predicate: F)
-    where
-        F: FnMut(&Word, &mut Count) -> bool,
-    {
+    pub fn retain(&mut self, predicate: impl FnMut(&Word, &mut Count) -> bool) {
         self.inner.retain(predicate);
     }
 
-    /// Extends the tally map with word counts from a string slice using Unicode segmentation.
-    #[inline]
-    pub fn add_words(&mut self, content: &str, case: Case) {
-        // Use thread-local ICU segmenter with word types to identify actual words
-        WORD_SEGMENTER.with(|segmenter| {
-            let mut last_boundary = 0;
-            segmenter
-                .as_borrowed()
-                .segment_str(content)
-                .iter_with_word_type()
-                .for_each(|(boundary, word_type)| {
-                    if word_type.is_word_like() {
-                        let word = &content[last_boundary..boundary];
-                        match case.normalize_unicode(word) {
-                            Cow::Borrowed(word) => self.increment(word),
-                            Cow::Owned(word) => self.increment_owned(word.into_boxed_str()),
-                        }
-                    }
-                    last_boundary = boundary;
-                });
-        });
-    }
-
-    /// Extends the tally map with word counts using ASCII-only segmentation.
+    /// Extends the tally map with word counts from a string slice.
     ///
     /// # Errors
     ///
-    /// Returns `Error::NonAsciiInAsciiMode` if non-ASCII bytes are encountered.
+    /// Returns `Error::NonAsciiInAsciiMode` if `encoding` is ASCII and non-ASCII bytes are encountered.
     #[inline]
-    pub fn add_words_ascii(&mut self, content: &str, case: Case) -> Result<()> {
-        let bytes = content.as_bytes();
-
-        // Fast path: validate entire content is ASCII
-        if !bytes.is_ascii() {
-            // Find exact position of first non-ASCII byte
-            for (position, &byte) in bytes.iter().enumerate() {
-                if !byte.is_ascii() {
-                    return Err(crate::error::Error::NonAsciiInAsciiMode { byte, position }.into());
-                }
-            }
-        }
-
-        // Now we know all bytes are ASCII, so we can process without validation
-        let mut pos = 0;
-
-        while pos < bytes.len() {
-            // Skip non-word characters
-            while pos < bytes.len() {
-                let byte = bytes[pos];
-                if byte.is_ascii_alphanumeric() {
-                    break;
-                }
-                pos += 1;
-            }
-
-            if pos >= bytes.len() {
-                break;
-            }
-
-            let word_start = pos;
-
-            // Find end of word
-            while pos < bytes.len() {
-                let byte = bytes[pos];
-                if byte.is_ascii_alphanumeric() || byte == b'\'' {
-                    pos += 1;
-                } else {
-                    break;
-                }
-            }
-
-            // We know this slice is valid UTF-8 because we validated all bytes are ASCII
-            let word = &content[word_start..pos];
-
-            match case.normalize_ascii(word) {
-                Cow::Borrowed(word) => self.increment(word),
-                Cow::Owned(word) => self.increment_owned(word.into_boxed_str()),
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Adds words based on the encoding, delegating to the appropriate method.
-    #[inline]
-    fn add_words_with_encoding(
-        &mut self,
-        content: &str,
-        case: Case,
-        encoding: Encoding,
-    ) -> Result<()> {
-        match encoding {
-            Encoding::Unicode => {
-                self.add_words(content, case);
-                Ok(())
-            }
-            Encoding::Ascii => self.add_words_ascii(content, case),
-        }
+    pub fn add_words(&mut self, content: &str, case: Case, encoding: Encoding) -> Result<()> {
+        encoding.segment_words(content, case, |word| match word {
+            Cow::Borrowed(w) => self.increment(w),
+            Cow::Owned(w) => self.increment_owned(w.into_boxed_str()),
+        })
     }
 
     /// Increments a word's tally by reference to avoid duplicate allocation.
@@ -318,7 +223,7 @@ impl TallyMap {
 
                 match content {
                     Ok(text) => {
-                        tally.add_words_with_encoding(text, case, encoding)?;
+                        tally.add_words(text, case, encoding)?;
                         remainder.clear();
                     }
                     Err(e) => {
@@ -342,7 +247,7 @@ impl TallyMap {
         if !remainder.is_empty() {
             let final_text = simdutf8::compat::from_utf8(&remainder)
                 .with_context(|| format!("invalid UTF-8 in stream from: {}", input.source()))?;
-            tally.add_words_with_encoding(final_text, case, encoding)?;
+            tally.add_words(final_text, case, encoding)?;
         }
 
         Ok(tally)
@@ -427,7 +332,7 @@ impl TallyMap {
             })
             .map(|chunk| {
                 let mut tally = Self::new();
-                tally.add_words_with_encoding(chunk, case, encoding)?;
+                tally.add_words(chunk, case, encoding)?;
                 Ok(tally)
             })
             .try_reduce(Self::new, |acc, tally| Ok(acc.merge(tally)))
@@ -585,7 +490,7 @@ impl TallyMap {
                 // Final chunk: process sequentially
                 let remaining = Self::parse_utf8_slice(buffer)?;
                 let mut tally = Self::with_capacity(perf.chunk_capacity(buffer.len() as u64));
-                tally.add_words_with_encoding(remaining, case, encoding)?;
+                tally.add_words(remaining, case, encoding)?;
                 Ok(Some((tally, buffer.len())))
             }
             _ => {
@@ -668,7 +573,7 @@ impl TallyMap {
         if e.valid_up_to() > 0 {
             match simdutf8::basic::from_utf8(&buffer[..e.valid_up_to()]) {
                 Ok(valid) => {
-                    tally.add_words_with_encoding(valid, case, encoding)?;
+                    tally.add_words(valid, case, encoding)?;
                 }
                 Err(_) => {
                     // This should not happen if valid_up_to() is correct

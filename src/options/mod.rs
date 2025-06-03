@@ -29,7 +29,7 @@
 //! # Components
 //!
 //! - [`Case`] - Word case normalization
-//! - [`encoding::Encoding`] - Word boundary detection
+//! - [`encoding::Encoding`] - Text encoding validation and word detection
 //! - [`Sort`] - Result ordering
 //! - [`Serialization`] - Output format
 //! - [`Filters`] - Word filtering rules
@@ -93,7 +93,7 @@ pub struct Options {
     /// Performance tuning configuration (threads, memory allocation, chunk size).
     performance: Performance,
 
-    /// Word encoding strategy (unicode, ascii).
+    /// Text encoding strategy (unicode, ascii).
     encoding: Encoding,
 }
 
@@ -177,7 +177,7 @@ impl Options {
         self
     }
 
-    /// Set word encoding strategy.
+    /// Set text encoding strategy.
     #[must_use]
     pub const fn with_encoding(mut self, encoding: Encoding) -> Self {
         self.encoding = encoding;
@@ -220,7 +220,7 @@ impl Options {
         self.io
     }
 
-    /// Get the word encoding strategy.
+    /// Get the text encoding strategy.
     #[must_use]
     pub const fn encoding(&self) -> Encoding {
         self.encoding

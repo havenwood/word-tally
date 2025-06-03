@@ -1,6 +1,6 @@
 //! Tests for I/O functionality.
 
-use std::collections::HashMap;
+use hashbrown::HashMap;
 use std::fs;
 use std::io::Write;
 

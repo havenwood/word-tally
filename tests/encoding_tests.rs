@@ -1,12 +1,11 @@
 //! Tests for encoding functionality (ASCII and Unicode modes)
 
-use std::collections::{HashMap, HashSet};
-
 use assert_cmd::Command;
-use word_tally::{Case, TallyMap};
+use hashbrown::{HashMap, HashSet};
+use word_tally::{Case, TallyMap, options::encoding::Encoding};
 
 fn word_tally() -> Command {
-    Command::cargo_bin("word-tally").expect("word-tally binary should be available")
+    Command::cargo_bin("word-tally").expect("binary should be available")
 }
 
 fn parse_output(output: &[u8]) -> HashSet<(String, usize)> {
@@ -19,9 +18,7 @@ fn parse_output(output: &[u8]) -> HashSet<(String, usize)> {
             assert_eq!(parts.len(), 2, "Invalid output line: {line}");
             (
                 parts[0].to_string(),
-                parts[1]
-                    .parse::<usize>()
-                    .expect("second part should be a valid count"),
+                parts[1].parse().expect("should be valid count"),
             )
         })
         .collect()
@@ -57,40 +54,73 @@ fn test_encoding_parity(input: &str, args: &[&str]) {
     );
 }
 
-fn test_encoding_parity_batch(test_cases: &[(&str, &[&str])]) {
-    for (input, args) in test_cases {
-        test_encoding_parity(input, args);
-    }
-}
-
-// =============================================================================
-// ASCII mode validation tests
-// =============================================================================
+// Segmenter tests
 
 #[test]
-fn test_add_words_ascii() {
-    let mut tally = TallyMap::new();
+fn test_basic_segmentation() {
+    fn test_segmenter(encoding: Encoding, expected_words: &[&str]) {
+        let mut tally = TallyMap::new();
+        tally
+            .add_words("Hello, world!", Case::Original, encoding)
+            .expect("segmentation should succeed");
 
-    // Valid ASCII text
-    let result = tally.add_words_ascii("Hello world", Case::Lower);
-    assert!(result.is_ok());
-    assert_eq!(tally.len(), 2);
+        let words: Vec<String> = tally.into_iter().map(|(w, _)| w.into()).collect();
+        assert_eq!(words.len(), expected_words.len());
+        for word in expected_words {
+            assert!(words.contains(&(*word).to_string()));
+        }
+    }
 
-    // Non-ASCII text should fail
-    let mut tally2 = TallyMap::new();
-    let result = tally2.add_words_ascii("café", Case::Lower);
-    assert!(result.is_err());
-
-    // Test apostrophes are handled
-    let mut tally3 = TallyMap::new();
-    let result = tally3.add_words_ascii("don't can't", Case::Lower);
-    assert!(result.is_ok());
-    assert_eq!(tally3.len(), 2);
+    test_segmenter(Encoding::Unicode, &["Hello", "world"]);
+    test_segmenter(Encoding::Ascii, &["Hello", "world"]);
 }
 
-// =============================================================================
+#[test]
+fn test_apostrophes() {
+    let mut tally = TallyMap::new();
+    tally
+        .add_words("don't can't", Case::Original, Encoding::Ascii)
+        .expect("should handle apostrophes");
+
+    let words: Vec<String> = tally.into_iter().map(|(w, _)| w.into()).collect();
+    assert_eq!(words.len(), 2);
+    assert!(words.contains(&"don't".to_string()));
+    assert!(words.contains(&"can't".to_string()));
+}
+
+#[test]
+fn test_ascii_rejects_non_ascii() {
+    let mut tally = TallyMap::new();
+    let result = tally.add_words("café", Case::Original, Encoding::Ascii);
+    assert!(result.is_err());
+    assert!(
+        result
+            .expect_err("should have non-ASCII error")
+            .to_string()
+            .contains("non-ASCII")
+    );
+}
+
+#[test]
+fn test_case_normalization() {
+    fn test_case(encoding: Encoding, case: Case, expected: &[&str]) {
+        let mut tally = TallyMap::new();
+        tally
+            .add_words("Hello WORLD", case, encoding)
+            .expect("case normalization should succeed");
+
+        let words: Vec<String> = tally.into_iter().map(|(w, _)| w.into()).collect();
+        assert_eq!(words.len(), expected.len());
+        for word in expected {
+            assert!(words.contains(&(*word).to_string()));
+        }
+    }
+
+    test_case(Encoding::Unicode, Case::Lower, &["hello", "world"]);
+    test_case(Encoding::Ascii, Case::Upper, &["HELLO", "WORLD"]);
+}
+
 // Unicode handling tests
-// =============================================================================
 
 #[test]
 fn test_unicode_words() {
@@ -109,8 +139,12 @@ fn test_unicode_words() {
         .expect("output should be valid UTF-8")
         .lines()
         .filter_map(|line| {
-            line.split_once(char::is_whitespace)
-                .map(|(word, count)| (word.trim(), count.trim().parse().expect("valid count")))
+            line.split_once(char::is_whitespace).map(|(word, count)| {
+                (
+                    word.trim(),
+                    count.trim().parse().expect("should be valid count"),
+                )
+            })
         })
         .collect();
 
@@ -123,9 +157,7 @@ fn test_unicode_words() {
 
 #[test]
 fn test_unicode_min_chars() {
-    // Test that Unicode character length is calculated correctly
-    let output = Command::cargo_bin("word-tally")
-        .expect("word-tally binary should be available")
+    let output = word_tally()
         .arg("--min-chars=4")
         .write_stdin("a café naive naïve")
         .assert()
@@ -138,43 +170,42 @@ fn test_unicode_min_chars() {
         .expect("output should be valid UTF-8")
         .lines()
         .filter(|line| !line.is_empty())
-        .map(|line| {
-            line.split_whitespace()
-                .next()
-                .expect("line should have at least one word")
-        })
+        .map(|line| line.split_whitespace().next().expect("should have word"))
         .collect();
 
-    assert!(!words.contains(&"a")); // 1 char
-    assert!(words.contains(&"café")); // 4 chars
-    assert!(words.contains(&"naive")); // 5 chars
-    assert!(words.contains(&"naïve")); // 5 chars
+    assert!(!words.contains(&"a"));
+    assert!(words.contains(&"café"));
+    assert!(words.contains(&"naive"));
+    assert!(words.contains(&"naïve"));
 }
 
-// =============================================================================
 // ASCII/Unicode parity tests (for ASCII-only input)
-// =============================================================================
 
 #[test]
 fn test_ascii_parity_basic() {
-    test_encoding_parity_batch(&[
-        ("hello world test data hello", &[]),
+    let test_cases = [
+        ("hello world test data hello", &[][..]),
         ("don't can't it's we're I'll they'll", &[]),
         ("test123 456test hello2world 2fast2furious", &[]),
         ("hello, world! How are you? I'm fine... Really!", &[]),
-    ]);
+    ];
+
+    for (input, args) in &test_cases {
+        test_encoding_parity(input, args);
+    }
 }
 
 #[test]
 fn test_case_handling_parity() {
     let input = "Hello WORLD hello World HELLO world";
-    test_encoding_parity_batch(&[(input, &["--case=original"]), (input, &["--case=lower"])]);
+    test_encoding_parity(input, &["--case=original"]);
+    test_encoding_parity(input, &["--case=lower"]);
 }
 
 #[test]
 fn test_edge_cases_parity() {
-    test_encoding_parity_batch(&[
-        ("word", &[]),
+    let test_cases = [
+        ("word", &[][..]),
         ("", &[]),
         ("   ", &[]),
         ("a b c", &[]),
@@ -184,22 +215,19 @@ fn test_edge_cases_parity() {
         ("C:\\path\\file", &[]),
         ("test...test", &[]),
         ("test--test", &[]),
-    ]);
+        ("'twas rock'n'roll y'all ma'am", &[]),
+    ];
+
+    for (input, args) in &test_cases {
+        test_encoding_parity(input, args);
+    }
 }
 
-#[test]
-fn test_multiple_apostrophes() {
-    test_encoding_parity("'twas rock'n'roll y'all ma'am", &[]);
-}
-
-// =============================================================================
 // Documented differences between ASCII and Unicode
-// =============================================================================
 
 #[test]
-fn test_documented_differences() {
-    // Test that Unicode handles non-ASCII characters while ASCII fails
-    let unicode_output = word_tally()
+fn test_unicode_accepts_non_ascii() {
+    let output = word_tally()
         .arg("--encoding=unicode")
         .write_stdin("café naïve")
         .assert()
@@ -208,25 +236,25 @@ fn test_documented_differences() {
         .stdout
         .clone();
 
-    word_tally()
-        .arg("--encoding=ascii")
-        .write_stdin("café naïve")
-        .assert()
-        .failure()
-        .code(65); // ASCII mode fails on non-ASCII input
-
-    let unicode_str = String::from_utf8_lossy(&unicode_output);
-
-    // Unicode should successfully process non-ASCII characters
+    let unicode_str = String::from_utf8_lossy(&output);
     assert!(unicode_str.contains("café"));
     assert!(unicode_str.contains("naïve"));
 }
 
 #[test]
-fn test_ascii_simplicity() {
+fn test_ascii_rejects_non_ascii_cli() {
+    word_tally()
+        .arg("--encoding=ascii")
+        .write_stdin("café naïve")
+        .assert()
+        .failure()
+        .code(65);
+}
+
+#[test]
+fn test_ascii_word_boundaries() {
     let output = word_tally()
         .arg("--encoding=ascii")
-        .arg("--case=lower")
         .arg("--sort=asc")
         .write_stdin("test@example.com, hello-world, 3.14, 'quoted', test's, rock'n'roll")
         .assert()
@@ -239,9 +267,10 @@ fn test_ascii_simplicity() {
         .expect("output should be valid UTF-8")
         .lines()
         .filter(|line| !line.is_empty())
-        .map(|line| line.split_whitespace().next().expect("valid word"))
+        .map(|line| line.split_whitespace().next().expect("should have word"))
         .collect();
 
+    // ASCII mode splits on non-alphanumeric except apostrophes
     let expected_words = [
         "test",
         "example",
@@ -254,7 +283,8 @@ fn test_ascii_simplicity() {
         "test's",
         "rock'n'roll",
     ];
-    for expected in expected_words {
-        assert!(words.contains(&expected), "Missing word: {expected}");
+
+    for expected in &expected_words {
+        assert!(words.contains(expected), "Missing word: {expected}");
     }
 }

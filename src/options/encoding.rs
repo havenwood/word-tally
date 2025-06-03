@@ -1,8 +1,19 @@
-//! Word encoding strategies for boundary detection.
+//! Word encoding strategies for text processing and validation.
 
-use clap::ValueEnum;
-use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::fmt::{self, Display, Formatter};
+
+use anyhow::Result;
+use clap::ValueEnum;
+use icu_segmenter::{WordSegmenter, options::WordBreakInvariantOptions};
+use serde::{Deserialize, Serialize};
+
+use crate::error::Error;
+use crate::options::case::Case;
+
+thread_local! {
+    static WORD_SEGMENTER: WordSegmenter = WordSegmenter::new_dictionary(WordBreakInvariantOptions::default()).static_to_owned();
+}
 
 /// Determines how word boundaries are detected.
 ///
@@ -16,29 +27,34 @@ use std::fmt::{self, Display, Formatter};
 /// // "naïve" → ["naïve"] (handles diacritics)
 /// let unicode = Encoding::Unicode;
 ///
-/// // ASCII: same word splitting, rejects non-ASCII
+/// // ASCII: validates ASCII-only, rejects non-ASCII
 /// // "café" → error (non-ASCII rejected)
 /// // "naïve" → error (non-ASCII rejected)
 /// let ascii = Encoding::Ascii;
 /// ```
 #[derive(
-    Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize, ValueEnum,
+    Clone,
+    Copy,
+    Debug,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    Serialize,
+    Deserialize,
+    ValueEnum,
 )]
 #[serde(rename_all = "camelCase")]
-#[value(rename_all = "lower")]
 pub enum Encoding {
-    /// Unicode-compliant word segmentation (default).
+    /// Unicode text encoding - accepts any UTF-8 text (default).
+    #[default]
     #[value(alias = "utf8", alias = "utf-8")]
     Unicode,
 
-    /// ASCII-only word segmentation using whitespace and punctuation.
+    /// ASCII-only encoding - validates and rejects non-ASCII bytes.
     Ascii,
-}
-
-impl Default for Encoding {
-    fn default() -> Self {
-        Self::Unicode
-    }
 }
 
 impl Display for Encoding {
@@ -51,15 +67,76 @@ impl Display for Encoding {
 }
 
 impl Encoding {
-    /// Whether this encoding uses Unicode word boundaries.
-    #[must_use]
-    pub const fn is_unicode(&self) -> bool {
-        matches!(self, Self::Unicode)
-    }
+    /// Process text and segment into words based on this encoding.
+    ///
+    /// # Errors
+    ///
+    /// Returns `Error::NonAsciiInAsciiMode` if encoding is ASCII and non-ASCII bytes are encountered.
+    #[inline]
+    pub(crate) fn segment_words(
+        self,
+        content: &str,
+        case: Case,
+        mut word_fn: impl FnMut(Cow<'_, str>),
+    ) -> Result<()> {
+        match self {
+            Self::Unicode => {
+                WORD_SEGMENTER.with(|segmenter| {
+                    let mut last_boundary = 0;
+                    segmenter
+                        .as_borrowed()
+                        .segment_str(content)
+                        .iter_with_word_type()
+                        .for_each(|(boundary, word_type)| {
+                            if word_type.is_word_like() {
+                                let word = &content[last_boundary..boundary];
+                                word_fn(case.normalize_unicode(word));
+                            }
+                            last_boundary = boundary;
+                        });
+                });
 
-    /// Whether this encoding uses ASCII-only word boundaries.
-    #[must_use]
-    pub const fn is_ascii(&self) -> bool {
-        matches!(self, Self::Ascii)
+                Ok(())
+            }
+            Self::Ascii => {
+                let bytes = content.as_bytes();
+
+                // Validate entire content is ASCII
+                if let Some(position) = bytes.iter().position(|&b| !b.is_ascii()) {
+                    return Err(Error::NonAsciiInAsciiMode {
+                        byte: bytes[position],
+                        position,
+                    }
+                    .into());
+                }
+
+                let mut pos = 0;
+                while pos < bytes.len() {
+                    // Skip non-word characters
+                    while pos < bytes.len() && !bytes[pos].is_ascii_alphanumeric() {
+                        pos += 1;
+                    }
+
+                    if pos >= bytes.len() {
+                        break;
+                    }
+
+                    let word_start = pos;
+
+                    // Find end of word (alphanumeric or apostrophe)
+                    while pos < bytes.len()
+                        && (bytes[pos].is_ascii_alphanumeric() || bytes[pos] == b'\'')
+                    {
+                        pos += 1;
+                    }
+
+                    // We know this slice is valid UTF-8 because all bytes are ASCII
+                    let word = &content[word_start..pos];
+                    word_fn(case.normalize_ascii(word));
+                }
+
+                Ok(())
+            }
+        }
     }
 }

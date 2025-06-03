@@ -38,6 +38,7 @@ Tests for specific modules:
 - `output_tests.rs` - Output destinations
 - `patterns_tests.rs` - Regex patterns
 - `performance_tests.rs` - Performance settings
+- `segmentation_tests.rs` - Word segmentation logic
 - `serialization_tests.rs` - Serialization formats
 - `threads_tests.rs` - Thread configuration
 - `verbose_tests.rs` - Verbose output logic

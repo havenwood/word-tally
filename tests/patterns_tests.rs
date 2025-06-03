@@ -1,5 +1,4 @@
-use std::collections::HashSet;
-
+use hashbrown::HashSet;
 use word_tally::{ExcludeSet, IncludeSet};
 
 #[test]

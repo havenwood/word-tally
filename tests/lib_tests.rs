@@ -1,9 +1,10 @@
 //! Tests for library functionality.
 
-use std::collections::HashSet;
 use std::fs;
 use std::io::Write;
 use std::sync::Arc;
+
+use hashbrown::HashSet;
 use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{

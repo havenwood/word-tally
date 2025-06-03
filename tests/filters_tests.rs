@@ -2,14 +2,16 @@
 
 use word_tally::PatternList;
 use word_tally::options::filters::{ExcludeWords, ExcludeWordsList};
-use word_tally::{Case, Filters, TallyMap};
+use word_tally::{Case, Filters, TallyMap, options::encoding::Encoding};
 
 // Helper function to create TallyMap from counts
 fn tally_map_from_counts(counts: &[(&str, usize)]) -> TallyMap {
     let mut tally = TallyMap::new();
     for (word, count) in counts {
         for _ in 0..*count {
-            tally.add_words(word, Case::Original);
+            tally
+                .add_words(word, Case::Original, Encoding::Unicode)
+                .expect("valid unicode");
         }
     }
     tally
@@ -172,7 +174,13 @@ fn test_serialization_with_patterns() {
     assert!(!deserialized_include_patterns.matches("123"));
 
     let mut tally_map = TallyMap::new();
-    tally_map.add_words("the the the the the test test 123 123 123", Case::Original);
+    tally_map
+        .add_words(
+            "the the the the the test test 123 123 123",
+            Case::Original,
+            Encoding::Unicode,
+        )
+        .expect("valid unicode");
 
     deserialized_filters.apply(&mut tally_map, Case::Original);
 
@@ -193,7 +201,7 @@ fn test_multiple_regexp_patterns() {
         .expect("execute operation");
 
     let mut tally_map = TallyMap::new();
-    tally_map.add_words("apple apple apple banana banana eating eating eating eating eating orange running running running running Example Example test test test test test test", Case::Original);
+    tally_map.add_words("apple apple apple banana banana eating eating eating eating eating orange running running running running Example Example test test test test test test", Case::Original, Encoding::Unicode).expect("valid unicode");
 
     filters.apply(&mut tally_map, Case::Original);
 
@@ -412,10 +420,13 @@ fn test_include_exclude_patterns_combination() {
 fn test_case_normalization_with_exclude_words() {
     // Create a TallyMap with case-normalized words
     let mut tally_map = TallyMap::new();
-    tally_map.add_words(
-        "hello hello hello Hello Hello HELLO world world world world",
-        Case::Lower,
-    );
+    tally_map
+        .add_words(
+            "hello hello hello Hello Hello HELLO world world world world",
+            Case::Lower,
+            Encoding::Unicode,
+        )
+        .expect("valid unicode");
 
     let exclude_words = vec!["hello".to_string()];
     let filters = Filters::default().with_exclude_words(exclude_words);

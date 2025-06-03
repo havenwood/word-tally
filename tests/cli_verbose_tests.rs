@@ -56,7 +56,7 @@ fn verbose_without_input() {
         .arg("-v")
         .assert()
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\nentry-delimiter \"\\n\"\ncase original\norder desc\nio parallel-stream\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\nentry-delimiter \"\\n\"\ncase original\norder desc\nio parallel-stream\nencoding unicode\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 

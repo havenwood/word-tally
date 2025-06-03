@@ -29,7 +29,7 @@ pub(crate) struct Args {
     #[arg(short = 'I', long, value_enum, default_value_t = Io::ParallelStream, value_name = "STRATEGY")]
     io: Io,
 
-    /// Word boundary detection encoding.
+    /// Text encoding mode for validation and word boundary detection.
     #[arg(short = 'e', long, value_enum, default_value_t = Encoding::Unicode, value_name = "ENCODING")]
     encoding: Encoding,
 

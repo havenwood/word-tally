@@ -1,11 +1,13 @@
-use word_tally::{Case, Input, Options, TallyMap};
+use word_tally::{Case, Input, Options, TallyMap, options::encoding::Encoding};
 
 // Helper to create TallyMap from word pairs
 fn make_tally(words: &[(&str, usize)]) -> TallyMap {
     let mut tally = TallyMap::new();
     for (word, count) in words {
         for _ in 0..*count {
-            tally.add_words(word, Case::Original);
+            tally
+                .add_words(word, Case::Original, Encoding::Unicode)
+                .expect("unicode segmentation should not fail");
         }
     }
     tally
@@ -37,7 +39,9 @@ fn test_is_empty() {
     let mut tally = TallyMap::new();
     assert!(tally.is_empty());
 
-    tally.add_words("hello", Case::Original);
+    tally
+        .add_words("hello", Case::Original, Encoding::Unicode)
+        .expect("unicode segmentation should not fail");
     assert!(!tally.is_empty());
 }
 
@@ -46,13 +50,19 @@ fn test_len() {
     let mut tally = TallyMap::new();
     assert_eq!(tally.len(), 0);
 
-    tally.add_words("hello", Case::Original);
+    tally
+        .add_words("hello", Case::Original, Encoding::Unicode)
+        .expect("unicode segmentation should not fail");
     assert_eq!(tally.len(), 1);
 
-    tally.add_words("world", Case::Original);
+    tally
+        .add_words("world", Case::Original, Encoding::Unicode)
+        .expect("unicode segmentation should not fail");
     assert_eq!(tally.len(), 2);
 
-    tally.add_words("hello", Case::Original);
+    tally
+        .add_words("hello", Case::Original, Encoding::Unicode)
+        .expect("unicode segmentation should not fail");
     assert_eq!(tally.len(), 2);
 }
 
@@ -91,7 +101,9 @@ fn test_into_tally() {
 #[test]
 fn test_add_words_original_case() {
     let mut tally = TallyMap::new();
-    tally.add_words("Hello WORLD hello", Case::Original);
+    tally
+        .add_words("Hello WORLD hello", Case::Original, Encoding::Unicode)
+        .expect("unicode segmentation should not fail");
     assert_eq!(tally.len(), 3);
 
     let words: Vec<String> = tally.into_iter().map(|(w, _)| w.into()).collect();
@@ -103,7 +115,9 @@ fn test_add_words_original_case() {
 #[test]
 fn test_add_words_lower_case() {
     let mut tally = TallyMap::new();
-    tally.add_words("Hello WORLD hello", Case::Lower);
+    tally
+        .add_words("Hello WORLD hello", Case::Lower, Encoding::Unicode)
+        .expect("unicode segmentation should not fail");
     assert_eq!(tally.len(), 2);
 
     let result: Vec<(String, usize)> = tally.into_iter().map(|(w, c)| (w.into(), c)).collect();
@@ -124,7 +138,9 @@ fn test_add_words_lower_case() {
 #[test]
 fn test_add_words_upper_case() {
     let mut tally = TallyMap::new();
-    tally.add_words("Hello WORLD hello", Case::Upper);
+    tally
+        .add_words("Hello WORLD hello", Case::Upper, Encoding::Unicode)
+        .expect("unicode segmentation should not fail");
     assert_eq!(tally.len(), 2);
 
     let result: Vec<(String, usize)> = tally.into_iter().map(|(w, c)| (w.into(), c)).collect();

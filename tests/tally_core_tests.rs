@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet};
 use std::io::Write;
 
+use hashbrown::{HashMap, HashSet};
 use tempfile::NamedTempFile;
 use word_tally::{
     Case, Count, Filters, Input, Io, Options, Performance, Serialization, Sort, WordTally,
