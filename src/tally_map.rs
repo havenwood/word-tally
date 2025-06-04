@@ -245,7 +245,7 @@ impl TallyMap {
 
         // Process any remaining data
         if !remainder.is_empty() {
-            let final_text = simdutf8::compat::from_utf8(&remainder)
+            let final_text = simdutf8::basic::from_utf8(&remainder)
                 .with_context(|| format!("invalid UTF-8 in stream from: {}", input.source()))?;
             tally.add_words(final_text, case, encoding)?;
         }
@@ -504,59 +504,16 @@ impl TallyMap {
         }
     }
 
-    /// Creates a UTF-8 error using `simdutf8` for consistent error handling.
-    fn create_utf8_error(buffer: &[u8], byte_position: usize, context: &str) -> anyhow::Error {
-        let message = match simdutf8::basic::from_utf8(buffer) {
-            Err(_) => {
-                format!("UTF-8 validation failed at byte {byte_position}: invalid UTF-8 sequence")
-            }
-            Ok(_) => format!("Inconsistent UTF-8 validation in {context}"),
-        };
-
-        if message.starts_with("UTF-8 validation failed") {
-            WordTallyError::Utf8 {
-                byte: byte_position,
-                message,
-            }
-        } else {
-            WordTallyError::Config(message)
-        }
-        .into()
-    }
-
-    /// Find the last valid UTF-8 character boundary at or before the given position.
-    fn find_valid_boundary(buffer: &[u8], valid_len: usize) -> usize {
-        if valid_len == 0 {
-            return 0;
-        }
-
-        (0..=valid_len)
-            .rev()
-            .find(|&len| simdutf8::basic::from_utf8(&buffer[..len]).is_ok())
-            .unwrap_or(0)
-    }
-
-    /// Parse a UTF-8 slice with error recovery, truncating at last valid boundary on error.
+    /// Parse a UTF-8 slice with fast validation.
+    #[inline]
     fn parse_utf8_slice(buffer: &[u8]) -> Result<&str> {
-        match simdutf8::compat::from_utf8(buffer) {
-            Ok(s) => Ok(s),
-            Err(e) => {
-                let valid_up_to = e.valid_up_to();
-                let adjusted_len = Self::find_valid_boundary(buffer, valid_up_to);
-
-                if adjusted_len == 0 {
-                    return Err(Self::create_utf8_error(
-                        buffer,
-                        valid_up_to,
-                        "parse_utf8_slice",
-                    ));
-                }
-
-                // Try parsing the adjusted slice
-                simdutf8::basic::from_utf8(&buffer[..adjusted_len])
-                    .map_err(|_| Self::create_utf8_error(buffer, valid_up_to, "recovery"))
+        simdutf8::basic::from_utf8(buffer).map_err(|_| {
+            WordTallyError::Utf8 {
+                byte: 0,
+                message: "invalid UTF-8 sequence".into(),
             }
-        }
+            .into()
+        })
     }
 
     /// Handle UTF-8 decoding errors by processing valid portion and preserving invalid bytes.
@@ -569,25 +526,16 @@ impl TallyMap {
         buffer: &[u8],
         process_until: usize,
     ) -> Result<()> {
-        // Handle UTF-8 boundary case
-        if e.valid_up_to() > 0 {
-            match simdutf8::basic::from_utf8(&buffer[..e.valid_up_to()]) {
-                Ok(valid) => {
-                    tally.add_words(valid, case, encoding)?;
-                }
-                Err(_) => {
-                    // This should not happen if valid_up_to() is correct
-                    return Err(Self::create_utf8_error(
-                        buffer,
-                        e.valid_up_to(),
-                        "stream processing",
-                    ));
-                }
-            }
+        let valid_up_to = e.valid_up_to();
+        if valid_up_to > 0 {
+            // simdutf8 guarantees this is valid UTF-8
+            let valid = std::str::from_utf8(&buffer[..valid_up_to])
+                .expect("simdutf8 guarantees valid UTF-8 up to valid_up_to");
+            tally.add_words(valid, case, encoding)?;
         }
         // Keep invalid portion for next iteration
         remainder.clear();
-        remainder.extend_from_slice(&buffer[e.valid_up_to()..process_until]);
+        remainder.extend_from_slice(&buffer[valid_up_to..process_until]);
         Ok(())
     }
 }
