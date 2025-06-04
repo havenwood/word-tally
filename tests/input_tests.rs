@@ -39,7 +39,7 @@ fn test_input_new_mmap() {
     Write::write_all(&mut temp_file, test_data).expect("write test data");
 
     let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
-    assert!(matches!(input, Input::Mmap(_, _)));
+    assert!(matches!(input, Input::MemoryMap(_, _)));
 
     let filename = temp_file
         .path()
@@ -88,22 +88,6 @@ fn test_input_display() {
 
     let bytes_input = Input::from_bytes(b"test");
     assert_eq!(format!("{bytes_input}"), "Bytes");
-}
-
-#[test]
-fn test_input_clone() {
-    let test_data = b"Clone test data";
-    let mut temp_file = NamedTempFile::new().expect("create temp file");
-    Write::write_all(&mut temp_file, test_data).expect("write test data");
-
-    let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
-    // Need the clone to test the Clone trait implementation works correctly
-    #[allow(clippy::redundant_clone)]
-    let cloned = input.clone();
-
-    assert_eq!(input.source(), cloned.source());
-    assert_eq!(input.size(), cloned.size());
-    assert_eq!(format!("{input:?}"), format!("{:?}", cloned));
 }
 
 #[test]

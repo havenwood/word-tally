@@ -8,17 +8,16 @@ use memmap2::Mmap;
 use std::fmt::{self, Formatter};
 use std::fs::{self, File};
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
 
 /// `Input` to read from a file, stdin, memory-mapped source, or bytes.
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum Input {
     /// Read from standard input.
     Stdin,
     /// Read from a file.
     File(PathBuf),
     /// Read from a memory-mapped file.
-    Mmap(Arc<Mmap>, PathBuf),
+    MemoryMap(Mmap, PathBuf),
     /// Read from in-memory bytes.
     Bytes(Box<[u8]>),
 }
@@ -83,9 +82,8 @@ impl Input {
                     message: "failed to create memory map".to_string(),
                     source: e,
                 })?;
-                let mmap_arc = Arc::new(mmap);
 
-                Ok(Self::Mmap(mmap_arc, path_buf))
+                Ok(Self::MemoryMap(mmap, path_buf))
             }
             Io::ParallelBytes => Err(WordTallyError::BytesWithPath.into()),
         }
@@ -122,7 +120,7 @@ impl Input {
     pub fn source(&self) -> String {
         match self {
             Self::Stdin => "-".to_string(),
-            Self::File(path) | Self::Mmap(_, path) => path.display().to_string(),
+            Self::File(path) | Self::MemoryMap(_, path) => path.display().to_string(),
             Self::Bytes(_) => "<bytes>".to_string(),
         }
     }
@@ -134,7 +132,7 @@ impl Input {
         match self {
             Self::Stdin => None,
             Self::File(path) => fs::metadata(path).ok().map(|metadata| metadata.len()),
-            Self::Mmap(mmap, _) => Some(mmap.len() as u64),
+            Self::MemoryMap(mmap, _) => Some(mmap.len() as u64),
             Self::Bytes(bytes) => Some(bytes.len() as u64),
         }
     }
@@ -163,7 +161,7 @@ impl fmt::Display for Input {
         match self {
             Self::Stdin => write!(f, "Stdin"),
             Self::File(path) => write!(f, "File({})", path.display()),
-            Self::Mmap(_, path) => write!(f, "Mmap({})", path.display()),
+            Self::MemoryMap(_, path) => write!(f, "Mmap({})", path.display()),
             Self::Bytes(_) => write!(f, "Bytes"),
         }
     }

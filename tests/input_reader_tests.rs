@@ -201,21 +201,22 @@ fn test_input_reader_thread_safety() {
     std::io::Write::write_all(&mut temp_file, test_data).expect("write test data");
 
     let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
-    let thread_input = input.clone();
 
-    std::thread::spawn(move || {
-        let mut reader = thread_input.reader().expect("process test");
+    std::thread::scope(|s| {
+        let handle = s.spawn(|| {
+            let mut reader = input.reader().expect("process test");
+            let mut buffer = Vec::new();
+            reader.read_to_end(&mut buffer).expect("process test");
+            assert_eq!(buffer, test_data);
+        });
+
+        let mut reader = input.reader().expect("process test");
         let mut buffer = Vec::new();
         reader.read_to_end(&mut buffer).expect("process test");
         assert_eq!(buffer, test_data);
-    })
-    .join()
-    .expect("execute operation");
 
-    let mut reader = input.reader().expect("process test");
-    let mut buffer = Vec::new();
-    reader.read_to_end(&mut buffer).expect("process test");
-    assert_eq!(buffer, test_data);
+        handle.join().expect("thread join");
+    });
 }
 
 #[test]
@@ -227,7 +228,7 @@ fn test_mmap_reader_type() {
     let input = Input::new(temp_file.path(), Io::ParallelMmap).expect("create test input");
     let reader = input.reader().expect("process test");
     // Just verify we can create the reader successfully
-    assert!(matches!(reader, word_tally::InputReader::Mmap(_)));
+    assert!(matches!(reader, word_tally::InputReader::MemoryMap(_)));
 }
 
 #[test]

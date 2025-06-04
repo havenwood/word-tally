@@ -11,7 +11,7 @@ use std::io::{self, BufRead, BufReader, Read};
 pub enum InputReader<'a> {
     Stdin(BufReader<io::Stdin>),
     File(BufReader<File>),
-    Mmap(MmapReader<'a>),
+    MemoryMap(MmapReader<'a>),
     Bytes(BytesReader<'a>),
 }
 
@@ -47,8 +47,8 @@ impl<'a> InputReader<'a> {
 
                 Ok(Self::File(BufReader::new(file)))
             }
-            Input::Mmap(mmap, _) => Ok(Self::Mmap(MmapReader::new(mmap.as_ref()))),
-            Input::Bytes(bytes) => Ok(Self::Bytes(BytesReader::new(bytes.as_ref()))),
+            Input::MemoryMap(mmap, _) => Ok(Self::MemoryMap(MmapReader::new(mmap))),
+            Input::Bytes(bytes) => Ok(Self::Bytes(BytesReader::new(bytes))),
         }
     }
 }
@@ -58,7 +58,7 @@ impl Read for InputReader<'_> {
         match self {
             Self::Stdin(reader) => reader.read(buf),
             Self::File(reader) => reader.read(buf),
-            Self::Mmap(reader) => reader.read(buf),
+            Self::MemoryMap(reader) => reader.read(buf),
             Self::Bytes(reader) => reader.read(buf),
         }
     }
@@ -70,7 +70,7 @@ impl BufRead for InputReader<'_> {
         match self {
             Self::Stdin(reader) => reader.fill_buf(),
             Self::File(reader) => reader.fill_buf(),
-            Self::Mmap(reader) => reader.fill_buf(),
+            Self::MemoryMap(reader) => reader.fill_buf(),
             Self::Bytes(reader) => reader.fill_buf(),
         }
     }
@@ -79,7 +79,7 @@ impl BufRead for InputReader<'_> {
         match self {
             Self::Stdin(reader) => reader.consume(amt),
             Self::File(reader) => reader.consume(amt),
-            Self::Mmap(reader) => reader.consume(amt),
+            Self::MemoryMap(reader) => reader.consume(amt),
             Self::Bytes(reader) => reader.consume(amt),
         }
     }

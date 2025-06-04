@@ -141,7 +141,7 @@ impl TallyMap {
                 _ => Err(WordTallyError::BytesInputRequired.into()),
             },
             Io::ParallelMmap => match input {
-                Input::Mmap(mmap_arc, _) => Self::par_memory_count(mmap_arc, options),
+                Input::MemoryMap(mmap, _) => Self::par_memory_count(mmap, options),
                 _ => Err(WordTallyError::MmapStdin.into()),
             },
         }
