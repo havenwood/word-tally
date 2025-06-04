@@ -54,7 +54,7 @@
 //! # }
 //! ```
 
-use std::{slice, str};
+use std::{collections::HashMap, hash::BuildHasher, slice, str};
 
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
@@ -140,6 +140,13 @@ impl WordTally {
 impl From<WordTally> for Vec<(Word, Count)> {
     fn from(word_tally: WordTally) -> Self {
         word_tally.into_tally().into_vec()
+    }
+}
+
+/// Converts a `WordTally` into a `HashMap<Word, Count>`.
+impl<S: BuildHasher + Default> From<WordTally> for HashMap<Word, Count, S> {
+    fn from(word_tally: WordTally) -> Self {
+        word_tally.into_tally().into_iter().collect()
     }
 }
 

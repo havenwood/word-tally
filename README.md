@@ -271,27 +271,31 @@ word-tally = "0.26.0"
 ```
 
 ```rust
+use std::collections::HashMap;
 use word_tally::{Case, Filters, Input, Io, Options, Output, Serialization, WordTally};
 use anyhow::Result;
 
 fn main() -> Result<()> {
     // Basic usage
-    let input = Input::new("document.txt", Io::default())?;
-    let word_tally = WordTally::new(&input, &Options::default())?;
+    let options = Options::default();
+    let input = Input::new("document.txt", options.io())?;
+    let word_tally = WordTally::new(&input, &options)?;
     println!("Total words: {}", word_tally.count());
 
     // Custom configuration
     let options = Options::default()
         .with_case(Case::Lower)
         .with_filters(Filters::default().with_min_chars(3))
-        .with_serialization(Serialization::Json);
+        .with_serialization(Serialization::Json)
+        .with_io(Io::ParallelMmap);
 
-    let input = Input::new("large-file.txt", Io::ParallelMmap)?;
+    let input = Input::new("large-file.txt", options.io())?;
     let tally = WordTally::new(&input, &options)?;
 
-    // Generate formatted output
-    let output = Output::new(&tally);
-    println!("{}", output);
+    // Convert to `HashMap` for fast word lookups
+    let lookup: HashMap<_, _> = tally.into();
+    println!("Count of 'the': {}", *lookup.get("the").unwrap_or(&0));
+    println!("Count of 'word': {}", *lookup.get("word").unwrap_or(&0));
 
     Ok(())
 }

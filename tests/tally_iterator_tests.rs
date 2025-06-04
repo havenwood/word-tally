@@ -1,4 +1,5 @@
 use hashbrown::HashMap;
+use std::collections::HashMap as StdHashMap;
 use std::io::Write;
 use std::sync::Arc;
 use tempfile::NamedTempFile;
@@ -165,4 +166,43 @@ fn test_from_trait_into_vec() {
     assert_eq!(vec_from_tally[1].1, 2);
     assert_eq!(vec_from_tally[2].0.as_ref(), "finite");
     assert_eq!(vec_from_tally[2].1, 1);
+}
+
+#[test]
+fn test_from_trait_into_hashmap() {
+    let input_text = b"perennial amaranth perennial amaranth perennial";
+    let tally = create_test_tally_with_text(input_text, Sort::Desc);
+
+    let hashmap_from_tally: StdHashMap<Word, Count> = tally.into();
+
+    assert_eq!(hashmap_from_tally.len(), 2);
+    assert_eq!(
+        *hashmap_from_tally
+            .get("perennial")
+            .expect("perennial should be present"),
+        3
+    );
+    assert_eq!(
+        *hashmap_from_tally
+            .get("amaranth")
+            .expect("amaranth should be present"),
+        2
+    );
+
+    assert_eq!(*hashmap_from_tally.get("perennial").unwrap_or(&0), 3);
+    assert_eq!(*hashmap_from_tally.get("amaranth").unwrap_or(&0), 2);
+    assert_eq!(*hashmap_from_tally.get("nonexistent").unwrap_or(&0), 0);
+}
+
+#[test]
+fn test_readme_hashmap_pattern() {
+    let input_text = b"seraph celestial seraph celestial seraph";
+    let tally = create_test_tally_with_text(input_text, Sort::Desc);
+
+    let lookup: StdHashMap<_, _> = tally.into();
+
+    assert_eq!(lookup.len(), 2);
+    assert_eq!(*lookup.get("seraph").unwrap_or(&0), 3);
+    assert_eq!(*lookup.get("celestial").unwrap_or(&0), 2);
+    assert_eq!(*lookup.get("nonexistent").unwrap_or(&0), 0);
 }
