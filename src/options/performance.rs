@@ -56,8 +56,8 @@ impl Performance {
     const WORDS_PER_KB: u16 = 128;
     /// At most, 512 words per KB (one word every other byte).
     const MAX_WORDS_PER_KB: u16 = 512;
-    /// Estimated ratio of 128:1 ratio, saves memory (~10:1 is more reasonable for books).
-    const UNIQUENESS_RATIO: u16 = 128;
+    /// Estimated 32 words per unique word (32:1 ratio).
+    const UNIQUENESS_RATIO: u16 = 32;
     /// Estimated stdin size is 256KB.
     const BASE_STDIN_SIZE: u64 = 256 * 1024;
     /// Target chunks per thread (2-4 chunks per thread helps with work stealing).

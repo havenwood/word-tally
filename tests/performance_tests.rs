@@ -6,7 +6,7 @@ use word_tally::{Performance, Threads};
 #[test]
 fn test_constants() {
     // These values are documented in the `Performance` struct
-    assert_eq!(Performance::base_stdin_tally_capacity(), 256);
+    assert_eq!(Performance::base_stdin_tally_capacity(), 1024);
 }
 
 // Test builder methods
@@ -75,7 +75,7 @@ fn test_environment_logic() {
     let perf = Performance::from_env();
 
     // Should get defaults when no env vars are set
-    assert_eq!(perf.uniqueness_ratio, 128);
+    assert_eq!(perf.uniqueness_ratio, 32);
     assert_eq!(perf.words_per_kb, 128);
     assert_eq!(perf.chunk_size, 65536);
     assert_eq!(perf.base_stdin_size, 256 * 1024);

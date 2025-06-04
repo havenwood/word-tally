@@ -241,11 +241,9 @@ I/O and processing strategy configuration:
 
 Memory allocation and performance:
 
-- `WORD_TALLY_UNIQUENESS_RATIO` - Ratio of total words to unique words for capacity estimation. Higher values allocate less initial memory. Books tend to have a 10:1 ratio, but a more conservative 256:1 is used as default to reduce unnecessary memory overhead (default: 256)
+- `WORD_TALLY_UNIQUENESS_RATIO` - Ratio of total words to unique words for capacity estimation. Higher values allocate less initial memory. Books tend to have a 10:1 ratio, and a balanced 32:1 is used as default for better performance (default: 32)
 - `WORD_TALLY_WORDS_PER_KB` - Estimated words per KB of text for capacity calculation (default: 128, max: 512)
 - `WORD_TALLY_STDIN_BUFFER_SIZE` - Buffer size for stdin when size cannot be determined (default: 262144)
-- `WORD_TALLY_DEFAULT_CAPACITY` - Default initial capacity when there is no size hint (default: 1024)
-- `WORD_TALLY_WORD_DENSITY` - Multiplier for estimating unique words per chunk (default: 15)
 
 Parallel processing configuration:
 

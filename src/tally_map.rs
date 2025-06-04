@@ -196,7 +196,9 @@ impl TallyMap {
         let mut reader = input.reader()?;
 
         let (batch_size, target_batch_size) = Self::calculate_batch_sizes(input, perf)?;
-        let mut tally = Self::with_capacity(perf.capacity(input.size()));
+        let mut tally = Self::with_capacity(
+            perf.chunk_capacity(input.size().unwrap_or_else(|| perf.base_stdin_size())),
+        );
         let mut buffer = Vec::with_capacity(batch_size);
         let mut remainder = Vec::new();
         let mut reached_eof = false;
