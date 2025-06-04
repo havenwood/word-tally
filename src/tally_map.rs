@@ -7,6 +7,7 @@ use std::{
 };
 
 use hashbrown::{HashMap, hash_map};
+use rustc_hash::FxBuildHasher;
 
 use anyhow::{Context, Result};
 use memchr::memchr2_iter;
@@ -16,9 +17,17 @@ use crate::options::{Options, case::Case, encoding::Encoding, io::Io, performanc
 use crate::{Count, Input, Word, WordTallyError};
 
 /// Map for tracking word counts with non-deterministic iteration order.
-#[derive(Clone, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TallyMap {
-    inner: HashMap<Word, Count>,
+    inner: HashMap<Word, Count, FxBuildHasher>,
+}
+
+impl Default for TallyMap {
+    fn default() -> Self {
+        Self {
+            inner: HashMap::with_hasher(FxBuildHasher),
+        }
+    }
 }
 
 impl TallyMap {
@@ -32,7 +41,7 @@ impl TallyMap {
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            inner: HashMap::with_capacity(capacity),
+            inner: HashMap::with_capacity_and_hasher(capacity, FxBuildHasher),
         }
     }
 
@@ -551,9 +560,11 @@ impl IntoIterator for TallyMap {
 
 impl FromIterator<(Word, Count)> for TallyMap {
     fn from_iter<I: IntoIterator<Item = (Word, Count)>>(iter: I) -> Self {
-        Self {
-            inner: HashMap::from_iter(iter),
-        }
+        let iter = iter.into_iter();
+        let (size_hint, _) = iter.size_hint();
+        let mut map = Self::with_capacity(size_hint);
+        map.extend(iter);
+        map
     }
 }
 
