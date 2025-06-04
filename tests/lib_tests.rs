@@ -8,8 +8,8 @@ use hashbrown::HashSet;
 use word_tally::input::Input;
 use word_tally::output::Output;
 use word_tally::{
-    Case, Count, ExcludeWords, Filters, Io, Options, Performance, Serialization, Sort, Word,
-    WordTally,
+    Case, Count, ExcludeWords, Filters, Io, Options, Performance, Reader, Serialization, Sort,
+    Word, WordTally,
 };
 
 fn make_shared<T>(value: T) -> Arc<T> {
@@ -541,12 +541,12 @@ fn test_combining_include_exclude_patterns() {
 #[test]
 fn test_input_size() {
     let temp_file = create_test_data_file();
-    let file_input = Input::File(temp_file.path().to_path_buf());
+    let file_input = Input::new(temp_file.path(), Io::default()).expect("create file input");
     let size = file_input.size();
     assert!(size.is_some());
     assert!(size.expect("get file size") > 0);
 
-    let stdin_input = Input::Stdin;
+    let stdin_input = Input::new("-", Io::default()).expect("create stdin input");
     assert_eq!(stdin_input.size(), None);
 }
 
@@ -747,7 +747,7 @@ mod default_impl_tests {
     #[test]
     fn input_default() {
         let input = Input::default();
-        assert!(matches!(input, Input::Stdin));
+        assert!(matches!(input, Input::Reader(Reader::Stdin(_))));
     }
 
     #[test]
@@ -814,11 +814,11 @@ fn test_min_count_graphemes() {
         Sort::default(),
         Serialization::default(),
         filters,
-        Io::ParallelStream,
+        Io::ParallelBytes,
         Performance::default(),
     );
 
-    let input = Input::from_bytes(input_text);
+    let input = Input::from(&input_text[..]);
     let tally = WordTally::new(&input, &options).expect("create word tally");
 
     assert_eq!(tally.count(), 0);
@@ -962,4 +962,24 @@ fn test_json_field_camel_case_deserialization() {
     let deserialized: WordTally = serde_json::from_str(&serialized).expect("deserialize JSON");
     assert_eq!(deserialized.count(), original.count());
     assert_eq!(deserialized.uniq_count(), original.uniq_count());
+}
+
+#[test]
+fn test_custom_chunk_size() {
+    let input_text = b"test convenience constructors";
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, input_text).expect("write test data");
+
+    let options =
+        Options::default().with_performance(Performance::default().with_chunk_size(32_768));
+
+    let input = Input::new(temp_file.path(), options.io()).expect("create input");
+    let tally = WordTally::new(&input, &options).expect("create word tally");
+    assert_eq!(tally.count(), 3);
+}
+
+#[test]
+fn test_exclude_words_from_trait() {
+    let words = vec!["beep".to_string(), "boop".to_string()];
+    assert_eq!(ExcludeWords::from(words.clone()), ExcludeWords(words));
 }

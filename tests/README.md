@@ -31,7 +31,7 @@ Tests for specific modules:
 - `exit_code_tests.rs` - Exit code mappings
 - `filters_tests.rs` - Filter configurations
 - `hash_tests.rs` - Hash implementations
-- `input_tests.rs` - Input sources
+- `input_tests.rs` - Input sources and mutex thread safety
 - `input_reader_tests.rs` - Buffer reading
 - `io_tests.rs` - I/O strategies
 - `options_tests.rs` - Options configuration

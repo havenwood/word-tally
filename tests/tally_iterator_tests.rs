@@ -141,7 +141,7 @@ fn test_into_iterator_trait() {
             "phosphor" => assert_eq!(*freq, 3),
             "alabaster" => assert_eq!(*freq, 2),
             "cochineal" => assert_eq!(*freq, 1),
-            other => unreachable!("Unexpected word: {}", other),
+            other => unreachable!("unexpected word: {other}"),
         }
     }
     assert_eq!(count, 3);

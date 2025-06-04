@@ -1,10 +1,6 @@
 //! A collection for tallying word counts using `HashMap`.
 
-use std::{
-    borrow::Cow,
-    io::{BufRead, Read},
-    iter,
-};
+use std::{borrow::Cow, iter};
 
 use hashbrown::{HashMap, hash_map};
 use rustc_hash::FxBuildHasher;
@@ -14,7 +10,7 @@ use memchr::memchr2_iter;
 use rayon::prelude::*;
 
 use crate::options::{Options, case::Case, encoding::Encoding, io::Io, performance::Performance};
-use crate::{Count, Input, Word, WordTallyError};
+use crate::{Count, Input, Reader, Word, WordTallyError};
 
 /// Map for tracking word counts with non-deterministic iteration order.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -137,12 +133,12 @@ impl TallyMap {
                 Self::par_memory_count(&bytes, options)
             }
             Io::ParallelBytes => match input {
-                Input::Bytes(bytes) => Self::par_memory_count(bytes, options),
-                _ => Err(WordTallyError::BytesInputRequired.into()),
+                Input::View(view) => Self::par_memory_count(view.as_ref(), options),
+                Input::Reader(_) => Err(WordTallyError::BytesInputRequired.into()),
             },
             Io::ParallelMmap => match input {
-                Input::MemoryMap(mmap, _) => Self::par_memory_count(mmap, options),
-                _ => Err(WordTallyError::MmapStdin.into()),
+                Input::View(view) => Self::par_memory_count(view.as_ref(), options),
+                Input::Reader(_) => Err(WordTallyError::MmapStdin.into()),
             },
         }
     }
@@ -193,12 +189,18 @@ impl TallyMap {
         let perf = options.performance();
         let case = options.case();
         let encoding = options.encoding();
-        let mut reader = input.reader()?;
 
-        let (batch_size, target_batch_size) = Self::calculate_batch_sizes(input, perf)?;
-        let mut tally = Self::with_capacity(
-            perf.chunk_capacity(input.size().unwrap_or_else(|| perf.base_stdin_size())),
-        );
+        // Get metadata before borrowing reader
+        let source = input.source();
+        let size = input.size();
+        let (batch_size, target_batch_size) = Self::calculate_batch_sizes_from_size(size, perf)?;
+        let tally_capacity = perf.chunk_capacity(size.unwrap_or_else(|| perf.base_stdin_size()));
+
+        let Input::Reader(reader) = input else {
+            anyhow::bail!("Stream mode requires a readable input")
+        };
+
+        let mut tally = Self::with_capacity(tally_capacity);
         let mut buffer = Vec::with_capacity(batch_size);
         let mut remainder = Vec::new();
         let mut reached_eof = false;
@@ -206,11 +208,11 @@ impl TallyMap {
         while !reached_eof || !buffer.is_empty() {
             // Fill buffer
             Self::fill_stream_buffer(
-                &mut reader,
+                reader,
                 &mut buffer,
                 &mut reached_eof,
                 target_batch_size,
-                input,
+                &source,
             )?;
 
             // Find the last whitespace (space or newline) to ensure we don't split words
@@ -274,11 +276,17 @@ impl TallyMap {
         let perf = options.performance();
         let case = options.case();
         let encoding = options.encoding();
-        let mut reader = input.reader()?;
 
-        let (batch_size, target_batch_size) = Self::calculate_batch_sizes(input, perf)?;
+        // Get metadata before borrowing reader
+        let source = input.source();
+        let size = input.size();
+        let (batch_size, target_batch_size) = Self::calculate_batch_sizes_from_size(size, perf)?;
+        let tally_capacity = perf.capacity(size);
 
-        let tally_capacity = perf.capacity(input.size());
+        let Input::Reader(reader) = input else {
+            anyhow::bail!("Parallel stream mode requires a readable input")
+        };
+
         let initial_tally = Self::with_capacity(tally_capacity);
 
         let final_tally = iter::from_fn({
@@ -292,11 +300,11 @@ impl TallyMap {
 
                 // Fill buffer
                 if let Err(e) = Self::fill_stream_buffer(
-                    &mut reader,
+                    reader,
                     &mut buffer,
                     &mut reached_eof,
                     target_batch_size,
-                    input,
+                    &source,
                 ) {
                     return Some(Err(e));
                 }
@@ -352,21 +360,30 @@ impl TallyMap {
     /// Reads the entire input into a byte buffer.
     fn read_input_to_bytes(input: &Input, perf: &Performance) -> Result<Vec<u8>> {
         let mut buffer = Vec::with_capacity(perf.capacity(input.size()));
-        input
-            .reader()
-            .with_context(|| format!("failed to create reader for input: {}", input.source()))?
-            .read_to_end(&mut buffer)
-            .with_context(|| format!("failed to read input into buffer: {}", input.source()))?;
+
+        match input {
+            Input::Reader(reader) => {
+                reader.with_buf_read(|buf_read| {
+                    buf_read.read_to_end(&mut buffer).with_context(|| {
+                        format!("failed to read input into buffer: {}", input.source())
+                    })
+                })?;
+            }
+            Input::View(view) => buffer.extend_from_slice(view.as_ref()),
+        }
 
         Ok(buffer)
     }
 
-    /// Calculate batch sizes for streaming.
-    fn calculate_batch_sizes(input: &Input, perf: &Performance) -> Result<(usize, usize)> {
+    /// Calculate batch sizes from optional size.
+    fn calculate_batch_sizes_from_size(
+        size: Option<u64>,
+        perf: &Performance,
+    ) -> Result<(usize, usize)> {
         let stream_batch = Performance::stream_batch_size();
         let batch_size = usize::try_from(stream_batch)
             .map_err(|_| WordTallyError::BatchSizeExceeded { size: stream_batch })?;
-        let input_size = input.size().unwrap_or_else(|| perf.base_stdin_size());
+        let input_size = size.unwrap_or_else(|| perf.base_stdin_size());
         let target_size = perf.stream_batch_size_for_input(input_size);
         let target_batch_size = usize::try_from(target_size)
             .map_err(|_| WordTallyError::BatchSizeExceeded { size: target_size })?;
@@ -441,31 +458,32 @@ impl TallyMap {
 
     /// Fill the buffer with data from the stream reader up to the target size.
     fn fill_stream_buffer(
-        reader: &mut dyn BufRead,
+        reader: &Reader,
         buffer: &mut Vec<u8>,
         reached_eof: &mut bool,
         target_size: usize,
-        input: &Input,
+        source: &str,
     ) -> Result<()> {
-        while buffer.len() < target_size && !*reached_eof {
-            // Fill reader's internal buffer
-            let available = reader
-                .fill_buf()
-                .with_context(|| format!("failed to read from: {}", input.source()))?;
+        reader.with_buf_read(|buf_read| {
+            while buffer.len() < target_size && !*reached_eof {
+                // Fill reader's internal buffer
+                let available = buf_read
+                    .fill_buf()
+                    .with_context(|| format!("failed to read from: {source}"))?;
 
-            if available.is_empty() {
-                *reached_eof = true;
-                break;
+                if available.is_empty() {
+                    *reached_eof = true;
+                    break;
+                }
+
+                // Copy only what's needed to reach target size
+                let bytes_to_copy = available.len().min(target_size - buffer.len());
+                buffer.extend_from_slice(&available[..bytes_to_copy]);
+                // Mark bytes as consumed in reader
+                buf_read.consume(bytes_to_copy);
             }
-
-            // Copy only what's needed to reach target size
-            let bytes_to_copy = available.len().min(target_size - buffer.len());
-            buffer.extend_from_slice(&available[..bytes_to_copy]);
-            // Mark bytes as consumed in reader
-            reader.consume(bytes_to_copy);
-        }
-
-        Ok(())
+            Ok(())
+        })
     }
 
     /// Process the stream buffer and return tally update with bytes processed.

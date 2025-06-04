@@ -170,7 +170,7 @@ pub fn bench_io_with_file(
     if io == Io::ParallelBytes {
         let file_content = fs::read(file_path).expect("read benchmark file");
         b.iter_batched(
-            || Input::from_bytes(&file_content),
+            || Input::from(&file_content[..]),
             |input| black_box(WordTally::new(&input, options).expect("create word tally")),
             BatchSize::LargeInput,
         );

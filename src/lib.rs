@@ -62,14 +62,12 @@ use serde::{Deserialize, Serialize};
 mod error;
 pub mod exit_code;
 pub mod input;
-pub mod input_reader;
 pub mod options;
 pub mod output;
 pub mod tally_map;
 
 pub use error::Error as WordTallyError;
-pub use input::Input;
-pub use input_reader::InputReader;
+pub use input::{Input, Reader, View};
 pub use options::patterns::{ExcludeSet, IncludeSet, PatternList};
 pub use options::{
     Options,
@@ -116,10 +114,11 @@ impl WordTally {
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{WordTally, Input, Options};
+    /// use word_tally::{WordTally, Input, Options, Io};
     ///
-    /// let input = Input::from_bytes("hello world hello");
-    /// let tally = WordTally::new(&input, &Options::default())?;
+    /// let input = Input::from("hello world hello".as_bytes());
+    /// let options = Options::default().with_io(Io::ParallelBytes);
+    /// let tally = WordTally::new(&input, &options)?;
     ///
     /// // Iterate over results (sorted by frequency desc by default)
     /// for (word, count) in tally.iter() {

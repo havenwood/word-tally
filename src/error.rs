@@ -15,7 +15,7 @@ pub enum Error {
     MmapStdin,
 
     /// Byte I/O mode used with file path.
-    #[error("byte I/O mode requires `Input::from_bytes()`")]
+    #[error("byte I/O mode requires `Input::from()`")]
     BytesWithPath,
 
     /// Parallel bytes mode requires bytes input.

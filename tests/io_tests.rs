@@ -198,31 +198,37 @@ fn test_parallel_mmap_with_real_file() {
 
 #[test]
 fn test_read_trait_with_all_io_strategies() {
-    use std::io::Read;
-
     let temp_dir = tempfile::tempdir().expect("process test");
     let file_path = temp_dir.path().join("test_io.txt");
     fs::write(&file_path, TEST_TEXT).expect("process test");
 
     let file_input = Input::new(&file_path, Io::ParallelStream).expect("create test input");
     let mmap_input = Input::new(&file_path, Io::ParallelMmap).expect("create test input");
-    let bytes_input = Input::from_bytes(TEST_TEXT);
+    let bytes_input = Input::from(TEST_TEXT.as_bytes());
 
-    let test_cases = [file_input, mmap_input, bytes_input];
+    let mut test_cases = [file_input, mmap_input, bytes_input];
 
-    for input in &test_cases {
-        let mut reader = input.reader().expect("create reader");
-        let mut content = String::new();
-        reader.read_to_string(&mut content).expect("read content");
-
-        assert_eq!(content.trim(), TEST_TEXT.trim());
+    for input in &mut test_cases {
+        match input {
+            Input::Reader(reader) => {
+                reader.with_buf_read(|buf_read| {
+                    let mut content = String::new();
+                    buf_read.read_to_string(&mut content).expect("read content");
+                    assert_eq!(content.trim(), TEST_TEXT.trim());
+                });
+            }
+            Input::View(view) => {
+                let content = std::str::from_utf8(view.as_ref()).expect("valid UTF-8");
+                assert_eq!(content.trim(), TEST_TEXT.trim());
+            }
+        }
     }
 }
 
 #[test]
 fn test_bytes_input() {
     let options = make_options(Io::ParallelBytes);
-    let input = Input::from_bytes(TEST_TEXT);
+    let input = Input::from(TEST_TEXT.as_bytes());
 
     assert_eq!(input.source(), "<bytes>");
     assert_eq!(input.size(), Some(TEST_TEXT.len() as u64));
@@ -238,7 +244,7 @@ fn test_bytes_io_with_input_new() {
     let err = result
         .expect_err("bytes I/O mode with Input::new should fail")
         .to_string();
-    assert!(err.contains("byte I/O mode requires `Input::from_bytes()`"));
+    assert!(err.contains("byte I/O mode requires `Input::from()`"));
 }
 
 #[test]

@@ -130,10 +130,16 @@ fn test_pathbuf_as_ref() {
 
 #[test]
 fn test_input_display() {
-    let file_input = Input::File(PathBuf::from("/tmp/test.txt"));
-    assert_eq!(format!("{file_input}"), "File(/tmp/test.txt)");
+    // Create a temp file so the input can be created successfully
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    std::io::Write::write_all(&mut temp_file, b"test").expect("write test data");
+    let file_path = temp_file.path();
 
-    let stdin_input = Input::Stdin;
+    let file_input = Input::new(file_path, Io::default()).expect("create input");
+    assert!(format!("{file_input}").starts_with("File("));
+    assert!(format!("{file_input}").contains("tmp"));
+
+    let stdin_input = Input::new("-", Io::default()).expect("create input");
     assert_eq!(format!("{stdin_input}"), "Stdin");
 }
 

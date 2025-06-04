@@ -41,11 +41,9 @@
 //! - `WORD_TALLY_IO` (default: `parallel-stream`)
 //! - `WORD_TALLY_THREADS` (default: all cores)
 //! - `WORD_TALLY_CHUNK_SIZE` (default: 65536)
-//! - `WORD_TALLY_UNIQUENESS_RATIO` (default: 256)
-//! - `WORD_TALLY_WORD_DENSITY` (default: 15)
+//! - `WORD_TALLY_UNIQUENESS_RATIO` (default: 32)
 //! - `WORD_TALLY_WORDS_PER_KB` (default: 128)
 //! - `WORD_TALLY_STDIN_BUFFER_SIZE` (default: 262144)
-//! - `WORD_TALLY_DEFAULT_CAPACITY` (default: 1024)
 
 pub mod case;
 pub mod delimiter;

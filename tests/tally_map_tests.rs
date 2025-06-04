@@ -182,9 +182,11 @@ fn test_from_iterator() {
 
 #[test]
 fn test_from_input_with_bytes() {
+    use word_tally::options::io::Io;
+
     let content = b"I celebrate myself and sing myself";
-    let input = Input::from_bytes(content);
-    let options = Options::default();
+    let input = Input::from(&content[..]);
+    let options = Options::default().with_io(Io::ParallelBytes);
 
     let result = TallyMap::from_input(&input, &options);
     assert!(result.is_ok());
@@ -198,8 +200,8 @@ fn test_from_input_streamed() {
     use word_tally::options::io::Io;
 
     let content = b"I celebrate myself and sing myself";
-    let input = Input::from_bytes(content);
-    let options = Options::default().with_io(Io::ParallelStream);
+    let input = Input::from(&content[..]);
+    let options = Options::default().with_io(Io::ParallelBytes);
 
     let result = TallyMap::from_input(&input, &options);
     assert!(result.is_ok());
@@ -213,8 +215,8 @@ fn test_from_input_parallel() {
     use word_tally::options::io::Io;
 
     let content = b"I celebrate myself and sing myself";
-    let input = Input::from_bytes(content);
-    let options = Options::default().with_io(Io::ParallelInMemory);
+    let input = Input::from(&content[..]);
+    let options = Options::default().with_io(Io::ParallelBytes);
 
     let result = TallyMap::from_input(&input, &options);
     assert!(result.is_ok());
@@ -228,8 +230,8 @@ fn test_from_input_parallel_streamed() {
     use word_tally::options::io::Io;
 
     let content = b"I celebrate myself and sing myself";
-    let input = Input::from_bytes(content);
-    let options = Options::default().with_io(Io::ParallelStream);
+    let input = Input::from(&content[..]);
+    let options = Options::default().with_io(Io::ParallelBytes);
 
     let result = TallyMap::from_input(&input, &options);
     assert!(result.is_ok());

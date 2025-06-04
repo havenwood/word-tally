@@ -180,11 +180,11 @@ fn test_min_count_graphemes() {
         Sort::default(),
         Serialization::default(),
         filters,
-        Io::ParallelStream,
+        Io::ParallelBytes,
         word_tally::Performance::default(),
     );
 
-    let input = Input::from_bytes(input_text);
+    let input = Input::from(&input_text[..]);
     let tally = WordTally::new(&input, &options).expect("create word tally");
 
     assert_eq!(tally.count(), 0);

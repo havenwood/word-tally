@@ -151,11 +151,12 @@ impl Output {
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{WordTally, Input, Output, Options, Serialization};
+    /// use word_tally::{WordTally, Input, Output, Options, Serialization, Io};
     ///
     /// // Create a tally and write it as JSON to stdout
-    /// let input = Input::from_bytes("hello world hello");
+    /// let input = Input::from("hello world hello".as_bytes());
     /// let options = Options::default()
+    ///     .with_io(Io::ParallelBytes)
     ///     .with_serialization(Serialization::Json);
     /// let tally = WordTally::new(&input, &options)?;
     ///
