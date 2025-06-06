@@ -12,7 +12,7 @@ use fake::Fake;
 use fake::faker::lorem::en::Words;
 use tempfile::NamedTempFile;
 
-use word_tally::{Input, Io, Options, Sort, WordTally};
+use word_tally::{Io, Options, Reader, Sort, TallyMap, View, WordTally};
 
 /// Generate random text for benchmarks.
 #[must_use]
@@ -55,20 +55,25 @@ pub fn standard_criterion_config() -> Criterion {
 }
 
 /// Benchmark `WordTally` with string input.
+///
+/// # Panics
+///
+/// Panics if tally map creation fails.
 pub fn bench_word_tally_with_string<F>(
     b: &mut criterion::Bencher<'_>,
     text: &str,
     options: &Arc<Options>,
     setup_fn: F,
 ) where
-    F: Fn(&str) -> (NamedTempFile, Input),
+    F: Fn(&str) -> (NamedTempFile, View),
 {
     b.iter_batched(
         || setup_fn(text),
-        |(temp_file, input)| {
+        |(temp_file, view)| {
             // Keep temp_file alive within the closure
             let _ = &temp_file;
-            black_box(WordTally::new(&input, options))
+            let tally_map = TallyMap::from_view(&view, options).expect("create tally map");
+            black_box(WordTally::from_tally_map(tally_map, options))
         },
         BatchSize::LargeInput,
     );
@@ -117,13 +122,13 @@ pub fn create_bench_group<'a>(
 /// Panics if:
 /// - Failed to create temporary file
 /// - Failed to write to temporary file
-/// - Failed to create Input from file path
+/// - Failed to create View from file path
 #[must_use]
-pub fn create_temp_input(text: &str) -> (NamedTempFile, Input) {
+pub fn create_temp_input(text: &str) -> (NamedTempFile, View) {
     let mut temp_file = NamedTempFile::new().expect("create benchmark temp file");
     Write::write_all(&mut temp_file, text.as_bytes()).expect("write benchmark text");
-    let input = Input::new(temp_file.path(), Io::ParallelInMemory).expect("create benchmark input");
-    (temp_file, input)
+    let view = View::from(text.as_bytes());
+    (temp_file, view)
 }
 
 /// Common I/O strategies for benchmarks.
@@ -170,14 +175,29 @@ pub fn bench_io_with_file(
     if io == Io::ParallelBytes {
         let file_content = fs::read(file_path).expect("read benchmark file");
         b.iter_batched(
-            || Input::from(&file_content[..]),
-            |input| black_box(WordTally::new(&input, options).expect("create word tally")),
+            || View::from(&file_content[..]),
+            |view| {
+                let tally_map = TallyMap::from_view(&view, options).expect("create tally map");
+                black_box(WordTally::from_tally_map(tally_map, options))
+            },
+            BatchSize::LargeInput,
+        );
+    } else if io == Io::ParallelMmap {
+        b.iter_batched(
+            || View::try_from(file_path).expect("create view"),
+            |view| {
+                let tally_map = TallyMap::from_view(&view, options).expect("create tally map");
+                black_box(WordTally::from_tally_map(tally_map, options))
+            },
             BatchSize::LargeInput,
         );
     } else {
         b.iter_batched(
-            || Input::new(file_path, io).expect("create input"),
-            |input| black_box(WordTally::new(&input, options).expect("create word tally")),
+            || Reader::try_from(file_path).expect("create reader"),
+            |reader| {
+                let tally_map = TallyMap::from_reader(&reader, options).expect("create tally map");
+                black_box(WordTally::from_tally_map(tally_map, options))
+            },
             BatchSize::LargeInput,
         );
     }

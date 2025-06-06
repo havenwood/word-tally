@@ -3,7 +3,7 @@ use word_tally::Threads;
 use word_tally::options::{
     filters::ExcludeWords, io::Io, performance::Performance, serialization::Serialization,
 };
-use word_tally::{Input, Options, WordTally};
+use word_tally::{Options, Reader, WordTally};
 
 #[test]
 fn test_display_implementations() {
@@ -135,12 +135,11 @@ fn test_input_display() {
     std::io::Write::write_all(&mut temp_file, b"test").expect("write test data");
     let file_path = temp_file.path();
 
-    let file_input = Input::new(file_path, Io::default()).expect("create input");
-    assert!(format!("{file_input}").starts_with("File("));
-    assert!(format!("{file_input}").contains("tmp"));
+    let file_reader = Reader::try_from(file_path).expect("create reader");
+    assert!(format!("{file_reader}").contains("tmp"));
 
-    let stdin_input = Input::new("-", Io::default()).expect("create input");
-    assert_eq!(format!("{stdin_input}"), "Stdin");
+    let stdin_reader = Reader::stdin();
+    assert_eq!(format!("{stdin_reader}"), "-");
 }
 
 #[test]

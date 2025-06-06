@@ -3,7 +3,9 @@
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
-use word_tally::{Case, Filters, Input, Io, Options, Serialization, Sort, Tally, View, WordTally};
+use word_tally::{
+    Case, Filters, Io, Options, Reader, Serialization, Sort, Tally, TallyMap, View, WordTally,
+};
 
 fn calculate_hash<T: Hash>(value: &T) -> u64 {
     let mut hasher = DefaultHasher::new();
@@ -16,21 +18,25 @@ fn test_wordtally_hash() {
     let hope_text = "Hope is the thing with";
     let base_options = Options::default().with_io(Io::ParallelBytes);
 
-    let hope_input_alpha = Input::from(hope_text.as_bytes());
-    let hope_input_beta = Input::from(hope_text.as_bytes());
+    let hope_view_alpha = View::from(hope_text.as_bytes());
+    let hope_view_beta = View::from(hope_text.as_bytes());
 
-    let hope_tally_alpha =
-        WordTally::new(&hope_input_alpha, &base_options).expect("create word tally");
-    let hope_tally_beta =
-        WordTally::new(&hope_input_beta, &base_options).expect("create word tally");
+    let hope_tally_map_alpha =
+        TallyMap::from_view(&hope_view_alpha, &base_options).expect("create tally map");
+    let hope_tally_map_beta =
+        TallyMap::from_view(&hope_view_beta, &base_options).expect("create tally map");
+
+    let hope_tally_alpha = WordTally::from_tally_map(hope_tally_map_alpha, &base_options);
+    let hope_tally_beta = WordTally::from_tally_map(hope_tally_map_beta, &base_options);
 
     assert_eq!(hope_tally_alpha.count(), hope_tally_beta.count());
     assert_eq!(hope_tally_alpha.uniq_count(), hope_tally_beta.uniq_count());
 
     let extended_hope_text = "Hope is the thing with feathers That perches";
-    let extended_hope_input = Input::from(extended_hope_text.as_bytes());
-    let extended_hope_tally =
-        WordTally::new(&extended_hope_input, &base_options).expect("create word tally");
+    let extended_hope_view = View::from(extended_hope_text.as_bytes());
+    let extended_hope_tally_map =
+        TallyMap::from_view(&extended_hope_view, &base_options).expect("create tally map");
+    let extended_hope_tally = WordTally::from_tally_map(extended_hope_tally_map, &base_options);
 
     assert_ne!(hope_tally_alpha.count(), extended_hope_tally.count());
     assert_ne!(
@@ -39,9 +45,10 @@ fn test_wordtally_hash() {
     );
 
     let repeated_hope_text = "Hope is the thing with Hope is the";
-    let repeated_hope_input = Input::from(repeated_hope_text.as_bytes());
-    let repeated_hope_tally =
-        WordTally::new(&repeated_hope_input, &base_options).expect("create word tally");
+    let repeated_hope_view = View::from(repeated_hope_text.as_bytes());
+    let repeated_hope_tally_map =
+        TallyMap::from_view(&repeated_hope_view, &base_options).expect("create tally map");
+    let repeated_hope_tally = WordTally::from_tally_map(repeated_hope_tally_map, &base_options);
 
     assert_ne!(hope_tally_alpha.count(), repeated_hope_tally.count());
 }
@@ -203,12 +210,16 @@ fn test_hash_collisions() {
     let bird_text = "I shall keep singing";
     let truth_text = "Tell all the truth but";
 
-    let bird_input = Input::View(View::Bytes(bird_text.as_bytes().into()));
-    let truth_input = Input::View(View::Bytes(truth_text.as_bytes().into()));
+    let bird_view = View::from(bird_text.as_bytes());
+    let truth_view = View::from(truth_text.as_bytes());
 
-    let bird_tally = WordTally::new(&bird_input, &lowercase_asc_text).expect("create word tally");
-    let truth_tally =
-        WordTally::new(&truth_input, &uppercase_desc_json).expect("create word tally");
+    let bird_tally_map =
+        TallyMap::from_view(&bird_view, &lowercase_asc_text).expect("create tally map");
+    let bird_tally = WordTally::from_tally_map(bird_tally_map, &lowercase_asc_text);
+
+    let truth_tally_map =
+        TallyMap::from_view(&truth_view, &uppercase_desc_json).expect("create tally map");
+    let truth_tally = WordTally::from_tally_map(truth_tally_map, &uppercase_desc_json);
 
     assert_ne!(calculate_hash(&bird_tally), calculate_hash(&truth_tally));
 }
@@ -225,13 +236,16 @@ fn test_wordtally_includes_options_in_hash() {
         .with_io(Io::ParallelBytes)
         .with_case(Case::Upper);
 
-    let success_input_alpha = Input::View(View::Bytes(success_text.as_bytes().into()));
-    let success_input_beta = Input::View(View::Bytes(success_text.as_bytes().into()));
+    let success_view_alpha = View::from(success_text.as_bytes());
+    let success_view_beta = View::from(success_text.as_bytes());
 
-    let success_lowercase =
-        WordTally::new(&success_input_alpha, &lowercase_options).expect("create word tally");
-    let success_uppercase =
-        WordTally::new(&success_input_beta, &uppercase_options).expect("create word tally");
+    let success_lowercase_map =
+        TallyMap::from_view(&success_view_alpha, &lowercase_options).expect("create tally map");
+    let success_lowercase = WordTally::from_tally_map(success_lowercase_map, &lowercase_options);
+
+    let success_uppercase_map =
+        TallyMap::from_view(&success_view_beta, &uppercase_options).expect("create tally map");
+    let success_uppercase = WordTally::from_tally_map(success_uppercase_map, &uppercase_options);
 
     assert_ne!(success_lowercase, success_uppercase);
 
@@ -245,13 +259,16 @@ fn test_wordtally_includes_options_in_hash() {
         .with_case(Case::Lower)
         .with_sort(Sort::Desc);
 
-    let success_input_gamma = Input::View(View::Bytes(success_text.as_bytes().into()));
-    let success_input_delta = Input::View(View::Bytes(success_text.as_bytes().into()));
+    let success_view_gamma = View::from(success_text.as_bytes());
+    let success_view_delta = View::from(success_text.as_bytes());
 
-    let success_ascending =
-        WordTally::new(&success_input_gamma, &lowercase_asc).expect("create word tally");
-    let success_descending =
-        WordTally::new(&success_input_delta, &lowercase_desc).expect("create word tally");
+    let success_ascending_map =
+        TallyMap::from_view(&success_view_gamma, &lowercase_asc).expect("create tally map");
+    let success_ascending = WordTally::from_tally_map(success_ascending_map, &lowercase_asc);
+
+    let success_descending_map =
+        TallyMap::from_view(&success_view_delta, &lowercase_desc).expect("create tally map");
+    let success_descending = WordTally::from_tally_map(success_descending_map, &lowercase_desc);
 
     assert_ne!(success_ascending, success_descending);
 }
@@ -259,22 +276,25 @@ fn test_wordtally_includes_options_in_hash() {
 #[test]
 fn test_wordtally_hash_fields() {
     let text = "The Brain is wider than";
-    let input = Input::View(View::Bytes(text.as_bytes().into()));
+    let view = View::from(text.as_bytes());
     let options = Options::default().with_io(Io::ParallelBytes);
-    let tally = WordTally::new(&input, &options).expect("create word tally");
+    let tally_map = TallyMap::from_view(&view, &options).expect("create tally map");
+    let tally = WordTally::from_tally_map(tally_map, &options);
 
     let doubled_text = "The Brain is wider than the Sky For put";
-    let doubled_input = Input::View(View::Bytes(doubled_text.as_bytes().into()));
-    let doubled_tally = WordTally::new(&doubled_input, &options).expect("create word tally");
+    let doubled_view = View::from(doubled_text.as_bytes());
+    let doubled_tally_map = TallyMap::from_view(&doubled_view, &options).expect("create tally map");
+    let doubled_tally = WordTally::from_tally_map(doubled_tally_map, &options);
 
     assert_ne!(tally, doubled_tally);
 
     let uppercase_options = Options::default()
         .with_io(Io::ParallelBytes)
         .with_case(Case::Upper);
-    let uppercase_input = Input::View(View::Bytes(text.as_bytes().into()));
-    let uppercase_tally =
-        WordTally::new(&uppercase_input, &uppercase_options).expect("create word tally");
+    let uppercase_view = View::from(text.as_bytes());
+    let uppercase_tally_map =
+        TallyMap::from_view(&uppercase_view, &uppercase_options).expect("create tally map");
+    let uppercase_tally = WordTally::from_tally_map(uppercase_tally_map, &uppercase_options);
 
     assert_ne!(tally, uppercase_tally);
 }
@@ -320,9 +340,10 @@ fn test_equality_and_hashing() {
             // For tests only: create a 'static reference using Box::leak
             let options_static = Box::leak(Box::new(options));
 
-            let input = Input::new(file_path, options_static.io()).expect("create input");
-
-            WordTally::new(&input, options_static).expect("create word tally")
+            let reader = Reader::try_from(file_path).expect("create reader");
+            let tally_map =
+                TallyMap::from_reader(&reader, options_static).expect("create tally map");
+            WordTally::from_tally_map(tally_map, options_static)
         })
         .collect();
 

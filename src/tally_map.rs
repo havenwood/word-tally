@@ -10,7 +10,7 @@ use memchr::memchr2_iter;
 use rayon::prelude::*;
 
 use crate::options::{Options, case::Case, encoding::Encoding, io::Io, performance::Performance};
-use crate::{Count, Input, Reader, Word, WordTallyError};
+use crate::{Count, Metadata, Word, WordTallyError, reader::Reader, view::View};
 
 /// Map for tracking word counts with non-deterministic iteration order.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -115,7 +115,7 @@ impl TallyMap {
         }
     }
 
-    /// Creates a `TallyMap` from an `Input` source and `Options`.
+    /// Creates a `TallyMap` from a `Reader` source and `Options`.
     ///
     /// # Errors
     ///
@@ -124,22 +124,35 @@ impl TallyMap {
     /// - Input contains invalid UTF-8 data
     /// - A configured thread pool cannot be initialized
     /// - I/O errors occur during reading
-    pub fn from_input(input: &Input, options: &Options) -> Result<Self> {
+    pub fn from_reader(reader: &Reader, options: &Options) -> Result<Self> {
         match options.io() {
-            Io::Stream => Self::stream_count(input, options),
-            Io::ParallelStream => Self::par_stream_count(input, options),
+            Io::Stream => Self::stream_count_reader(reader, options),
+            Io::ParallelStream => Self::par_stream_count_reader(reader, options),
             Io::ParallelInMemory => {
-                let bytes = Self::read_input_to_bytes(input, options.performance())?;
-                Self::par_memory_count(&bytes, options)
+                let bytes = Self::read_to_bytes(reader, options.performance())?;
+                let view = View::from(bytes);
+                Self::from_view(&view, options)
             }
-            Io::ParallelBytes => match input {
-                Input::View(view) => Self::par_memory_count(view.as_ref(), options),
-                Input::Reader(_) => Err(WordTallyError::BytesInputRequired.into()),
-            },
-            Io::ParallelMmap => match input {
-                Input::View(view) => Self::par_memory_count(view.as_ref(), options),
-                Input::Reader(_) => Err(WordTallyError::MmapStdin.into()),
-            },
+            Io::ParallelBytes => Err(WordTallyError::BytesInputRequired.into()),
+            Io::ParallelMmap => Err(WordTallyError::MmapStdin.into()),
+        }
+    }
+
+    /// Creates a `TallyMap` from a `View` source and `Options`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - Input contains invalid UTF-8 data
+    /// - A configured thread pool cannot be initialized
+    pub fn from_view(view: &View, options: &Options) -> Result<Self> {
+        match options.io() {
+            Io::Stream | Io::ParallelStream => {
+                Err(anyhow::anyhow!("Stream mode requires a Reader, not a View"))
+            }
+            Io::ParallelInMemory | Io::ParallelBytes | Io::ParallelMmap => {
+                Self::par_memory_count(view.as_ref(), options)
+            }
         }
     }
 
@@ -185,20 +198,16 @@ impl TallyMap {
     ///
     /// Processes data in chunks without loading the entire input into memory.
     /// Uses chunk-based processing for better performance than line-by-line.
-    fn stream_count(input: &Input, options: &Options) -> Result<Self> {
+    fn stream_count_reader(reader: &Reader, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
         let encoding = options.encoding();
 
         // Get metadata before borrowing reader
-        let source = input.source();
-        let size = input.size();
+        let source = reader.to_string();
+        let size = reader.size();
         let (batch_size, target_batch_size) = Self::calculate_batch_sizes_from_size(size, perf)?;
         let tally_capacity = perf.chunk_capacity(size.unwrap_or_else(|| perf.base_stdin_size()));
-
-        let Input::Reader(reader) = input else {
-            anyhow::bail!("Stream mode requires a readable input")
-        };
 
         let mut tally = Self::with_capacity(tally_capacity);
         let mut buffer = Vec::with_capacity(batch_size);
@@ -259,7 +268,7 @@ impl TallyMap {
         // Process any remaining data
         if !remainder.is_empty() {
             let final_text = simdutf8::basic::from_utf8(&remainder)
-                .with_context(|| format!("invalid UTF-8 in stream from: {}", input.source()))?;
+                .with_context(|| format!("invalid UTF-8 in stream from: {source}"))?;
             tally.add_words(final_text, case, encoding)?;
         }
 
@@ -272,20 +281,16 @@ impl TallyMap {
     /// - Uses memchr SIMD to find whitespace-aligned chunk boundaries
     /// - Stream in chunks, without loading the entire input into memory
     /// - Balances performance and memory usage
-    fn par_stream_count(input: &Input, options: &Options) -> Result<Self> {
+    fn par_stream_count_reader(reader: &Reader, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
         let encoding = options.encoding();
 
         // Get metadata before borrowing reader
-        let source = input.source();
-        let size = input.size();
+        let source = reader.to_string();
+        let size = reader.size();
         let (batch_size, target_batch_size) = Self::calculate_batch_sizes_from_size(size, perf)?;
         let tally_capacity = perf.capacity(size);
-
-        let Input::Reader(reader) = input else {
-            anyhow::bail!("Parallel stream mode requires a readable input")
-        };
 
         let initial_tally = Self::with_capacity(tally_capacity);
 
@@ -358,19 +363,14 @@ impl TallyMap {
     }
 
     /// Reads the entire input into a byte buffer.
-    fn read_input_to_bytes(input: &Input, perf: &Performance) -> Result<Vec<u8>> {
-        let mut buffer = Vec::with_capacity(perf.capacity(input.size()));
+    fn read_to_bytes(reader: &Reader, perf: &Performance) -> Result<Vec<u8>> {
+        let mut buffer = Vec::with_capacity(perf.capacity(reader.size()));
 
-        match input {
-            Input::Reader(reader) => {
-                reader.with_buf_read(|buf_read| {
-                    buf_read.read_to_end(&mut buffer).with_context(|| {
-                        format!("failed to read input into buffer: {}", input.source())
-                    })
-                })?;
-            }
-            Input::View(view) => buffer.extend_from_slice(view.as_ref()),
-        }
+        reader.with_buf_read(|buf_read| {
+            buf_read
+                .read_to_end(&mut buffer)
+                .with_context(|| format!("failed to read input into buffer: {reader}"))
+        })?;
 
         Ok(buffer)
     }

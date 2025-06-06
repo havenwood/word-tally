@@ -19,22 +19,22 @@
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Options, WordTally, Input, Io};
+//! use word_tally::{Options, TallyMap, WordTally, Reader};
 //! use anyhow::Result;
 //!
 //! # fn example() -> Result<()> {
 //! // Basic usage with default options
 //! let options = Options::default();
-//! let file_path = std::path::Path::new("example.txt");
-//! let input = Input::new(file_path, Io::ParallelStream)?;
-//! let words = WordTally::new(&input, &options)?;
+//! let reader = Reader::try_from("example.txt")?;
+//! let tally_map = TallyMap::from_reader(&reader, &options)?;
+//! let words = WordTally::from_tally_map(tally_map, &options);
 //! assert_eq!(words.count(), 9);
 //! # Ok(())
 //! # }
 //! ```
 //!
 //! ```
-//! use word_tally::{Case, Filters, Options, Serialization, Tally, WordTally, Input, Io};
+//! use word_tally::{Case, Filters, Options, Serialization, Tally, TallyMap, WordTally, Reader};
 //! use anyhow::Result;
 //!
 //! # fn example() -> Result<()> {
@@ -44,9 +44,9 @@
 //!     .with_serialization(Serialization::Json)
 //!     .with_filters(Filters::default().with_min_chars(3));
 //!
-//! let file_path = std::path::Path::new("example_word.txt");
-//! let input = Input::new(file_path, Io::ParallelInMemory)?;
-//! let words = WordTally::new(&input, &options)?;
+//! let reader = Reader::try_from("example_word.txt")?;
+//! let tally_map = TallyMap::from_reader(&reader, &options)?;
+//! let words = WordTally::from_tally_map(tally_map, &options);
 //! let expected_tally: Tally = [("cinquedea".into(), 1)].into();
 //!
 //! assert_eq!(words.into_tally(), expected_tally);
@@ -54,20 +54,19 @@
 //! # }
 //! ```
 
-use std::{collections::HashMap, hash::BuildHasher, slice, str};
+use std::{collections::HashMap, hash::BuildHasher, path::Path, slice, str};
 
-use anyhow::Result;
 use serde::{Deserialize, Serialize};
 
 mod error;
 pub mod exit_code;
-pub mod input;
 pub mod options;
 pub mod output;
+pub mod reader;
 pub mod tally_map;
+pub mod view;
 
 pub use error::Error as WordTallyError;
-pub use input::{Input, Reader, View};
 pub use options::patterns::{ExcludeSet, IncludeSet, PatternList};
 pub use options::{
     Options,
@@ -80,7 +79,9 @@ pub use options::{
     threads::Threads,
 };
 pub use output::Output;
+pub use reader::Reader;
 pub use tally_map::TallyMap;
+pub use view::View;
 
 /// The count of occurrences for a word.
 pub type Count = usize;
@@ -88,6 +89,15 @@ pub type Count = usize;
 pub type Word = Box<str>;
 /// A collection of word-count pairs.
 pub type Tally = Box<[(Word, Count)]>;
+
+/// Provides metadata for data sources.
+pub trait Metadata {
+    /// Returns the file path, if file-based.
+    fn path(&self) -> Option<&Path>;
+
+    /// Returns the size in bytes, if known.
+    fn size(&self) -> Option<u64>;
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -107,108 +117,7 @@ pub struct WordTally {
     uniq_count: Count,
 }
 
-/// An explicit `iter` method for `WordTally`.
 impl WordTally {
-    /// Returns an iterator over references to the words and counts.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use word_tally::{WordTally, Input, Options, Io};
-    ///
-    /// let input = Input::from("hello world hello".as_bytes());
-    /// let options = Options::default().with_io(Io::ParallelBytes);
-    /// let tally = WordTally::new(&input, &options)?;
-    ///
-    /// // Iterate over results (sorted by frequency desc by default)
-    /// for (word, count) in tally.iter() {
-    ///     println!("{}: {}", word, count);
-    /// }
-    ///
-    /// // Or use the reference directly
-    /// for (word, count) in &tally {
-    ///     println!("{}: {}", word, count);
-    /// }
-    /// # Ok::<(), anyhow::Error>(())
-    /// ```
-    pub fn iter(&self) -> slice::Iter<'_, (Word, Count)> {
-        self.tally.iter()
-    }
-}
-
-/// Converts a `WordTally` into a `Vec<(Word, Count)>`.
-impl From<WordTally> for Vec<(Word, Count)> {
-    fn from(word_tally: WordTally) -> Self {
-        word_tally.into_tally().into_vec()
-    }
-}
-
-/// Converts a `WordTally` into a `HashMap<Word, Count>`.
-impl<S: BuildHasher + Default> From<WordTally> for HashMap<Word, Count, S> {
-    fn from(word_tally: WordTally) -> Self {
-        word_tally.into_tally().into_iter().collect()
-    }
-}
-
-/// Allows consuming the `WordTally` in a for loop, yielding owned pairs.
-impl IntoIterator for WordTally {
-    type Item = (Word, Count);
-    type IntoIter = <Box<[(Word, Count)]> as IntoIterator>::IntoIter;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.tally.into_iter()
-    }
-}
-
-/// Makes `WordTally` reference available directly in a for loop.
-impl<'i> IntoIterator for &'i WordTally {
-    type Item = &'i (Word, Count);
-    type IntoIter = slice::Iter<'i, (Word, Count)>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.iter()
-    }
-}
-
-/// `WordTally` fields are eagerly populated upon construction and exposed by getter methods.
-impl WordTally {
-    /// Constructs a `WordTally` from an input source and tallying options.
-    ///
-    /// This constructor handles all I/O strategies (stream, parallel-stream, parallel-in-memory and parallel-mmap).
-    ///
-    /// **Note**: For parallel processing, the thread pool should be initialized before calling
-    /// this method. Use `options.init_thread_pool_if_parallel()?` to set up the thread pool.
-    /// If not initialized, Rayon will use a default thread pool with all available cores.
-    ///
-    /// # Errors
-    ///
-    /// An error will be returned if:
-    /// - The input contains invalid UTF-8
-    /// - An I/O error occurs while reading from the source
-    /// - Memory mapping fails (piped input will always fail)
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use word_tally::{Options, WordTally, Input, Io};
-    /// use anyhow::Result;
-    ///
-    /// # fn example() -> Result<()> {
-    /// let options = Options::default();
-    /// // Initialize thread pool for parallel processing
-    /// options.init_thread_pool_if_parallel()?;
-    /// let input = Input::new("document.txt", Io::ParallelStream)?;
-    /// let word_tally = WordTally::new(&input, &options)?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn new(input: &Input, options: &Options) -> Result<Self> {
-        // Generate the tally map from the input
-        let tally_map = TallyMap::from_input(input, options)?;
-
-        Ok(Self::from_tally_map(tally_map, options))
-    }
-
     /// Creates a `WordTally` instance from a `TallyMap` and `Options`.
     #[must_use]
     pub fn from_tally_map(mut tally_map: TallyMap, options: &Options) -> Self {
@@ -260,10 +169,49 @@ impl WordTally {
         self.count
     }
 
+    /// Returns an iterator over references to the words and counts.
+    pub fn iter(&self) -> slice::Iter<'_, (Word, Count)> {
+        self.tally.iter()
+    }
+
     /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
     fn sort(&mut self) {
         self.options
             .sort()
             .apply(&mut self.tally, self.options.io());
+    }
+}
+
+/// Converts a `WordTally` into a `Vec<(Word, Count)>`.
+impl From<WordTally> for Vec<(Word, Count)> {
+    fn from(word_tally: WordTally) -> Self {
+        word_tally.into_tally().into_vec()
+    }
+}
+
+/// Converts a `WordTally` into a `HashMap<Word, Count>`.
+impl<S: BuildHasher + Default> From<WordTally> for HashMap<Word, Count, S> {
+    fn from(word_tally: WordTally) -> Self {
+        word_tally.into_tally().into_iter().collect()
+    }
+}
+
+/// Allows consuming the `WordTally` in a for loop, yielding owned pairs.
+impl IntoIterator for WordTally {
+    type Item = (Word, Count);
+    type IntoIter = <Box<[(Word, Count)]> as IntoIterator>::IntoIter;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.tally.into_iter()
+    }
+}
+
+/// Makes `WordTally` reference available directly in a for loop.
+impl<'i> IntoIterator for &'i WordTally {
+    type Item = &'i (Word, Count);
+    type IntoIter = slice::Iter<'i, (Word, Count)>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }

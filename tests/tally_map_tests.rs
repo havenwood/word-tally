@@ -1,4 +1,4 @@
-use word_tally::{Case, Input, Options, TallyMap, options::encoding::Encoding};
+use word_tally::{Case, Options, TallyMap, View, options::encoding::Encoding};
 
 // Helper to create TallyMap from word pairs
 fn make_tally(words: &[(&str, usize)]) -> TallyMap {
@@ -185,10 +185,10 @@ fn test_from_input_with_bytes() {
     use word_tally::options::io::Io;
 
     let content = b"I celebrate myself and sing myself";
-    let input = Input::from(&content[..]);
+    let view = View::from(&content[..]);
     let options = Options::default().with_io(Io::ParallelBytes);
 
-    let result = TallyMap::from_input(&input, &options);
+    let result = TallyMap::from_view(&view, &options);
     assert!(result.is_ok());
 
     let tally = result.expect("process test data");
@@ -200,10 +200,10 @@ fn test_from_input_streamed() {
     use word_tally::options::io::Io;
 
     let content = b"I celebrate myself and sing myself";
-    let input = Input::from(&content[..]);
+    let view = View::from(&content[..]);
     let options = Options::default().with_io(Io::ParallelBytes);
 
-    let result = TallyMap::from_input(&input, &options);
+    let result = TallyMap::from_view(&view, &options);
     assert!(result.is_ok());
 
     let tally = result.expect("process test data");
@@ -215,10 +215,10 @@ fn test_from_input_parallel() {
     use word_tally::options::io::Io;
 
     let content = b"I celebrate myself and sing myself";
-    let input = Input::from(&content[..]);
+    let view = View::from(&content[..]);
     let options = Options::default().with_io(Io::ParallelBytes);
 
-    let result = TallyMap::from_input(&input, &options);
+    let result = TallyMap::from_view(&view, &options);
     assert!(result.is_ok());
 
     let tally = result.expect("process test data");
@@ -230,10 +230,10 @@ fn test_from_input_parallel_streamed() {
     use word_tally::options::io::Io;
 
     let content = b"I celebrate myself and sing myself";
-    let input = Input::from(&content[..]);
+    let view = View::from(&content[..]);
     let options = Options::default().with_io(Io::ParallelBytes);
 
-    let result = TallyMap::from_input(&input, &options);
+    let result = TallyMap::from_view(&view, &options);
     assert!(result.is_ok());
 
     let tally = result.expect("process test data");

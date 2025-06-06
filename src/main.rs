@@ -3,64 +3,109 @@
 pub(crate) mod args;
 pub(crate) mod verbose;
 
+use std::io::Read;
 use std::path::PathBuf;
-use std::process;
+use std::process::ExitCode;
+use std::{fs, io};
 
-use crate::args::Args;
-use crate::verbose::Verbose;
 use anyhow::Result;
 use clap::Parser;
 use rayon::prelude::*;
-use word_tally::{Input, Io, Output, TallyMap, WordTally, exit_code::ExitCode};
 
-fn main() {
+use crate::args::Args;
+use crate::verbose::Verbose;
+use word_tally::{Io, Output, Reader, TallyMap, View, WordTally, WordTallyError};
+
+type SourceProcessor = fn(&str, &word_tally::Options) -> Result<TallyMap>;
+
+fn main() -> ExitCode {
     match run() {
-        Ok(()) => process::exit(ExitCode::Success.into()),
+        Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             let mut stderr = Output::stderr();
-            stderr.write_chunk(&format!("Error: {err}\n")).ok();
-            process::exit(ExitCode::from(&err).into());
+            stderr
+                .write_chunk(&format!("Error: {err}\n"))
+                .expect("writing to stderr should not fail");
+            ExitCode::from(u8::from(word_tally::exit_code::ExitCode::from(&err)))
         }
     }
 }
 
 fn run() -> Result<()> {
-    // Parse arguments and prepare options
     let args = Args::parse();
     let sources = args.sources();
     let options = args.to_options()?;
 
-    // Process inputs and aggregate results
-    let inputs = sources
-        .iter()
-        .map(|source| Input::new(source.as_str(), options.io()))
-        .collect::<Result<Vec<_>>>()?;
-
     options.init_thread_pool_if_parallel()?;
-    let tally_map = match options.io() {
-        Io::Stream => inputs
-            .iter()
-            .map(|input| TallyMap::from_input(input, &options))
-            .try_fold(TallyMap::new(), |acc, tally| tally.map(|t| acc.merge(t)))?,
-        Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes => inputs
-            .par_iter()
-            .map(|input| TallyMap::from_input(input, &options))
-            .try_reduce(TallyMap::new, |acc, tally| Ok(acc.merge(tally)))?,
-    };
 
-    // Create a `WordTally` from the merged `TallyMap`
+    let tally_map = tally_sources(sources, &options)?;
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
-    // Optional verbose output
     if args.verbose() {
-        let paths: Vec<_> = inputs.iter().map(Input::source).collect();
         let mut verbose = Verbose::default();
-        verbose.write_info(&word_tally, &paths.join(", "))?;
+        verbose.write_info(&word_tally, &sources.join(", "))?;
     }
 
-    // Primary output
     let mut output = Output::new(args.output().map(PathBuf::as_path))?;
     output.write_formatted_tally(&word_tally)?;
 
     Ok(())
+}
+
+// I/O processings orchestration
+
+fn tally_sources(sources: &[String], options: &word_tally::Options) -> Result<TallyMap> {
+    match options.io() {
+        Io::Stream => tally_sequential(sources, options, process_with_reader),
+        Io::ParallelStream => tally_parallel(sources, options, process_with_reader),
+        Io::ParallelMmap => tally_parallel(sources, options, process_with_mmap),
+        Io::ParallelInMemory => tally_parallel(sources, options, process_with_bytes),
+        Io::ParallelBytes => Err(WordTallyError::BytesWithPath.into()),
+    }
+}
+
+fn tally_sequential(
+    sources: &[String],
+    options: &word_tally::Options,
+    processor: SourceProcessor,
+) -> Result<TallyMap> {
+    sources
+        .iter()
+        .map(|source| processor(source, options))
+        .try_fold(TallyMap::new(), |acc, tally| tally.map(|t| acc.merge(t)))
+}
+
+fn tally_parallel(
+    sources: &[String],
+    options: &word_tally::Options,
+    processor: SourceProcessor,
+) -> Result<TallyMap> {
+    sources
+        .par_iter()
+        .map(|source| processor(source, options))
+        .try_reduce(TallyMap::new, |acc, tally| Ok(acc.merge(tally)))
+}
+
+// Processing based on I/O mode
+
+fn process_with_reader(source: &str, options: &word_tally::Options) -> Result<TallyMap> {
+    let reader = Reader::try_from(source)?;
+    TallyMap::from_reader(&reader, options)
+}
+
+fn process_with_mmap(source: &str, options: &word_tally::Options) -> Result<TallyMap> {
+    let view = View::try_from(source)?;
+    TallyMap::from_view(&view, options)
+}
+
+fn process_with_bytes(source: &str, options: &word_tally::Options) -> Result<TallyMap> {
+    let bytes = if source == "-" {
+        let mut buffer = Vec::new();
+        io::stdin().lock().read_to_end(&mut buffer)?;
+        buffer
+    } else {
+        fs::read(source)?
+    };
+    let view = View::from(bytes);
+    TallyMap::from_view(&view, options)
 }

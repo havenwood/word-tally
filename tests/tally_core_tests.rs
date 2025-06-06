@@ -3,7 +3,8 @@ use std::io::Write;
 use hashbrown::{HashMap, HashSet};
 use tempfile::NamedTempFile;
 use word_tally::{
-    Case, Count, Filters, Input, Io, Options, Performance, Serialization, Sort, WordTally,
+    Case, Count, Filters, Io, Options, Performance, Reader, Serialization, Sort, TallyMap,
+    WordTally,
 };
 
 fn create_test_data_file() -> NamedTempFile {
@@ -36,9 +37,9 @@ fn word_tally(case: Case, sort: Sort, serialization: Serialization, filters: Fil
 
     let options_static = Box::leak(Box::new(options));
 
-    let input = Input::new(file_path, options_static.io()).expect("create input from test file");
-
-    WordTally::new(&input, options_static).expect("create word tally")
+    let reader = Reader::try_from(file_path).expect("create reader");
+    let tally_map = TallyMap::from_reader(&reader, options_static).expect("create tally map");
+    WordTally::from_tally_map(tally_map, options_static)
 }
 
 fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFields<'_>) {
@@ -222,8 +223,9 @@ fn create_test_tally_with_text(input_text: &[u8], sort: Sort) -> WordTally {
     let options = Options::default().with_sort(sort);
     let options_static = Box::leak(Box::new(options));
 
-    let input = Input::new(file_path, options_static.io()).expect("create input");
-    WordTally::new(&input, options_static).expect("create word tally")
+    let reader = Reader::try_from(file_path).expect("create reader");
+    let tally_map = TallyMap::from_reader(&reader, options_static).expect("create tally map");
+    WordTally::from_tally_map(tally_map, options_static)
 }
 
 #[test]

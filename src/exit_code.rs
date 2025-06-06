@@ -98,3 +98,9 @@ impl From<ExitCode> for i32 {
         code as Self
     }
 }
+
+impl From<ExitCode> for u8 {
+    fn from(code: ExitCode) -> Self {
+        code as Self
+    }
+}

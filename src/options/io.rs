@@ -21,20 +21,22 @@ use std::str::FromStr;
 /// # Examples
 ///
 /// ```
-/// use word_tally::{Io, Input};
+/// use word_tally::{Io, Reader, View};
 ///
 /// # fn example() -> anyhow::Result<()> {
-/// // Default: balanced performance and memory
-/// let input = Input::new("file.txt", Io::default())?;
+/// // Default: reader for files and stdin
+/// let reader = Reader::try_from("file.txt")?;
 ///
-/// // Low memory: process huge files on constrained systems
-/// let input = Input::new("10gb_file.txt", Io::Stream)?;
+/// // Memory-mapped files for maximum speed
+/// let view = View::try_from("large_file.txt")?;
 ///
-/// // Maximum speed: best for local files
-/// let input = Input::new("large_file.txt", Io::ParallelMmap)?;
+/// // Stdin processing
+/// let stdin = Reader::stdin();
+/// // or
+/// let stdin = Reader::try_from("-")?;
 ///
-/// // Stdin processing: mmap not available
-/// let input = Input::new("-", Io::ParallelInMemory)?;
+/// // Bytes input
+/// let bytes_view = View::from(b"some text data");
 /// # Ok(())
 /// # }
 /// ```

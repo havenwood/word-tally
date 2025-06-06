@@ -2,7 +2,9 @@
 mod verbose_unit_tests {
     use std::io::{Result as IoResult, Write};
     use std::sync::{Arc, Mutex};
-    use word_tally::{Case, Filters, Input, Io, Options, Serialization, Sort, WordTally};
+    use word_tally::{
+        Case, Filters, Io, Options, Reader, Serialization, Sort, TallyMap, WordTally,
+    };
 
     // Mock writer to capture verbose output
     #[derive(Default)]
@@ -38,12 +40,9 @@ mod verbose_unit_tests {
         let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
         Write::write_all(&mut temp_file, test_text).expect("write test data");
 
-        let input = Input::new(
-            temp_file.path().to_str().expect("temp file path"),
-            options.io(),
-        )
-        .expect("process test");
-        WordTally::new(&input, options).expect("create word tally")
+        let reader = Reader::try_from(temp_file.path()).expect("create reader");
+        let tally_map = TallyMap::from_reader(&reader, options).expect("create tally map");
+        WordTally::from_tally_map(tally_map, options)
     }
 
     // Test that verbose output works with JSON format
@@ -167,12 +166,9 @@ mod verbose_unit_tests {
         Write::write_all(&mut temp_file, test_text).expect("write test data");
 
         let options = Options::default();
-        let input = Input::new(
-            temp_file.path().to_str().expect("temp file path"),
-            options.io(),
-        )
-        .expect("process test");
-        let tally = WordTally::new(&input, &options).expect("create word tally");
+        let reader = Reader::try_from(temp_file.path()).expect("create reader");
+        let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
+        let tally = WordTally::from_tally_map(tally_map, &options);
 
         assert_eq!(tally.count(), 0);
         assert_eq!(tally.uniq_count(), 0);
@@ -191,12 +187,9 @@ mod verbose_unit_tests {
         Write::write_all(&mut temp_file, test_text).expect("write test data");
 
         let options = Options::default();
-        let input = Input::new(
-            temp_file.path().to_str().expect("temp file path"),
-            options.io(),
-        )
-        .expect("process test");
-        let tally = WordTally::new(&input, &options).expect("create word tally");
+        let reader = Reader::try_from(temp_file.path()).expect("create reader");
+        let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
+        let tally = WordTally::from_tally_map(tally_map, &options);
 
         // Check that special characters are handled properly
         let json = serde_json::to_string(&tally).expect("serialize JSON");
