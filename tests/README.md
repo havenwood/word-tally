@@ -16,9 +16,7 @@ Command-line interface tests using `assert_cmd`:
 ### Core Library Tests (`tally_*.rs`)
 Tests for the WordTally struct and core functionality:
 - `tally_core_tests.rs` - Core operations (sorting, filtering)
-- `tally_defaults_tests.rs` - Default implementations
 - `tally_filter_tests.rs` - Word filtering logic
-- `tally_io_mode_tests.rs` - I/O mode comparisons
 - `tally_iterator_tests.rs` - Iterator implementations
 - `tally_map_tests.rs` - TallyMap operations
 - `tally_serialization_tests.rs` - Serialization/deserialization
@@ -26,13 +24,14 @@ Tests for the WordTally struct and core functionality:
 ### Module Tests (`{module}_tests.rs`)
 Tests for specific modules:
 - `args_tests.rs` - CLI argument parsing
+- `case_tests.rs` - Case normalization functionality
 - `delimiter_tests.rs` - Delimiter escaping/unescaping
 - `encoding_tests.rs` - ASCII/Unicode handling
 - `exit_code_tests.rs` - Exit code mappings
 - `filters_tests.rs` - Filter configurations
 - `hash_tests.rs` - Hash implementations
-- `input_tests.rs` - Input sources and mutex thread safety
-- `input_reader_tests.rs` - Buffer reading
+- `reader_tests.rs` - Reader functionality and file I/O
+- `view_tests.rs` - View functionality and memory mapping
 - `io_tests.rs` - I/O strategies
 - `options_tests.rs` - Options configuration
 - `output_tests.rs` - Output destinations

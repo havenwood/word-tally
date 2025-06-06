@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use tempfile::NamedTempFile;
-use word_tally::{Input, Options, TallyMap};
+use word_tally::{Io, Options, Reader, TallyMap, View};
 
 #[path = "common.rs"]
 pub mod common;
@@ -35,25 +35,47 @@ fn bench_multi_file_processing(c: &mut Criterion) {
         let shared_options = make_shared(options);
 
         group.bench_function(*name, |b| {
-            b.iter_batched(
-                || {
-                    file_paths
-                        .iter()
-                        .map(|path| Input::new(path, *io).expect("create input"))
-                        .collect::<Vec<_>>()
-                },
-                |inputs| {
-                    let tally_map = inputs
-                        .iter()
-                        .map(|input| TallyMap::from_input(input, &shared_options))
-                        .try_fold(TallyMap::new(), |acc, result| {
-                            result.map(|tally| acc.merge(tally))
-                        })
-                        .expect("process inputs");
-                    black_box(tally_map)
-                },
-                BatchSize::LargeInput,
-            );
+            if *io == Io::ParallelMmap {
+                b.iter_batched(
+                    || {
+                        file_paths
+                            .iter()
+                            .map(|path| View::try_from(*path).expect("create view"))
+                            .collect::<Vec<_>>()
+                    },
+                    |views| {
+                        let tally_map = views
+                            .iter()
+                            .map(|view| TallyMap::from_view(view, &shared_options))
+                            .try_fold(TallyMap::new(), |acc, result| {
+                                result.map(|tally| acc.merge(tally))
+                            })
+                            .expect("process inputs");
+                        black_box(tally_map)
+                    },
+                    BatchSize::LargeInput,
+                );
+            } else {
+                b.iter_batched(
+                    || {
+                        file_paths
+                            .iter()
+                            .map(|path| Reader::try_from(*path).expect("create reader"))
+                            .collect::<Vec<_>>()
+                    },
+                    |readers| {
+                        let tally_map = readers
+                            .iter()
+                            .map(|reader| TallyMap::from_reader(reader, &shared_options))
+                            .try_fold(TallyMap::new(), |acc, result| {
+                                result.map(|tally| acc.merge(tally))
+                            })
+                            .expect("process inputs");
+                        black_box(tally_map)
+                    },
+                    BatchSize::LargeInput,
+                );
+            }
         });
     }
 

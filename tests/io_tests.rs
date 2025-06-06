@@ -5,7 +5,10 @@ use std::fs;
 use std::io::Write;
 
 use anyhow::Context;
-use word_tally::{Count, Input, Io, Options, Performance, WordTally};
+use word_tally::{
+    Case, Count, Filters, Io, Metadata, Options, Performance, Reader, Serialization, Sort,
+    TallyMap, View, WordTally,
+};
 
 const TEST_TEXT: &str = "The quick brown fox
 jumps over the lazy dog
@@ -40,13 +43,9 @@ fn test_parallel_stream_sequential() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
 
-    let input = Input::new(
-        temp_file.path().to_str().expect("temp file path"),
-        options.io(),
-    )
-    .expect("create input");
-
-    let tally = WordTally::new(&input, &options).expect("create word tally");
+    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
+    let tally = WordTally::from_tally_map(tally_map, &options);
 
     verify_tally(&tally);
 }
@@ -58,13 +57,9 @@ fn test_parallel_stream_parallel() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
 
-    let input = Input::new(
-        temp_file.path().to_str().expect("temp file path"),
-        options.io(),
-    )
-    .expect("create input");
-
-    let tally = WordTally::new(&input, &options).expect("create word tally");
+    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
+    let tally = WordTally::from_tally_map(tally_map, &options);
 
     verify_tally(&tally);
 }
@@ -76,13 +71,9 @@ fn test_parallel_in_memory_sequential() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
 
-    let input = Input::new(
-        temp_file.path().to_str().expect("temp file path"),
-        options.io(),
-    )
-    .expect("create input");
-
-    let tally = WordTally::new(&input, &options).expect("create word tally");
+    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
+    let tally = WordTally::from_tally_map(tally_map, &options);
 
     verify_tally(&tally);
 }
@@ -94,13 +85,9 @@ fn test_parallel_in_memory_parallel() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
 
-    let input = Input::new(
-        temp_file.path().to_str().expect("temp file path"),
-        options.io(),
-    )
-    .expect("create input");
-
-    let tally = WordTally::new(&input, &options).expect("create word tally");
+    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
+    let tally = WordTally::from_tally_map(tally_map, &options);
 
     verify_tally(&tally);
 }
@@ -109,23 +96,30 @@ fn test_parallel_in_memory_parallel() {
 fn test_new_with_io_combinations() -> anyhow::Result<()> {
     let mut temp_file = tempfile::NamedTempFile::new()?;
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes())?;
-    let file_path = temp_file
-        .path()
-        .to_str()
-        .ok_or_else(|| anyhow::anyhow!("invalid temp file path"))?;
+    let file_path = temp_file.path();
 
-    let io_strategies = [Io::ParallelStream, Io::ParallelInMemory, Io::ParallelMmap];
-
-    for &io in &io_strategies {
+    // Test reader-based I/O strategies
+    let reader_strategies = [Io::ParallelStream, Io::ParallelInMemory];
+    for &io in &reader_strategies {
         let options = make_options(io);
-        let input = Input::new(file_path, io)
-            .with_context(|| format!("input creation failed with `{io:?}`"))?;
-
-        let tally = WordTally::new(&input, &options)
-            .with_context(|| format!("`new()` failed with `{io:?}`"))?;
+        let reader = Reader::try_from(file_path)
+            .with_context(|| format!("reader creation failed with `{io:?}`"))?;
+        let tally_map = TallyMap::from_reader(&reader, &options)
+            .with_context(|| format!("tally map creation failed with `{io:?}`"))?;
+        let tally = WordTally::from_tally_map(tally_map, &options);
 
         verify_tally(&tally);
     }
+
+    // Test view-based I/O strategy (mmap)
+    let options = make_options(Io::ParallelMmap);
+    let view =
+        View::try_from(file_path).with_context(|| "view creation failed with `ParallelMmap`")?;
+    let tally_map = TallyMap::from_view(&view, &options)
+        .with_context(|| "tally map creation failed with `ParallelMmap`")?;
+    let tally = WordTally::from_tally_map(tally_map, &options);
+
+    verify_tally(&tally);
 
     Ok(())
 }
@@ -159,15 +153,15 @@ fn test_parallel_processing_with_large_text() {
     let sequential_options = make_options(Io::ParallelInMemory);
     let parallel_options = make_options(Io::ParallelInMemory);
 
-    let sequential_input =
-        Input::new(file_path, sequential_options.io()).expect("create sequential input");
-    let parallel_input =
-        Input::new(file_path, parallel_options.io()).expect("create parallel input");
+    let sequential_reader = Reader::try_from(file_path).expect("create sequential reader");
+    let sequential_tally_map = TallyMap::from_reader(&sequential_reader, &sequential_options)
+        .expect("create sequential tally map");
+    let sequential_tally = WordTally::from_tally_map(sequential_tally_map, &sequential_options);
 
-    let sequential_tally = WordTally::new(&sequential_input, &sequential_options)
-        .expect("create sequential WordTally");
-    let parallel_tally =
-        WordTally::new(&parallel_input, &parallel_options).expect("create parallel WordTally");
+    let parallel_reader = Reader::try_from(file_path).expect("create parallel reader");
+    let parallel_tally_map = TallyMap::from_reader(&parallel_reader, &parallel_options)
+        .expect("create parallel tally map");
+    let parallel_tally = WordTally::from_tally_map(parallel_tally_map, &parallel_options);
 
     assert_eq!(sequential_tally.count(), parallel_tally.count());
     assert_eq!(sequential_tally.uniq_count(), parallel_tally.uniq_count());
@@ -188,10 +182,9 @@ fn test_parallel_mmap_with_real_file() {
     let file_path = temp_file.path().to_str().expect("temp file path");
 
     let mmap_options = make_options(Io::ParallelMmap);
-    let input = Input::new(file_path, mmap_options.io()).expect("create memory-mapped input");
-
-    let mmap_tally =
-        WordTally::new(&input, &mmap_options).expect("process file with memory mapping");
+    let view = View::try_from(file_path).expect("create memory-mapped view");
+    let mmap_tally_map = TallyMap::from_view(&view, &mmap_options).expect("create tally map");
+    let mmap_tally = WordTally::from_tally_map(mmap_tally_map, &mmap_options);
 
     verify_tally(&mmap_tally);
 }
@@ -202,49 +195,43 @@ fn test_read_trait_with_all_io_strategies() {
     let file_path = temp_dir.path().join("test_io.txt");
     fs::write(&file_path, TEST_TEXT).expect("process test");
 
-    let file_input = Input::new(&file_path, Io::ParallelStream).expect("create test input");
-    let mmap_input = Input::new(&file_path, Io::ParallelMmap).expect("create test input");
-    let bytes_input = Input::from(TEST_TEXT.as_bytes());
+    let file_reader = Reader::try_from(file_path.as_path()).expect("create test reader");
+    let mmap_view = View::try_from(file_path.as_path()).expect("create test view");
+    let bytes_view = View::from(TEST_TEXT.as_bytes());
 
-    let mut test_cases = [file_input, mmap_input, bytes_input];
+    // Test Reader
+    file_reader.with_buf_read(|buf_read| {
+        let mut content = String::new();
+        buf_read.read_to_string(&mut content).expect("read content");
+        assert_eq!(content.trim(), TEST_TEXT.trim());
+    });
 
-    for input in &mut test_cases {
-        match input {
-            Input::Reader(reader) => {
-                reader.with_buf_read(|buf_read| {
-                    let mut content = String::new();
-                    buf_read.read_to_string(&mut content).expect("read content");
-                    assert_eq!(content.trim(), TEST_TEXT.trim());
-                });
-            }
-            Input::View(view) => {
-                let content = std::str::from_utf8(view.as_ref()).expect("valid UTF-8");
-                assert_eq!(content.trim(), TEST_TEXT.trim());
-            }
-        }
-    }
+    // Test Views
+    let mmap_content = std::str::from_utf8(mmap_view.as_ref()).expect("valid UTF-8");
+    assert_eq!(mmap_content.trim(), TEST_TEXT.trim());
+
+    let bytes_content = std::str::from_utf8(bytes_view.as_ref()).expect("valid UTF-8");
+    assert_eq!(bytes_content.trim(), TEST_TEXT.trim());
 }
 
 #[test]
 fn test_bytes_input() {
     let options = make_options(Io::ParallelBytes);
-    let input = Input::from(TEST_TEXT.as_bytes());
+    let view = View::from(TEST_TEXT.as_bytes());
 
-    assert_eq!(input.source(), "<bytes>");
-    assert_eq!(input.size(), Some(TEST_TEXT.len() as u64));
+    assert_eq!(view.to_string(), "<bytes>");
+    assert_eq!(view.size(), Some(TEST_TEXT.len() as u64));
 
-    let tally = WordTally::new(&input, &options).expect("create word tally");
+    let tally_map = TallyMap::from_view(&view, &options).expect("create tally map");
+    let tally = WordTally::from_tally_map(tally_map, &options);
     verify_tally(&tally);
 }
 
 #[test]
 fn test_bytes_io_with_input_new() {
-    let result = Input::new(TEST_TEXT, Io::ParallelBytes);
-    assert!(result.is_err());
-    let err = result
-        .expect_err("bytes I/O mode with Input::new should fail")
-        .to_string();
-    assert!(err.contains("byte I/O mode requires `Input::from()`"));
+    // ParallelBytes is used with View::from() for bytes
+    let bytes_view = View::from(TEST_TEXT.as_bytes());
+    assert!(matches!(bytes_view, View::Bytes(_)));
 }
 
 #[test]
@@ -261,23 +248,30 @@ fn test_nonexistent_file_handling() {
 fn test_new_with_all_io_strategies() -> anyhow::Result<()> {
     let mut temp_file = tempfile::NamedTempFile::new()?;
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes())?;
-    let file_path = temp_file
-        .path()
-        .to_str()
-        .ok_or_else(|| anyhow::anyhow!("invalid temp file path"))?;
+    let file_path = temp_file.path();
 
-    let io_strategies = [Io::ParallelStream, Io::ParallelInMemory, Io::ParallelMmap];
-
-    for &io in &io_strategies {
+    // Test reader-based I/O strategies
+    let reader_strategies = [Io::ParallelStream, Io::ParallelInMemory];
+    for &io in &reader_strategies {
         let options = make_options(io);
-        let input = Input::new(file_path, io)
-            .with_context(|| format!("input creation failed with `{io:?}`"))?;
-
-        let tally = WordTally::new(&input, &options)
-            .with_context(|| format!("`new()` failed with `{io:?}`"))?;
+        let reader = Reader::try_from(file_path)
+            .with_context(|| format!("reader creation failed with `{io:?}`"))?;
+        let tally_map = TallyMap::from_reader(&reader, &options)
+            .with_context(|| format!("tally map creation failed with `{io:?}`"))?;
+        let tally = WordTally::from_tally_map(tally_map, &options);
 
         verify_tally(&tally);
     }
+
+    // Test view-based I/O strategy (mmap)
+    let options = make_options(Io::ParallelMmap);
+    let view =
+        View::try_from(file_path).with_context(|| "view creation failed with `ParallelMmap`")?;
+    let tally_map = TallyMap::from_view(&view, &options)
+        .with_context(|| "tally map creation failed with `ParallelMmap`")?;
+    let tally = WordTally::from_tally_map(tally_map, &options);
+
+    verify_tally(&tally);
 
     Ok(())
 }
@@ -297,8 +291,9 @@ fn test_utf8_boundary_handling() {
         .with_io(Io::ParallelMmap)
         .with_performance(performance);
 
-    let input = Input::new(file_path, options.io()).expect("create input");
-    let tally = WordTally::new(&input, &options).expect("create word tally");
+    let view = View::try_from(file_path).expect("create memory-mapped view");
+    let tally_map = TallyMap::from_view(&view, &options).expect("create tally map");
+    let tally = WordTally::from_tally_map(tally_map, &options);
 
     assert!(
         tally
@@ -497,7 +492,6 @@ fn test_io_debug_format() {
 use std::fs::File;
 use std::sync::Arc;
 use tempfile::TempDir;
-use word_tally::{Case, Filters, Serialization, Sort};
 
 fn make_shared<T>(value: T) -> Arc<T> {
     Arc::new(value)
@@ -540,8 +534,9 @@ fn test_streaming_processes_entire_file() -> anyhow::Result<()> {
 
     // Test streaming
     let streaming_options = make_shared(base_options.clone().with_io(Io::ParallelStream));
-    let streaming_input = Input::new(&file_path, streaming_options.io())?;
-    let streaming_tally = WordTally::new(&streaming_input, &streaming_options)?;
+    let streaming_reader = Reader::try_from(file_path.as_str())?;
+    let streaming_tally_map = TallyMap::from_reader(&streaming_reader, &streaming_options)?;
+    let streaming_tally = WordTally::from_tally_map(streaming_tally_map, &streaming_options);
     let streaming_count: usize = streaming_tally
         .into_iter()
         .find(|(w, _)| &**w == "narrow")
@@ -549,8 +544,9 @@ fn test_streaming_processes_entire_file() -> anyhow::Result<()> {
 
     // Test in-memory for comparison
     let in_memory_options = make_shared(base_options.with_io(Io::ParallelInMemory));
-    let in_memory_input = Input::new(&file_path, in_memory_options.io())?;
-    let in_memory_tally = WordTally::new(&in_memory_input, &in_memory_options)?;
+    let in_memory_reader = Reader::try_from(file_path.as_str())?;
+    let in_memory_tally_map = TallyMap::from_reader(&in_memory_reader, &in_memory_options)?;
+    let in_memory_tally = WordTally::from_tally_map(in_memory_tally_map, &in_memory_options);
     let in_memory_count: usize = in_memory_tally
         .into_iter()
         .find(|(w, _)| &**w == "narrow")
@@ -582,8 +578,9 @@ fn test_streaming_consistency_across_io_modes() -> anyhow::Result<()> {
     );
     let streaming_options_arc = make_shared(streaming_options);
 
-    let streaming_input = Input::new(&file_path, streaming_options_arc.io())?;
-    let streaming_tally = WordTally::new(&streaming_input, &streaming_options_arc)?;
+    let streaming_reader = Reader::try_from(file_path.as_str())?;
+    let streaming_tally_map = TallyMap::from_reader(&streaming_reader, &streaming_options_arc)?;
+    let streaming_tally = WordTally::from_tally_map(streaming_tally_map, &streaming_options_arc);
     let streaming_results: Vec<_> = streaming_tally.into_iter().collect();
 
     // Test with in-memory
@@ -597,8 +594,9 @@ fn test_streaming_consistency_across_io_modes() -> anyhow::Result<()> {
     );
     let in_memory_options_arc = make_shared(in_memory_options);
 
-    let in_memory_input = Input::new(&file_path, in_memory_options_arc.io())?;
-    let in_memory_tally = WordTally::new(&in_memory_input, &in_memory_options_arc)?;
+    let in_memory_reader = Reader::try_from(file_path.as_str())?;
+    let in_memory_tally_map = TallyMap::from_reader(&in_memory_reader, &in_memory_options_arc)?;
+    let in_memory_tally = WordTally::from_tally_map(in_memory_tally_map, &in_memory_options_arc);
     let in_memory_results: Vec<_> = in_memory_tally.into_iter().collect();
 
     assert_eq!(
