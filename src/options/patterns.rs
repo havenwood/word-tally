@@ -72,7 +72,7 @@ impl AsRef<[String]> for Patterns {
 
 impl Patterns {
     /// Creates a pattern set and compiles the `RegexSet`.
-    fn new(input_patterns: PatternList) -> Result<Self> {
+    fn new(input_patterns: PatternList) -> Result<Self, WordTallyError> {
         let regex_set = RegexSet::new(&input_patterns).map_err(|e| WordTallyError::Pattern {
             kind: "regex".to_string(),
             message: e.to_string(),
@@ -85,7 +85,7 @@ impl Patterns {
     }
 
     /// Creates a pattern set from a slice of strings.
-    fn from_slice(input_patterns: &[String]) -> Result<Self> {
+    fn from_slice(input_patterns: &[String]) -> Result<Self, WordTallyError> {
         Self::new(input_patterns.to_vec())
     }
 
@@ -140,7 +140,7 @@ impl ExcludeSet {
     /// # Errors
     ///
     /// Returns an error if any pattern cannot be compiled into a valid regular expression.
-    pub fn new(input_patterns: PatternList) -> Result<Self> {
+    pub fn new(input_patterns: PatternList) -> Result<Self, WordTallyError> {
         Ok(Self(Patterns::new(input_patterns)?))
     }
 
@@ -170,9 +170,9 @@ impl ExcludeSet {
 }
 
 impl<'a> TryFrom<&'a [String]> for ExcludeSet {
-    type Error = anyhow::Error;
+    type Error = WordTallyError;
 
-    fn try_from(input_patterns: &'a [String]) -> Result<Self> {
+    fn try_from(input_patterns: &'a [String]) -> Result<Self, Self::Error> {
         Ok(Self(Patterns::from_slice(input_patterns)?))
     }
 }
@@ -276,7 +276,7 @@ impl IncludeSet {
     /// # Errors
     ///
     /// Returns an error if any pattern cannot be compiled into a valid regular expression.
-    pub fn new(input_patterns: PatternList) -> Result<Self> {
+    pub fn new(input_patterns: PatternList) -> Result<Self, WordTallyError> {
         Ok(Self(Patterns::new(input_patterns)?))
     }
 
@@ -306,9 +306,9 @@ impl IncludeSet {
 }
 
 impl<'a> TryFrom<&'a [String]> for IncludeSet {
-    type Error = anyhow::Error;
+    type Error = WordTallyError;
 
-    fn try_from(input_patterns: &'a [String]) -> Result<Self> {
+    fn try_from(input_patterns: &'a [String]) -> Result<Self, Self::Error> {
         Ok(Self(Patterns::from_slice(input_patterns)?))
     }
 }

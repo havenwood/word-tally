@@ -155,7 +155,7 @@ impl Filters {
         self.with_patterns(
             input_patterns,
             |s, p| s.exclude_patterns = p,
-            |patterns| ExcludeSet::new(patterns.to_vec()),
+            |patterns| Ok(ExcludeSet::new(patterns.to_vec())?),
         )
     }
 
@@ -168,7 +168,7 @@ impl Filters {
         self.with_patterns(
             input_patterns,
             |s, p| s.include_patterns = p,
-            |patterns| IncludeSet::new(patterns.to_vec()),
+            |patterns| Ok(IncludeSet::new(patterns.to_vec())?),
         )
     }
 
