@@ -1,6 +1,5 @@
 //! Multi-file processing benchmarks.
 
-use std::hint::black_box;
 use std::path::PathBuf;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
@@ -8,16 +7,40 @@ use tempfile::NamedTempFile;
 use word_tally::{Io, Options, Reader, TallyMap, View};
 
 #[path = "common.rs"]
-pub mod common;
-use self::common::{
-    IO_STRATEGIES_NO_BYTES, create_bench_group, make_shared, standard_criterion_config,
-};
+mod common;
+use self::common::{IO_STRATEGIES_FILE, create_benchmark_file, process_tally};
+
+/// Processes multiple sources following the main.rs pattern
+fn process_multi_file_sources(sources: &[&str], options: &Options) -> anyhow::Result<TallyMap> {
+    if options.io() == Io::ParallelMmap {
+        let views: Result<Vec<_>, _> = sources.iter().map(|path| View::try_from(*path)).collect();
+        let views = views?;
+
+        views
+            .iter()
+            .map(|view| TallyMap::from_view(view, options))
+            .try_fold(TallyMap::new(), |acc, result| {
+                result.map(|tally| acc.merge(tally))
+            })
+    } else {
+        let readers: Result<Vec<_>, _> =
+            sources.iter().map(|path| Reader::try_from(*path)).collect();
+        let readers = readers?;
+
+        readers
+            .iter()
+            .map(|reader| TallyMap::from_reader(reader, options))
+            .try_fold(TallyMap::new(), |acc, result| {
+                result.map(|tally| acc.merge(tally))
+            })
+    }
+}
 
 fn bench_multi_file_processing(c: &mut Criterion) {
     let file_sizes_kb = [5, 8, 7];
     let temp_files_and_paths: Vec<(NamedTempFile, PathBuf)> = file_sizes_kb
         .iter()
-        .map(|&size| common::create_benchmark_file(size))
+        .map(|&size| create_benchmark_file(size))
         .collect();
 
     let file_paths: Vec<&str> = temp_files_and_paths
@@ -28,54 +51,23 @@ fn bench_multi_file_processing(c: &mut Criterion) {
         })
         .collect();
 
-    let mut group = create_bench_group(c, "multi_file_processing");
+    let mut group = c.benchmark_group("multi_file/processing");
 
-    for (io, name) in &IO_STRATEGIES_NO_BYTES {
+    for (io, name) in &IO_STRATEGIES_FILE {
         let options = Options::default().with_io(*io);
-        let shared_options = make_shared(options);
 
         group.bench_function(*name, |b| {
-            if *io == Io::ParallelMmap {
-                b.iter_batched(
-                    || {
-                        file_paths
-                            .iter()
-                            .map(|path| View::try_from(*path).expect("create view"))
-                            .collect::<Vec<_>>()
-                    },
-                    |views| {
-                        let tally_map = views
-                            .iter()
-                            .map(|view| TallyMap::from_view(view, &shared_options))
-                            .try_fold(TallyMap::new(), |acc, result| {
-                                result.map(|tally| acc.merge(tally))
-                            })
-                            .expect("process inputs");
-                        black_box(tally_map)
-                    },
-                    BatchSize::LargeInput,
-                );
-            } else {
-                b.iter_batched(
-                    || {
-                        file_paths
-                            .iter()
-                            .map(|path| Reader::try_from(*path).expect("create reader"))
-                            .collect::<Vec<_>>()
-                    },
-                    |readers| {
-                        let tally_map = readers
-                            .iter()
-                            .map(|reader| TallyMap::from_reader(reader, &shared_options))
-                            .try_fold(TallyMap::new(), |acc, result| {
-                                result.map(|tally| acc.merge(tally))
-                            })
-                            .expect("process inputs");
-                        black_box(tally_map)
-                    },
-                    BatchSize::LargeInput,
-                );
-            }
+            b.iter_batched(
+                || file_paths.clone(),
+                |paths| {
+                    let sources: Vec<&str> =
+                        paths.iter().map(std::convert::AsRef::as_ref).collect();
+                    let tally_map = process_multi_file_sources(&sources, &options)
+                        .expect("process multi-file sources");
+                    process_tally(tally_map, &options)
+                },
+                BatchSize::LargeInput,
+            );
         });
     }
 
@@ -84,7 +76,7 @@ fn bench_multi_file_processing(c: &mut Criterion) {
 
 criterion_group! {
     name = benches;
-    config = standard_criterion_config();
+    config = common::criterion_config();
     targets = bench_multi_file_processing
 }
 

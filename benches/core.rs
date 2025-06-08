@@ -1,65 +1,59 @@
 //! Core benchmarks for sorting and filtering strategies.
 
 use criterion::{Criterion, criterion_group, criterion_main};
-use word_tally::{Filters, Io, Options};
+
+use word_tally::Options;
 
 #[path = "common.rs"]
-pub mod common;
-use self::common::{
-    SORT_OPTIONS, create_bench_group, create_temp_input, make_shared, small_text,
-    standard_criterion_config,
-};
+mod common;
+use self::common::{SORT_OPTIONS, bench_word_tally_with_string, small_text};
 
-/// Benchmark sorting strategies
+/// Benchmarks sorting strategies.
 fn bench_sorting_strategies(c: &mut Criterion) {
-    let mut group = create_bench_group(c, "core/sorting_strategies");
+    let mut group = c.benchmark_group("core/sorting_strategies");
     let text_sample = small_text();
 
     for (sort, sort_name) in &SORT_OPTIONS {
-        let options = Options::default().with_sort(*sort).with_io(Io::Stream);
-
-        let shared_options = make_shared(options);
+        let options = Options::default().with_sort(*sort);
 
         group.bench_function(*sort_name, |b| {
-            common::bench_word_tally_with_string(
-                b,
-                &text_sample,
-                &shared_options,
-                create_temp_input,
-            );
+            bench_word_tally_with_string(b, &text_sample, &options);
         });
     }
 
     group.finish();
 }
 
-/// Benchmark filtering strategies
-fn bench_filtering_strategies(c: &mut Criterion) {
-    let mut group = create_bench_group(c, "core/filtering_strategies");
+/// Benchmarks text processing strategies (filtering and case).
+fn bench_text_processing_strategies(c: &mut Criterion) {
+    let mut group = c.benchmark_group("core/text_processing");
     let text_sample = small_text();
 
-    let filters = [
-        (Filters::default(), "none"),
+    let strategies = [
+        (Options::default(), "default"),
         (
-            Filters::default().with_min_count(2).with_min_chars(3),
-            "combined",
+            Options::default().with_case(word_tally::Case::Lower),
+            "lowercase",
+        ),
+        (
+            Options::default().with_filters(word_tally::Filters::default().with_min_chars(3)),
+            "min_chars_filter",
+        ),
+        (
+            Options::default()
+                .with_case(word_tally::Case::Lower)
+                .with_filters(
+                    word_tally::Filters::default()
+                        .with_min_chars(3)
+                        .with_min_count(2),
+                ),
+            "combined_processing",
         ),
     ];
 
-    for (filter, filter_name) in &filters {
-        let options = Options::default()
-            .with_filters(filter.clone())
-            .with_io(Io::Stream);
-
-        let shared_options = make_shared(options);
-
-        group.bench_function(*filter_name, |b| {
-            common::bench_word_tally_with_string(
-                b,
-                &text_sample,
-                &shared_options,
-                create_temp_input,
-            );
+    for (options, strategy_name) in &strategies {
+        group.bench_function(*strategy_name, |b| {
+            bench_word_tally_with_string(b, &text_sample, options);
         });
     }
 
@@ -68,12 +62,12 @@ fn bench_filtering_strategies(c: &mut Criterion) {
 
 fn run_benchmarks(c: &mut Criterion) {
     bench_sorting_strategies(c);
-    bench_filtering_strategies(c);
+    bench_text_processing_strategies(c);
 }
 
 criterion_group! {
     name = benches;
-    config = standard_criterion_config();
+    config = common::criterion_config();
     targets = run_benchmarks
 }
 
