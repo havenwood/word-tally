@@ -172,8 +172,6 @@ fn test_include_patterns_ord() {
 }
 
 #[test]
-// Testing hash implementation with interior mutability is safe here
-#[allow(clippy::mutable_key_type)]
 fn test_exclude_patterns_hash() {
     let patterns1 = ExcludeSet::new(vec!["test".to_string()]).expect("process test");
     let patterns2 = ExcludeSet::new(vec!["test".to_string()]).expect("process test");
@@ -184,8 +182,6 @@ fn test_exclude_patterns_hash() {
 }
 
 #[test]
-// Testing hash implementation with interior mutability is safe here
-#[allow(clippy::mutable_key_type)]
 fn test_include_patterns_hash() {
     let patterns1 = IncludeSet::new(vec!["test".to_string()]).expect("process test");
     let patterns2 = IncludeSet::new(vec!["test".to_string()]).expect("process test");
