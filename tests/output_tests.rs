@@ -49,11 +49,11 @@ mod output_tests {
     }
 
     #[test]
-    fn test_output_write_chunk() {
+    fn test_output_write_bytes() {
         let temp_file = NamedTempFile::new().expect("create temp file");
         let mut output = Output::file(temp_file.path()).expect("process test");
         output
-            .write_chunk("I'm Nobody! Who are you?")
+            .write_all(b"I'm Nobody! Who are you?")
             .expect("process test");
         output.flush().expect("process test");
 
@@ -82,20 +82,20 @@ mod output_tests {
     }
 
     #[test]
-    fn test_write_chunk_succeeds() {
+    fn test_write_bytes_succeeds() {
         let temp_file = NamedTempFile::new().expect("create temp file");
         let mut output = Output::file(temp_file.path()).expect("process test");
 
-        output.write_chunk("").expect("write empty");
-        output.write_chunk("Hope").expect("write Hope");
+        output.write_all(b"").expect("write empty");
+        output.write_all(b"Hope").expect("write Hope");
         output
-            .write_chunk("With a capital letter—")
+            .write_all("With a capital letter—".as_bytes())
             .expect("write with capital");
         output
-            .write_chunk("And without—is still a thing with feathers")
+            .write_all("And without—is still a thing with feathers".as_bytes())
             .expect("write feathers");
         output
-            .write_chunk("Tell all the truth but tell it slant—")
+            .write_all("Tell all the truth but tell it slant—".as_bytes())
             .expect("write slant");
 
         output.flush().expect("flush");
@@ -106,15 +106,15 @@ mod output_tests {
     }
 
     #[test]
-    fn test_write_chunk_with_newlines() {
+    fn test_write_bytes_with_newlines() {
         let temp_file = NamedTempFile::new().expect("create temp file");
         let mut output = Output::file(temp_file.path()).expect("process test");
 
         output
-            .write_chunk("Much Madness is divinest Sense—\nTo a discerning Eye—")
+            .write_all("Much Madness is divinest Sense—\nTo a discerning Eye—".as_bytes())
             .expect("write lines");
         output
-            .write_chunk("They shut me up in Prose—\n")
+            .write_all("They shut me up in Prose—\n".as_bytes())
             .expect("write with newline");
 
         output.flush().expect("flush");

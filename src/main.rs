@@ -3,8 +3,7 @@
 pub(crate) mod args;
 pub(crate) mod verbose;
 
-use std::io::Read;
-use std::path::PathBuf;
+use std::io::{Read, Write};
 use std::process::ExitCode;
 use std::{fs, io};
 
@@ -24,7 +23,7 @@ fn main() -> ExitCode {
         Err(err) => {
             let mut stderr = Output::stderr();
             stderr
-                .write_chunk(&format!("Error: {err}\n"))
+                .write_all(format!("Error: {err}\n").as_bytes())
                 .expect("writing to stderr should not fail");
             ExitCode::from(u8::from(word_tally::exit_code::ExitCode::from(&err)))
         }
@@ -46,7 +45,7 @@ fn run() -> Result<()> {
         verbose.write_info(&word_tally, &sources.join(", "))?;
     }
 
-    let mut output = Output::new(args.output().map(PathBuf::as_path))?;
+    let mut output = Output::try_from(args.output())?;
     output.write_formatted_tally(&word_tally)?;
 
     Ok(())

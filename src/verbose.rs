@@ -2,6 +2,7 @@
 
 use anyhow::{Context, Result};
 use serde::Serialize;
+use std::io::Write;
 use word_tally::Output;
 use word_tally::{Serialization, WordTally, WordTallyError};
 
@@ -125,7 +126,7 @@ impl Verbose {
         let json = serde_json::to_string(data).map_err(WordTallyError::JsonSerialization)?;
 
         self.output
-            .write_chunk(&format!("{json}\n\n"))
+            .write_all(format!("{json}\n\n").as_bytes())
             .context("failed to write JSON output")
     }
 
@@ -153,12 +154,12 @@ impl Verbose {
         // Write each field as key-value pairs
         data.field_pairs().try_for_each(|(field_name, value)| {
             self.output
-                .write_chunk(&format!("{field_name}{delimiter}{value}{entry_delimiter}"))
+                .write_all(format!("{field_name}{delimiter}{value}{entry_delimiter}").as_bytes())
         })?;
 
         // Add separator if needed
         if data.total_words > 0 {
-            self.output.write_chunk("\n")?;
+            self.output.write_all(b"\n")?;
         }
 
         Ok(())
@@ -169,10 +170,10 @@ impl Verbose {
         let output = String::from_utf8(data).context("failed to convert output to UTF-8")?;
 
         self.output
-            .write_chunk(&output)
+            .write_all(output.as_bytes())
             .context("failed to write output")?;
         self.output
-            .write_chunk("\n")
+            .write_all(b"\n")
             .context("failed to write trailing newline")
     }
 }

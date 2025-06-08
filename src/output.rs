@@ -6,14 +6,11 @@ use anyhow::{Context, Result};
 use std::fmt::{self, Debug, Formatter};
 use std::fs::File;
 use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Write};
-use std::path::Path;
-
-/// `Writer` dynamic dispatches the `Write` trait.
-pub type Writer = Box<dyn Write>;
+use std::path::{Path, PathBuf};
 
 /// `Output` writes to either a file or stream like stdout or stderr.
 pub struct Output {
-    writer: Writer,
+    writer: Box<dyn io::Write>,
 }
 
 impl Default for Output {
@@ -35,43 +32,37 @@ impl Debug for Output {
 ///
 /// Note: Broken pipe handling is needed for commands like `word-tally | head`.
 /// Once it stabilizes, the `unix_sigpipe` feature will be a better solution here.
-impl Write for Output {
+impl io::Write for Output {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         match self.writer.write(buf) {
             Ok(n) => Ok(n),
-            Err(err) => match err.kind() {
-                // Pretend we wrote all bytes on broken pipe
-                BrokenPipe => Ok(buf.len()),
-                _ => Err(err),
-            },
+            Err(e) if e.kind() == BrokenPipe => Ok(buf.len()),
+            Err(e) => Err(e),
         }
     }
 
     fn flush(&mut self) -> io::Result<()> {
         match self.writer.flush() {
             Ok(()) => Ok(()),
-            Err(err) => match err.kind() {
-                // Ignore broken pipe errors for CLI tools
-                BrokenPipe => Ok(()),
-                _ => Err(err),
-            },
+            Err(e) if e.kind() == BrokenPipe => Ok(()),
+            Err(e) => Err(e),
         }
     }
 
     fn write_all(&mut self, buf: &[u8]) -> io::Result<()> {
         match self.writer.write_all(buf) {
             Ok(()) => Ok(()),
-            Err(err) => match err.kind() {
-                // Ignore broken pipe errors for CLI tools
-                BrokenPipe => Ok(()),
-                _ => Err(err),
-            },
+            Err(e) if e.kind() == BrokenPipe => Ok(()),
+            Err(e) => Err(e),
         }
     }
 }
 
 impl Output {
-    /// Creates an `Output` from optional arguments, choosing between file or stdout.
+    /// Creates an `Output` from an optional path.
+    /// - `None` -> stdout
+    /// - `Some("-")` -> stdout
+    /// - `Some(path)` -> file
     ///
     /// # Examples
     ///
@@ -134,18 +125,6 @@ impl Output {
         }
     }
 
-    /// Writes a chunk of text to the writer.
-    ///
-    /// # Errors
-    ///
-    /// Returns an I/O error if the write operation fails, such as when:
-    /// - Disk is full
-    /// - File is not writable
-    /// - Pipe is broken
-    pub fn write_chunk(&mut self, chunk: &str) -> io::Result<()> {
-        self.write_all(chunk.as_bytes())
-    }
-
     /// Writes word tally data in the specified format.
     ///
     /// # Examples
@@ -192,7 +171,7 @@ impl Output {
         entry_delimiter: &str,
     ) -> Result<()> {
         tally.iter().try_for_each(|(word, count)| {
-            self.write_chunk(&format!("{word}{field_delimiter}{count}{entry_delimiter}"))
+            self.write_all(format!("{word}{field_delimiter}{count}{entry_delimiter}").as_bytes())
                 .context("failed to write word-count pair")
         })?;
 
@@ -203,24 +182,53 @@ impl Output {
         let mut json_data = Vec::with_capacity(tally.len());
         json_data.extend(tally.iter().map(|(word, count)| (word.as_ref(), count)));
         let json = serde_json::to_string(&json_data).map_err(WordTallyError::JsonSerialization)?;
-        self.write_chunk(&format!("{json}\n"))
+        self.write_all(format!("{json}\n").as_bytes())
             .context("failed to write JSON output")?;
 
         self.flush().context("failed to flush JSON output")
     }
 
     fn write_csv(&mut self, tally: &[(Word, Count)]) -> Result<()> {
-        let mut csv_writer = csv::Writer::from_writer(&mut self.writer);
+        let mut csv_writer = csv::Writer::from_writer(self);
         csv_writer
             .write_record(["word", "count"])
             .map_err(WordTallyError::CsvSerialization)?;
 
-        tally.iter().try_for_each(|(word, count)| {
+        for (word, count) in tally {
             csv_writer
                 .write_record([word.as_ref(), &count.to_string()])
-                .map_err(WordTallyError::CsvSerialization)
-        })?;
+                .map_err(WordTallyError::CsvSerialization)?;
+        }
 
         csv_writer.flush().context("failed to flush CSV output")
+    }
+}
+
+/// Allows creating `Output` from an optional path (`None` = stdout).
+impl TryFrom<Option<&PathBuf>> for Output {
+    type Error = WordTallyError;
+
+    fn try_from(path: Option<&PathBuf>) -> Result<Self, Self::Error> {
+        path.map_or_else(|| Ok(Self::stdout()), |path| Self::try_from(path.as_path()))
+    }
+}
+
+/// Allows creating `Output` from a path (stdin for "-").
+impl TryFrom<&Path> for Output {
+    type Error = WordTallyError;
+
+    fn try_from(path: &Path) -> Result<Self, Self::Error> {
+        if path == Path::new("-") {
+            Ok(Self::stdout())
+        } else {
+            Self::file(path).map_err(|e| WordTallyError::Io {
+                path: path.display().to_string(),
+                message: "failed to create output file".to_string(),
+                source: e.downcast_ref::<io::Error>().map_or_else(
+                    || io::Error::other(e.to_string()),
+                    |io_err| io::Error::new(io_err.kind(), io_err.to_string()),
+                ),
+            })
+        }
     }
 }
