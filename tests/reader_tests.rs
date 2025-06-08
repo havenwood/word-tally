@@ -81,6 +81,6 @@ fn test_reader_file_not_found() {
     let error = reader_result.expect_err("should fail for nonexistent file");
     assert_eq!(
         error.to_string(),
-        "I/O at /nonexistent/path/to/file.txt: no such file: /nonexistent/path/to/file.txt"
+        "no such file: /nonexistent/path/to/file.txt: /nonexistent/path/to/file.txt"
     );
 }

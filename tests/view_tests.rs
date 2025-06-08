@@ -79,7 +79,7 @@ fn test_view_file_not_found_error_message() {
     let error = view_result.expect_err("should fail for nonexistent file");
     assert_eq!(
         error.to_string(),
-        "I/O at /nonexistent/path/to/file.txt: no such file: /nonexistent/path/to/file.txt"
+        "no such file: /nonexistent/path/to/file.txt: /nonexistent/path/to/file.txt"
     );
 }
 

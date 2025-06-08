@@ -66,7 +66,7 @@ pub enum Error {
     },
 
     /// I/O error with context.
-    #[error("I/O at {path}: {message}")]
+    #[error("{message}: {path}")]
     Io {
         /// File path where error occurred.
         path: String,
