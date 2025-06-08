@@ -163,6 +163,18 @@ impl WordTally {
         self.uniq_count
     }
 
+    /// Same as `uniq_count`, the size of the collection.
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.tally.len()
+    }
+
+    /// Returns true if the tally contains no words.
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.tally.is_empty()
+    }
+
     /// Gets the `count` field.
     #[must_use]
     pub const fn count(&self) -> Count {
