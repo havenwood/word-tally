@@ -1,9 +1,10 @@
 //! Tests for CLI functionality.
 
+use std::fs;
+
 use assert_cmd::Command;
 use predicates::prelude::PredicateBooleanExt;
 use predicates::str::{self, contains};
-use std::fs;
 use tempfile::NamedTempFile;
 
 fn word_tally() -> Command {
@@ -47,54 +48,6 @@ fn help_long() {
 }
 
 #[test]
-fn verbose_without_input() {
-    let assert = word_tally().arg("-v").assert();
-    assert
-        .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\nentry-delimiter \"\\n\"\ncase original\norder desc\nio parallel-stream\nencoding unicode\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
-        .stdout("");
-}
-
-#[test]
-fn verbose_with_min_chars() {
-    let assert = word_tally().arg("-v").arg("--min-chars=42").assert();
-    assert
-        .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\nentry-delimiter \"\\n\"\ncase original\norder desc\nio parallel-stream\nencoding unicode\nmin-chars 42\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
-        .stdout("");
-}
-
-#[test]
-fn verbose_with_min_count() {
-    let assert = word_tally().arg("-v").arg("--min-count=42").assert();
-    assert
-        .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\nentry-delimiter \"\\n\"\ncase original\norder desc\nio parallel-stream\nencoding unicode\nmin-chars none\nmin-count 42\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
-        .stdout("");
-}
-
-#[test]
-fn verbose_with_exclude_words() {
-    let assert = word_tally()
-        .arg("-v")
-        .arg("--exclude-words=narrow,certain")
-        .assert();
-    assert
-        .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\nentry-delimiter \"\\n\"\ncase original\norder desc\nio parallel-stream\nencoding unicode\nmin-chars none\nmin-count none\nexclude-words narrow,certain\nexclude-patterns none\ninclude-patterns none\n")
-        .stdout("");
-}
-
-#[test]
-fn verbose_with_input() {
-    let assert = word_tally().write_stdin("narrow").arg("-v").assert();
-    assert
-        .success()
-        .stderr("source -\ntotal-words 1\nunique-words 1\ndelimiter \" \"\nentry-delimiter \"\\n\"\ncase original\norder desc\nio parallel-stream\nencoding unicode\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n\n")
-        .stdout("narrow 1\n");
-}
-
-#[test]
 fn output_longhand() {
     let temp_file = NamedTempFile::new().expect("process test");
     let temp_path = temp_file.path().to_str().expect("process test");
@@ -124,21 +77,6 @@ fn output_shorthand() {
         "narrow 1\n",
         fs::read_to_string(temp_path).expect("process test")
     );
-}
-
-#[test]
-fn delimiter_shorthand() {
-    let assert = word_tally().write_stdin("narrow").arg("-d\t").assert();
-    assert.success().stdout("narrow\t1\n");
-}
-
-#[test]
-fn delimiter_longhand() {
-    let assert = word_tally()
-        .write_stdin("narrow")
-        .arg("--field-delimiter=,")
-        .assert();
-    assert.success().stdout("narrow,1\n");
 }
 
 #[test]
@@ -193,207 +131,12 @@ fn no_words() {
 #[test]
 fn test_discard_words() {
     let input = "Hope is the thing with feathers that perches in the soul.";
-    let mut cmd = Command::cargo_bin("word-tally").expect("process test");
+    let mut cmd = word_tally();
     cmd.write_stdin(input)
         .arg("--exclude-words=feathers,soul")
         .assert()
         .success()
         .stdout(contains("Hope").and(contains("feathers").not().and(contains("soul").not())));
-}
-
-#[test]
-fn test_exclude_patterns() {
-    let input = "I dwell in possibility - a fairer house than prose.";
-    let mut cmd = Command::cargo_bin("word-tally").expect("process test");
-    cmd.write_stdin(input)
-        .arg("--exclude=^h.*") // Exclude words starting with 'h'
-        .arg("--exclude=.*t$") // Exclude words ending with 't'
-        .assert()
-        .success()
-        .stdout(contains("dwell"))
-        .stdout(contains("possibility"))
-        .stdout(contains("a"))
-        .stdout(contains("fairer"))
-        .stdout(contains("prose"))
-        .stdout(contains("house").not())
-        .stdout(contains("than"))
-        .stdout(contains("i"));
-}
-
-#[test]
-fn test_multiple_exclude_patterns() {
-    let input = "success fame sunset wild nobody moon immortal";
-    let mut cmd = Command::cargo_bin("word-tally").expect("process test");
-    cmd.write_stdin(input)
-        .arg("--exclude=^s.*") // Exclude words starting with 's'
-        .arg("--exclude=.*g$") // Exclude words ending with 'g'
-        .arg("--exclude=c.*t") // Exclude words containing 'c' and 't'
-        .assert()
-        .success()
-        .stdout(contains("fame"))
-        .stdout(contains("wild"))
-        .stdout(contains("nobody"))
-        .stdout(contains("moon"))
-        .stdout(contains("immortal"))
-        .stdout(contains("success").not())
-        .stdout(contains("sunset").not());
-}
-
-#[test]
-fn test_include_patterns() {
-    let input = "nobody knows tomorrow certain immortal narrow sublime";
-    let mut cmd = Command::cargo_bin("word-tally").expect("process test");
-    cmd.write_stdin(input)
-        .arg("--include=^[nt].*") // Include words starting with 'n' or 't'
-        .assert()
-        .success()
-        .stdout(contains("nobody"))
-        .stdout(contains("tomorrow"))
-        .stdout(contains("narrow"))
-        .stdout(contains("knows").not())
-        .stdout(contains("certain").not())
-        .stdout(contains("immortal").not())
-        .stdout(contains("sublime").not());
-}
-
-#[test]
-fn test_multiple_include_patterns() {
-    let input = "beauty finite infinite fame certain forever sublime";
-    let mut cmd = Command::cargo_bin("word-tally").expect("process test");
-    cmd.write_stdin(input)
-        .arg("--include=^f.*") // Include words starting with 'f'
-        .arg("--include=.*e$") // Include words ending with 'e'
-        .assert()
-        .success()
-        .stdout(contains("finite"))
-        .stdout(contains("fame"))
-        .stdout(contains("forever"))
-        .stdout(contains("infinite"))
-        .stdout(contains("sublime"))
-        .stdout(contains("beauty").not())
-        .stdout(contains("certain").not());
-}
-
-#[test]
-fn test_combine_exclusions() {
-    let input = "Tell all the truth but tell it slant - success in circuit lies.";
-    let mut cmd = Command::cargo_bin("word-tally").expect("process test");
-    cmd.write_stdin(input)
-        .arg("--exclude-words=tell,lies")
-        .arg("--exclude=^s.*")
-        .arg("--exclude=.*t$")
-        .assert()
-        .success()
-        .stdout(contains("all"))
-        .stdout(contains("the"))
-        .stdout(contains("truth"))
-        .stdout(contains("in"))
-        .stdout(contains("but").not())
-        .stdout(contains("it").not())
-        .stdout(contains("circuit").not())
-        .stdout(contains("slant").not())
-        .stdout(contains("success").not())
-        .stdout(contains("tell").not())
-        .stdout(contains("lies").not());
-}
-
-#[test]
-fn verbose_with_exclude_patterns() {
-    let assert = word_tally()
-        .arg("-v")
-        .arg("--exclude=^t.*")
-        .arg("--exclude=ing$")
-        .assert();
-    assert
-        .success()
-        .stderr(contains("exclude-patterns ^t.*,ing$"));
-}
-
-#[test]
-fn verbose_with_json_format() {
-    let assert = word_tally()
-        .arg("-v")
-        .arg("--format=json")
-        .write_stdin("hope forever")
-        .assert();
-
-    assert
-        .success()
-        .stderr(contains("\"source\":\"-\""))
-        .stderr(contains("\"totalWords\":2"))
-        .stderr(contains("\"uniqueWords\":2"))
-        .stderr(contains("\"case\":\"original\""))
-        .stderr(contains("\"order\":\"desc\""))
-        .stderr(contains("\"io\":\"parallel-stream\""))
-        .stderr(contains("\"minChars\":null"))
-        .stderr(contains("\"minCount\":null"))
-        .stderr(contains("\"excludeWords\":null"))
-        .stderr(contains("\"excludePatterns\":null"))
-        .stderr(contains("\"includePatterns\":null"))
-        .stdout(contains("[\"hope\",1]").and(contains("[\"forever\",1]")));
-}
-
-#[test]
-fn verbose_with_csv_format() {
-    let assert = word_tally()
-        .arg("-v")
-        .arg("--format=csv")
-        .write_stdin("hope forever")
-        .assert();
-
-    assert
-        .success()
-        .stderr(contains("source,total-words,unique-words"))
-        .stderr(contains("desc"))
-        .stderr(contains("parallel-stream"))
-        .stdout(contains("word,count"))
-        .stdout(contains("forever,1"))
-        .stdout(contains("hope,1"));
-}
-
-#[test]
-fn format_json() {
-    let assert = word_tally()
-        .write_stdin("narrow narrow fame")
-        .arg("--format=json")
-        .assert();
-    assert
-        .success()
-        .stdout(contains("[\"narrow\",2]").and(contains("[\"fame\",1]")));
-}
-
-#[test]
-fn format_csv() {
-    let assert = word_tally()
-        .write_stdin("narrow narrow fame")
-        .arg("--format=csv")
-        .assert();
-    assert
-        .success()
-        .stdout(contains("word,count"))
-        .stdout(contains("narrow,2"))
-        .stdout(contains("fame,1"));
-}
-
-#[test]
-fn csv_escaping() {
-    // Using a normal test with multiple words to verify CSV format is correct
-    // This tests that the CSV header exists and words are tallied correctly
-    // The real test of CSV escaping is happening behind the scenes in the csv crate
-    // which handles commas and quotes automatically
-
-    let assert = word_tally()
-        .write_stdin("narrow certain \"sublime\" hope")
-        .arg("--format=csv")
-        .assert();
-
-    assert
-        .success()
-        .stdout(str::starts_with("word,count\n"))
-        .stdout(contains("narrow,1"))
-        .stdout(contains("certain,1"))
-        .stdout(contains("sublime,1"))
-        .stdout(contains("hope,1"));
 }
 
 #[test]

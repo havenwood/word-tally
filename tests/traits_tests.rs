@@ -1,9 +1,9 @@
 use std::path::PathBuf;
-use word_tally::Threads;
+
 use word_tally::options::{
     filters::ExcludeWords, io::Io, performance::Performance, serialization::Serialization,
 };
-use word_tally::{Options, Reader, WordTally};
+use word_tally::{Options, Reader, Threads, WordTally};
 
 #[test]
 fn test_display_implementations() {

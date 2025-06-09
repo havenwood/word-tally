@@ -337,13 +337,10 @@ fn test_equality_and_hashing() {
                 Io::ParallelStream,
                 word_tally::Performance::default(),
             );
-            // For tests only: create a 'static reference using Box::leak
-            let options_static = Box::leak(Box::new(options));
 
             let reader = Reader::try_from(file_path).expect("create reader");
-            let tally_map =
-                TallyMap::from_reader(&reader, options_static).expect("create tally map");
-            WordTally::from_tally_map(tally_map, options_static)
+            let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
+            WordTally::from_tally_map(tally_map, &options)
         })
         .collect();
 

@@ -1,9 +1,10 @@
 //! Tests for error handling integration.
 
-use assert_cmd::Command;
-use predicates::prelude::*;
 use std::fs::{self, File};
 use std::io::Write;
+
+use assert_cmd::Command;
+use predicates::prelude::*;
 use tempfile::{NamedTempFile, TempDir};
 
 #[test]

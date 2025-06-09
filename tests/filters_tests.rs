@@ -4,20 +4,19 @@ use word_tally::PatternList;
 use word_tally::options::filters::{ExcludeWords, ExcludeWordsList};
 use word_tally::{Case, Filters, TallyMap, options::encoding::Encoding};
 
-// Helper function to create TallyMap from counts
 fn tally_map_from_counts(counts: &[(&str, usize)]) -> TallyMap {
-    let mut tally = TallyMap::new();
-    for (word, count) in counts {
-        for _ in 0..*count {
+    counts
+        .iter()
+        .fold(TallyMap::new(), |mut tally, (word, count)| {
+            for _ in 0..*count {
+                tally
+                    .add_words(word, Case::Original, Encoding::Unicode)
+                    .expect("valid unicode");
+            }
             tally
-                .add_words(word, Case::Original, Encoding::Unicode)
-                .expect("valid unicode");
-        }
-    }
-    tally
+        })
 }
 
-// Helper function to check if a word exists in the TallyMap
 fn has_word(tally: &TallyMap, word: &str) -> bool {
     tally.clone().into_iter().any(|(w, _)| w.as_ref() == word)
 }
@@ -39,8 +38,8 @@ fn test_filters_new() {
     )
     .expect("execute operation");
 
-    assert_eq!(filters.min_chars().expect("process test"), 3);
-    assert_eq!(filters.min_count().expect("process test"), 2);
+    assert_eq!(filters.min_chars(), Some(3));
+    assert_eq!(filters.min_count(), Some(2));
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_none());
     assert!(filters.include_patterns().is_none());
@@ -55,8 +54,8 @@ fn test_filters_new() {
     )
     .expect("execute operation");
 
-    assert_eq!(filters.min_chars().expect("process test"), 3);
-    assert_eq!(filters.min_count().expect("process test"), 2);
+    assert_eq!(filters.min_chars(), Some(3));
+    assert_eq!(filters.min_count(), Some(2));
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_some());
     assert!(filters.include_patterns().is_none());
@@ -72,8 +71,8 @@ fn test_filters_new() {
     )
     .expect("execute operation");
 
-    assert_eq!(filters.min_chars().expect("process test"), 3);
-    assert_eq!(filters.min_count().expect("process test"), 2);
+    assert_eq!(filters.min_chars(), Some(3));
+    assert_eq!(filters.min_count(), Some(2));
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_none());
     assert!(filters.include_patterns().is_some());
@@ -89,8 +88,8 @@ fn test_filters_new() {
     )
     .expect("execute operation");
 
-    assert_eq!(filters.min_chars().expect("process test"), 3);
-    assert_eq!(filters.min_count().expect("process test"), 2);
+    assert_eq!(filters.min_chars(), Some(3));
+    assert_eq!(filters.min_count(), Some(2));
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_some());
     assert!(filters.include_patterns().is_some());
@@ -123,8 +122,8 @@ fn test_filters_with_empty_patterns() {
     )
     .expect("execute operation");
 
-    assert_eq!(filters.min_chars().expect("process test"), 3);
-    assert_eq!(filters.min_count().expect("process test"), 2);
+    assert_eq!(filters.min_chars(), Some(3));
+    assert_eq!(filters.min_count(), Some(2));
     assert!(filters.exclude_words().is_some());
     assert!(filters.exclude_patterns().is_none());
     assert!(filters.include_patterns().is_none());

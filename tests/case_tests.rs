@@ -6,182 +6,149 @@ use word_tally::options::case::Case;
 #[test]
 fn test_normalize_unicode_original_case() {
     let case = Case::Original;
+    let test_cases = [
+        ("narrow", "narrow"),
+        ("FELLOW", "FELLOW"),
+        ("CiRcUiT", "CiRcUiT"),
+        ("", ""),
+        ("123!@#", "123!@#"),
+    ];
 
-    assert_eq!(case.normalize_unicode("narrow"), Cow::Borrowed("narrow"));
-    assert_eq!(case.normalize_unicode("FELLOW"), Cow::Borrowed("FELLOW"));
-    assert_eq!(case.normalize_unicode("CiRcUiT"), Cow::Borrowed("CiRcUiT"));
-    assert_eq!(case.normalize_unicode(""), Cow::Borrowed(""));
-    assert_eq!(case.normalize_unicode("123!@#"), Cow::Borrowed("123!@#"));
+    for (input, expected) in test_cases {
+        assert_eq!(case.normalize_unicode(input), Cow::Borrowed(expected));
+    }
 }
 
 #[test]
 fn test_normalize_unicode_lower_case_already_lower() {
     let case = Case::Lower;
+    let test_cases = [
+        "narrow",
+        "fellow",
+        "123",
+        "",
+        "!@#$%",
+        "narrow123",
+        "narrow_fellow",
+    ];
 
-    // Already lowercase - should return borrowed
-    assert_eq!(case.normalize_unicode("narrow"), Cow::Borrowed("narrow"));
-    assert_eq!(case.normalize_unicode("fellow"), Cow::Borrowed("fellow"));
-    assert_eq!(case.normalize_unicode("123"), Cow::Borrowed("123"));
-    assert_eq!(case.normalize_unicode(""), Cow::Borrowed(""));
-    assert_eq!(case.normalize_unicode("!@#$%"), Cow::Borrowed("!@#$%"));
-    assert_eq!(
-        case.normalize_unicode("narrow123"),
-        Cow::Borrowed("narrow123")
-    );
-    assert_eq!(
-        case.normalize_unicode("narrow_fellow"),
-        Cow::Borrowed("narrow_fellow")
-    );
+    for input in test_cases {
+        assert_eq!(case.normalize_unicode(input), Cow::Borrowed(input));
+    }
 }
 
 #[test]
 fn test_normalize_unicode_lower_case_needs_conversion() {
     let case = Case::Lower;
+    let test_cases = [
+        ("NARROW", "narrow"),
+        ("NaRrOw", "narrow"),
+        ("Fellow", "fellow"),
+        ("CIRCUIT123", "circuit123"),
+        ("ZERO_AT_BONE", "zero_at_bone"),
+    ];
 
-    // Has uppercase - should return owned
-    assert_eq!(
-        case.normalize_unicode("NARROW"),
-        Cow::Owned::<str>("narrow".to_string())
-    );
-    assert_eq!(
-        case.normalize_unicode("NaRrOw"),
-        Cow::Owned::<str>("narrow".to_string())
-    );
-    assert_eq!(
-        case.normalize_unicode("Fellow"),
-        Cow::Owned::<str>("fellow".to_string())
-    );
-    assert_eq!(
-        case.normalize_unicode("CIRCUIT123"),
-        Cow::Owned::<str>("circuit123".to_string())
-    );
-    assert_eq!(
-        case.normalize_unicode("ZERO_AT_BONE"),
-        Cow::Owned::<str>("zero_at_bone".to_string())
-    );
+    for (input, expected) in test_cases {
+        assert_eq!(
+            case.normalize_unicode(input),
+            Cow::Owned::<str>(expected.to_string())
+        );
+    }
 }
 
 #[test]
 fn test_normalize_unicode_upper_case_already_upper() {
     let case = Case::Upper;
+    let test_cases = [
+        "NARROW",
+        "FELLOW",
+        "123",
+        "",
+        "!@#$%",
+        "NARROW123",
+        "NARROW_FELLOW",
+    ];
 
-    // Already uppercase - should return borrowed
-    assert_eq!(case.normalize_unicode("NARROW"), Cow::Borrowed("NARROW"));
-    assert_eq!(case.normalize_unicode("FELLOW"), Cow::Borrowed("FELLOW"));
-    assert_eq!(case.normalize_unicode("123"), Cow::Borrowed("123"));
-    assert_eq!(case.normalize_unicode(""), Cow::Borrowed(""));
-    assert_eq!(case.normalize_unicode("!@#$%"), Cow::Borrowed("!@#$%"));
-    assert_eq!(
-        case.normalize_unicode("NARROW123"),
-        Cow::Borrowed("NARROW123")
-    );
-    assert_eq!(
-        case.normalize_unicode("NARROW_FELLOW"),
-        Cow::Borrowed("NARROW_FELLOW")
-    );
+    for input in test_cases {
+        assert_eq!(case.normalize_unicode(input), Cow::Borrowed(input));
+    }
 }
 
 #[test]
 fn test_normalize_unicode_upper_case_needs_conversion() {
     let case = Case::Upper;
+    let test_cases = [
+        ("narrow", "NARROW"),
+        ("NaRrOw", "NARROW"),
+        ("Fellow", "FELLOW"),
+        ("circuit123", "CIRCUIT123"),
+        ("zero_at_bone", "ZERO_AT_BONE"),
+    ];
 
-    // Has lowercase - should return owned
-    assert_eq!(
-        case.normalize_unicode("narrow"),
-        Cow::Owned::<str>("NARROW".to_string())
-    );
-    assert_eq!(
-        case.normalize_unicode("NaRrOw"),
-        Cow::Owned::<str>("NARROW".to_string())
-    );
-    assert_eq!(
-        case.normalize_unicode("Fellow"),
-        Cow::Owned::<str>("FELLOW".to_string())
-    );
-    assert_eq!(
-        case.normalize_unicode("circuit123"),
-        Cow::Owned::<str>("CIRCUIT123".to_string())
-    );
-    assert_eq!(
-        case.normalize_unicode("zero_at_bone"),
-        Cow::Owned::<str>("ZERO_AT_BONE".to_string())
-    );
+    for (input, expected) in test_cases {
+        assert_eq!(
+            case.normalize_unicode(input),
+            Cow::Owned::<str>(expected.to_string())
+        );
+    }
 }
 
 #[test]
 fn test_normalize_ascii_lower_case() {
     let case = Case::Lower;
 
-    // Already lowercase ASCII - should return borrowed
-    assert_eq!(case.normalize_ascii("narrow"), Cow::Borrowed("narrow"));
-    assert_eq!(
-        case.normalize_ascii("fellow123"),
-        Cow::Borrowed("fellow123")
-    );
-    assert_eq!(case.normalize_ascii(""), Cow::Borrowed(""));
-    assert_eq!(case.normalize_ascii("!@#$%"), Cow::Borrowed("!@#$%"));
-    assert_eq!(
-        case.normalize_ascii("narrow_fellow"),
-        Cow::Borrowed("narrow_fellow")
-    );
+    // Already lowercase - borrowed
+    let borrowed_cases = ["narrow", "fellow123", "", "!@#$%", "narrow_fellow"];
+    for input in borrowed_cases {
+        assert_eq!(case.normalize_ascii(input), Cow::Borrowed(input));
+    }
 
-    // Has uppercase ASCII - should return owned
-    assert_eq!(
-        case.normalize_ascii("NARROW"),
-        Cow::Owned::<str>("narrow".to_string())
-    );
-    assert_eq!(
-        case.normalize_ascii("NaRrOw"),
-        Cow::Owned::<str>("narrow".to_string())
-    );
-    assert_eq!(
-        case.normalize_ascii("ZERO123"),
-        Cow::Owned::<str>("zero123".to_string())
-    );
+    // Needs conversion - owned
+    let owned_cases = [
+        ("NARROW", "narrow"),
+        ("NaRrOw", "narrow"),
+        ("ZERO123", "zero123"),
+    ];
+    for (input, expected) in owned_cases {
+        assert_eq!(
+            case.normalize_ascii(input),
+            Cow::Owned::<str>(expected.to_string())
+        );
+    }
 }
 
 #[test]
 fn test_normalize_ascii_upper_case() {
     let case = Case::Upper;
 
-    // Already uppercase ASCII - should return borrowed
-    assert_eq!(case.normalize_ascii("NARROW"), Cow::Borrowed("NARROW"));
-    assert_eq!(
-        case.normalize_ascii("FELLOW123"),
-        Cow::Borrowed("FELLOW123")
-    );
-    assert_eq!(case.normalize_ascii(""), Cow::Borrowed(""));
-    assert_eq!(case.normalize_ascii("!@#$%"), Cow::Borrowed("!@#$%"));
-    assert_eq!(
-        case.normalize_ascii("NARROW_FELLOW"),
-        Cow::Borrowed("NARROW_FELLOW")
-    );
+    // Already uppercase - borrowed
+    let borrowed_cases = ["NARROW", "FELLOW123", "", "!@#$%", "NARROW_FELLOW"];
+    for input in borrowed_cases {
+        assert_eq!(case.normalize_ascii(input), Cow::Borrowed(input));
+    }
 
-    // Has lowercase ASCII - should return owned
-    assert_eq!(
-        case.normalize_ascii("narrow"),
-        Cow::Owned::<str>("NARROW".to_string())
-    );
-    assert_eq!(
-        case.normalize_ascii("NaRrOw"),
-        Cow::Owned::<str>("NARROW".to_string())
-    );
-    assert_eq!(
-        case.normalize_ascii("zero123"),
-        Cow::Owned::<str>("ZERO123".to_string())
-    );
+    // Needs conversion - owned
+    let owned_cases = [
+        ("narrow", "NARROW"),
+        ("NaRrOw", "NARROW"),
+        ("zero123", "ZERO123"),
+    ];
+    for (input, expected) in owned_cases {
+        assert_eq!(
+            case.normalize_ascii(input),
+            Cow::Owned::<str>(expected.to_string())
+        );
+    }
 }
 
 #[test]
 fn test_normalize_ascii_original_case() {
     let case = Case::Original;
+    let test_cases = ["narrow", "NARROW", "NaRrOw", "", "123!@#"];
 
-    // Always returns borrowed for original case
-    assert_eq!(case.normalize_ascii("narrow"), Cow::Borrowed("narrow"));
-    assert_eq!(case.normalize_ascii("NARROW"), Cow::Borrowed("NARROW"));
-    assert_eq!(case.normalize_ascii("NaRrOw"), Cow::Borrowed("NaRrOw"));
-    assert_eq!(case.normalize_ascii(""), Cow::Borrowed(""));
-    assert_eq!(case.normalize_ascii("123!@#"), Cow::Borrowed("123!@#"));
+    for input in test_cases {
+        assert_eq!(case.normalize_ascii(input), Cow::Borrowed(input));
+    }
 }
 
 #[test]
@@ -250,42 +217,24 @@ fn test_normalize_ascii_with_non_ascii_chars() {
 
 #[test]
 fn test_normalize_unicode_edge_cases() {
-    // Test with strings that have no case (numbers, symbols)
-    let case = Case::Lower;
-    assert_eq!(case.normalize_unicode("12345"), Cow::Borrowed("12345"));
-    assert_eq!(
-        case.normalize_unicode("!@#$%^&*()"),
-        Cow::Borrowed("!@#$%^&*()")
-    );
-    assert_eq!(case.normalize_unicode("   "), Cow::Borrowed("   "));
+    let no_case_strings = ["12345", "!@#$%^&*()", "   "];
 
-    let case = Case::Upper;
-    assert_eq!(case.normalize_unicode("12345"), Cow::Borrowed("12345"));
-    assert_eq!(
-        case.normalize_unicode("!@#$%^&*()"),
-        Cow::Borrowed("!@#$%^&*()")
-    );
-    assert_eq!(case.normalize_unicode("   "), Cow::Borrowed("   "));
+    for case in [Case::Lower, Case::Upper] {
+        for input in &no_case_strings {
+            assert_eq!(case.normalize_unicode(input), Cow::Borrowed(*input));
+        }
+    }
 }
 
 #[test]
 fn test_normalize_ascii_edge_cases() {
-    // Test with strings that have no case (numbers, symbols)
-    let case = Case::Lower;
-    assert_eq!(case.normalize_ascii("12345"), Cow::Borrowed("12345"));
-    assert_eq!(
-        case.normalize_ascii("!@#$%^&*()"),
-        Cow::Borrowed("!@#$%^&*()")
-    );
-    assert_eq!(case.normalize_ascii("   "), Cow::Borrowed("   "));
+    let no_case_strings = ["12345", "!@#$%^&*()", "   "];
 
-    let case = Case::Upper;
-    assert_eq!(case.normalize_ascii("12345"), Cow::Borrowed("12345"));
-    assert_eq!(
-        case.normalize_ascii("!@#$%^&*()"),
-        Cow::Borrowed("!@#$%^&*()")
-    );
-    assert_eq!(case.normalize_ascii("   "), Cow::Borrowed("   "));
+    for case in [Case::Lower, Case::Upper] {
+        for input in &no_case_strings {
+            assert_eq!(case.normalize_ascii(input), Cow::Borrowed(*input));
+        }
+    }
 }
 
 #[test]

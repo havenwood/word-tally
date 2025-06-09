@@ -23,7 +23,7 @@ And opens further on -";
 }
 
 fn word_tally(case: Case, sort: Sort, serialization: Serialization, filters: Filters) -> WordTally {
-    let test_file = Box::leak(Box::new(create_test_data_file()));
+    let test_file = create_test_data_file();
     let file_path = test_file.path().to_str().expect("temp file path");
 
     let options = Options::new(
@@ -35,11 +35,9 @@ fn word_tally(case: Case, sort: Sort, serialization: Serialization, filters: Fil
         Performance::default(),
     );
 
-    let options_static = Box::leak(Box::new(options));
-
     let reader = Reader::try_from(file_path).expect("create reader");
-    let tally_map = TallyMap::from_reader(&reader, options_static).expect("create tally map");
-    WordTally::from_tally_map(tally_map, options_static)
+    let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
+    WordTally::from_tally_map(tally_map, &options)
 }
 
 fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFields<'_>) {
@@ -217,15 +215,13 @@ struct ExpectedFields<'a> {
 fn create_test_tally_with_text(input_text: &[u8], sort: Sort) -> WordTally {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
-    let temp_file_static = Box::leak(Box::new(temp_file));
-    let file_path = temp_file_static.path().to_str().expect("temp file path");
+    let file_path = temp_file.path().to_str().expect("temp file path");
 
     let options = Options::default().with_sort(sort);
-    let options_static = Box::leak(Box::new(options));
 
     let reader = Reader::try_from(file_path).expect("create reader");
-    let tally_map = TallyMap::from_reader(&reader, options_static).expect("create tally map");
-    WordTally::from_tally_map(tally_map, options_static)
+    let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
+    WordTally::from_tally_map(tally_map, &options)
 }
 
 #[test]

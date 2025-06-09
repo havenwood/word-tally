@@ -2,23 +2,17 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use word_tally::{Performance, Threads};
 
-// Test constants
 #[test]
 fn test_constants() {
-    // These values are documented in the `Performance` struct
     assert_eq!(Performance::base_stdin_tally_capacity(), 1024);
 }
 
-// Test builder methods
 #[test]
 fn test_with_base_stdin_size() {
     let perf = Performance::default().with_base_stdin_size(512 * 1024);
     assert_eq!(perf.base_stdin_size, 512 * 1024);
 }
 
-// Test calculation methods
-
-// Test trait implementations
 #[test]
 fn test_clone() {
     let perf1 = Performance::default().with_chunk_size(32768);
@@ -57,7 +51,6 @@ fn test_hash() {
     assert_eq!(hasher1.finish(), hasher2.finish());
 }
 
-// Test serialization
 #[test]
 fn test_serde() {
     let perf = Performance::default().with_chunk_size(32768);
@@ -68,10 +61,8 @@ fn test_serde() {
     assert_eq!(perf, deserialized);
 }
 
-// Test environment variable parsing simulation
 #[test]
 fn test_environment_logic() {
-    // Test the logic without actually setting environment variables
     let perf = Performance::from_env();
 
     // Should get defaults when no env vars are set

@@ -245,38 +245,6 @@ fn test_nonexistent_file_handling() {
 }
 
 #[test]
-fn test_new_with_all_io_strategies() -> anyhow::Result<()> {
-    let mut temp_file = tempfile::NamedTempFile::new()?;
-    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes())?;
-    let file_path = temp_file.path();
-
-    // Test reader-based I/O strategies
-    let reader_strategies = [Io::ParallelStream, Io::ParallelInMemory];
-    for &io in &reader_strategies {
-        let options = make_options(io);
-        let reader = Reader::try_from(file_path)
-            .with_context(|| format!("reader creation failed with `{io:?}`"))?;
-        let tally_map = TallyMap::from_reader(&reader, &options)
-            .with_context(|| format!("tally map creation failed with `{io:?}`"))?;
-        let tally = WordTally::from_tally_map(tally_map, &options);
-
-        verify_tally(&tally);
-    }
-
-    // Test view-based I/O strategy (mmap)
-    let options = make_options(Io::ParallelMmap);
-    let view =
-        View::try_from(file_path).with_context(|| "view creation failed with `ParallelMmap`")?;
-    let tally_map = TallyMap::from_view(&view, &options)
-        .with_context(|| "tally map creation failed with `ParallelMmap`")?;
-    let tally = WordTally::from_tally_map(tally_map, &options);
-
-    verify_tally(&tally);
-
-    Ok(())
-}
-
-#[test]
 fn test_utf8_boundary_handling() {
     let test_text = "æ æ æ æ";
 

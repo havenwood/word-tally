@@ -21,62 +21,27 @@ fn test_verbose_command(args: &[&str], stdin: &str, expected_patterns: &[&str]) 
     }
 }
 
-fn test_basic_command(args: &[&str], stdin: &str, expected_stdout: &[&str]) {
-    let mut cmd = word_tally();
-    for arg in args {
-        cmd.arg(*arg);
-    }
-    let mut assert = cmd.write_stdin(stdin).assert().success();
-
-    for pattern in expected_stdout {
-        assert = assert.stdout(contains(*pattern));
-    }
-}
-
 //
 // Default Values Testing
 //
 
 #[test]
-fn test_args_default_input() {
-    test_verbose_command(&["-v"], "test", &["source -"]);
-}
-
-#[test]
-fn test_args_default_io() {
-    test_verbose_command(&["-v"], "test", &["io parallel-stream"]);
-}
-
-#[test]
-fn test_args_default_case() {
-    test_verbose_command(&["-v"], "test", &["case original"]);
-}
-
-#[test]
-fn test_args_default_sort() {
-    test_verbose_command(&["-v"], "test", &["order desc"]);
-}
-
-#[test]
-fn test_args_default_format() {
-    test_verbose_command(&["-v"], "test", &["delimiter \" \""]);
-}
-
-#[test]
-fn test_args_default_delimiter() {
-    test_verbose_command(&["-v"], "test", &["delimiter \" \""]);
-}
-
-#[test]
-fn test_args_default_processing() {
-    test_verbose_command(&["-v"], "test", &["io parallel-stream"]);
+fn test_args_defaults() {
+    word_tally()
+        .arg("-v")
+        .write_stdin("test")
+        .assert()
+        .success()
+        .stderr(contains("source -"))
+        .stderr(contains("io parallel-stream"))
+        .stderr(contains("case original"))
+        .stderr(contains("order desc"))
+        .stderr(contains("delimiter \" \""));
 }
 
 #[test]
 fn test_args_default_filters() {
-    // Default filters should all be none
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("-v")
         .write_stdin("test")
         .assert()
@@ -90,9 +55,7 @@ fn test_args_default_filters() {
 
 #[test]
 fn test_args_default_verbose() {
-    // Default verbose should be false (no verbose output without -v)
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .write_stdin("test")
         .assert()
         .success()
@@ -102,9 +65,7 @@ fn test_args_default_verbose() {
 
 #[test]
 fn test_args_default_output() {
-    // Default output should be stdout (no file output)
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .write_stdin("test")
         .assert()
         .success()
@@ -113,14 +74,19 @@ fn test_args_default_output() {
 
 #[test]
 fn test_args_all_defaults() {
-    test_basic_command(&[], "This is a test", &["This 1", "is 1", "a 1", "test 1"]);
+    word_tally()
+        .write_stdin("This is a test")
+        .assert()
+        .success()
+        .stdout(contains("This 1"))
+        .stdout(contains("is 1"))
+        .stdout(contains("a 1"))
+        .stdout(contains("test 1"));
 }
 
 #[test]
 fn test_args_defaults_with_minimal_flags() {
-    // Test that defaults work with minimal flags
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("-v")
         .write_stdin("Test")
         .assert()
@@ -146,17 +112,16 @@ fn test_args_defaults_with_minimal_flags() {
 
 #[test]
 fn test_get_options() {
-    let assert = Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("--case=upper")
-        .arg("--sort=asc")
-        .arg("--format=json")
-        .arg("--min-chars=3")
-        .arg("-v")
+    word_tally()
+        .args([
+            "--case=upper",
+            "--sort=asc",
+            "--format=json",
+            "--min-chars=3",
+            "-v",
+        ])
         .write_stdin("hello world")
-        .assert();
-
-    assert
+        .assert()
         .success()
         .stderr(contains("\"case\":\"upper\""))
         .stderr(contains("\"order\":\"asc\""))
@@ -165,27 +130,19 @@ fn test_get_options() {
 
 #[test]
 fn test_get_performance() {
-    let assert = Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("-v")
         .write_stdin("hello world")
-        .assert();
-
-    assert.success();
+        .assert()
+        .success();
 }
 
 #[test]
 fn test_get_formatting() {
-    let assert = Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("--case=upper")
-        .arg("--sort=asc")
-        .arg("--format=json")
-        .arg("-v")
+    word_tally()
+        .args(["--case=upper", "--sort=asc", "--format=json", "-v"])
         .write_stdin("hello")
-        .assert();
-
-    assert
+        .assert()
         .success()
         .stderr(contains("\"case\":\"upper\""))
         .stderr(contains("\"order\":\"asc\""));
@@ -193,16 +150,15 @@ fn test_get_formatting() {
 
 #[test]
 fn test_get_filters() {
-    let assert = Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("--min-chars=3")
-        .arg("--min-count=2")
-        .arg("--exclude-words=hello,world")
-        .arg("-v")
+    word_tally()
+        .args([
+            "--min-chars=3",
+            "--min-count=2",
+            "--exclude-words=hello,world",
+            "-v",
+        ])
         .write_stdin("hello world")
-        .assert();
-
-    assert
+        .assert()
         .success()
         .stderr(contains("min-chars 3"))
         .stderr(contains("min-count 2"))
@@ -211,15 +167,12 @@ fn test_get_filters() {
 
 #[test]
 fn test_get_filters_with_patterns() {
-    let assert = Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("--include=^h")
-        .arg("--exclude=\\d+")
-        .arg("-v")
+    word_tally()
+        .args(["--include=^h", "--exclude=\\d+", "-v"])
         .write_stdin("hello 123 world")
-        .assert();
-
-    assert.success().stderr(contains("exclude-patterns"));
+        .assert()
+        .success()
+        .stderr(contains("exclude-patterns"));
 }
 
 //
@@ -228,31 +181,22 @@ fn test_get_filters_with_patterns() {
 
 #[test]
 fn test_io_shorthand_flag() {
-    let assert = Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("-I=parallel-in-memory")
-        .arg("-v")
+    word_tally()
+        .args(["-I=parallel-in-memory", "-v"])
         .write_stdin("hello world")
-        .assert();
-
-    assert.success().stderr(contains("io parallel-in-memory"));
+        .assert()
+        .success()
+        .stderr(contains("io parallel-in-memory"));
 }
 
 #[test]
 fn test_args_shorthand_flags() {
-    let assert = Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
-        .arg("-c=upper")
-        .arg("-s=asc")
-        .arg("-f=json")
-        .arg("-d=,")
-        .arg("-m=3")
-        .arg("-n=2")
-        .arg("-v")
+    word_tally()
+        .args([
+            "-c=upper", "-s=asc", "-f=json", "-d=,", "-m=3", "-n=2", "-v",
+        ])
         .write_stdin("hello world test")
-        .assert();
-
-    assert
+        .assert()
         .success()
         .stderr(contains("\"case\":\"upper\""))
         .stderr(contains("\"order\":\"asc\""))
@@ -262,8 +206,7 @@ fn test_args_shorthand_flags() {
 
 #[test]
 fn test_args_exclude_words_list() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("-w=the,a,an,and,or")
         .arg("-v")
         .write_stdin("the quick brown fox and a lazy dog")
@@ -274,8 +217,7 @@ fn test_args_exclude_words_list() {
 
 #[test]
 fn test_args_multiple_include_patterns() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("-i=^h")
         .arg("-i=^w")
         .arg("-v")
@@ -287,8 +229,7 @@ fn test_args_multiple_include_patterns() {
 
 #[test]
 fn test_args_multiple_exclude_patterns() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("-x=ing$")
         .arg("-x=ed$")
         .arg("-v")
@@ -302,8 +243,7 @@ fn test_args_multiple_exclude_patterns() {
 fn test_args_output_file_shorthand() {
     let temp_file = NamedTempFile::new().expect("create temp file");
 
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("-o")
         .arg(temp_file.path())
         .write_stdin("test word")
@@ -326,8 +266,7 @@ fn test_args_input_from_file() {
 
     let path = temp_file.path().display().to_string();
 
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg(temp_file.path())
         .arg("-v")
         .assert()
@@ -339,8 +278,7 @@ fn test_args_input_from_file() {
 fn test_args_output_to_file() {
     let temp_file = NamedTempFile::new().expect("create temp file");
 
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--output")
         .arg(temp_file.path())
         .write_stdin("test word test")
@@ -354,8 +292,7 @@ fn test_args_output_to_file() {
 
 #[test]
 fn test_args_stdin_explicit() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("-")
         .arg("-v")
         .write_stdin("test")
@@ -370,8 +307,7 @@ fn test_args_stdin_explicit() {
 
 #[test]
 fn test_args_verbose_flag() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("-v")
         .write_stdin("test")
         .assert()
@@ -385,8 +321,7 @@ fn test_args_verbose_flag() {
 
 #[test]
 fn test_args_filters_comprehensive() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--min-chars=5")
         .arg("--min-count=1")
         .arg("--exclude-words=hello,world")
@@ -404,8 +339,7 @@ fn test_args_filters_comprehensive() {
 
 #[test]
 fn test_args_escaped_words() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--exclude-words=\\t,\\n")
         .arg("-v")
         .write_stdin("test\ttab\nnewline")
@@ -416,8 +350,7 @@ fn test_args_escaped_words() {
 
 #[test]
 fn test_args_multiple_patterns() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--include=^t")
         .arg("--include=^w")
         .arg("--exclude=st$")
@@ -436,8 +369,7 @@ fn test_args_multiple_patterns() {
 
 #[test]
 fn test_args_options_comprehensive() {
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--case=lower")
         .arg("--sort=desc")
         .arg("--io=parallel-in-memory")
@@ -476,8 +408,7 @@ fn test_args_all_io_modes() {
     }
 
     // Test mmap separately - it should fail with stdin
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--io=parallel-mmap")
         .write_stdin("test")
         .assert()
@@ -489,11 +420,12 @@ fn test_args_all_io_modes() {
 #[test]
 fn test_args_case_modes() {
     for case in ["original", "upper", "lower"] {
-        test_verbose_command(
-            &[&format!("--case={case}"), "-v"],
-            "Test",
-            &[&format!("case {case}")],
-        );
+        word_tally()
+            .args([&format!("--case={case}"), "-v"])
+            .write_stdin("Test")
+            .assert()
+            .success()
+            .stderr(contains(format!("case {case}")));
     }
 }
 
@@ -522,8 +454,7 @@ fn test_args_format_modes() {
 #[test]
 fn test_args_delimiter_edge_cases() {
     // Empty delimiter
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--field-delimiter=")
         .arg("--format=text")
         .write_stdin("test word")
@@ -533,8 +464,7 @@ fn test_args_delimiter_edge_cases() {
         .stdout(contains("word1"));
 
     // Multi-char delimiter
-    Command::cargo_bin("word-tally")
-        .expect("arguments should be valid")
+    word_tally()
         .arg("--field-delimiter= => ")
         .arg("--format=text")
         .write_stdin("test word")

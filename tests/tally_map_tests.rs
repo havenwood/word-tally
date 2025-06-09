@@ -1,4 +1,8 @@
-use word_tally::{Case, Options, TallyMap, View, options::encoding::Encoding};
+//! Tests for `TallyMap` functionality
+
+use word_tally::options::encoding::Encoding;
+use word_tally::options::io::Io;
+use word_tally::{Case, Count, Options, TallyMap, View, Word};
 
 // Helper to create TallyMap from word pairs
 fn make_tally(words: &[(&str, usize)]) -> TallyMap {
@@ -172,18 +176,21 @@ fn test_into_iterator() {
 
 #[test]
 fn test_from_iterator() {
-    use word_tally::{Count, Word};
-
     let items: Vec<(Word, Count)> = vec![("hello".into(), 3), ("world".into(), 1)];
 
     let tally: TallyMap = items.into_iter().collect();
     assert_eq!(tally.len(), 2);
+
+    let mut result: Vec<(String, usize)> = tally.into_iter().map(|(w, c)| (w.into(), c)).collect();
+    result.sort_by_key(|(w, _)| w.clone());
+    assert_eq!(
+        result,
+        vec![("hello".to_string(), 3), ("world".to_string(), 1)]
+    );
 }
 
 #[test]
-fn test_from_input_with_bytes() {
-    use word_tally::options::io::Io;
-
+fn test_from_view_with_parallel_bytes() {
     let content = b"I celebrate myself and sing myself";
     let view = View::from(&content[..]);
     let options = Options::default().with_io(Io::ParallelBytes);
@@ -191,52 +198,20 @@ fn test_from_input_with_bytes() {
     let result = TallyMap::from_view(&view, &options);
     assert!(result.is_ok());
 
-    let tally = result.expect("process test data");
+    let tally = result.expect("process test data should succeed");
     assert_eq!(tally.len(), 5);
 }
 
 #[test]
-fn test_from_input_streamed() {
-    use word_tally::options::io::Io;
-
+fn test_from_view_with_parallel_in_memory() {
     let content = b"I celebrate myself and sing myself";
     let view = View::from(&content[..]);
-    let options = Options::default().with_io(Io::ParallelBytes);
+    let options = Options::default().with_io(Io::ParallelInMemory);
 
     let result = TallyMap::from_view(&view, &options);
     assert!(result.is_ok());
 
-    let tally = result.expect("process test data");
-    assert_eq!(tally.len(), 5);
-}
-
-#[test]
-fn test_from_input_parallel() {
-    use word_tally::options::io::Io;
-
-    let content = b"I celebrate myself and sing myself";
-    let view = View::from(&content[..]);
-    let options = Options::default().with_io(Io::ParallelBytes);
-
-    let result = TallyMap::from_view(&view, &options);
-    assert!(result.is_ok());
-
-    let tally = result.expect("process test data");
-    assert_eq!(tally.len(), 5);
-}
-
-#[test]
-fn test_from_input_parallel_streamed() {
-    use word_tally::options::io::Io;
-
-    let content = b"I celebrate myself and sing myself";
-    let view = View::from(&content[..]);
-    let options = Options::default().with_io(Io::ParallelBytes);
-
-    let result = TallyMap::from_view(&view, &options);
-    assert!(result.is_ok());
-
-    let tally = result.expect("process test data");
+    let tally = result.expect("process test data should succeed");
     assert_eq!(tally.len(), 5);
 }
 

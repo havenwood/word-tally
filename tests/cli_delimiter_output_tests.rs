@@ -3,7 +3,7 @@
 use assert_cmd::Command;
 
 fn word_tally() -> Command {
-    Command::cargo_bin("word-tally").expect("find word-tally binary")
+    Command::cargo_bin("word-tally").expect("process test")
 }
 
 #[test]

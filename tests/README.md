@@ -48,7 +48,6 @@ Tests for specific modules:
 - `lib_tests.rs` - Comprehensive library tests
 - `multi_file_io_tests.rs` - Multiple file handling
 - `traits_tests.rs` - Trait implementations
-- `verbose_output_tests.rs` - Verbose output integration
 
 ## Running Tests
 

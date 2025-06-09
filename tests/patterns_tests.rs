@@ -1,3 +1,5 @@
+//! Tests for pattern matching functionality.
+
 use hashbrown::HashSet;
 use word_tally::{ExcludeSet, IncludeSet};
 
@@ -20,10 +22,16 @@ fn test_exclude_patterns_matches() {
     let patterns =
         ExcludeSet::new(vec!["^test".to_string(), "ing$".to_string()]).expect("process test");
 
-    assert!(patterns.matches("testing"));
-    assert!(patterns.matches("test"));
-    assert!(patterns.matches("running"));
-    assert!(!patterns.matches("run"));
+    let test_cases = [
+        ("testing", true),
+        ("test", true),
+        ("running", true),
+        ("run", false),
+    ];
+
+    for (word, should_match) in test_cases {
+        assert_eq!(patterns.matches(word), should_match);
+    }
 }
 
 #[test]
@@ -64,10 +72,16 @@ fn test_include_patterns_empty() {
 fn test_include_patterns_matches() {
     let patterns = IncludeSet::new(vec!["[aeiou]".to_string()]).expect("process test");
 
-    assert!(patterns.matches("test"));
-    assert!(patterns.matches("hello"));
-    assert!(!patterns.matches("rhythm"));
-    assert!(!patterns.matches("xyz"));
+    let test_cases = [
+        ("test", true),
+        ("hello", true),
+        ("rhythm", false),
+        ("xyz", false),
+    ];
+
+    for (word, should_match) in test_cases {
+        assert_eq!(patterns.matches(word), should_match);
+    }
 }
 
 #[test]
@@ -75,10 +89,16 @@ fn test_include_patterns_multiple() {
     let patterns =
         IncludeSet::new(vec!["^pre".to_string(), "^un".to_string()]).expect("process test");
 
-    assert!(patterns.matches("prevent"));
-    assert!(patterns.matches("unlike"));
-    assert!(!patterns.matches("likely"));
-    assert!(!patterns.matches("post"));
+    let test_cases = [
+        ("prevent", true),
+        ("unlike", true),
+        ("likely", false),
+        ("post", false),
+    ];
+
+    for (word, should_match) in test_cases {
+        assert_eq!(patterns.matches(word), should_match);
+    }
 }
 
 #[test]

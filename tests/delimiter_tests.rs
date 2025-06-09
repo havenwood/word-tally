@@ -13,23 +13,27 @@ fn test_delimiter_from_literal() {
 
 #[test]
 fn test_delimiter_from_escaped() {
-    // Basic escape sequences
-    assert_eq!(Delimiter::from_escaped("\\0").as_str(), "\0");
-    assert_eq!(Delimiter::from_escaped("\\t").as_str(), "\t");
-    assert_eq!(Delimiter::from_escaped("\\n").as_str(), "\n");
-    assert_eq!(Delimiter::from_escaped("\\r").as_str(), "\r");
-    assert_eq!(Delimiter::from_escaped("\\\\").as_str(), "\\");
-    assert_eq!(Delimiter::from_escaped("\\\"").as_str(), "\"");
-    assert_eq!(Delimiter::from_escaped("\\'").as_str(), "'");
+    let test_cases = [
+        // Basic escape sequences
+        ("\\0", "\0"),
+        ("\\t", "\t"),
+        ("\\n", "\n"),
+        ("\\r", "\r"),
+        ("\\\\", "\\"),
+        ("\\\"", "\""),
+        ("\\'", "'"),
+        // No escapes
+        (" ", " "),
+        (",", ","),
+        ("::", "::"),
+        // Unknown escape sequences (just use the character)
+        ("\\x", "x"),
+        ("\\a", "a"),
+    ];
 
-    // No escapes
-    assert_eq!(Delimiter::from_escaped(" ").as_str(), " ");
-    assert_eq!(Delimiter::from_escaped(",").as_str(), ",");
-    assert_eq!(Delimiter::from_escaped("::").as_str(), "::");
-
-    // Unknown escape sequences (just use the character)
-    assert_eq!(Delimiter::from_escaped("\\x").as_str(), "x");
-    assert_eq!(Delimiter::from_escaped("\\a").as_str(), "a");
+    for (input, expected) in test_cases {
+        assert_eq!(Delimiter::from_escaped(input).as_str(), expected);
+    }
 }
 
 #[test]
@@ -41,10 +45,11 @@ fn test_delimiter_from_escaped_error() {
 
 #[test]
 fn test_delimiter_display() {
-    // Display should show quoted form
-    assert_eq!(format!("{}", Delimiter::from_literal("\t")), "\"\\t\"");
-    assert_eq!(format!("{}", Delimiter::from_literal("\n")), "\"\\n\"");
-    assert_eq!(format!("{}", Delimiter::from_literal(" ")), "\" \"");
+    let test_cases = [("\t", "\"\\t\""), ("\n", "\"\\n\""), (" ", "\" \"")];
+
+    for (input, expected) in test_cases {
+        assert_eq!(format!("{}", Delimiter::from_literal(input)), expected);
+    }
 }
 
 #[test]
