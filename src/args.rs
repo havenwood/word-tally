@@ -179,29 +179,3 @@ impl TryFrom<&Args> for Options {
         .with_encoding(args.encoding))
     }
 }
-
-/// Converts command-line arguments to `Options` by consuming them.
-impl TryFrom<Args> for Options {
-    type Error = anyhow::Error;
-
-    fn try_from(args: Args) -> Result<Self> {
-        let serialization = match args.format.as_str() {
-            "text" => Serialization::text()
-                .with_field_delimiter(&args.field_delimiter)
-                .with_entry_delimiter(&args.entry_delimiter),
-            "json" => Serialization::Json,
-            "csv" => Serialization::Csv,
-            _ => unreachable!("clap should validate format values"),
-        };
-
-        Ok(Self::new(
-            args.case,
-            args.sort,
-            serialization,
-            args.build_filters()?,
-            args.io,
-            Performance::from_env(),
-        )
-        .with_encoding(args.encoding))
-    }
-}
