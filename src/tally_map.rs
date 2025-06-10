@@ -3,7 +3,6 @@
 use std::{borrow::Cow, iter};
 
 use hashbrown::{HashMap, hash_map};
-use rustc_hash::FxBuildHasher;
 
 use anyhow::{Context, Result};
 use memchr::memchr2_iter;
@@ -15,13 +14,13 @@ use crate::{Count, Metadata, Word, WordTallyError, reader::Reader, view::View};
 /// Map for tracking word counts with non-deterministic iteration order.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TallyMap {
-    inner: HashMap<Word, Count, FxBuildHasher>,
+    inner: HashMap<Word, Count>,
 }
 
 impl Default for TallyMap {
     fn default() -> Self {
         Self {
-            inner: HashMap::with_hasher(FxBuildHasher),
+            inner: HashMap::new(),
         }
     }
 }
@@ -37,7 +36,7 @@ impl TallyMap {
     #[must_use]
     pub fn with_capacity(capacity: usize) -> Self {
         Self {
-            inner: HashMap::with_capacity_and_hasher(capacity, FxBuildHasher),
+            inner: HashMap::with_capacity(capacity),
         }
     }
 
