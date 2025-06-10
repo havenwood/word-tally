@@ -63,7 +63,7 @@ use self::io::Io;
 use self::performance::Performance;
 use self::serialization::Serialization;
 use self::sort::Sort;
-use anyhow::Result;
+use crate::WordTallyError;
 use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
 
@@ -233,7 +233,7 @@ impl Options {
     ///
     /// Returns an error if a parallel I/O mode is selected but the thread pool
     /// cannot be initialized.
-    pub fn init_thread_pool_if_parallel(&self) -> Result<()> {
+    pub fn init_thread_pool_if_parallel(&self) -> Result<(), WordTallyError> {
         match self.io {
             Io::Stream => Ok(()),
             Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes => {

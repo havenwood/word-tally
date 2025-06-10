@@ -1,7 +1,6 @@
 //! Regular expression pattern matching for word filtering.
 
 use crate::WordTallyError;
-use anyhow::Result;
 use core::fmt::{self, Display, Formatter};
 use regex::RegexSet;
 use serde::de::Error;

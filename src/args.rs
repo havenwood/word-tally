@@ -1,7 +1,7 @@
 //! Command-line argument parsing and access.
 
-use anyhow::Result;
 use clap::{ArgAction, Parser};
+use std::fmt::Display;
 use std::path::PathBuf;
 
 use word_tally::options::{
@@ -107,8 +107,8 @@ impl Args {
     }
 
     /// Parse command-line arguments and convert them to word-tally `Options`.
-    pub(crate) fn to_options(&self) -> Result<Options> {
-        Options::try_from(self).map_err(Into::into)
+    pub(crate) fn to_options(&self) -> Result<Options, WordTallyError> {
+        Options::try_from(self)
     }
 
     /// Helper to create filters from arguments.
@@ -146,7 +146,7 @@ impl Args {
     }
 
     /// Convert a pattern compilation error into a `WordTallyError`.
-    fn pattern_error(kind: &str, e: &anyhow::Error) -> WordTallyError {
+    fn pattern_error(kind: &str, e: &impl Display) -> WordTallyError {
         WordTallyError::Pattern {
             kind: kind.to_string(),
             message: e.to_string(),

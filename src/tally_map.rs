@@ -147,9 +147,10 @@ impl TallyMap {
     /// - A configured thread pool cannot be initialized
     pub fn from_view(view: &View, options: &Options) -> Result<Self> {
         match options.io() {
-            Io::Stream | Io::ParallelStream => {
-                Err(anyhow::anyhow!("Stream mode requires a Reader, not a View"))
-            }
+            Io::Stream | Io::ParallelStream => Err(WordTallyError::Config(
+                "stream mode requires a Reader, not a View".to_string(),
+            )
+            .into()),
             Io::ParallelInMemory | Io::ParallelBytes | Io::ParallelMmap => {
                 Self::par_memory_count(view.as_ref(), options)
             }

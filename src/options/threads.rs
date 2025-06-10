@@ -33,7 +33,7 @@ impl Threads {
     ///
     /// Returns an error if the thread pool cannot be initialized or if the
     /// number of threads specified is invalid.
-    pub fn init_pool(self) -> anyhow::Result<()> {
+    pub fn init_pool(self) -> Result<(), WordTallyError> {
         static INIT_ATTEMPTED: AtomicBool = AtomicBool::new(false);
 
         // Only attempt initialization once using a thread-safe check
