@@ -108,16 +108,16 @@ impl Args {
 
     /// Parse command-line arguments and convert them to word-tally `Options`.
     pub(crate) fn to_options(&self) -> Result<Options> {
-        Options::try_from(self)
+        Options::try_from(self).map_err(Into::into)
     }
 
     /// Helper to create filters from arguments.
-    fn build_filters(&self) -> Result<Filters> {
+    fn build_filters(&self) -> Result<Filters, WordTallyError> {
         self.build_filters_impl()
     }
 
     /// Implementation of `build_filters` that works for both borrowed and owned.
-    fn build_filters_impl(&self) -> Result<Filters> {
+    fn build_filters_impl(&self) -> Result<Filters, WordTallyError> {
         Ok(Filters::default())
             .map(|f| match self.min_chars {
                 Some(min) => f.with_min_chars(min),
@@ -132,33 +132,33 @@ impl Args {
                 None => f,
             })
             .and_then(|f| match &self.exclude {
-                Some(patterns) => f.with_exclude_patterns(patterns).map_err(|e| {
-                    WordTallyError::Pattern {
-                        kind: "exclude".to_string(),
-                        message: e.to_string(),
-                    }
-                    .into()
-                }),
+                Some(patterns) => f
+                    .with_exclude_patterns(patterns)
+                    .map_err(|e| Self::pattern_error("exclude", &e)),
                 None => Ok(f),
             })
             .and_then(|f| match &self.include {
-                Some(patterns) => f.with_include_patterns(patterns).map_err(|e| {
-                    WordTallyError::Pattern {
-                        kind: "include".to_string(),
-                        message: e.to_string(),
-                    }
-                    .into()
-                }),
+                Some(patterns) => f
+                    .with_include_patterns(patterns)
+                    .map_err(|e| Self::pattern_error("include", &e)),
                 None => Ok(f),
             })
+    }
+
+    /// Convert a pattern compilation error into a `WordTallyError`.
+    fn pattern_error(kind: &str, e: &anyhow::Error) -> WordTallyError {
+        WordTallyError::Pattern {
+            kind: kind.to_string(),
+            message: e.to_string(),
+        }
     }
 }
 
 /// Converts command-line arguments to `Options`.
 impl TryFrom<&Args> for Options {
-    type Error = anyhow::Error;
+    type Error = WordTallyError;
 
-    fn try_from(args: &Args) -> Result<Self> {
+    fn try_from(args: &Args) -> Result<Self, Self::Error> {
         let serialization = match args.format.as_str() {
             "text" => Serialization::text()
                 .with_field_delimiter(&args.field_delimiter)
