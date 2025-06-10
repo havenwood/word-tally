@@ -1,7 +1,7 @@
 //! Tests for word filtering functionality.
 
 use word_tally::PatternList;
-use word_tally::options::filters::{ExcludeWords, ExcludeWordsList};
+use word_tally::options::filters::ExcludeWords;
 use word_tally::{Case, Filters, TallyMap, options::encoding::Encoding};
 
 fn tally_map_from_counts(counts: &[(&str, usize)]) -> TallyMap {
@@ -25,7 +25,7 @@ fn has_word(tally: &TallyMap, word: &str) -> bool {
 fn test_filters_new() {
     let min_chars = Some(3);
     let min_count = Some(2);
-    let exclude_words: Option<ExcludeWordsList> = Some(vec!["the".to_string(), "and".to_string()]);
+    let exclude_words = Some(vec!["the".to_string(), "and".to_string()]);
     let exclude_patterns: Option<PatternList> = None;
     let include_patterns: Option<PatternList> = None;
 
@@ -109,7 +109,7 @@ fn test_filters_new() {
 fn test_filters_with_empty_patterns() {
     let min_chars = Some(3);
     let min_count = Some(2);
-    let exclude_words: Option<ExcludeWordsList> = Some(vec!["the".to_string(), "and".to_string()]);
+    let exclude_words = Some(vec!["the".to_string(), "and".to_string()]);
     let exclude_patterns: Option<PatternList> = Some(vec![]);
     let include_patterns: Option<PatternList> = Some(vec![]);
 
@@ -135,7 +135,7 @@ fn test_serialization_with_patterns() {
 
     let min_chars = Some(3);
     let min_count = Some(2);
-    let exclude_words: Option<ExcludeWordsList> = Some(vec!["the".to_string(), "and".to_string()]);
+    let exclude_words = Some(vec!["the".to_string(), "and".to_string()]);
     let exclude_patterns = Some(vec![r"\d+".to_string()]);
     let include_patterns = Some(vec![r"[a-z]+".to_string()]);
 
@@ -238,7 +238,7 @@ fn test_patterns_accessors() {
 fn test_builder() {
     let min_chars = Some(4);
     let min_count = Some(3);
-    let exclude_words: ExcludeWordsList = vec!["stop".to_string(), "the".to_string()];
+    let exclude_words = vec!["stop".to_string(), "the".to_string()];
 
     let filters = Filters::default()
         .with_min_chars(4)
@@ -520,15 +520,15 @@ fn test_with_exclude_words() {
     let words_list = exclude_words.as_ref();
 
     assert_eq!(words_list.len(), 3);
-    assert_eq!(words_list[0], "the");
-    assert_eq!(words_list[1], "and");
-    assert_eq!(words_list[2], "is");
+    assert_eq!(words_list[0].as_ref(), "the");
+    assert_eq!(words_list[1].as_ref(), "and");
+    assert_eq!(words_list[2].as_ref(), "is");
 }
 
 #[test]
 fn test_display_exclude_words() {
     let words = vec!["hello".to_string(), "world".to_string()];
-    let exclude_words = ExcludeWords(words);
+    let exclude_words = ExcludeWords::from(words);
     assert_eq!(format!("{exclude_words}"), "hello,world");
 }
 

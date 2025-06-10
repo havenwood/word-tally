@@ -537,7 +537,10 @@ fn test_merge_maps() {
 #[test]
 fn test_words_exclude_from() {
     let words = vec!["beep".to_string(), "boop".to_string()];
-    assert_eq!(ExcludeWords::from(words.clone()), ExcludeWords(words));
+    let exclude_words = ExcludeWords::from(words);
+    assert_eq!(exclude_words.len(), 2);
+    assert_eq!(exclude_words[0].as_ref(), "beep");
+    assert_eq!(exclude_words[1].as_ref(), "boop");
 }
 
 // Tests for Serialization convenience methods
@@ -642,5 +645,8 @@ fn test_custom_chunk_size() {
 #[test]
 fn test_exclude_words_from_trait() {
     let words = vec!["beep".to_string(), "boop".to_string()];
-    assert_eq!(ExcludeWords::from(words.clone()), ExcludeWords(words));
+    let exclude_words = ExcludeWords::from(words);
+    assert_eq!(exclude_words.len(), 2);
+    assert_eq!(exclude_words[0].as_ref(), "beep");
+    assert_eq!(exclude_words[1].as_ref(), "boop");
 }

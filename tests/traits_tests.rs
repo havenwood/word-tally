@@ -37,11 +37,10 @@ fn test_display_implementations() {
 fn test_newtype_conversions() {
     // Test ExcludeWords conversions
     let words = vec!["a".to_string(), "the".to_string()];
-    let exclude_words = ExcludeWords(words.clone());
-    assert_eq!(*exclude_words.as_ref(), words);
-    // Test Deref implementation
+    let exclude_words = ExcludeWords::from(words);
     assert_eq!(exclude_words.len(), 2);
-    assert_eq!(exclude_words[0], "a");
+    assert_eq!(exclude_words[0].as_ref(), "a");
+    assert_eq!(exclude_words[1].as_ref(), "the");
 }
 
 #[test]

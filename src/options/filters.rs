@@ -18,7 +18,7 @@ pub type MinChars = Count;
 pub type MinCount = Count;
 
 /// Collection of words to be excluded from the tally.
-pub type ExcludeWordsList = Vec<String>;
+pub type Words = Box<[Box<str>]>;
 
 /// Filters for which words should be tallied.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
@@ -72,7 +72,7 @@ impl Filters {
     pub fn new(
         min_chars: Option<MinChars>,
         min_count: Option<MinCount>,
-        exclude_words: Option<ExcludeWordsList>,
+        exclude_words: Option<Vec<String>>,
         exclude_patterns: Option<PatternList>,
         include_patterns: Option<PatternList>,
     ) -> Result<Self> {
@@ -124,7 +124,7 @@ impl Filters {
     /// Set words to exclude.
     #[must_use]
     pub fn with_exclude_words(mut self, words: Vec<String>) -> Self {
-        self.exclude_words = Some(ExcludeWords(words));
+        self.exclude_words = Some(words.into());
         self
     }
 
@@ -216,7 +216,7 @@ impl Filters {
         if let Some(exclude_words) = self.exclude_words() {
             let discard: HashSet<Box<str>> = exclude_words
                 .iter()
-                .map(|word| case.normalize_unicode(word).into_owned().into())
+                .map(|word| case.normalize_unicode(word).into())
                 .collect();
             tally_map.retain(|word, _| !discard.contains(word));
         }
@@ -233,28 +233,43 @@ impl Filters {
 
 /// A list of words that should be omitted from the tally.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct ExcludeWords(pub ExcludeWordsList);
+pub struct ExcludeWords(Words);
 
 impl Display for ExcludeWords {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0.join(","))
+        write!(
+            f,
+            "{}",
+            self.0
+                .iter()
+                .map(AsRef::as_ref)
+                .collect::<Vec<_>>()
+                .join(",")
+        )
     }
 }
 
-impl From<ExcludeWordsList> for ExcludeWords {
-    fn from(raw: ExcludeWordsList) -> Self {
+impl From<Vec<String>> for ExcludeWords {
+    fn from(strings: Vec<String>) -> Self {
+        let words: Box<[Box<str>]> = strings.into_iter().map(Into::into).collect();
+        Self(words)
+    }
+}
+
+impl From<Words> for ExcludeWords {
+    fn from(raw: Words) -> Self {
         Self(raw)
     }
 }
 
-impl AsRef<ExcludeWordsList> for ExcludeWords {
-    fn as_ref(&self) -> &ExcludeWordsList {
+impl AsRef<Words> for ExcludeWords {
+    fn as_ref(&self) -> &Words {
         &self.0
     }
 }
 
 impl Deref for ExcludeWords {
-    type Target = ExcludeWordsList;
+    type Target = Words;
 
     fn deref(&self) -> &Self::Target {
         &self.0
