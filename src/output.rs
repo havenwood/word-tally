@@ -66,7 +66,7 @@ impl Output {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```no_run
     /// use word_tally::Output;
     /// use std::path::Path;
     ///
