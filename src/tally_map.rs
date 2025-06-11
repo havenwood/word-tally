@@ -1,6 +1,10 @@
 //! A collection for tallying word counts using `HashMap`.
 
-use std::{borrow::Cow, iter};
+use std::{
+    borrow::Cow,
+    iter,
+    ops::{Deref, DerefMut},
+};
 
 use hashbrown::{HashMap, hash_map};
 
@@ -38,33 +42,6 @@ impl TallyMap {
         Self {
             inner: HashMap::with_capacity(capacity),
         }
-    }
-
-    /// Returns the number of unique words in the map.
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.inner.len()
-    }
-
-    /// Returns true if the map contains no words.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.inner.is_empty()
-    }
-
-    /// Returns an iterator over the counts.
-    pub fn values(&self) -> impl Iterator<Item = &Count> {
-        self.inner.values()
-    }
-
-    /// Reserves capacity for at least `additional` more elements.
-    pub fn reserve(&mut self, additional: usize) {
-        self.inner.reserve(additional);
-    }
-
-    /// Retains only the elements specified by the predicate.
-    pub fn retain(&mut self, predicate: impl FnMut(&Word, &mut Count) -> bool) {
-        self.inner.retain(predicate);
     }
 
     /// Extends the tally map with word counts from a string slice.
@@ -602,5 +579,19 @@ impl Extend<(Word, Count)> for TallyMap {
                 self.inner.insert(word, count);
             }
         });
+    }
+}
+
+impl Deref for TallyMap {
+    type Target = HashMap<Word, Count>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl DerefMut for TallyMap {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
     }
 }

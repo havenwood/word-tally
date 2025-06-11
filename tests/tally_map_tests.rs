@@ -250,3 +250,96 @@ fn test_partial_eq() {
     assert_eq!(tally1, tally2);
     assert_ne!(tally1, tally3);
 }
+
+#[test]
+fn test_deref_contains_key() {
+    let mut tally = TallyMap::new();
+    tally
+        .add_words("rust", Case::default(), Encoding::default())
+        .expect("should add words");
+
+    assert!(tally.contains_key("rust"));
+    assert!(!tally.contains_key("python"));
+}
+
+#[test]
+fn test_deref_get() {
+    let mut tally = TallyMap::new();
+    tally
+        .add_words("hello world hello", Case::default(), Encoding::default())
+        .expect("add test words");
+
+    assert_eq!(tally.get("hello"), Some(&2));
+    assert_eq!(tally.get("world"), Some(&1));
+    assert_eq!(tally.get("missing"), None);
+}
+
+#[test]
+fn test_deref_keys() {
+    let mut tally = TallyMap::new();
+    tally
+        .add_words("apple banana", Case::default(), Encoding::default())
+        .expect("should add words");
+
+    let mut keys: Vec<_> = tally.keys().map(std::convert::AsRef::as_ref).collect();
+    keys.sort_unstable();
+    assert_eq!(keys, vec!["apple", "banana"]);
+}
+
+#[test]
+fn test_deref_iter() {
+    let mut tally = TallyMap::new();
+    tally
+        .add_words("x y y", Case::default(), Encoding::default())
+        .expect("should add words");
+
+    let mut entries: Vec<_> = tally
+        .iter()
+        .map(|(word, &count)| (word.as_ref(), count))
+        .collect();
+    entries.sort_by_key(|(word, _)| *word);
+
+    assert_eq!(entries, vec![("x", 1), ("y", 2)]);
+}
+
+#[test]
+fn test_deref_capacity() {
+    let tally = TallyMap::with_capacity(100);
+    assert!(tally.capacity() >= 100);
+}
+
+#[test]
+fn test_deref_clear() {
+    let mut tally = make_tally(&[("hello", 3), ("world", 1)]);
+
+    assert_eq!(tally.len(), 2);
+    tally.clear();
+    assert_eq!(tally.len(), 0);
+    assert!(tally.is_empty());
+}
+
+#[test]
+fn test_deref_shrink_to_fit() {
+    let mut tally = TallyMap::with_capacity(100);
+    tally
+        .add_words("only_one", Case::default(), Encoding::default())
+        .expect("should add words");
+
+    let initial_capacity = tally.capacity();
+    assert!(initial_capacity >= 100);
+
+    tally.shrink_to_fit();
+    assert!(tally.capacity() < initial_capacity);
+}
+
+#[test]
+fn test_deref_entry() {
+    let mut tally = TallyMap::new();
+
+    // Test entry API is accessible through Deref
+    tally.entry("new".into()).or_insert(5);
+    assert_eq!(tally.get("new"), Some(&5));
+
+    tally.entry("new".into()).and_modify(|count| *count += 1);
+    assert_eq!(tally.get("new"), Some(&6));
+}
