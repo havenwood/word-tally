@@ -150,7 +150,7 @@ fn test_with_filters() {
 fn test_with_performance() {
     let performance = Performance::default().with_threads(Threads::Count(4));
     let options = Options::default().with_performance(performance);
-    assert_eq!(options.performance().threads.count(), 4);
+    assert_eq!(options.performance().threads().count(), 4);
 }
 
 #[test]
@@ -170,27 +170,27 @@ fn test_with_io() {
 fn test_with_threads() {
     let options =
         Options::default().with_performance(Performance::default().with_threads(Threads::Count(8)));
-    assert_eq!(options.performance().threads.count(), 8);
+    assert_eq!(options.performance().threads().count(), 8);
 }
 
 #[test]
 fn test_with_uniqueness_ratio() {
     let options =
         Options::default().with_performance(Performance::default().with_uniqueness_ratio(75));
-    assert_eq!(options.performance().uniqueness_ratio, 75);
+    assert_eq!(options.performance().uniqueness_ratio(), 75);
 }
 
 #[test]
 fn test_with_words_per_kb() {
     let options =
         Options::default().with_performance(Performance::default().with_words_per_kb(120));
-    assert_eq!(options.performance().words_per_kb, 120);
+    assert_eq!(options.performance().words_per_kb(), 120);
 }
 
 #[test]
 fn test_with_chunk_size() {
     let options = Options::default().with_performance(Performance::default().with_chunk_size(8192));
-    assert_eq!(options.performance().chunk_size, 8192);
+    assert_eq!(options.performance().chunk_size(), 8192);
 }
 
 #[test]
@@ -231,10 +231,10 @@ fn test_builder_chaining() {
     assert_eq!(options.serialization(), &Serialization::Json);
     assert_eq!(options.serialization().field_delimiter(), None);
     assert_eq!(options.io(), Io::ParallelInMemory);
-    assert_eq!(options.performance().threads.count(), 4);
-    assert_eq!(options.performance().uniqueness_ratio, 80);
-    assert_eq!(options.performance().words_per_kb, 150);
-    assert_eq!(options.performance().chunk_size, 16384);
+    assert_eq!(options.performance().threads().count(), 4);
+    assert_eq!(options.performance().uniqueness_ratio(), 80);
+    assert_eq!(options.performance().words_per_kb(), 150);
+    assert_eq!(options.performance().chunk_size(), 16384);
 }
 
 #[test]
@@ -256,7 +256,7 @@ fn test_as_ref_performance() {
     let options =
         Options::default().with_performance(Performance::default().with_threads(Threads::Count(2)));
     let performance_ref: &Performance = options.as_ref();
-    assert_eq!(performance_ref.threads.count(), 2);
+    assert_eq!(performance_ref.threads().count(), 2);
 }
 
 #[test]

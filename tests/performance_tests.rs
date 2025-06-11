@@ -10,7 +10,7 @@ fn test_constants() {
 #[test]
 fn test_with_base_stdin_size() {
     let perf = Performance::default().with_base_stdin_size(512 * 1024);
-    assert_eq!(perf.base_stdin_size, 512 * 1024);
+    assert_eq!(perf.base_stdin_size(), 512 * 1024);
 }
 
 #[test]
@@ -66,9 +66,9 @@ fn test_environment_logic() {
     let perf = Performance::from_env();
 
     // Should get defaults when no env vars are set
-    assert_eq!(perf.uniqueness_ratio, 32);
-    assert_eq!(perf.words_per_kb, 128);
-    assert_eq!(perf.chunk_size, 65536);
-    assert_eq!(perf.base_stdin_size, 256 * 1024);
-    assert_eq!(perf.threads, Threads::All);
+    assert_eq!(perf.uniqueness_ratio(), 32);
+    assert_eq!(perf.words_per_kb(), 128);
+    assert_eq!(perf.chunk_size(), 65536);
+    assert_eq!(perf.base_stdin_size(), 256 * 1024);
+    assert_eq!(perf.threads(), Threads::All);
 }

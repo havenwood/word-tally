@@ -12,19 +12,19 @@ use std::sync::OnceLock;
 #[serde(rename_all = "camelCase")]
 pub struct Performance {
     /// Ratio used to estimate number of unique words based on input size.
-    pub uniqueness_ratio: u16,
+    uniqueness_ratio: u16,
 
     /// Words-per-KB of text.
-    pub words_per_kb: u16,
+    words_per_kb: u16,
 
     /// Size of chunks for parallel processing (in bytes).
-    pub chunk_size: u64,
+    chunk_size: u64,
 
     /// Base stdin size for unknown-sized inputs.
-    pub base_stdin_size: u64,
+    base_stdin_size: u64,
 
     /// Thread configuration for parallel processing.
-    pub threads: Threads,
+    threads: Threads,
 }
 
 impl Default for Performance {
@@ -156,6 +156,18 @@ impl Performance {
     #[must_use]
     pub const fn threads(&self) -> Threads {
         self.threads
+    }
+
+    /// Get the uniqueness ratio.
+    #[must_use]
+    pub const fn uniqueness_ratio(&self) -> u16 {
+        self.uniqueness_ratio
+    }
+
+    /// Get the words-per-KB value.
+    #[must_use]
+    pub const fn words_per_kb(&self) -> u16 {
+        self.words_per_kb
     }
 
     /// Calculate capacity based on input size in bytes.
