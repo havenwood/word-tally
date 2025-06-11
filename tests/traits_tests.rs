@@ -98,11 +98,11 @@ fn test_wordtally_deserialize() {
     // Verify the values
     assert_eq!(word_tally.count(), 8);
     assert_eq!(word_tally.uniq_count(), 2);
-    assert_eq!(word_tally.tally().len(), 2);
-    assert_eq!(word_tally.tally()[0].0, "hello".into());
-    assert_eq!(word_tally.tally()[0].1, 5);
-    assert_eq!(word_tally.tally()[1].0, "world".into());
-    assert_eq!(word_tally.tally()[1].1, 3);
+    assert_eq!(word_tally.len(), 2);
+    assert_eq!(word_tally[0].0, "hello".into());
+    assert_eq!(word_tally[0].1, 5);
+    assert_eq!(word_tally[1].0, "world".into());
+    assert_eq!(word_tally[1].1, 3);
 }
 
 #[test]

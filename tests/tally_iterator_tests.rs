@@ -28,9 +28,6 @@ fn test_into_tally() {
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
-    // Use `tally()` to get a reference to the slice.
-    let tally = word_tally.tally();
-
     let mut expected_counts = HashMap::new();
     expected_counts.insert("the", 2);
     expected_counts.insert("Hope", 1);
@@ -43,8 +40,8 @@ fn test_into_tally() {
     expected_counts.insert("in", 1);
     expected_counts.insert("soul", 1);
 
-    assert_eq!(tally.len(), expected_counts.len());
-    for (word, count) in tally {
+    assert_eq!(word_tally.len(), expected_counts.len());
+    for (word, count) in &word_tally {
         let expected_count = expected_counts.get(word.as_ref()).expect("unexpected word");
         assert_eq!(count, expected_count);
     }

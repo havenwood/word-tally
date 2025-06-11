@@ -295,8 +295,8 @@ fn test_into_tally() {
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
-    // Use `tally()` to get a reference to the slice.
-    let tally = word_tally.tally();
+    // Use deref to get a reference to the slice.
+    let tally = &word_tally;
 
     let mut tally_vec: Vec<_> = tally.to_vec();
     tally_vec.sort_by_key(|(word, _): &(Word, Count)| word.clone());
@@ -417,10 +417,10 @@ fn test_parallel_vs_sequential() {
     assert_eq!(sequential.count(), parallel.count());
     assert_eq!(sequential.uniq_count(), parallel.uniq_count());
 
-    let mut seq_tally: Vec<_> = sequential.tally().to_vec();
+    let mut seq_tally: Vec<_> = sequential.to_vec();
     seq_tally.sort_by_key(|(word, _): &(Word, Count)| word.clone());
 
-    let mut par_tally: Vec<_> = parallel.tally().to_vec();
+    let mut par_tally: Vec<_> = parallel.to_vec();
     par_tally.sort_by_key(|(word, _): &(Word, Count)| word.clone());
 
     assert_eq!(seq_tally, par_tally);
@@ -649,4 +649,44 @@ fn test_exclude_words_from_trait() {
     assert_eq!(exclude_words.len(), 2);
     assert_eq!(exclude_words[0].as_ref(), "beep");
     assert_eq!(exclude_words[1].as_ref(), "boop");
+}
+
+#[test]
+fn test_wordtally_deref() {
+    let options = Options::default();
+    let mut tally_map = TallyMap::new();
+    tally_map.insert("hello".into(), 5);
+    tally_map.insert("world".into(), 3);
+    tally_map.insert("rust".into(), 1);
+
+    let word_tally = WordTally::from_tally_map(tally_map, &options);
+
+    // Test direct indexing via Deref
+    assert_eq!(word_tally[0].0.as_ref(), "hello");
+    assert_eq!(word_tally[0].1, 5);
+
+    // Test slice methods via Deref
+    assert_eq!(
+        word_tally
+            .first()
+            .expect("should have first item")
+            .0
+            .as_ref(),
+        "hello"
+    );
+    assert_eq!(
+        word_tally.last().expect("should have last item").0.as_ref(),
+        "rust"
+    );
+    assert_eq!(word_tally.len(), 3);
+    assert!(!word_tally.is_empty());
+
+    // Test that we can find "world" in the sorted array
+    let contains_world = word_tally.iter().any(|(word, _)| word.as_ref() == "world");
+    assert!(contains_world);
+
+    // Test slice splitting
+    let (first, rest) = word_tally.split_first().expect("should be able to split");
+    assert_eq!(first.0.as_ref(), "hello");
+    assert_eq!(rest.len(), 2);
 }

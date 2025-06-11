@@ -49,13 +49,12 @@ fn word_tally_test(case: Case, sort: Sort, filters: Filters, fields: &ExpectedFi
     if sort == Sort::Unsorted {
         let expected_set: HashSet<(&str, Count)> = fields.tally.iter().copied().collect();
         let actual_set: HashSet<(&str, Count)> = word_tally
-            .tally()
             .iter()
             .map(|(word, count)| (word.as_ref(), *count))
             .collect();
         assert_eq!(expected_set, actual_set);
     } else {
-        let actual_tally = word_tally.tally();
+        let actual_tally = &word_tally;
 
         let expected_counts: Vec<Count> = fields.tally.iter().map(|&(_, count)| count).collect();
         let actual_counts: Vec<Count> = actual_tally
@@ -230,15 +229,13 @@ fn test_sort_mutates_tally() {
 
     // Test ascending sort
     let tally_asc = create_test_tally_with_text(input_text, Sort::Asc);
-    let asc_tally = tally_asc.tally().to_vec();
-    assert_eq!(asc_tally[0].0.as_ref(), "circuit");
-    assert_eq!(asc_tally[0].1, 2);
+    assert_eq!(tally_asc[0].0.as_ref(), "circuit");
+    assert_eq!(tally_asc[0].1, 2);
 
     // Test descending sort
     let tally_desc = create_test_tally_with_text(input_text, Sort::Desc);
-    let desc_tally = tally_desc.tally().to_vec();
-    assert_eq!(desc_tally[0].0.as_ref(), "narrow");
-    assert_eq!(desc_tally[0].1, 5);
+    assert_eq!(tally_desc[0].0.as_ref(), "narrow");
+    assert_eq!(tally_desc[0].1, 5);
 
     // Test unsorted has all expected words regardless of order
     let tally_unsorted = create_test_tally_with_text(input_text, Sort::Unsorted);
@@ -247,7 +244,6 @@ fn test_sort_mutates_tally() {
 
     // Verify all words are present with correct counts
     let unsorted_map: HashMap<_, _> = tally_unsorted
-        .tally()
         .iter()
         .map(|(word, count)| (word.as_ref(), *count))
         .collect();
@@ -264,9 +260,8 @@ fn test_tally_with_punctuation() {
     assert_eq!(tally.count(), 6);
     assert_eq!(tally.uniq_count(), 3);
 
-    let tally_vec = tally.tally().to_vec();
     // All words have count 2, so we check they exist with correct counts
-    let word_counts: HashMap<_, _> = tally_vec
+    let word_counts: HashMap<_, _> = tally
         .iter()
         .map(|(word, count)| (word.as_ref(), *count))
         .collect();
@@ -291,8 +286,7 @@ fn test_large_input() {
     assert_eq!(tally.count(), 1000);
     assert_eq!(tally.uniq_count(), 5);
 
-    let tally_vec = tally.tally().to_vec();
-    for item in tally_vec {
+    for item in &tally {
         assert_eq!(item.1, 200);
     }
 }
@@ -304,7 +298,7 @@ fn test_edge_case_empty() {
 
     assert_eq!(tally.count(), 0);
     assert_eq!(tally.uniq_count(), 0);
-    assert!(tally.tally().is_empty());
+    assert!(tally.is_empty());
 }
 
 #[test]
@@ -314,7 +308,7 @@ fn test_edge_case_only_whitespace() {
 
     assert_eq!(tally.count(), 0);
     assert_eq!(tally.uniq_count(), 0);
-    assert!(tally.tally().is_empty());
+    assert!(tally.is_empty());
 }
 
 #[test]
@@ -325,9 +319,8 @@ fn test_edge_case_single_word() {
     assert_eq!(tally.count(), 1);
     assert_eq!(tally.uniq_count(), 1);
 
-    let tally_vec = tally.tally().to_vec();
-    assert_eq!(tally_vec[0].0.as_ref(), "Nobody");
-    assert_eq!(tally_vec[0].1, 1);
+    assert_eq!(tally[0].0.as_ref(), "Nobody");
+    assert_eq!(tally[0].1, 1);
 }
 
 #[test]
@@ -338,9 +331,8 @@ fn test_numeric_sorting() {
     assert_eq!(tally.count(), 9);
     assert_eq!(tally.uniq_count(), 9);
 
-    let tally_vec = tally.tally().to_vec();
     assert_eq!(
-        tally_vec
+        tally
             .iter()
             .find(|(word, _)| word.as_ref() == "1")
             .expect("execute operation")
@@ -348,7 +340,7 @@ fn test_numeric_sorting() {
         1
     );
     assert_eq!(
-        tally_vec
+        tally
             .iter()
             .find(|(word, _)| word.as_ref() == "200")
             .expect("execute operation")
@@ -366,8 +358,7 @@ fn test_null_bytes() {
     assert_eq!(tally.count(), 3);
     assert_eq!(tally.uniq_count(), 3);
 
-    let tally_vec = tally.tally().to_vec();
-    assert_eq!(tally_vec.len(), 3);
+    assert_eq!(tally.len(), 3);
 }
 
 #[test]

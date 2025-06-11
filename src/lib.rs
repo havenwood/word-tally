@@ -54,7 +54,7 @@
 //! # }
 //! ```
 
-use std::{collections::HashMap, hash::BuildHasher, path::Path, slice, str};
+use std::{collections::HashMap, hash::BuildHasher, ops::Deref, path::Path, slice, str};
 
 use serde::{Deserialize, Serialize};
 
@@ -103,6 +103,9 @@ pub trait Metadata {
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 /// A tally of word frequencies and counts, along with processing options.
+///
+/// This type implements `Deref<Target = [(Word, Count)]>`, so you can directly access slice
+/// methods like `len()`, `is_empty()`, `iter()`, indexing and such.
 pub struct WordTally {
     /// Ordered pairs of words and the count of times they appear.
     tally: Tally,
@@ -163,27 +166,10 @@ impl WordTally {
         self.uniq_count
     }
 
-    /// Same as `uniq_count`, the size of the collection.
-    #[must_use]
-    pub fn len(&self) -> usize {
-        self.tally.len()
-    }
-
-    /// Returns true if the tally contains no words.
-    #[must_use]
-    pub fn is_empty(&self) -> bool {
-        self.tally.is_empty()
-    }
-
     /// Gets the `count` field.
     #[must_use]
     pub const fn count(&self) -> Count {
         self.count
-    }
-
-    /// Returns an iterator over references to the words and counts.
-    pub fn iter(&self) -> slice::Iter<'_, (Word, Count)> {
-        self.tally.iter()
     }
 
     /// Sorts the `tally` field in place if a sort order other than `Unsorted` is provided.
@@ -191,6 +177,14 @@ impl WordTally {
         self.options
             .sort()
             .apply(&mut self.tally, self.options.io());
+    }
+}
+
+impl Deref for WordTally {
+    type Target = [(Word, Count)];
+
+    fn deref(&self) -> &Self::Target {
+        &self.tally
     }
 }
 
