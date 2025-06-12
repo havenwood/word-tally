@@ -14,7 +14,7 @@ fn test_view_from_mmap() {
     let view = View::try_from(temp_file.path()).expect("create test view");
     assert_eq!(view.path(), Some(temp_file.path()));
     assert_eq!(view.size(), Some(test_data.len() as u64));
-    assert_eq!(view.as_ref(), test_data);
+    assert_eq!(&*view, test_data);
 }
 
 #[test]
@@ -23,7 +23,7 @@ fn test_view_from_bytes() {
     let view = View::from(&test_data[..]);
     assert_eq!(view.path(), None);
     assert_eq!(view.size(), Some(test_data.len() as u64));
-    assert_eq!(view.as_ref(), test_data);
+    assert_eq!(&*view, test_data);
     assert_eq!(view.to_string(), "<bytes>");
 }
 
@@ -41,7 +41,7 @@ fn test_view_from_slice() {
     let view = View::from(slice_data);
     assert_eq!(view.size(), Some(5));
     assert_eq!(view.path(), None);
-    assert_eq!(view.as_ref(), slice_data);
+    assert_eq!(&*view, slice_data);
 }
 
 #[test]
@@ -128,12 +128,12 @@ fn test_view_as_ref() {
 
     // Test with bytes view
     let bytes_view = View::from(&test_data[..]);
-    assert_eq!(bytes_view.as_ref(), test_data);
+    assert_eq!(&*bytes_view, test_data);
 
     // Test with mmap view
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, test_data).expect("write test data");
 
     let mmap_view = View::try_from(temp_file.path()).expect("create test view");
-    assert_eq!(mmap_view.as_ref(), test_data);
+    assert_eq!(&*mmap_view, test_data);
 }

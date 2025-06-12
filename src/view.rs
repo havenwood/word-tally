@@ -1,6 +1,7 @@
 //! Memory view for direct data access (mmap or bytes).
 
 use std::fmt::{self, Display, Formatter};
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 
 use memmap2::Mmap;
@@ -19,6 +20,18 @@ pub enum View {
 impl AsRef<[u8]> for View {
     /// Returns the underlying byte slice.
     fn as_ref(&self) -> &[u8] {
+        match self {
+            Self::Mmap { mmap, .. } => mmap,
+            Self::Bytes(bytes) => bytes,
+        }
+    }
+}
+
+impl Deref for View {
+    type Target = [u8];
+
+    /// Provides direct access to the underlying byte data.
+    fn deref(&self) -> &Self::Target {
         match self {
             Self::Mmap { mmap, .. } => mmap,
             Self::Bytes(bytes) => bytes,
@@ -139,6 +152,6 @@ impl Metadata for View {
 
     /// Returns the view size in bytes.
     fn size(&self) -> Option<u64> {
-        Some(self.as_ref().len() as u64)
+        Some(self.len() as u64)
     }
 }

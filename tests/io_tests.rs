@@ -207,10 +207,10 @@ fn test_read_trait_with_all_io_strategies() {
     });
 
     // Test Views
-    let mmap_content = std::str::from_utf8(mmap_view.as_ref()).expect("valid UTF-8");
+    let mmap_content = std::str::from_utf8(&mmap_view).expect("valid UTF-8");
     assert_eq!(mmap_content.trim(), TEST_TEXT.trim());
 
-    let bytes_content = std::str::from_utf8(bytes_view.as_ref()).expect("valid UTF-8");
+    let bytes_content = std::str::from_utf8(&bytes_view).expect("valid UTF-8");
     assert_eq!(bytes_content.trim(), TEST_TEXT.trim());
 }
 

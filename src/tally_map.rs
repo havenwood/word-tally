@@ -128,7 +128,7 @@ impl TallyMap {
             )
             .into()),
             Io::ParallelInMemory | Io::ParallelBytes | Io::ParallelMmap => {
-                Self::par_memory_count(view.as_ref(), options)
+                Self::par_memory_count(view, options)
             }
         }
     }
