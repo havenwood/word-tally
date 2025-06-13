@@ -1,7 +1,6 @@
 //! Feature benchmarks for processing and encoding modes.
 
 use criterion::{Criterion, criterion_group, criterion_main};
-
 use word_tally::Options;
 
 #[path = "common.rs"]

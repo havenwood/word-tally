@@ -6,14 +6,17 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use hashbrown::{HashMap, hash_map};
-
 use anyhow::{Context, Result};
+use hashbrown::{HashMap, hash_map};
 use memchr::memchr2_iter;
 use rayon::prelude::*;
 
-use crate::options::{Options, case::Case, encoding::Encoding, io::Io, performance::Performance};
-use crate::{Count, Metadata, Word, WordTallyError, reader::Reader, view::View};
+use crate::{
+    Count, Metadata, Word, WordTallyError,
+    options::{Options, case::Case, encoding::Encoding, io::Io, performance::Performance},
+    reader::Reader,
+    view::View,
+};
 
 /// Map for tracking word counts with non-deterministic iteration order.
 #[derive(Clone, Debug, PartialEq, Eq)]

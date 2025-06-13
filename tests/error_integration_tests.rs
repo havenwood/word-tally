@@ -1,7 +1,9 @@
 //! Tests for error handling integration.
 
-use std::fs::{self, File};
-use std::io::Write;
+use std::{
+    fs::{self, File},
+    io::Write,
+};
 
 use assert_cmd::Command;
 use predicates::prelude::*;

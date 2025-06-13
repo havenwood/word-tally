@@ -1,11 +1,11 @@
 //! Configuration for word tallying performance.
 
-use super::threads::Threads;
 use core::fmt::{self, Display, Formatter};
+use std::{env, str::FromStr, sync::OnceLock};
+
 use serde::{Deserialize, Serialize};
-use std::env;
-use std::str::FromStr;
-use std::sync::OnceLock;
+
+use super::threads::Threads;
 
 /// Performance tuning configuration parameters.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

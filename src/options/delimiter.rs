@@ -1,6 +1,7 @@
 //! Delimiters for text serialization.
 
 use core::fmt::{self, Display, Formatter};
+
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 /// A delimiter separates text serialization words/counts or entries.

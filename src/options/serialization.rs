@@ -1,8 +1,10 @@
 //! Serialization format options and settings.
 
-use crate::options::delimiter::Delimiter;
 use core::fmt::{self, Display, Formatter};
+
 use serde::{Deserialize, Serialize};
+
+use crate::options::delimiter::Delimiter;
 
 /// Serialization format options.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

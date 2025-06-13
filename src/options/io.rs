@@ -1,10 +1,10 @@
 //! Configuration for I/O strategies.
 
-use clap::ValueEnum;
 use core::fmt::{self, Display, Formatter};
+use std::{env, str::FromStr};
+
+use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
-use std::env;
-use std::str::FromStr;
 
 /// Determines the I/O strategy for processing input.
 ///

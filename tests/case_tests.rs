@@ -1,6 +1,7 @@
 //! Tests for case normalization functionality.
 
 use std::borrow::Cow;
+
 use word_tally::options::case::Case;
 
 #[test]

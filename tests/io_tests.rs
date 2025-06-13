@@ -1,10 +1,9 @@
 //! Tests for I/O functionality.
 
-use hashbrown::HashMap;
-use std::fs;
-use std::io::Write;
+use std::{fs, io::Write};
 
 use anyhow::Context;
+use hashbrown::HashMap;
 use word_tally::{
     Case, Count, Filters, Io, Metadata, Options, Performance, Reader, Serialization, Sort,
     TallyMap, View, WordTally,
@@ -236,8 +235,7 @@ fn test_bytes_io_with_input_new() {
 
 #[test]
 fn test_nonexistent_file_handling() {
-    use std::fs::File;
-    use std::path::PathBuf;
+    use std::{fs::File, path::PathBuf};
 
     let path = PathBuf::from("/nonexistent/file/path");
     let file_result = File::open(&path);
@@ -315,8 +313,10 @@ fn test_io_traits_ordering() {
 
 #[test]
 fn test_io_traits_hash() {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
+    use std::{
+        collections::hash_map::DefaultHasher,
+        hash::{Hash, Hasher},
+    };
 
     fn calculate_hash<T: Hash>(t: &T) -> u64 {
         let mut s = DefaultHasher::new();
@@ -457,8 +457,8 @@ fn test_io_debug_format() {
 // Tests for streaming chunk size handling
 //
 
-use std::fs::File;
-use std::sync::Arc;
+use std::{fs::File, sync::Arc};
+
 use tempfile::TempDir;
 
 fn make_shared<T>(value: T) -> Arc<T> {

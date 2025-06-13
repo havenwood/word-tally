@@ -1,10 +1,10 @@
 //! Verbose logging functionality for word tallying operations.
 
+use std::io::Write;
+
 use anyhow::{Context, Result};
 use serde::Serialize;
-use std::io::Write;
-use word_tally::Output;
-use word_tally::{Serialization, WordTally, WordTallyError};
+use word_tally::{Output, Serialization, WordTally, WordTallyError};
 
 /// Handles verbose output formatting and display of word tally results.
 #[derive(Debug)]

@@ -1,11 +1,15 @@
 //! Sorting options for word tallying results.
 
-use crate::{Count, Io, Word};
+use core::{
+    cmp::Reverse,
+    fmt::{self, Display, Formatter},
+};
+
 use clap::ValueEnum;
-use core::cmp::Reverse;
-use core::fmt::{self, Display, Formatter};
 use rayon::slice::ParallelSliceMut;
 use serde::{Deserialize, Serialize};
+
+use crate::{Count, Io, Word};
 
 /// Sort order by count.
 ///

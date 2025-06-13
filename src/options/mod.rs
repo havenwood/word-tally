@@ -56,16 +56,15 @@ pub mod serialization;
 pub mod sort;
 pub mod threads;
 
-use self::case::Case;
-use self::encoding::Encoding;
-use self::filters::Filters;
-use self::io::Io;
-use self::performance::Performance;
-use self::serialization::Serialization;
-use self::sort::Sort;
-use crate::WordTallyError;
 use core::fmt::{self, Display, Formatter};
+
 use serde::{Deserialize, Serialize};
+
+use self::{
+    case::Case, encoding::Encoding, filters::Filters, io::Io, performance::Performance,
+    serialization::Serialization, sort::Sort,
+};
+use crate::WordTallyError;
 
 /// Unified configuration for word tallying operations.
 ///

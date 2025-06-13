@@ -1,8 +1,9 @@
 //! Tests for multi-file processing with different I/O strategies.
 
+use std::fs;
+
 use assert_cmd::Command;
 use predicates::str::contains;
-use std::fs;
 use tempfile::{NamedTempFile, tempdir};
 
 fn word_tally() -> Command {

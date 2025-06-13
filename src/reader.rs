@@ -1,10 +1,12 @@
 //! Sequential reader for file or stdin input.
 
-use std::fmt::{self, Display, Formatter};
-use std::fs::{self, File};
-use std::io::{self, BufRead, BufReader, Stdin};
-use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::{
+    fmt::{self, Display, Formatter},
+    fs::{self, File},
+    io::{self, BufRead, BufReader, Stdin},
+    path::{Path, PathBuf},
+    sync::Mutex,
+};
 
 use crate::{Metadata, WordTallyError};
 

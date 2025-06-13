@@ -3,7 +3,6 @@
 use std::io;
 
 use anyhow::{Error, anyhow};
-
 use word_tally::exit_code::ExitCode;
 
 fn create_io_error(kind: io::ErrorKind) -> Error {

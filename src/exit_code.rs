@@ -1,8 +1,10 @@
 //! Exit codes following Unix sysexits.h conventions.
 
-use crate::error::Error;
-use clap::error::ErrorKind as ClapErrorKind;
 use std::io;
+
+use clap::error::ErrorKind as ClapErrorKind;
+
+use crate::error::Error;
 
 /// Exit codes following Unix sysexits.h convention
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

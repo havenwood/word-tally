@@ -1,5 +1,4 @@
-use std::io::Write;
-use std::sync::Arc;
+use std::{io::Write, sync::Arc};
 
 use word_tally::{
     Case, Filters, Io, Options, Reader, Serialization, Sort, TallyMap, View, WordTally,

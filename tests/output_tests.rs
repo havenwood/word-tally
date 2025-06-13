@@ -1,11 +1,12 @@
 //! Tests for output functionality.
 
-use std::fs;
-use std::io::{ErrorKind, Write};
-use std::path::PathBuf;
+use std::{
+    fs,
+    io::{ErrorKind, Write},
+    path::PathBuf,
+};
 
 use tempfile::NamedTempFile;
-
 use word_tally::Output;
 
 #[test]
@@ -121,8 +122,10 @@ fn test_write_bytes_with_newlines() {
 #[test]
 #[cfg(unix)]
 fn test_broken_pipe_simulation() {
-    use std::io::Write;
-    use std::process::{Command, Stdio};
+    use std::{
+        io::Write,
+        process::{Command, Stdio},
+    };
 
     let mut child = Command::new("sh")
         .arg("-c")

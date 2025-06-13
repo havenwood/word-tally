@@ -3,8 +3,10 @@
 use std::fs;
 
 use assert_cmd::Command;
-use predicates::prelude::PredicateBooleanExt;
-use predicates::str::{self, contains};
+use predicates::{
+    prelude::PredicateBooleanExt,
+    str::{self, contains},
+};
 use tempfile::NamedTempFile;
 
 fn word_tally() -> Command {

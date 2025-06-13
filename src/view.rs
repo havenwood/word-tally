@@ -1,8 +1,10 @@
 //! Memory view for direct data access (mmap or bytes).
 
-use std::fmt::{self, Display, Formatter};
-use std::ops::Deref;
-use std::path::{Path, PathBuf};
+use std::{
+    fmt::{self, Display, Formatter},
+    ops::Deref,
+    path::{Path, PathBuf},
+};
 
 use memmap2::Mmap;
 

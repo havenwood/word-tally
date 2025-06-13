@@ -1,12 +1,15 @@
 //! Output writing for stdout and file serialization.
 
-use crate::options::serialization::Serialization;
-use crate::{Count, Word, WordTally, WordTallyError};
+use std::{
+    fmt::{self, Debug, Formatter},
+    fs::File,
+    io::{self, ErrorKind::BrokenPipe, LineWriter, Write},
+    path::{Path, PathBuf},
+};
+
 use anyhow::{Context, Result};
-use std::fmt::{self, Debug, Formatter};
-use std::fs::File;
-use std::io::{self, ErrorKind::BrokenPipe, LineWriter, Write};
-use std::path::{Path, PathBuf};
+
+use crate::{Count, Word, WordTally, WordTallyError, options::serialization::Serialization};
 
 /// `Output` writes to either a file or stream like stdout or stderr.
 pub struct Output {

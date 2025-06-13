@@ -1,14 +1,15 @@
 //! Command-line argument parsing and access.
 
-use clap::{ArgAction, Parser};
-use std::fmt::Display;
-use std::path::PathBuf;
+use std::{fmt::Display, path::PathBuf};
 
-use word_tally::options::{
-    case::Case, encoding::Encoding, filters::Filters, io::Io, performance::Performance,
-    serialization::Serialization, sort::Sort,
+use clap::{ArgAction, Parser};
+use word_tally::{
+    Count, Options, WordTallyError,
+    options::{
+        case::Case, encoding::Encoding, filters::Filters, io::Io, performance::Performance,
+        serialization::Serialization, sort::Sort,
+    },
 };
-use word_tally::{Count, Options, WordTallyError};
 
 /// A utility for tallying word frequencies in text.
 #[derive(Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, Parser)]

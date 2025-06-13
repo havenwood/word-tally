@@ -1,8 +1,9 @@
 //! Tests for word filtering functionality.
 
-use word_tally::PatternList;
-use word_tally::options::filters::ExcludeWords;
-use word_tally::{Case, Filters, TallyMap, options::encoding::Encoding};
+use word_tally::{
+    Case, Filters, PatternList, TallyMap,
+    options::{encoding::Encoding, filters::ExcludeWords},
+};
 
 fn tally_map_from_counts(counts: &[(&str, usize)]) -> TallyMap {
     counts

@@ -1,8 +1,9 @@
 //! Tests for command-line argument parsing.
 
+use std::fs;
+
 use assert_cmd::Command;
 use predicates::str::contains;
-use std::fs;
 use tempfile::NamedTempFile;
 
 fn word_tally() -> Command {

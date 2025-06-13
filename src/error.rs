@@ -1,6 +1,7 @@
 //! Error types for word-tally.
 
 use std::io;
+
 use thiserror::Error;
 
 /// Structured error types for word-tally

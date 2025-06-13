@@ -1,8 +1,9 @@
 //! Tests for `TallyMap` functionality
 
-use word_tally::options::encoding::Encoding;
-use word_tally::options::io::Io;
-use word_tally::{Case, Count, Options, TallyMap, View, Word};
+use word_tally::{
+    Case, Count, Options, TallyMap, View, Word,
+    options::{encoding::Encoding, io::Io},
+};
 
 // Helper to create TallyMap from word pairs
 fn make_tally(words: &[(&str, usize)]) -> TallyMap {

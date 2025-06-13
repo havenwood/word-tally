@@ -2,18 +2,15 @@
 
 #![allow(dead_code)]
 
-use std::fs;
-use std::hint::black_box;
-use std::io::Write;
-use std::path::PathBuf;
+use std::{fs, hint::black_box, io::Write, path::PathBuf};
 
 use criterion::BatchSize;
-use fake::Fake;
-use fake::faker::lorem::en::Words;
+use fake::{Fake, faker::lorem::en::Words};
 use tempfile::NamedTempFile;
-
-use word_tally::options::encoding::Encoding;
-use word_tally::{Case, Filters, Io, Options, Reader, Sort, TallyMap, View, WordTally};
+use word_tally::{
+    Case, Filters, Io, Options, Reader, Sort, TallyMap, View, WordTally,
+    options::encoding::Encoding,
+};
 
 /// Standard Criterion configuration for all benchmarks.
 #[must_use]

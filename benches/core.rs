@@ -1,7 +1,6 @@
 //! Core benchmarks for sorting and filtering strategies.
 
 use criterion::{Criterion, criterion_group, criterion_main};
-
 use word_tally::Options;
 
 #[path = "common.rs"]

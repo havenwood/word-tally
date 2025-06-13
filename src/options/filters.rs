@@ -1,15 +1,22 @@
 //! Word filtering based on length, frequency, patterns and exclusion lists.
 
-use crate::options::case::Case;
-use crate::options::patterns::{ExcludeSet, IncludeSet, PatternList};
-use crate::{Count, TallyMap};
+use core::{
+    fmt::{self, Display, Formatter},
+    ops::Deref,
+};
 
 use anyhow::Result;
-use core::fmt::{self, Display, Formatter};
-use core::ops::Deref;
 use hashbrown::HashSet;
 use icu_segmenter::GraphemeClusterSegmenter;
 use serde::{Deserialize, Serialize};
+
+use crate::{
+    Count, TallyMap,
+    options::{
+        case::Case,
+        patterns::{ExcludeSet, IncludeSet, PatternList},
+    },
+};
 
 /// Minimum number of characters a word needs to have to be tallied.
 pub type MinChars = Count;

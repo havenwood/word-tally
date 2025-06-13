@@ -67,12 +67,12 @@ pub mod tally_map;
 pub mod view;
 
 pub use error::Error as WordTallyError;
-pub use options::patterns::{ExcludeSet, IncludeSet, PatternList};
 pub use options::{
     Options,
     case::Case,
     filters::{ExcludeWords, Filters, MinChars, MinCount},
     io::Io,
+    patterns::{ExcludeSet, IncludeSet, PatternList},
     performance::Performance,
     serialization::Serialization,
     sort::Sort,

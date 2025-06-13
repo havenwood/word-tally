@@ -1,15 +1,16 @@
 //! Word encoding strategies for text processing and validation.
 
-use std::borrow::Cow;
-use std::fmt::{self, Display, Formatter};
+use std::{
+    borrow::Cow,
+    fmt::{self, Display, Formatter},
+};
 
 use anyhow::Result;
 use clap::ValueEnum;
 use icu_segmenter::{WordSegmenter, options::WordBreakInvariantOptions};
 use serde::{Deserialize, Serialize};
 
-use crate::error::Error;
-use crate::options::case::Case;
+use crate::{error::Error, options::case::Case};
 
 thread_local! {
     static WORD_SEGMENTER: WordSegmenter = WordSegmenter::new_dictionary(WordBreakInvariantOptions::default()).static_to_owned();

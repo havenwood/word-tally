@@ -3,17 +3,18 @@
 pub(crate) mod args;
 pub(crate) mod verbose;
 
-use std::io::{Read, Write};
-use std::process::ExitCode;
-use std::{fs, io};
+use std::{
+    fs, io,
+    io::{Read, Write},
+    process::ExitCode,
+};
 
 use anyhow::Result;
 use clap::Parser;
 use rayon::prelude::*;
-
-use crate::args::Args;
-use crate::verbose::Verbose;
 use word_tally::{Io, Output, Reader, TallyMap, View, WordTally, WordTallyError};
+
+use crate::{args::Args, verbose::Verbose};
 
 type SourceProcessor = fn(&str, &word_tally::Options) -> Result<TallyMap>;
 

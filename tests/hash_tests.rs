@@ -1,7 +1,9 @@
 //! Tests for hash functionality.
 
-use std::collections::hash_map::DefaultHasher;
-use std::hash::{Hash, Hasher};
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+};
 
 use word_tally::{
     Case, Filters, Io, Options, Reader, Serialization, Sort, Tally, TallyMap, View, WordTally,

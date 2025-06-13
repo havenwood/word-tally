@@ -1,6 +1,4 @@
-use std::collections::HashMap as StdHashMap;
-use std::io::Write;
-use std::sync::Arc;
+use std::{collections::HashMap as StdHashMap, io::Write, sync::Arc};
 
 use hashbrown::HashMap;
 use tempfile::NamedTempFile;

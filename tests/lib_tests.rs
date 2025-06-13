@@ -1,14 +1,11 @@
 //! Tests for library functionality.
 
-use std::fs;
-use std::io::Write;
-use std::sync::Arc;
+use std::{fs, io::Write, sync::Arc};
 
 use hashbrown::HashSet;
-use word_tally::output::Output;
 use word_tally::{
     Case, Count, ExcludeWords, Filters, Io, Metadata, Options, Performance, Reader, Serialization,
-    Sort, TallyMap, View, Word, WordTally,
+    Sort, TallyMap, View, Word, WordTally, output::Output,
 };
 
 fn make_shared<T>(value: T) -> Arc<T> {

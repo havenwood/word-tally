@@ -1,10 +1,12 @@
 //! Thread count configuration for parallel processing.
 
-use crate::WordTallyError;
 use core::fmt::{self, Display, Formatter};
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use rayon::ThreadPoolBuilder;
 use serde::{Deserialize, Serialize};
-use std::sync::atomic::{AtomicBool, Ordering};
+
+use crate::WordTallyError;
 
 /// Thread count configuration for parallel processing.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]

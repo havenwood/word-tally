@@ -1,12 +1,15 @@
 //! Regular expression pattern matching for word filtering.
 
-use crate::WordTallyError;
 use core::fmt::{self, Display, Formatter};
+use std::{
+    cmp::Ordering,
+    hash::{Hash, Hasher},
+};
+
 use regex::RegexSet;
-use serde::de::Error;
-use serde::{Deserialize, Serialize};
-use std::cmp::Ordering;
-use std::hash::{Hash, Hasher};
+use serde::{Deserialize, Serialize, de::Error};
+
+use crate::WordTallyError;
 
 /// Collection of regex pattern strings.
 pub type PatternList = Vec<String>;

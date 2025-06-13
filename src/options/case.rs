@@ -1,9 +1,10 @@
 //! Word case normalization options.
 
-use clap::ValueEnum;
 use core::fmt::{self, Display, Formatter};
-use serde::{Deserialize, Serialize};
 use std::borrow::Cow;
+
+use clap::ValueEnum;
+use serde::{Deserialize, Serialize};
 
 /// Word case normalization options.
 ///
