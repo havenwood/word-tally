@@ -383,12 +383,12 @@ impl TallyMap {
         let target_chunk_size = content_len.div_ceil(num_chunks);
         let content_bytes = content.as_bytes();
 
-        let mut boundaries = Vec::with_capacity(num_chunks + 1);
-        boundaries.extend(iter::once(0).chain((1..=num_chunks).map(|i| {
-            let target_pos = i * target_chunk_size;
-            Self::find_whitespace_boundary(content_bytes, target_pos)
-        })));
-        boundaries
+        iter::once(0)
+            .chain((1..=num_chunks).map(|i| {
+                let target_pos = i * target_chunk_size;
+                Self::find_whitespace_boundary(content_bytes, target_pos)
+            }))
+            .collect()
     }
 
     /// Calculate chunk boundaries within a streamed batch based on whitespace positions.
