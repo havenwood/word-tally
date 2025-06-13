@@ -5,15 +5,13 @@
 //! # Common Patterns
 //!
 //! ```
-//! use word_tally::{Options, Case, Io, Serialization, Filters};
+//! use word_tally::{Case, Filters, Io, Options, Serialization};
 //!
 //! // Fast processing of large files
-//! let fast = Options::default()
-//!     .with_io(Io::ParallelMmap);
+//! let fast = Options::default().with_io(Io::ParallelMmap);
 //!
 //! // Memory-constrained environment
-//! let low_memory = Options::default()
-//!     .with_io(Io::Stream);
+//! let low_memory = Options::default().with_io(Io::Stream);
 //!
 //! // Case-insensitive frequency analysis
 //! let frequency = Options::default()
@@ -95,12 +93,13 @@ pub struct Options {
 }
 
 impl Options {
-    /// Creates a new `Options` with custom case, sort, serializer, filters, and performance configurations.
+    /// Creates a new `Options` with custom case, sort, serializer, filters, and performance
+    /// configurations.
     ///
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{Options, Serialization, Filters, Performance, Case, Io, Sort};
+    /// use word_tally::{Case, Filters, Io, Options, Performance, Serialization, Sort};
     ///
     /// // Default configuration
     /// let options = Options::default();

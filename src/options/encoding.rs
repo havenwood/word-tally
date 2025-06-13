@@ -72,7 +72,8 @@ impl Encoding {
     ///
     /// # Errors
     ///
-    /// Returns `Error::NonAsciiInAsciiMode` if encoding is ASCII and non-ASCII bytes are encountered.
+    /// Returns `Error::NonAsciiInAsciiMode` if encoding is ASCII and non-ASCII bytes are
+    /// encountered.
     #[inline]
     pub(crate) fn segment_words(
         self,

@@ -59,23 +59,26 @@ impl Filters {
     /// // Filter out common words and focus on content
     /// let filters = Filters::default()
     ///     .with_min_chars(4)
-    ///     .with_exclude_words(vec!["the".to_string(), "and".to_string(), "for".to_string(), "with".to_string()]);
+    ///     .with_exclude_words(vec![
+    ///         "the".to_string(),
+    ///         "and".to_string(),
+    ///         "for".to_string(),
+    ///         "with".to_string(),
+    ///     ]);
     ///
     /// // Analyze only capitalized words (names, places)
-    /// let name_filter = Filters::default()
-    ///     .with_include_patterns(&vec!["^[A-Z]".to_string()])?;
+    /// let name_filter = Filters::default().with_include_patterns(&vec!["^[A-Z]".to_string()])?;
     ///
     /// // Focus on frequently used terms
-    /// let frequent = Filters::default()
-    ///     .with_min_count(5)
-    ///     .with_min_chars(3);
+    /// let frequent = Filters::default().with_min_count(5).with_min_chars(3);
     /// # Ok(())
     /// # }
     /// ```
     ///
     /// # Errors
     ///
-    /// Returns an error if any of the provided patterns cannot be compiled into valid regular expressions.
+    /// Returns an error if any of the provided patterns cannot be compiled into valid regular
+    /// expressions.
     pub fn new(
         min_chars: Option<MinChars>,
         min_count: Option<MinCount>,

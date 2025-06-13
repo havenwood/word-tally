@@ -70,8 +70,9 @@ impl Output {
     /// # Examples
     ///
     /// ```no_run
-    /// use word_tally::Output;
     /// use std::path::Path;
+    ///
+    /// use word_tally::Output;
     ///
     /// // Write to stdout (default)
     /// let stdout = Output::new(None)?;
@@ -133,7 +134,7 @@ impl Output {
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{WordTally, TallyMap, View, Output, Options, Serialization, Io};
+    /// use word_tally::{Io, Options, Output, Serialization, TallyMap, View, WordTally};
     ///
     /// // Create a tally and write it as JSON to stdout
     /// let view = View::from("hello world hello".as_bytes());

@@ -249,8 +249,8 @@ impl Display for ExcludeSet {
 /// let patterns = IncludeSet::new(vec![r"[aeiou]".to_string()]).unwrap();
 ///
 /// // Test matching
-/// assert!(patterns.matches("test"));     // Contains 'e'
-/// assert!(!patterns.matches("rhythm"));  // No vowels
+/// assert!(patterns.matches("test")); // Contains 'e'
+/// assert!(!patterns.matches("rhythm")); // No vowels
 /// ```
 #[derive(Clone, Debug, Default)]
 pub struct IncludeSet(Patterns);
@@ -264,10 +264,7 @@ impl IncludeSet {
     /// use word_tally::IncludeSet;
     ///
     /// // Create patterns for including words with specific prefixes.
-    /// let patterns = IncludeSet::new(vec![
-    ///     r"^pre".to_string(),
-    ///     r"^un".to_string()
-    /// ]).unwrap();
+    /// let patterns = IncludeSet::new(vec![r"^pre".to_string(), r"^un".to_string()]).unwrap();
     ///
     /// assert_eq!(patterns.len(), 2);
     /// assert!(patterns.matches("prevent"));

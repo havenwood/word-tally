@@ -89,7 +89,8 @@ impl TryFrom<&Path> for View {
     ///
     /// Returns an error if:
     /// - `WordTallyError::MmapStdin` if path is "-" (stdin cannot be memory-mapped)
-    /// - `WordTallyError::Io` if file cannot be opened (with specific messages for not found, permission denied, etc.)
+    /// - `WordTallyError::Io` if file cannot be opened (with specific messages for not found,
+    ///   permission denied, etc.)
     /// - `WordTallyError::Io` if memory mapping fails
     fn try_from(path: &Path) -> Result<Self, Self::Error> {
         if path.as_os_str() == "-" {

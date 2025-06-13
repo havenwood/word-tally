@@ -51,7 +51,8 @@ impl TallyMap {
     ///
     /// # Errors
     ///
-    /// Returns `Error::NonAsciiInAsciiMode` if `encoding` is ASCII and non-ASCII bytes are encountered.
+    /// Returns `Error::NonAsciiInAsciiMode` if `encoding` is ASCII and non-ASCII bytes are
+    /// encountered.
     #[inline]
     pub fn add_words(&mut self, content: &str, case: Case, encoding: Encoding) -> Result<()> {
         encoding.segment_words(content, case, |word| match word {

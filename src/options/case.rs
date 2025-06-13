@@ -58,7 +58,8 @@ impl Display for Case {
 }
 
 impl Case {
-    /// Normalize text using Unicode case conversion, returning a reference if already normalized or owned if conversion needed.
+    /// Normalize text using Unicode case conversion, returning a reference if already normalized or
+    /// owned if conversion needed.
     #[must_use]
     pub fn normalize_unicode<'a>(&self, content: &'a str) -> Cow<'a, str> {
         match self {
@@ -80,7 +81,8 @@ impl Case {
         }
     }
 
-    /// ASCII-specific normalization for better performance, returning a reference if already normalized or owned if conversion needed.
+    /// ASCII-specific normalization for better performance, returning a reference if already
+    /// normalized or owned if conversion needed.
     #[must_use]
     pub fn normalize_ascii<'a>(&self, content: &'a str) -> Cow<'a, str> {
         match self {

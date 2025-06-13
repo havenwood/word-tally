@@ -13,14 +13,14 @@
 //!
 //! # Configuration
 //!
-//! The [`Options`] struct provides a unified interface for configuring all aspects of word tallying.
-//! See the [`options`] module for detailed configuration documentation.
+//! The [`Options`] struct provides a unified interface for configuring all aspects of word
+//! tallying. See the [`options`] module for detailed configuration documentation.
 //!
 //! # Examples
 //!
 //! ```
-//! use word_tally::{Options, TallyMap, WordTally, Reader};
 //! use anyhow::Result;
+//! use word_tally::{Options, Reader, TallyMap, WordTally};
 //!
 //! # fn example() -> Result<()> {
 //! // Basic usage with default options
@@ -34,8 +34,8 @@
 //! ```
 //!
 //! ```
-//! use word_tally::{Case, Filters, Options, Serialization, Tally, TallyMap, WordTally, Reader};
 //! use anyhow::Result;
+//! use word_tally::{Case, Filters, Options, Reader, Serialization, Tally, TallyMap, WordTally};
 //!
 //! # fn example() -> Result<()> {
 //! // Advanced configuration
