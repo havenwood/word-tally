@@ -50,11 +50,13 @@ fn test_reader_with_buf_read() {
     let reader = Reader::try_from(temp_file.path()).expect("create reader");
 
     let mut lines = Vec::new();
-    reader.with_buf_read(|buf_read| {
-        for line in std::io::BufRead::lines(buf_read) {
-            lines.push(line.expect("read line"));
-        }
-    });
+    reader
+        .with_buf_read(|buf_read| {
+            for line in std::io::BufRead::lines(buf_read) {
+                lines.push(line.expect("read line"));
+            }
+        })
+        .expect("reader should not be poisoned");
 
     assert_eq!(lines, vec!["Line 1", "Line 2", "Line 3"]);
 }

@@ -351,7 +351,7 @@ impl TallyMap {
             buf_read
                 .read_to_end(&mut buffer)
                 .with_context(|| format!("failed to read input into buffer: {reader}"))
-        })?;
+        })??;
 
         Ok(buffer)
     }
@@ -464,7 +464,7 @@ impl TallyMap {
                 buf_read.consume(bytes_to_copy);
             }
             Ok(())
-        })
+        })?
     }
 
     /// Process the stream buffer and return tally update with bytes processed.

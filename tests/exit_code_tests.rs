@@ -3,7 +3,7 @@
 use std::io;
 
 use anyhow::{Error, anyhow};
-use word_tally::exit_code::ExitCode;
+use word_tally::{WordTallyError, exit_code::ExitCode};
 
 fn create_io_error(kind: io::ErrorKind) -> Error {
     io::Error::new(kind, "test I/O error").into()
@@ -71,6 +71,7 @@ fn test_exit_code_values() {
     assert_eq!(ExitCode::Usage as i32, 64);
     assert_eq!(ExitCode::Data as i32, 65);
     assert_eq!(ExitCode::NoInput as i32, 66);
+    assert_eq!(ExitCode::Software as i32, 70);
     assert_eq!(ExitCode::CannotCreate as i32, 73);
     assert_eq!(ExitCode::Io as i32, 74);
     assert_eq!(ExitCode::NoPermission as i32, 77);
@@ -125,4 +126,11 @@ fn test_exit_code_from_anyhow_error_trait() {
         ExitCode::from_error(&generic_err),
         ExitCode::from(&generic_err)
     );
+}
+
+#[test]
+fn test_mutex_poisoned_exit_code() {
+    let mutex_err = WordTallyError::MutexPoisoned;
+    let anyhow_err: Error = mutex_err.into();
+    assert_eq!(ExitCode::from(&anyhow_err), ExitCode::Software);
 }

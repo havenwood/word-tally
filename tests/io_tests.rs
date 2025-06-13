@@ -199,11 +199,13 @@ fn test_read_trait_with_all_io_strategies() {
     let bytes_view = View::from(TEST_TEXT.as_bytes());
 
     // Test Reader
-    file_reader.with_buf_read(|buf_read| {
-        let mut content = String::new();
-        buf_read.read_to_string(&mut content).expect("read content");
-        assert_eq!(content.trim(), TEST_TEXT.trim());
-    });
+    file_reader
+        .with_buf_read(|buf_read| {
+            let mut content = String::new();
+            buf_read.read_to_string(&mut content).expect("read content");
+            assert_eq!(content.trim(), TEST_TEXT.trim());
+        })
+        .expect("reader should not be poisoned");
 
     // Test Views
     let mmap_content = std::str::from_utf8(&mmap_view).expect("valid UTF-8");

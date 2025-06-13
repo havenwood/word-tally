@@ -8,7 +8,9 @@ use std::{
     sync::Mutex,
 };
 
-use crate::{Metadata, WordTallyError};
+use anyhow::Result;
+
+use crate::{Metadata, WordTallyError, error::Error};
 
 /// Sequential reader for file or stdin input.
 #[derive(Debug)]
@@ -27,7 +29,11 @@ impl Reader {
     }
 
     /// Provides access to the underlying buffered reader.
-    pub fn with_buf_read<R>(&self, f: impl FnOnce(&mut dyn BufRead) -> R) -> R {
+    ///
+    /// # Errors
+    ///
+    /// Returns `Error::MutexPoisoned` if the mutex was poisoned by a panic in another thread.
+    pub fn with_buf_read<R>(&self, f: impl FnOnce(&mut dyn BufRead) -> R) -> Result<R> {
         match self {
             Self::Stdin(buf_reader) => Self::with_mutex(buf_reader, f),
             Self::File(_, buf_reader) => Self::with_mutex(buf_reader, f),
@@ -35,8 +41,14 @@ impl Reader {
     }
 
     /// Helper to safely access the mutex-protected reader.
-    fn with_mutex<T: BufRead, R>(mutex: &Mutex<T>, f: impl FnOnce(&mut dyn BufRead) -> R) -> R {
-        f(&mut *mutex.lock().expect("mutex should be unpoisoned"))
+    fn with_mutex<T: BufRead, R>(
+        mutex: &Mutex<T>,
+        f: impl FnOnce(&mut dyn BufRead) -> R,
+    ) -> Result<R> {
+        mutex
+            .lock()
+            .map(|mut guard| f(&mut *guard))
+            .map_err(|_| Error::MutexPoisoned.into())
     }
 }
 

@@ -19,6 +19,8 @@ pub enum ExitCode {
     Data = 65,
     /// Cannot open input
     NoInput = 66,
+    /// Internal software error
+    Software = 70,
     /// Cannot create output
     CannotCreate = 73,
     /// I/O error
@@ -61,6 +63,7 @@ impl From<&Error> for ExitCode {
             | Error::ChunkCountExceeded { .. }
             | Error::BatchSizeExceeded { .. }
             | Error::NonAsciiInAsciiMode { .. } => Self::Data,
+            Error::MutexPoisoned => Self::Software,
             Error::Io { source, .. } => Self::from(source),
         }
     }

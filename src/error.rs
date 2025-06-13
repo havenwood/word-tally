@@ -90,4 +90,8 @@ pub enum Error {
         /// Byte position in input.
         position: usize,
     },
+
+    /// Internal error: mutex was poisoned.
+    #[error("internal error: reader mutex was poisoned")]
+    MutexPoisoned,
 }
