@@ -13,11 +13,10 @@
 pub mod buffered;
 pub mod mapped;
 
-pub use self::buffered::Buffered;
-pub use self::mapped::Mapped;
-
-use crate::WordTallyError;
 use std::{fs::File, io, path::Path};
+
+pub use self::{buffered::Buffered, mapped::Mapped};
+use crate::WordTallyError;
 
 /// Opens a file with enhanced error context.
 ///

@@ -21,7 +21,7 @@ use serde::{Deserialize, Serialize};
 /// # Examples
 ///
 /// ```
-/// use word_tally::{Io, Buffered, Mapped};
+/// use word_tally::{Buffered, Io, Mapped};
 ///
 /// # fn example() -> anyhow::Result<()> {
 /// // Default: reader for files and stdin

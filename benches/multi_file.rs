@@ -1,5 +1,6 @@
 //! Multi-file processing benchmarks.
 
+use core::convert::AsRef;
 use std::path::PathBuf;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
@@ -62,8 +63,7 @@ fn bench_multi_file_processing(c: &mut Criterion) {
             b.iter_batched(
                 || file_paths.clone(),
                 |paths| {
-                    let sources: Vec<&str> =
-                        paths.iter().map(std::convert::AsRef::as_ref).collect();
+                    let sources: Vec<&str> = paths.iter().map(AsRef::as_ref).collect();
                     let tally_map = process_multi_file_sources(&sources, &options)
                         .expect("process multi-file sources");
                     process_tally(tally_map, &options)

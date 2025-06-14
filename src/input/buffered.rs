@@ -10,9 +10,8 @@ use std::{
 
 use anyhow::Result;
 
-use crate::{Metadata, WordTallyError, error::Error};
-
 use super::open_file_with_error_context;
+use crate::{Metadata, WordTallyError, error::Error};
 
 /// Buffered source for sequential file or stdin input.
 #[derive(Debug)]

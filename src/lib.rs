@@ -20,7 +20,7 @@
 //!
 //! ```
 //! use anyhow::Result;
-//! use word_tally::{Options, input::Buffered, TallyMap, WordTally};
+//! use word_tally::{Options, TallyMap, WordTally, input::Buffered};
 //!
 //! # fn example() -> Result<()> {
 //! // Basic usage with default options
@@ -35,7 +35,9 @@
 //!
 //! ```
 //! use anyhow::Result;
-//! use word_tally::{Case, Filters, Options, input::Buffered, Serialization, Tally, TallyMap, WordTally};
+//! use word_tally::{
+//!     Case, Filters, Options, Serialization, Tally, TallyMap, WordTally, input::Buffered,
+//! };
 //!
 //! # fn example() -> Result<()> {
 //! // Advanced configuration

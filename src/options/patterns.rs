@@ -1,8 +1,8 @@
 //! Regular expression pattern matching for word filtering.
 
-use core::fmt::{self, Display, Formatter};
-use std::{
+use core::{
     cmp::Ordering,
+    fmt::{self, Display, Formatter},
     hash::{Hash, Hasher},
 };
 

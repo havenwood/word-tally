@@ -1,5 +1,6 @@
 //! Tests for I/O functionality.
 
+use core::{cmp::Ordering, str::FromStr};
 use std::{fs, io::Write};
 
 use anyhow::Context;
@@ -208,10 +209,10 @@ fn test_read_trait_with_all_io_strategies() {
         .expect("reader should not be poisoned");
 
     // Test Mapped
-    let mmap_content = std::str::from_utf8(&mmap_mapped).expect("valid UTF-8");
+    let mmap_content = core::str::from_utf8(&mmap_mapped).expect("valid UTF-8");
     assert_eq!(mmap_content.trim(), TEST_TEXT.trim());
 
-    let bytes_content = std::str::from_utf8(&bytes_mapped).expect("valid UTF-8");
+    let bytes_content = core::str::from_utf8(&bytes_mapped).expect("valid UTF-8");
     assert_eq!(bytes_content.trim(), TEST_TEXT.trim());
 }
 
@@ -300,8 +301,6 @@ fn test_io_traits_partial_eq() {
 
 #[test]
 fn test_io_traits_ordering() {
-    use std::cmp::Ordering;
-
     // Test PartialOrd and Ord (based on enum declaration order)
     assert!(Io::ParallelStream < Io::Stream);
     assert!(Io::Stream < Io::ParallelMmap);
@@ -396,8 +395,6 @@ fn test_parse_io_from_str_value() {
 
 #[test]
 fn test_io_from_str_trait() {
-    use std::str::FromStr;
-
     // Test valid values
     assert_eq!(Io::from_str("stream"), Ok(Io::Stream));
     assert_eq!(Io::from_str("STREAM"), Ok(Io::Stream));

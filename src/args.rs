@@ -1,6 +1,7 @@
 //! Command-line argument parsing and access.
 
-use std::{fmt::Display, path::PathBuf};
+use core::fmt::Display;
+use std::path::PathBuf;
 
 use clap::{ArgAction, Parser};
 use word_tally::{

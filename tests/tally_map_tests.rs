@@ -1,5 +1,7 @@
 //! Tests for `TallyMap` functionality
 
+use core::convert::AsRef;
+
 use word_tally::{
     Case, Count, Mapped, Options, TallyMap, Word,
     options::{encoding::Encoding, io::Io},
@@ -282,7 +284,7 @@ fn test_deref_keys() {
         .add_words("apple banana", Case::default(), Encoding::default())
         .expect("should add words");
 
-    let mut keys: Vec<_> = tally.keys().map(std::convert::AsRef::as_ref).collect();
+    let mut keys: Vec<_> = tally.keys().map(AsRef::as_ref).collect();
     keys.sort_unstable();
     assert_eq!(keys, vec!["apple", "banana"]);
 }

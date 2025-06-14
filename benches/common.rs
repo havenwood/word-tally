@@ -18,13 +18,13 @@ pub(crate) fn criterion_config() -> criterion::Criterion {
     criterion::Criterion::default()
         .configure_from_args()
         .sample_size(10)
-        .measurement_time(std::time::Duration::from_secs(3))
-        .warm_up_time(std::time::Duration::from_secs(1))
+        .measurement_time(core::time::Duration::from_secs(3))
+        .warm_up_time(core::time::Duration::from_secs(1))
 }
 
 /// Generates random text for benchmarks.
 #[must_use]
-fn generate_sample_text(lines: usize, words_per_line: std::ops::Range<usize>) -> String {
+fn generate_sample_text(lines: usize, words_per_line: core::ops::Range<usize>) -> String {
     let mut result = String::with_capacity(lines * 80);
 
     for i in 0..lines {

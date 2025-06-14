@@ -134,7 +134,7 @@ impl Output {
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{Io, Options, Output, Serialization, TallyMap, Mapped, WordTally};
+    /// use word_tally::{Io, Mapped, Options, Output, Serialization, TallyMap, WordTally};
     ///
     /// // Create a tally and write it as JSON to stdout
     /// let view = Mapped::from("hello world hello".as_bytes());

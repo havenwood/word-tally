@@ -1,7 +1,9 @@
 //! Thread count configuration for parallel processing.
 
-use core::fmt::{self, Display, Formatter};
-use std::sync::atomic::{AtomicBool, Ordering};
+use core::{
+    fmt::{self, Display, Formatter},
+    sync::atomic::{AtomicBool, Ordering},
+};
 
 use rayon::ThreadPoolBuilder;
 use serde::{Deserialize, Serialize};
