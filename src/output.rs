@@ -141,7 +141,7 @@ impl Output {
     /// let options = Options::default()
     ///     .with_io(Io::ParallelBytes)
     ///     .with_serialization(Serialization::Json);
-    /// let tally_map = TallyMap::from_view(&view, &options)?;
+    /// let tally_map = TallyMap::from_mapped_input(&view, &options)?;
     /// let tally = WordTally::from_tally_map(tally_map, &options);
     ///
     /// let mut output = Output::new(None)?; // Write to stdout

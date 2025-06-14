@@ -70,12 +70,12 @@ pub(crate) fn bench_word_tally_with_string(
     let path = temp_file.path().to_path_buf();
 
     match options.io() {
-        Io::Stream | Io::ParallelStream => bench_with_reader(
+        Io::Stream | Io::ParallelStream => bench_with_buffered_input(
             b,
             || (path.as_path(), Some(text.as_bytes().to_vec())),
             options,
         ),
-        Io::ParallelMmap => bench_with_mmap(
+        Io::ParallelMmap => bench_with_mapped_input(
             b,
             || (path.as_path(), Some(text.as_bytes().to_vec())),
             options,
@@ -122,7 +122,7 @@ pub(crate) fn process_tally(tally_map: TallyMap, options: &Options) -> WordTally
 }
 
 /// Benchmarks using `Buffered` for streaming modes.
-fn bench_with_reader<F, P>(b: &mut criterion::Bencher<'_>, setup: F, options: &Options)
+fn bench_with_buffered_input<F, P>(b: &mut criterion::Bencher<'_>, setup: F, options: &Options)
 where
     F: Fn() -> (P, Option<Vec<u8>>),
     P: AsRef<std::path::Path>,
@@ -133,7 +133,8 @@ where
             Buffered::try_from(path.as_ref()).expect("create reader")
         },
         |reader| {
-            let tally_map = TallyMap::from_reader(&reader, options).expect("create tally map");
+            let tally_map =
+                TallyMap::from_buffered_input(&reader, options).expect("create tally map");
             process_tally(tally_map, options)
         },
         BatchSize::LargeInput,
@@ -141,7 +142,7 @@ where
 }
 
 /// Benchmarks using memory-mapped `Mapped`.
-fn bench_with_mmap<F, P>(b: &mut criterion::Bencher<'_>, setup: F, options: &Options)
+fn bench_with_mapped_input<F, P>(b: &mut criterion::Bencher<'_>, setup: F, options: &Options)
 where
     F: Fn() -> (P, Option<Vec<u8>>),
     P: AsRef<std::path::Path>,
@@ -152,7 +153,7 @@ where
             Mapped::try_from(path.as_ref()).expect("create view")
         },
         |view| {
-            let tally_map = TallyMap::from_view(&view, options).expect("create tally map");
+            let tally_map = TallyMap::from_mapped_input(&view, options).expect("create tally map");
             process_tally(tally_map, options)
         },
         BatchSize::LargeInput,
@@ -170,7 +171,7 @@ where
     b.iter_batched(
         || Mapped::from(&bytes[..]),
         |view| {
-            let tally_map = TallyMap::from_view(&view, options).expect("create tally map");
+            let tally_map = TallyMap::from_mapped_input(&view, options).expect("create tally map");
             process_tally(tally_map, options)
         },
         BatchSize::LargeInput,
@@ -187,14 +188,15 @@ where
     if let Some(bytes) = bytes {
         let view = Mapped::from(bytes);
         b.iter(|| {
-            let tally_map = TallyMap::from_view(&view, options).expect("create tally map");
+            let tally_map = TallyMap::from_mapped_input(&view, options).expect("create tally map");
             process_tally(tally_map, options)
         });
     } else {
         b.iter_batched(
             || Mapped::try_from(path.as_ref()).expect("create view"),
             |view| {
-                let tally_map = TallyMap::from_view(&view, options).expect("create tally map");
+                let tally_map =
+                    TallyMap::from_mapped_input(&view, options).expect("create tally map");
                 process_tally(tally_map, options)
             },
             BatchSize::LargeInput,
@@ -261,9 +263,11 @@ pub(crate) fn bench_io_with_file(
 
     match io {
         Io::Stream | Io::ParallelStream => {
-            bench_with_reader(b, || (file_path, file_content.clone()), options);
+            bench_with_buffered_input(b, || (file_path, file_content.clone()), options);
         }
-        Io::ParallelMmap => bench_with_mmap(b, || (file_path, file_content.clone()), options),
+        Io::ParallelMmap => {
+            bench_with_mapped_input(b, || (file_path, file_content.clone()), options);
+        }
         Io::ParallelBytes => bench_with_bytes(b, || (file_path, file_content.clone()), options),
         Io::ParallelInMemory => {
             bench_with_in_memory(b, || (file_path, file_content.clone()), options);

@@ -104,14 +104,14 @@ impl TallyMap {
     /// - Input contains invalid UTF-8 data
     /// - A configured thread pool cannot be initialized
     /// - I/O errors occur during reading
-    pub fn from_reader(reader: &Buffered, options: &Options) -> Result<Self> {
+    pub fn from_buffered_input(reader: &Buffered, options: &Options) -> Result<Self> {
         match options.io() {
             Io::Stream => Self::stream_count_reader(reader, options),
             Io::ParallelStream => Self::par_stream_count_reader(reader, options),
             Io::ParallelInMemory => {
                 let bytes = Self::read_to_bytes(reader, options.performance())?;
                 let view = Mapped::from(bytes);
-                Self::from_view(&view, options)
+                Self::from_mapped_input(&view, options)
             }
             Io::ParallelBytes => Err(WordTallyError::BytesRequired.into()),
             Io::ParallelMmap => Err(WordTallyError::StdinInvalid.into()),
@@ -125,7 +125,7 @@ impl TallyMap {
     /// Returns an error if:
     /// - Input contains invalid UTF-8 data
     /// - A configured thread pool cannot be initialized
-    pub fn from_view(view: &Mapped, options: &Options) -> Result<Self> {
+    pub fn from_mapped_input(view: &Mapped, options: &Options) -> Result<Self> {
         match options.io() {
             Io::Stream | Io::ParallelStream => Err(WordTallyError::Config(
                 "stream mode requires a Buffered, not a Mapped".to_string(),

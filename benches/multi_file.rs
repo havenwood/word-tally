@@ -19,7 +19,7 @@ fn process_multi_file_sources(sources: &[&str], options: &Options) -> anyhow::Re
 
         views
             .iter()
-            .map(|view| TallyMap::from_view(view, options))
+            .map(|view| TallyMap::from_mapped_input(view, options))
             .try_fold(TallyMap::new(), |acc, result| {
                 result.map(|tally| acc.merge(tally))
             })
@@ -32,7 +32,7 @@ fn process_multi_file_sources(sources: &[&str], options: &Options) -> anyhow::Re
 
         readers
             .iter()
-            .map(|reader| TallyMap::from_reader(reader, options))
+            .map(|reader| TallyMap::from_buffered_input(reader, options))
             .try_fold(TallyMap::new(), |acc, result| {
                 result.map(|tally| acc.merge(tally))
             })

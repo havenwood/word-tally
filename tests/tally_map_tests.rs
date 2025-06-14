@@ -193,12 +193,12 @@ fn test_from_iterator() {
 }
 
 #[test]
-fn test_from_view_with_parallel_bytes() {
+fn test_from_mapped_input_with_parallel_bytes() {
     let content = b"I celebrate myself and sing myself";
     let view = Mapped::from(&content[..]);
     let options = Options::default().with_io(Io::ParallelBytes);
 
-    let result = TallyMap::from_view(&view, &options);
+    let result = TallyMap::from_mapped_input(&view, &options);
     assert!(result.is_ok());
 
     let tally = result.expect("process test data should succeed");
@@ -206,12 +206,12 @@ fn test_from_view_with_parallel_bytes() {
 }
 
 #[test]
-fn test_from_view_with_parallel_in_memory() {
+fn test_from_mapped_input_with_parallel_in_memory() {
     let content = b"I celebrate myself and sing myself";
     let view = Mapped::from(&content[..]);
     let options = Options::default().with_io(Io::ParallelInMemory);
 
-    let result = TallyMap::from_view(&view, &options);
+    let result = TallyMap::from_mapped_input(&view, &options);
     assert!(result.is_ok());
 
     let tally = result.expect("process test data should succeed");

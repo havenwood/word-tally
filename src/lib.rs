@@ -26,7 +26,7 @@
 //! // Basic usage with default options
 //! let options = Options::default();
 //! let buffered = Buffered::try_from("example.txt")?;
-//! let tally_map = TallyMap::from_reader(&buffered, &options)?;
+//! let tally_map = TallyMap::from_buffered_input(&buffered, &options)?;
 //! let words = WordTally::from_tally_map(tally_map, &options);
 //! assert_eq!(words.count(), 9);
 //! # Ok(())
@@ -47,7 +47,7 @@
 //!     .with_filters(Filters::default().with_min_chars(3));
 //!
 //! let buffered = Buffered::try_from("example_word.txt")?;
-//! let tally_map = TallyMap::from_reader(&buffered, &options)?;
+//! let tally_map = TallyMap::from_buffered_input(&buffered, &options)?;
 //! let words = WordTally::from_tally_map(tally_map, &options);
 //! let expected_tally: Tally = [("cinquedea".into(), 1)].into();
 //!

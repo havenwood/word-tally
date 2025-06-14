@@ -54,9 +54,9 @@ fn run() -> Result<()> {
 
 fn tally_sources(sources: &[String], options: &word_tally::Options) -> Result<TallyMap> {
     match options.io() {
-        Io::Stream => tally_sequential(sources, options, process_with_reader),
-        Io::ParallelStream => tally_parallel(sources, options, process_with_reader),
-        Io::ParallelMmap => tally_parallel(sources, options, process_with_mmap),
+        Io::Stream => tally_sequential(sources, options, process_with_buffered_input),
+        Io::ParallelStream => tally_parallel(sources, options, process_with_buffered_input),
+        Io::ParallelMmap => tally_parallel(sources, options, process_with_mapped_input),
         Io::ParallelInMemory => tally_parallel(sources, options, process_with_bytes),
         Io::ParallelBytes => Err(WordTallyError::PathInvalid.into()),
     }
@@ -86,14 +86,14 @@ fn tally_parallel(
 
 // Processing based on I/O mode
 
-fn process_with_reader(source: &str, options: &word_tally::Options) -> Result<TallyMap> {
+fn process_with_buffered_input(source: &str, options: &word_tally::Options) -> Result<TallyMap> {
     let reader = Buffered::try_from(source)?;
-    TallyMap::from_reader(&reader, options)
+    TallyMap::from_buffered_input(&reader, options)
 }
 
-fn process_with_mmap(source: &str, options: &word_tally::Options) -> Result<TallyMap> {
+fn process_with_mapped_input(source: &str, options: &word_tally::Options) -> Result<TallyMap> {
     let view = Mapped::try_from(source)?;
-    TallyMap::from_view(&view, options)
+    TallyMap::from_mapped_input(&view, options)
 }
 
 fn process_with_bytes(source: &str, options: &word_tally::Options) -> Result<TallyMap> {
@@ -105,5 +105,5 @@ fn process_with_bytes(source: &str, options: &word_tally::Options) -> Result<Tal
         fs::read(source)?
     };
     let view = Mapped::from(bytes);
-    TallyMap::from_view(&view, options)
+    TallyMap::from_mapped_input(&view, options)
 }
