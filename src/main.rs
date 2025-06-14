@@ -23,9 +23,7 @@ fn main() -> ExitCode {
         Ok(()) => ExitCode::SUCCESS,
         Err(err) => {
             let mut stderr = Output::stderr();
-            stderr
-                .write_all(format!("Error: {err}\n").as_bytes())
-                .expect("writing to stderr should not fail");
+            stderr.write_all(format!("Error: {err}\n").as_bytes()).ok();
             ExitCode::from(u8::from(word_tally::exit_code::ExitCode::from(&err)))
         }
     }
