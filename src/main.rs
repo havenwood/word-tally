@@ -58,7 +58,7 @@ fn tally_sources(sources: &[String], options: &word_tally::Options) -> Result<Ta
         Io::ParallelStream => tally_parallel(sources, options, process_with_reader),
         Io::ParallelMmap => tally_parallel(sources, options, process_with_mmap),
         Io::ParallelInMemory => tally_parallel(sources, options, process_with_bytes),
-        Io::ParallelBytes => Err(WordTallyError::BytesWithPath.into()),
+        Io::ParallelBytes => Err(WordTallyError::PathInvalid.into()),
     }
 }
 

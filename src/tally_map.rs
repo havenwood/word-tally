@@ -52,7 +52,7 @@ impl TallyMap {
     ///
     /// # Errors
     ///
-    /// Returns `Error::NonAsciiInAsciiMode` if `encoding` is ASCII and non-ASCII bytes are
+    /// Returns `Error::NonAscii` if `encoding` is ASCII and non-ASCII bytes are
     /// encountered.
     #[inline]
     pub fn add_words(&mut self, content: &str, case: Case, encoding: Encoding) -> Result<()> {
@@ -114,8 +114,8 @@ impl TallyMap {
                 let view = View::from(bytes);
                 Self::from_view(&view, options)
             }
-            Io::ParallelBytes => Err(WordTallyError::BytesInputRequired.into()),
-            Io::ParallelMmap => Err(WordTallyError::MmapStdin.into()),
+            Io::ParallelBytes => Err(WordTallyError::BytesRequired.into()),
+            Io::ParallelMmap => Err(WordTallyError::StdinInvalid.into()),
         }
     }
 
@@ -167,7 +167,7 @@ impl TallyMap {
     ) -> Result<Self> {
         let total_chunks = perf.total_chunks(content.len() as u64);
         let num_chunks =
-            usize::try_from(total_chunks).map_err(|_| WordTallyError::ChunkCountExceeded {
+            usize::try_from(total_chunks).map_err(|_| WordTallyError::ChunkOverflow {
                 chunks: total_chunks,
             })?;
         let boundaries = boundary_fn(content, num_chunks);
@@ -364,11 +364,11 @@ impl TallyMap {
     ) -> Result<(usize, usize)> {
         let stream_batch = Performance::stream_batch_size();
         let batch_size = usize::try_from(stream_batch)
-            .map_err(|_| WordTallyError::BatchSizeExceeded { size: stream_batch })?;
+            .map_err(|_| WordTallyError::BatchOverflow { size: stream_batch })?;
         let input_size = size.unwrap_or_else(|| perf.base_stdin_size());
         let target_size = perf.stream_batch_size_for_input(input_size);
         let target_batch_size = usize::try_from(target_size)
-            .map_err(|_| WordTallyError::BatchSizeExceeded { size: target_size })?;
+            .map_err(|_| WordTallyError::BatchOverflow { size: target_size })?;
 
         Ok((batch_size, target_batch_size))
     }

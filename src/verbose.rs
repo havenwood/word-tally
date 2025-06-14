@@ -123,7 +123,7 @@ impl Verbose {
 
     /// Write verbose info in JSON format.
     fn write_json(&mut self, data: &VerboseData<'_>) -> Result<()> {
-        let json = serde_json::to_string(data).map_err(WordTallyError::JsonSerialization)?;
+        let json = serde_json::to_string(data).map_err(WordTallyError::Json)?;
 
         self.output
             .write_all(format!("{json}\n\n").as_bytes())

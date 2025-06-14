@@ -185,7 +185,7 @@ impl Output {
     fn write_json(&mut self, tally: &[(Word, Count)]) -> Result<()> {
         let mut json_data = Vec::with_capacity(tally.len());
         json_data.extend(tally.iter().map(|(word, count)| (word.as_ref(), count)));
-        let json = serde_json::to_string(&json_data).map_err(WordTallyError::JsonSerialization)?;
+        let json = serde_json::to_string(&json_data).map_err(WordTallyError::Json)?;
         self.write_all(format!("{json}\n").as_bytes())
             .context("failed to write JSON output")?;
 
@@ -196,12 +196,12 @@ impl Output {
         let mut csv_writer = csv::Writer::from_writer(self);
         csv_writer
             .write_record(["word", "count"])
-            .map_err(WordTallyError::CsvSerialization)?;
+            .map_err(WordTallyError::Csv)?;
 
         for (word, count) in tally {
             csv_writer
                 .write_record([word.as_ref(), &count.to_string()])
-                .map_err(WordTallyError::CsvSerialization)?;
+                .map_err(WordTallyError::Csv)?;
         }
 
         csv_writer.flush().context("failed to flush CSV output")

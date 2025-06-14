@@ -88,13 +88,13 @@ impl TryFrom<&Path> for View {
     /// # Errors
     ///
     /// Returns an error if:
-    /// - `WordTallyError::MmapStdin` if path is "-" (stdin cannot be memory-mapped)
+    /// - `WordTallyError::StdinInvalid` if path is "-" (stdin cannot be memory-mapped)
     /// - `WordTallyError::Io` if file cannot be opened (with specific messages for not found,
     ///   permission denied, etc.)
     /// - `WordTallyError::Io` if memory mapping fails
     fn try_from(path: &Path) -> Result<Self, Self::Error> {
         if path.as_os_str() == "-" {
-            return Err(WordTallyError::MmapStdin);
+            return Err(WordTallyError::StdinInvalid);
         }
         let file = open_file_with_error_context(path)?;
         let path_buf = path.to_path_buf();
@@ -122,7 +122,7 @@ impl TryFrom<PathBuf> for View {
     /// # Errors
     ///
     /// Returns an error if:
-    /// - `WordTallyError::MmapStdin` if path is "-"
+    /// - `WordTallyError::StdinInvalid` if path is "-"
     /// - `WordTallyError::Io` if file cannot be opened or memory mapping fails
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         Self::try_from(path.as_path())
@@ -137,7 +137,7 @@ impl TryFrom<&str> for View {
     /// # Errors
     ///
     /// Returns an error if:
-    /// - `WordTallyError::MmapStdin` if path is "-"
+    /// - `WordTallyError::StdinInvalid` if path is "-"
     /// - `WordTallyError::Io` if file cannot be opened or memory mapping fails
     fn try_from(path: &str) -> Result<Self, Self::Error> {
         Self::try_from(Path::new(path))

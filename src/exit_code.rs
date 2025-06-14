@@ -56,17 +56,17 @@ impl From<&WordTallyError> for ExitCode {
     fn from(err: &WordTallyError) -> Self {
         match err {
             WordTallyError::Usage(_)
-            | WordTallyError::MmapStdin
-            | WordTallyError::BytesWithPath
-            | WordTallyError::BytesInputRequired
+            | WordTallyError::StdinInvalid
+            | WordTallyError::PathInvalid
+            | WordTallyError::BytesRequired
             | WordTallyError::Config(_) => Self::Usage,
             WordTallyError::Utf8 { .. }
             | WordTallyError::Pattern { .. }
-            | WordTallyError::JsonSerialization(_)
-            | WordTallyError::CsvSerialization(_)
-            | WordTallyError::ChunkCountExceeded { .. }
-            | WordTallyError::BatchSizeExceeded { .. }
-            | WordTallyError::NonAsciiInAsciiMode { .. } => Self::Data,
+            | WordTallyError::Json(_)
+            | WordTallyError::Csv(_)
+            | WordTallyError::ChunkOverflow { .. }
+            | WordTallyError::BatchOverflow { .. }
+            | WordTallyError::NonAscii { .. } => Self::Data,
             WordTallyError::MutexPoisoned => Self::Software,
             WordTallyError::Io { source, .. } => Self::from(source),
         }

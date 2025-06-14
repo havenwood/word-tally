@@ -72,7 +72,7 @@ impl Encoding {
     ///
     /// # Errors
     ///
-    /// Returns `Error::NonAsciiInAsciiMode` if encoding is ASCII and non-ASCII bytes are
+    /// Returns `Error::NonAscii` if encoding is ASCII and non-ASCII bytes are
     /// encountered.
     #[inline]
     pub(crate) fn segment_words(
@@ -105,7 +105,7 @@ impl Encoding {
 
                 // Validate entire content is ASCII
                 if let Some(position) = bytes.iter().position(|&b| !b.is_ascii()) {
-                    return Err(Error::NonAsciiInAsciiMode {
+                    return Err(Error::NonAscii {
                         byte: bytes[position],
                         position,
                     }

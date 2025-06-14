@@ -13,15 +13,15 @@ pub enum Error {
 
     /// Memory-mapped I/O attempted on stdin.
     #[error("memory-mapped I/O requires a file, not stdin")]
-    MmapStdin,
+    StdinInvalid,
 
     /// Byte I/O mode used with file path.
     #[error("byte I/O mode requires `Input::from()`")]
-    BytesWithPath,
+    PathInvalid,
 
     /// Parallel bytes mode requires bytes input.
     #[error("parallel bytes I/O mode requires bytes input")]
-    BytesInputRequired,
+    BytesRequired,
 
     /// UTF-8 decoding error.
     #[error("invalid UTF-8 at byte {byte}: {message}")]
@@ -43,15 +43,15 @@ pub enum Error {
 
     /// JSON serialization error.
     #[error("JSON serialization failed")]
-    JsonSerialization(#[from] serde_json::Error),
+    Json(#[from] serde_json::Error),
 
     /// CSV serialization error.
     #[error("CSV serialization failed")]
-    CsvSerialization(#[from] csv::Error),
+    Csv(#[from] csv::Error),
 
     /// Chunk count exceeds platform limits.
     #[error("chunk count {chunks} exceeds platform limit of {}", usize::MAX)]
-    ChunkCountExceeded {
+    ChunkOverflow {
         /// Number of chunks requested.
         chunks: u64,
     },
@@ -61,7 +61,7 @@ pub enum Error {
         "batch size {size} bytes exceeds platform limit of {} bytes",
         usize::MAX
     )]
-    BatchSizeExceeded {
+    BatchOverflow {
         /// Batch size in bytes.
         size: u64,
     },
@@ -84,7 +84,7 @@ pub enum Error {
 
     /// Non-ASCII byte in ASCII-only mode.
     #[error("non-ASCII byte {byte:#x} at position {position} in ASCII-only mode")]
-    NonAsciiInAsciiMode {
+    NonAscii {
         /// The non-ASCII byte value.
         byte: u8,
         /// Byte position in input.
