@@ -66,15 +66,15 @@ fn test_generic_error() {
 
 #[test]
 fn test_exit_code_values() {
-    assert_eq!(ExitCode::Success as i32, 0);
-    assert_eq!(ExitCode::Failure as i32, 1);
-    assert_eq!(ExitCode::Usage as i32, 64);
-    assert_eq!(ExitCode::Data as i32, 65);
-    assert_eq!(ExitCode::NoInput as i32, 66);
-    assert_eq!(ExitCode::Software as i32, 70);
-    assert_eq!(ExitCode::CannotCreate as i32, 73);
-    assert_eq!(ExitCode::Io as i32, 74);
-    assert_eq!(ExitCode::NoPermission as i32, 77);
+    assert_eq!(ExitCode::Success as u8, 0);
+    assert_eq!(ExitCode::Failure as u8, 1);
+    assert_eq!(ExitCode::Usage as u8, 64);
+    assert_eq!(ExitCode::Data as u8, 65);
+    assert_eq!(ExitCode::NoInput as u8, 66);
+    assert_eq!(ExitCode::Software as u8, 70);
+    assert_eq!(ExitCode::CannotCreate as u8, 73);
+    assert_eq!(ExitCode::Io as u8, 74);
+    assert_eq!(ExitCode::NoPermission as u8, 77);
 }
 
 #[test]
@@ -120,12 +120,6 @@ fn test_exit_code_from_anyhow_error_trait() {
 
     let generic_err: Error = anyhow!("generic error");
     assert_eq!(ExitCode::from(&generic_err), ExitCode::Failure);
-
-    // Test that `from_error` still works and delegates to `From` trait
-    assert_eq!(
-        ExitCode::from_error(&generic_err),
-        ExitCode::from(&generic_err)
-    );
 }
 
 #[test]

@@ -6,7 +6,7 @@ pub(crate) mod verbose;
 use std::{
     fs, io,
     io::{Read, Write},
-    process::ExitCode,
+    process,
 };
 
 use anyhow::Result;
@@ -18,13 +18,13 @@ use crate::{args::Args, verbose::Verbose};
 
 type SourceProcessor = fn(&str, &word_tally::Options) -> Result<TallyMap>;
 
-fn main() -> ExitCode {
+fn main() -> process::ExitCode {
     match run() {
-        Ok(()) => ExitCode::SUCCESS,
+        Ok(()) => process::ExitCode::SUCCESS,
         Err(err) => {
             let mut stderr = Output::stderr();
             stderr.write_all(format!("Error: {err}\n").as_bytes()).ok();
-            ExitCode::from(u8::from(word_tally::exit_code::ExitCode::from(&err)))
+            word_tally::exit_code::ExitCode::from(&err).into()
         }
     }
 }

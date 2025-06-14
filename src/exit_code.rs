@@ -1,13 +1,14 @@
 //! Exit codes following Unix sysexits.h conventions.
 
-use std::io;
+use std::{io, process};
 
 use clap::error::ErrorKind as ClapErrorKind;
 
-use crate::error::Error;
+use crate::error::Error as WordTallyError;
 
 /// Exit codes following Unix sysexits.h convention
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[repr(u8)]
 pub enum ExitCode {
     /// Successful termination
     Success = 0,
@@ -29,11 +30,14 @@ pub enum ExitCode {
     NoPermission = 77,
 }
 
-impl ExitCode {
-    /// Converts an error to an appropriate exit code.
-    #[must_use]
-    pub fn from_error(err: &anyhow::Error) -> Self {
-        Self::from(err)
+impl From<&io::Error> for ExitCode {
+    fn from(err: &io::Error) -> Self {
+        match err.kind() {
+            io::ErrorKind::NotFound => Self::NoInput,
+            io::ErrorKind::PermissionDenied => Self::NoPermission,
+            io::ErrorKind::AlreadyExists => Self::CannotCreate,
+            _ => Self::Io,
+        }
     }
 }
 
@@ -48,64 +52,39 @@ impl From<&clap::Error> for ExitCode {
     }
 }
 
-impl From<&Error> for ExitCode {
-    fn from(err: &Error) -> Self {
+impl From<&WordTallyError> for ExitCode {
+    fn from(err: &WordTallyError) -> Self {
         match err {
-            Error::Usage(_)
-            | Error::MmapStdin
-            | Error::BytesWithPath
-            | Error::BytesInputRequired
-            | Error::Config(_) => Self::Usage,
-            Error::Utf8 { .. }
-            | Error::Pattern { .. }
-            | Error::JsonSerialization(_)
-            | Error::CsvSerialization(_)
-            | Error::ChunkCountExceeded { .. }
-            | Error::BatchSizeExceeded { .. }
-            | Error::NonAsciiInAsciiMode { .. } => Self::Data,
-            Error::MutexPoisoned => Self::Software,
-            Error::Io { source, .. } => Self::from(source),
-        }
-    }
-}
-
-impl From<&io::Error> for ExitCode {
-    fn from(err: &io::Error) -> Self {
-        match err.kind() {
-            io::ErrorKind::NotFound => Self::NoInput,
-            io::ErrorKind::PermissionDenied => Self::NoPermission,
-            io::ErrorKind::AlreadyExists => Self::CannotCreate,
-            _ => Self::Io,
+            WordTallyError::Usage(_)
+            | WordTallyError::MmapStdin
+            | WordTallyError::BytesWithPath
+            | WordTallyError::BytesInputRequired
+            | WordTallyError::Config(_) => Self::Usage,
+            WordTallyError::Utf8 { .. }
+            | WordTallyError::Pattern { .. }
+            | WordTallyError::JsonSerialization(_)
+            | WordTallyError::CsvSerialization(_)
+            | WordTallyError::ChunkCountExceeded { .. }
+            | WordTallyError::BatchSizeExceeded { .. }
+            | WordTallyError::NonAsciiInAsciiMode { .. } => Self::Data,
+            WordTallyError::MutexPoisoned => Self::Software,
+            WordTallyError::Io { source, .. } => Self::from(source),
         }
     }
 }
 
 impl From<&anyhow::Error> for ExitCode {
     fn from(err: &anyhow::Error) -> Self {
-        if let Some(clap_err) = err.downcast_ref::<clap::Error>() {
-            return Self::from(clap_err);
-        }
-
-        if let Some(wt_err) = err.downcast_ref::<Error>() {
-            return Self::from(wt_err);
-        }
-
-        if let Some(io_err) = err.downcast_ref::<io::Error>() {
-            return Self::from(io_err);
-        }
-
-        Self::Failure
+        err.downcast_ref::<io::Error>()
+            .map(Self::from)
+            .or_else(|| err.downcast_ref::<clap::Error>().map(Self::from))
+            .or_else(|| err.downcast_ref::<WordTallyError>().map(Self::from))
+            .unwrap_or(Self::Failure)
     }
 }
 
-impl From<ExitCode> for i32 {
+impl From<ExitCode> for process::ExitCode {
     fn from(code: ExitCode) -> Self {
-        code as Self
-    }
-}
-
-impl From<ExitCode> for u8 {
-    fn from(code: ExitCode) -> Self {
-        code as Self
+        Self::from(code as u8)
     }
 }
