@@ -15,28 +15,28 @@ pub enum ExitCode {
     /// General failure
     Failure = 1,
     /// Command line usage error
-    Usage = 64,
+    UsageError = 64,
     /// Data format error
-    Data = 65,
+    DataFormat = 65,
     /// Cannot open input
-    NoInput = 66,
+    InputNotFound = 66,
     /// Internal software error
-    Software = 70,
+    InternalError = 70,
     /// Cannot create output
-    CannotCreate = 73,
+    OutputFailed = 73,
     /// I/O error
-    Io = 74,
+    IoError = 74,
     /// Permission denied
-    NoPermission = 77,
+    PermissionDenied = 77,
 }
 
 impl From<&io::Error> for ExitCode {
     fn from(err: &io::Error) -> Self {
         match err.kind() {
-            io::ErrorKind::NotFound => Self::NoInput,
-            io::ErrorKind::PermissionDenied => Self::NoPermission,
-            io::ErrorKind::AlreadyExists => Self::CannotCreate,
-            _ => Self::Io,
+            io::ErrorKind::NotFound => Self::InputNotFound,
+            io::ErrorKind::PermissionDenied => Self::PermissionDenied,
+            io::ErrorKind::AlreadyExists => Self::OutputFailed,
+            _ => Self::IoError,
         }
     }
 }
@@ -47,7 +47,7 @@ impl From<&clap::Error> for ExitCode {
             // Successful `--help` or `--version` display
             ClapErrorKind::DisplayHelp | ClapErrorKind::DisplayVersion => Self::Success,
             // Clap usage errors
-            _ => Self::Usage,
+            _ => Self::UsageError,
         }
     }
 }
@@ -59,15 +59,15 @@ impl From<&WordTallyError> for ExitCode {
             | WordTallyError::StdinInvalid
             | WordTallyError::PathInvalid
             | WordTallyError::BytesRequired
-            | WordTallyError::Config(_) => Self::Usage,
+            | WordTallyError::Config(_) => Self::UsageError,
             WordTallyError::Utf8 { .. }
             | WordTallyError::Pattern { .. }
             | WordTallyError::Json(_)
             | WordTallyError::Csv(_)
             | WordTallyError::ChunkOverflow { .. }
             | WordTallyError::BatchOverflow { .. }
-            | WordTallyError::NonAscii { .. } => Self::Data,
-            WordTallyError::MutexPoisoned => Self::Software,
+            | WordTallyError::NonAscii { .. } => Self::DataFormat,
+            WordTallyError::MutexPoisoned => Self::InternalError,
             WordTallyError::Io { source, .. } => Self::from(source),
         }
     }

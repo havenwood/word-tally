@@ -78,8 +78,8 @@ pub enum Error {
         source: io::Error,
     },
 
-    /// Configuration error.
-    #[error("invalid configuration: {0}")]
+    /// Runtime configuration error.
+    #[error("runtime configuration error: {0}")]
     Config(String),
 
     /// Non-ASCII byte in ASCII-only mode.

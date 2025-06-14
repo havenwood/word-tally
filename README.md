@@ -255,11 +255,12 @@ Parallel processing configuration:
 `word-tally` uses standard unix exit codes to indicate success or the types of failure:
 
 - `0`: Success
-- `1`: General error
+- `1`: General failure
 - `64`: Command line usage error
 - `65`: Data format error
-- `66`: Cannot open input
-- `73`: Cannot create output file
+- `66`: Input not found
+- `70`: Internal software error
+- `73`: Output creation failed
 - `74`: I/O error
 - `77`: Permission denied
 
