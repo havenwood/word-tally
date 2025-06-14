@@ -4,6 +4,7 @@ use std::{
     borrow::Cow,
     iter,
     ops::{Deref, DerefMut},
+    str,
 };
 
 use anyhow::{Context, Result};
@@ -539,8 +540,11 @@ impl TallyMap {
         let valid_up_to = e.valid_up_to();
         if valid_up_to > 0 {
             // simdutf8 guarantees this is valid UTF-8
-            let valid = std::str::from_utf8(&buffer[..valid_up_to])
-                .expect("simdutf8 guarantees valid UTF-8 up to valid_up_to");
+            let valid =
+                str::from_utf8(&buffer[..valid_up_to]).map_err(|_| WordTallyError::Utf8 {
+                    byte: valid_up_to,
+                    message: "simdutf8 validation inconsistency".to_string(),
+                })?;
             tally.add_words(valid, case, encoding)?;
         }
         // Keep invalid portion for next iteration
