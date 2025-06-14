@@ -1,7 +1,7 @@
 //! Tests for `TallyMap` functionality
 
 use word_tally::{
-    Case, Count, Options, TallyMap, View, Word,
+    Case, Count, Mapped, Options, TallyMap, Word,
     options::{encoding::Encoding, io::Io},
 };
 
@@ -193,7 +193,7 @@ fn test_from_iterator() {
 #[test]
 fn test_from_view_with_parallel_bytes() {
     let content = b"I celebrate myself and sing myself";
-    let view = View::from(&content[..]);
+    let view = Mapped::from(&content[..]);
     let options = Options::default().with_io(Io::ParallelBytes);
 
     let result = TallyMap::from_view(&view, &options);
@@ -206,7 +206,7 @@ fn test_from_view_with_parallel_bytes() {
 #[test]
 fn test_from_view_with_parallel_in_memory() {
     let content = b"I celebrate myself and sing myself";
-    let view = View::from(&content[..]);
+    let view = Mapped::from(&content[..]);
     let options = Options::default().with_io(Io::ParallelInMemory);
 
     let result = TallyMap::from_view(&view, &options);

@@ -1,6 +1,6 @@
 use std::{io::Write, sync::Arc};
 
-use word_tally::{Case, Options, Reader, Serialization, Sort, TallyMap, WordTally};
+use word_tally::{Buffered, Case, Options, Serialization, Sort, TallyMap, WordTally};
 
 fn make_shared<T>(value: T) -> Arc<T> {
     Arc::new(value)
@@ -15,7 +15,7 @@ fn test_to_json() {
     let options = Options::default();
     let shared_options = make_shared(options);
 
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &shared_options).expect("create tally map");
     let expected = WordTally::from_tally_map(tally_map, &shared_options);
     let serialized = serde_json::to_string(&expected).expect("serialize JSON");
@@ -35,7 +35,7 @@ fn test_from_json() {
     Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     let original = WordTally::from_tally_map(tally_map, &options);
     let json = serde_json::to_string(&original).expect("serialize JSON");
@@ -55,7 +55,7 @@ fn test_json_field_renamed() {
     Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     let original = WordTally::from_tally_map(tally_map, &options);
     let json = serde_json::to_string(&original).expect("serialize JSON");
@@ -71,7 +71,7 @@ fn test_deserialization_with_serde() {
     Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Options::default();
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     let original = WordTally::from_tally_map(tally_map, &options);
     let json = serde_json::to_string(&original).expect("serialize JSON");
@@ -122,7 +122,7 @@ fn test_comprehensive_wordtally_serialization() {
         .with_case(Case::Lower)
         .with_sort(Sort::Desc);
 
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -145,7 +145,7 @@ fn test_json_field_names() {
     Write::write_all(&mut temp_file, content).expect("write test data");
 
     let options = Options::default();
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -170,7 +170,7 @@ fn test_round_trip_serialization() {
         .with_serialization(Serialization::Json)
         .with_filters(word_tally::Filters::default().with_min_chars(2));
 
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     let original = WordTally::from_tally_map(tally_map, &options);
 

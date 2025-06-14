@@ -30,8 +30,8 @@ Tests for specific modules:
 - `exit_code_tests.rs` - Exit code mappings
 - `filters_tests.rs` - Filter configurations
 - `hash_tests.rs` - Hash implementations
-- `reader_tests.rs` - Reader functionality and file I/O
-- `view_tests.rs` - View functionality and memory mapping
+- `buffered_tests.rs` - Buffered input functionality and file I/O
+- `mapped_tests.rs` - Mapped input functionality and memory mapping
 - `io_tests.rs` - I/O strategies
 - `options_tests.rs` - Options configuration
 - `output_tests.rs` - Output destinations

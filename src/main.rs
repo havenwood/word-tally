@@ -12,7 +12,7 @@ use std::{
 use anyhow::Result;
 use clap::Parser;
 use rayon::prelude::*;
-use word_tally::{Io, Output, Reader, TallyMap, View, WordTally, WordTallyError};
+use word_tally::{Buffered, Io, Mapped, Output, TallyMap, WordTally, WordTallyError};
 
 use crate::{args::Args, verbose::Verbose};
 
@@ -87,12 +87,12 @@ fn tally_parallel(
 // Processing based on I/O mode
 
 fn process_with_reader(source: &str, options: &word_tally::Options) -> Result<TallyMap> {
-    let reader = Reader::try_from(source)?;
+    let reader = Buffered::try_from(source)?;
     TallyMap::from_reader(&reader, options)
 }
 
 fn process_with_mmap(source: &str, options: &word_tally::Options) -> Result<TallyMap> {
-    let view = View::try_from(source)?;
+    let view = Mapped::try_from(source)?;
     TallyMap::from_view(&view, options)
 }
 
@@ -104,6 +104,6 @@ fn process_with_bytes(source: &str, options: &word_tally::Options) -> Result<Tal
     } else {
         fs::read(source)?
     };
-    let view = View::from(bytes);
+    let view = Mapped::from(bytes);
     TallyMap::from_view(&view, options)
 }

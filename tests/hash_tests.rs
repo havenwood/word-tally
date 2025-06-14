@@ -6,7 +6,7 @@ use std::{
 };
 
 use word_tally::{
-    Case, Filters, Io, Options, Reader, Serialization, Sort, Tally, TallyMap, View, WordTally,
+    Buffered, Case, Filters, Io, Mapped, Options, Serialization, Sort, Tally, TallyMap, WordTally,
 };
 
 fn calculate_hash<T: Hash>(value: &T) -> u64 {
@@ -20,8 +20,8 @@ fn test_wordtally_hash() {
     let hope_text = "Hope is the thing with";
     let base_options = Options::default().with_io(Io::ParallelBytes);
 
-    let hope_view_alpha = View::from(hope_text.as_bytes());
-    let hope_view_beta = View::from(hope_text.as_bytes());
+    let hope_view_alpha = Mapped::from(hope_text.as_bytes());
+    let hope_view_beta = Mapped::from(hope_text.as_bytes());
 
     let hope_tally_map_alpha =
         TallyMap::from_view(&hope_view_alpha, &base_options).expect("create tally map");
@@ -35,7 +35,7 @@ fn test_wordtally_hash() {
     assert_eq!(hope_tally_alpha.uniq_count(), hope_tally_beta.uniq_count());
 
     let extended_hope_text = "Hope is the thing with feathers That perches";
-    let extended_hope_view = View::from(extended_hope_text.as_bytes());
+    let extended_hope_view = Mapped::from(extended_hope_text.as_bytes());
     let extended_hope_tally_map =
         TallyMap::from_view(&extended_hope_view, &base_options).expect("create tally map");
     let extended_hope_tally = WordTally::from_tally_map(extended_hope_tally_map, &base_options);
@@ -47,7 +47,7 @@ fn test_wordtally_hash() {
     );
 
     let repeated_hope_text = "Hope is the thing with Hope is the";
-    let repeated_hope_view = View::from(repeated_hope_text.as_bytes());
+    let repeated_hope_view = Mapped::from(repeated_hope_text.as_bytes());
     let repeated_hope_tally_map =
         TallyMap::from_view(&repeated_hope_view, &base_options).expect("create tally map");
     let repeated_hope_tally = WordTally::from_tally_map(repeated_hope_tally_map, &base_options);
@@ -212,8 +212,8 @@ fn test_hash_collisions() {
     let bird_text = "I shall keep singing";
     let truth_text = "Tell all the truth but";
 
-    let bird_view = View::from(bird_text.as_bytes());
-    let truth_view = View::from(truth_text.as_bytes());
+    let bird_view = Mapped::from(bird_text.as_bytes());
+    let truth_view = Mapped::from(truth_text.as_bytes());
 
     let bird_tally_map =
         TallyMap::from_view(&bird_view, &lowercase_asc_text).expect("create tally map");
@@ -238,8 +238,8 @@ fn test_wordtally_includes_options_in_hash() {
         .with_io(Io::ParallelBytes)
         .with_case(Case::Upper);
 
-    let success_view_alpha = View::from(success_text.as_bytes());
-    let success_view_beta = View::from(success_text.as_bytes());
+    let success_view_alpha = Mapped::from(success_text.as_bytes());
+    let success_view_beta = Mapped::from(success_text.as_bytes());
 
     let success_lowercase_map =
         TallyMap::from_view(&success_view_alpha, &lowercase_options).expect("create tally map");
@@ -261,8 +261,8 @@ fn test_wordtally_includes_options_in_hash() {
         .with_case(Case::Lower)
         .with_sort(Sort::Desc);
 
-    let success_view_gamma = View::from(success_text.as_bytes());
-    let success_view_delta = View::from(success_text.as_bytes());
+    let success_view_gamma = Mapped::from(success_text.as_bytes());
+    let success_view_delta = Mapped::from(success_text.as_bytes());
 
     let success_ascending_map =
         TallyMap::from_view(&success_view_gamma, &lowercase_asc).expect("create tally map");
@@ -278,13 +278,13 @@ fn test_wordtally_includes_options_in_hash() {
 #[test]
 fn test_wordtally_hash_fields() {
     let text = "The Brain is wider than";
-    let view = View::from(text.as_bytes());
+    let view = Mapped::from(text.as_bytes());
     let options = Options::default().with_io(Io::ParallelBytes);
     let tally_map = TallyMap::from_view(&view, &options).expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
 
     let doubled_text = "The Brain is wider than the Sky For put";
-    let doubled_view = View::from(doubled_text.as_bytes());
+    let doubled_view = Mapped::from(doubled_text.as_bytes());
     let doubled_tally_map = TallyMap::from_view(&doubled_view, &options).expect("create tally map");
     let doubled_tally = WordTally::from_tally_map(doubled_tally_map, &options);
 
@@ -293,7 +293,7 @@ fn test_wordtally_hash_fields() {
     let uppercase_options = Options::default()
         .with_io(Io::ParallelBytes)
         .with_case(Case::Upper);
-    let uppercase_view = View::from(text.as_bytes());
+    let uppercase_view = Mapped::from(text.as_bytes());
     let uppercase_tally_map =
         TallyMap::from_view(&uppercase_view, &uppercase_options).expect("create tally map");
     let uppercase_tally = WordTally::from_tally_map(uppercase_tally_map, &uppercase_options);
@@ -340,7 +340,7 @@ fn test_equality_and_hashing() {
                 word_tally::Performance::default(),
             );
 
-            let reader = Reader::try_from(file_path).expect("create reader");
+            let reader = Buffered::try_from(file_path).expect("create reader");
             let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
             WordTally::from_tally_map(tally_map, &options)
         })

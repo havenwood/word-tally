@@ -14,9 +14,8 @@ use rayon::prelude::*;
 
 use crate::{
     Count, Metadata, Word, WordTallyError,
+    input::{Buffered, Mapped},
     options::{Options, case::Case, encoding::Encoding, io::Io, performance::Performance},
-    reader::Reader,
-    view::View,
 };
 
 /// Map for tracking word counts with non-deterministic iteration order.
@@ -96,7 +95,7 @@ impl TallyMap {
         }
     }
 
-    /// Creates a `TallyMap` from a `Reader` source and `Options`.
+    /// Creates a `TallyMap` from a `Buffered` source and `Options`.
     ///
     /// # Errors
     ///
@@ -105,13 +104,13 @@ impl TallyMap {
     /// - Input contains invalid UTF-8 data
     /// - A configured thread pool cannot be initialized
     /// - I/O errors occur during reading
-    pub fn from_reader(reader: &Reader, options: &Options) -> Result<Self> {
+    pub fn from_reader(reader: &Buffered, options: &Options) -> Result<Self> {
         match options.io() {
             Io::Stream => Self::stream_count_reader(reader, options),
             Io::ParallelStream => Self::par_stream_count_reader(reader, options),
             Io::ParallelInMemory => {
                 let bytes = Self::read_to_bytes(reader, options.performance())?;
-                let view = View::from(bytes);
+                let view = Mapped::from(bytes);
                 Self::from_view(&view, options)
             }
             Io::ParallelBytes => Err(WordTallyError::BytesRequired.into()),
@@ -119,17 +118,17 @@ impl TallyMap {
         }
     }
 
-    /// Creates a `TallyMap` from a `View` source and `Options`.
+    /// Creates a `TallyMap` from a `Mapped` source and `Options`.
     ///
     /// # Errors
     ///
     /// Returns an error if:
     /// - Input contains invalid UTF-8 data
     /// - A configured thread pool cannot be initialized
-    pub fn from_view(view: &View, options: &Options) -> Result<Self> {
+    pub fn from_view(view: &Mapped, options: &Options) -> Result<Self> {
         match options.io() {
             Io::Stream | Io::ParallelStream => Err(WordTallyError::Config(
-                "stream mode requires a Reader, not a View".to_string(),
+                "stream mode requires a Buffered, not a Mapped".to_string(),
             )
             .into()),
             Io::ParallelInMemory | Io::ParallelBytes | Io::ParallelMmap => {
@@ -180,7 +179,7 @@ impl TallyMap {
     ///
     /// Processes data in chunks without loading the entire input into memory.
     /// Uses chunk-based processing for better performance than line-by-line.
-    fn stream_count_reader(reader: &Reader, options: &Options) -> Result<Self> {
+    fn stream_count_reader(reader: &Buffered, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
         let encoding = options.encoding();
@@ -263,7 +262,7 @@ impl TallyMap {
     /// - Uses memchr SIMD to find whitespace-aligned chunk boundaries
     /// - Stream in chunks, without loading the entire input into memory
     /// - Balances performance and memory usage
-    fn par_stream_count_reader(reader: &Reader, options: &Options) -> Result<Self> {
+    fn par_stream_count_reader(reader: &Buffered, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
         let encoding = options.encoding();
@@ -345,7 +344,7 @@ impl TallyMap {
     }
 
     /// Reads the entire input into a byte buffer.
-    fn read_to_bytes(reader: &Reader, perf: &Performance) -> Result<Vec<u8>> {
+    fn read_to_bytes(reader: &Buffered, perf: &Performance) -> Result<Vec<u8>> {
         let mut buffer = Vec::with_capacity(perf.capacity(reader.size()));
 
         reader.with_buf_read(|buf_read| {
@@ -440,7 +439,7 @@ impl TallyMap {
 
     /// Fill the buffer with data from the stream reader up to the target size.
     fn fill_stream_buffer(
-        reader: &Reader,
+        reader: &Buffered,
         buffer: &mut Vec<u8>,
         reached_eof: &mut bool,
         target_size: usize,

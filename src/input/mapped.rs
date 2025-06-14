@@ -1,4 +1,4 @@
-//! Memory view for direct data access (mmap or bytes).
+//! Mapped source for direct data access (mmap or bytes).
 
 use std::{
     fmt::{self, Display, Formatter},
@@ -8,18 +8,20 @@ use std::{
 
 use memmap2::Mmap;
 
-use crate::{Metadata, WordTallyError, reader::open_file_with_error_context};
+use crate::{Metadata, WordTallyError};
 
-/// Memory view for direct data access (mmap or bytes).
+use super::open_file_with_error_context;
+
+/// Mapped source for direct data access (mmap or bytes).
 #[derive(Debug)]
-pub enum View {
+pub enum Mapped {
     /// Memory-mapped file view.
     Mmap { path: PathBuf, mmap: Mmap },
     /// In-memory byte data.
     Bytes(Box<[u8]>),
 }
 
-impl AsRef<[u8]> for View {
+impl AsRef<[u8]> for Mapped {
     /// Returns the underlying byte slice.
     fn as_ref(&self) -> &[u8] {
         match self {
@@ -29,7 +31,7 @@ impl AsRef<[u8]> for View {
     }
 }
 
-impl Deref for View {
+impl Deref for Mapped {
     type Target = [u8];
 
     /// Provides direct access to the underlying byte data.
@@ -41,7 +43,7 @@ impl Deref for View {
     }
 }
 
-impl Display for View {
+impl Display for Mapped {
     /// Formats the view for display.
     /// Shows file path for mmap or "<bytes>" for byte data.
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -52,35 +54,35 @@ impl Display for View {
     }
 }
 
-impl From<Box<[u8]>> for View {
+impl From<Box<[u8]>> for Mapped {
     /// Creates a view from boxed bytes.
     fn from(bytes: Box<[u8]>) -> Self {
         Self::Bytes(bytes)
     }
 }
 
-impl From<&[u8]> for View {
+impl From<&[u8]> for Mapped {
     /// Creates a view from a byte slice.
     fn from(bytes: &[u8]) -> Self {
         Self::Bytes(Box::from(bytes))
     }
 }
 
-impl From<Vec<u8>> for View {
+impl From<Vec<u8>> for Mapped {
     /// Creates a view from a byte vector.
     fn from(bytes: Vec<u8>) -> Self {
         Self::Bytes(bytes.into_boxed_slice())
     }
 }
 
-impl<const N: usize> From<&[u8; N]> for View {
+impl<const N: usize> From<&[u8; N]> for Mapped {
     /// Creates a view from a fixed-size byte array.
     fn from(bytes: &[u8; N]) -> Self {
         Self::Bytes(Box::from(bytes.as_slice()))
     }
 }
 
-impl TryFrom<&Path> for View {
+impl TryFrom<&Path> for Mapped {
     type Error = WordTallyError;
 
     /// Creates a memory-mapped view from a file path.
@@ -114,7 +116,7 @@ impl TryFrom<&Path> for View {
     }
 }
 
-impl TryFrom<PathBuf> for View {
+impl TryFrom<PathBuf> for Mapped {
     type Error = WordTallyError;
 
     /// Creates a memory-mapped view from a path buffer.
@@ -129,7 +131,7 @@ impl TryFrom<PathBuf> for View {
     }
 }
 
-impl TryFrom<&str> for View {
+impl TryFrom<&str> for Mapped {
     type Error = WordTallyError;
 
     /// Creates a memory-mapped view from a string path.
@@ -144,7 +146,7 @@ impl TryFrom<&str> for View {
     }
 }
 
-impl Metadata for View {
+impl Metadata for Mapped {
     /// Returns the file path for mmap views, `None` for bytes.
     fn path(&self) -> Option<&Path> {
         match self {

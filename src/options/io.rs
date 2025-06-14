@@ -21,22 +21,22 @@ use serde::{Deserialize, Serialize};
 /// # Examples
 ///
 /// ```
-/// use word_tally::{Io, Reader, View};
+/// use word_tally::{Io, Buffered, Mapped};
 ///
 /// # fn example() -> anyhow::Result<()> {
 /// // Default: reader for files and stdin
-/// let reader = Reader::try_from("file.txt")?;
+/// let reader = Buffered::try_from("file.txt")?;
 ///
 /// // Memory-mapped files for maximum speed
-/// let view = View::try_from("large_file.txt")?;
+/// let view = Mapped::try_from("large_file.txt")?;
 ///
 /// // Stdin processing
-/// let stdin = Reader::stdin();
+/// let stdin = Buffered::stdin();
 /// // or
-/// let stdin = Reader::try_from("-")?;
+/// let stdin = Buffered::try_from("-")?;
 ///
 /// // Bytes input
-/// let bytes_view = View::from(b"some text data");
+/// let bytes_view = Mapped::from(b"some text data");
 /// # Ok(())
 /// # }
 /// ```

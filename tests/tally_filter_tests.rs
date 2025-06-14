@@ -1,7 +1,7 @@
 use std::{io::Write, sync::Arc};
 
 use word_tally::{
-    Case, Filters, Io, Options, Reader, Serialization, Sort, TallyMap, View, WordTally,
+    Buffered, Case, Filters, Io, Mapped, Options, Serialization, Sort, TallyMap, WordTally,
 };
 
 fn make_shared<T>(value: T) -> Arc<T> {
@@ -27,7 +27,7 @@ fn test_excluding_words() {
     );
     let options_arc = make_shared(options);
 
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options_arc).expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options_arc);
     let result = tally.tally();
@@ -61,7 +61,7 @@ fn test_excluding_patterns() {
     );
     let options_arc = make_shared(options);
 
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options_arc).expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options_arc);
     let result = tally.tally();
@@ -102,7 +102,7 @@ fn test_including_patterns() {
     );
     let options_arc = make_shared(options);
 
-    let reader = Reader::try_from(file_path).expect("create reader");
+    let reader = Buffered::try_from(file_path).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options_arc).expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options_arc);
     let result = tally.tally();
@@ -150,7 +150,7 @@ fn test_combining_include_exclude_patterns() {
     );
     let options_arc = make_shared(options);
 
-    let reader = Reader::try_from(file_path).expect("create reader");
+    let reader = Buffered::try_from(file_path).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options_arc).expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options_arc);
     let result = tally.tally();
@@ -177,7 +177,7 @@ fn test_min_count_graphemes() {
         word_tally::Performance::default(),
     );
 
-    let view = View::from(&input_text[..]);
+    let view = Mapped::from(&input_text[..]);
     let tally_map = TallyMap::from_view(&view, &options).expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
 

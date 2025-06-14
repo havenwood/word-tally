@@ -1,4 +1,4 @@
-//! Sequential reader for file or stdin input.
+//! Buffered source for sequential file or stdin input.
 
 use std::{
     fmt::{self, Display, Formatter},
@@ -12,16 +12,18 @@ use anyhow::Result;
 
 use crate::{Metadata, WordTallyError, error::Error};
 
-/// Sequential reader for file or stdin input.
+use super::open_file_with_error_context;
+
+/// Buffered source for sequential file or stdin input.
 #[derive(Debug)]
-pub enum Reader {
+pub enum Buffered {
     /// Standard input reader.
     Stdin(Mutex<BufReader<Stdin>>),
     /// File reader.
     File(PathBuf, Mutex<BufReader<File>>),
 }
 
-impl Reader {
+impl Buffered {
     /// Creates a reader for standard input.
     #[must_use]
     pub fn stdin() -> Self {
@@ -52,7 +54,7 @@ impl Reader {
     }
 }
 
-impl Display for Reader {
+impl Display for Buffered {
     /// Formats the reader for display.
     /// Shows file path or "-" for stdin.
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -63,7 +65,7 @@ impl Display for Reader {
     }
 }
 
-impl TryFrom<&Path> for Reader {
+impl TryFrom<&Path> for Buffered {
     type Error = WordTallyError;
 
     /// Creates a reader from a file path or stdin.
@@ -87,7 +89,7 @@ impl TryFrom<&Path> for Reader {
     }
 }
 
-impl TryFrom<PathBuf> for Reader {
+impl TryFrom<PathBuf> for Buffered {
     type Error = WordTallyError;
 
     /// Creates a reader from a path buffer.
@@ -102,7 +104,7 @@ impl TryFrom<PathBuf> for Reader {
     }
 }
 
-impl TryFrom<&str> for Reader {
+impl TryFrom<&str> for Buffered {
     type Error = WordTallyError;
 
     /// Creates a reader from a string path.
@@ -117,7 +119,7 @@ impl TryFrom<&str> for Reader {
     }
 }
 
-impl Metadata for Reader {
+impl Metadata for Buffered {
     /// Returns the file path for file readers, `None` for stdin.
     fn path(&self) -> Option<&Path> {
         match self {
@@ -131,31 +133,4 @@ impl Metadata for Reader {
         self.path()
             .and_then(|path| fs::metadata(path).ok().map(|metadata| metadata.len()))
     }
-}
-
-/// Opens a file with enhanced error context.
-///
-/// # Errors
-///
-/// Returns `WordTallyError::Io` with specific messages for:
-/// - File not found
-/// - Permission denied
-/// - Other I/O errors
-pub(crate) fn open_file_with_error_context(path: &Path) -> Result<File, WordTallyError> {
-    File::open(path).map_err(|source| {
-        let path_buf = path.to_path_buf();
-        let message = match source.kind() {
-            io::ErrorKind::NotFound => format!("no such file: {}", path_buf.display()),
-            io::ErrorKind::PermissionDenied => {
-                format!("permission denied: {}", path_buf.display())
-            }
-            _ => format!("failed to open file: {}", path_buf.display()),
-        };
-
-        WordTallyError::Io {
-            path: path_buf.display().to_string(),
-            message,
-            source,
-        }
-    })
 }

@@ -8,7 +8,7 @@ use criterion::BatchSize;
 use fake::{Fake, faker::lorem::en::Words};
 use tempfile::NamedTempFile;
 use word_tally::{
-    Case, Filters, Io, Options, Reader, Sort, TallyMap, View, WordTally,
+    Buffered, Case, Filters, Io, Mapped, Options, Sort, TallyMap, WordTally,
     options::encoding::Encoding,
 };
 
@@ -121,7 +121,7 @@ pub(crate) fn process_tally(tally_map: TallyMap, options: &Options) -> WordTally
     black_box(WordTally::from_tally_map(tally_map, options))
 }
 
-/// Benchmarks using `Reader` for streaming modes.
+/// Benchmarks using `Buffered` for streaming modes.
 fn bench_with_reader<F, P>(b: &mut criterion::Bencher<'_>, setup: F, options: &Options)
 where
     F: Fn() -> (P, Option<Vec<u8>>),
@@ -130,7 +130,7 @@ where
     b.iter_batched(
         || {
             let (path, _) = setup();
-            Reader::try_from(path.as_ref()).expect("create reader")
+            Buffered::try_from(path.as_ref()).expect("create reader")
         },
         |reader| {
             let tally_map = TallyMap::from_reader(&reader, options).expect("create tally map");
@@ -140,7 +140,7 @@ where
     );
 }
 
-/// Benchmarks using memory-mapped `View`.
+/// Benchmarks using memory-mapped `Mapped`.
 fn bench_with_mmap<F, P>(b: &mut criterion::Bencher<'_>, setup: F, options: &Options)
 where
     F: Fn() -> (P, Option<Vec<u8>>),
@@ -149,7 +149,7 @@ where
     b.iter_batched(
         || {
             let (path, _) = setup();
-            View::try_from(path.as_ref()).expect("create view")
+            Mapped::try_from(path.as_ref()).expect("create view")
         },
         |view| {
             let tally_map = TallyMap::from_view(&view, options).expect("create tally map");
@@ -159,7 +159,7 @@ where
     );
 }
 
-/// Benchmarks using byte slice `View`.
+/// Benchmarks using byte slice `Mapped`.
 fn bench_with_bytes<F, P>(b: &mut criterion::Bencher<'_>, setup: F, options: &Options)
 where
     F: Fn() -> (P, Option<Vec<u8>>),
@@ -168,7 +168,7 @@ where
     let (_, bytes) = setup();
     let bytes = bytes.expect("ParallelBytes requires bytes");
     b.iter_batched(
-        || View::from(&bytes[..]),
+        || Mapped::from(&bytes[..]),
         |view| {
             let tally_map = TallyMap::from_view(&view, options).expect("create tally map");
             process_tally(tally_map, options)
@@ -177,7 +177,7 @@ where
     );
 }
 
-/// Benchmarks using in-memory `View`.
+/// Benchmarks using in-memory `Mapped`.
 fn bench_with_in_memory<F, P>(b: &mut criterion::Bencher<'_>, setup: F, options: &Options)
 where
     F: Fn() -> (P, Option<Vec<u8>>),
@@ -185,14 +185,14 @@ where
 {
     let (path, bytes) = setup();
     if let Some(bytes) = bytes {
-        let view = View::from(bytes);
+        let view = Mapped::from(bytes);
         b.iter(|| {
             let tally_map = TallyMap::from_view(&view, options).expect("create tally map");
             process_tally(tally_map, options)
         });
     } else {
         b.iter_batched(
-            || View::try_from(path.as_ref()).expect("create view"),
+            || Mapped::try_from(path.as_ref()).expect("create view"),
             |view| {
                 let tally_map = TallyMap::from_view(&view, options).expect("create tally map");
                 process_tally(tally_map, options)

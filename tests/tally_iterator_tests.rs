@@ -2,7 +2,7 @@ use std::{collections::HashMap as StdHashMap, io::Write, sync::Arc};
 
 use hashbrown::HashMap;
 use tempfile::NamedTempFile;
-use word_tally::{Count, Options, Reader, Sort, TallyMap, Word, WordTally};
+use word_tally::{Buffered, Count, Options, Sort, TallyMap, Word, WordTally};
 
 fn create_test_tally_with_text(text: &[u8], sort: Sort) -> WordTally {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
@@ -10,7 +10,7 @@ fn create_test_tally_with_text(text: &[u8], sort: Sort) -> WordTally {
 
     let options = Options::default().with_sort(sort);
 
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     WordTally::from_tally_map(tally_map, &options)
 }
@@ -22,7 +22,7 @@ fn test_into_tally() {
     Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Arc::new(Options::default());
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -52,7 +52,7 @@ fn test_iterator() {
     Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Arc::new(Options::default());
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -74,7 +74,7 @@ fn test_iterator_for_loop() {
     Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Arc::new(Options::default());
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 

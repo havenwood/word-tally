@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use word_tally::{
-    Options, Reader, Threads, WordTally,
+    Buffered, Options, Threads, WordTally,
     options::{
         filters::ExcludeWords, io::Io, performance::Performance, serialization::Serialization,
     },
@@ -136,10 +136,10 @@ fn test_input_display() {
     std::io::Write::write_all(&mut temp_file, b"test").expect("write test data");
     let file_path = temp_file.path();
 
-    let file_reader = Reader::try_from(file_path).expect("create reader");
+    let file_reader = Buffered::try_from(file_path).expect("create reader");
     assert!(format!("{file_reader}").contains("tmp"));
 
-    let stdin_reader = Reader::stdin();
+    let stdin_reader = Buffered::stdin();
     assert_eq!(format!("{stdin_reader}"), "-");
 }
 

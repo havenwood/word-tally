@@ -20,13 +20,13 @@
 //!
 //! ```
 //! use anyhow::Result;
-//! use word_tally::{Options, Reader, TallyMap, WordTally};
+//! use word_tally::{Options, input::Buffered, TallyMap, WordTally};
 //!
 //! # fn example() -> Result<()> {
 //! // Basic usage with default options
 //! let options = Options::default();
-//! let reader = Reader::try_from("example.txt")?;
-//! let tally_map = TallyMap::from_reader(&reader, &options)?;
+//! let buffered = Buffered::try_from("example.txt")?;
+//! let tally_map = TallyMap::from_reader(&buffered, &options)?;
 //! let words = WordTally::from_tally_map(tally_map, &options);
 //! assert_eq!(words.count(), 9);
 //! # Ok(())
@@ -35,7 +35,7 @@
 //!
 //! ```
 //! use anyhow::Result;
-//! use word_tally::{Case, Filters, Options, Reader, Serialization, Tally, TallyMap, WordTally};
+//! use word_tally::{Case, Filters, Options, input::Buffered, Serialization, Tally, TallyMap, WordTally};
 //!
 //! # fn example() -> Result<()> {
 //! // Advanced configuration
@@ -44,8 +44,8 @@
 //!     .with_serialization(Serialization::Json)
 //!     .with_filters(Filters::default().with_min_chars(3));
 //!
-//! let reader = Reader::try_from("example_word.txt")?;
-//! let tally_map = TallyMap::from_reader(&reader, &options)?;
+//! let buffered = Buffered::try_from("example_word.txt")?;
+//! let tally_map = TallyMap::from_reader(&buffered, &options)?;
 //! let words = WordTally::from_tally_map(tally_map, &options);
 //! let expected_tally: Tally = [("cinquedea".into(), 1)].into();
 //!
@@ -60,13 +60,13 @@ use serde::{Deserialize, Serialize};
 
 mod error;
 pub mod exit_code;
+pub mod input;
 pub mod options;
 pub mod output;
-pub mod reader;
 pub mod tally_map;
-pub mod view;
 
 pub use error::Error as WordTallyError;
+pub use input::{Buffered, Mapped};
 pub use options::{
     Options,
     case::Case,
@@ -79,9 +79,7 @@ pub use options::{
     threads::Threads,
 };
 pub use output::Output;
-pub use reader::Reader;
 pub use tally_map::TallyMap;
-pub use view::View;
 
 /// The count of occurrences for a word.
 pub type Count = usize;

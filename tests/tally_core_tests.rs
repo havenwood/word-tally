@@ -3,7 +3,7 @@ use std::io::Write;
 use hashbrown::{HashMap, HashSet};
 use tempfile::NamedTempFile;
 use word_tally::{
-    Case, Count, Filters, Io, Options, Performance, Reader, Serialization, Sort, TallyMap,
+    Buffered, Case, Count, Filters, Io, Options, Performance, Serialization, Sort, TallyMap,
     WordTally,
 };
 
@@ -35,7 +35,7 @@ fn word_tally(case: Case, sort: Sort, serialization: Serialization, filters: Fil
         Performance::default(),
     );
 
-    let reader = Reader::try_from(file_path).expect("create reader");
+    let reader = Buffered::try_from(file_path).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     WordTally::from_tally_map(tally_map, &options)
 }
@@ -218,7 +218,7 @@ fn create_test_tally_with_text(input_text: &[u8], sort: Sort) -> WordTally {
 
     let options = Options::default().with_sort(sort);
 
-    let reader = Reader::try_from(file_path).expect("create reader");
+    let reader = Buffered::try_from(file_path).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     WordTally::from_tally_map(tally_map, &options)
 }

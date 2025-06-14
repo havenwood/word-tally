@@ -2,7 +2,7 @@
 
 use std::io::Write;
 
-use word_tally::{Count, Io, Options, Reader, TallyMap, View, WordTally};
+use word_tally::{Buffered, Count, Io, Mapped, Options, TallyMap, WordTally};
 
 const API_EXAMPLE_TEXT: &str = "I taste a liquor never brewed";
 const EXPECTED_API_WORD_COUNT: Count = 6;
@@ -27,7 +27,7 @@ fn test_api_basic_functionality() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).expect("process test");
 
-    let reader = Reader::try_from(temp_file.path()).expect("create reader");
+    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
     let tally_map = TallyMap::from_reader(&reader, &options).expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -36,7 +36,7 @@ fn test_api_basic_functionality() {
 
 #[test]
 fn test_from_bytes_api() {
-    let view = View::from(API_EXAMPLE_TEXT.as_bytes());
+    let view = Mapped::from(API_EXAMPLE_TEXT.as_bytes());
     let options = Options::default().with_io(Io::ParallelBytes);
     let tally_map = TallyMap::from_view(&view, &options).expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
