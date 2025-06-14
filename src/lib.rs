@@ -20,38 +20,28 @@
 //!
 //! ```
 //! use anyhow::Result;
-//! use word_tally::{Options, TallyMap, WordTally, input::Buffered};
+//! use word_tally::{Options, TallyMap, WordTally};
 //!
 //! # fn example() -> Result<()> {
-//! // Basic usage with default options
 //! let options = Options::default();
-//! let buffered = Buffered::try_from("example.txt")?;
-//! let tally_map = TallyMap::from_buffered_input(&buffered, &options)?;
+//! let tally_map = TallyMap::from_buffered_input("example.txt", &options)?;
 //! let words = WordTally::from_tally_map(tally_map, &options);
-//! assert_eq!(words.count(), 9);
+//! println!("Total words: {}", words.count());
 //! # Ok(())
 //! # }
 //! ```
 //!
 //! ```
 //! use anyhow::Result;
-//! use word_tally::{
-//!     Case, Filters, Options, Serialization, Tally, TallyMap, WordTally, input::Buffered,
-//! };
+//! use word_tally::{Case, Io, Options, TallyMap, WordTally};
 //!
 //! # fn example() -> Result<()> {
-//! // Advanced configuration
+//! // Memory-mapped file with lowercase normalization
 //! let options = Options::default()
-//!     .with_case(Case::Lower)
-//!     .with_serialization(Serialization::Json)
-//!     .with_filters(Filters::default().with_min_chars(3));
-//!
-//! let buffered = Buffered::try_from("example_word.txt")?;
-//! let tally_map = TallyMap::from_buffered_input(&buffered, &options)?;
+//!     .with_io(Io::ParallelMmap)
+//!     .with_case(Case::Lower);
+//! let tally_map = TallyMap::from_mapped_input("large-file.txt", &options)?;
 //! let words = WordTally::from_tally_map(tally_map, &options);
-//! let expected_tally: Tally = [("cinquedea".into(), 1)].into();
-//!
-//! assert_eq!(words.into_tally(), expected_tally);
 //! # Ok(())
 //! # }
 //! ```

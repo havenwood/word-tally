@@ -16,7 +16,7 @@ pub enum Error {
     StdinInvalid,
 
     /// Byte I/O mode used with file path.
-    #[error("byte I/O mode requires `Input::from()`")]
+    #[error("byte I/O mode requires bytes input")]
     PathInvalid,
 
     /// Parallel bytes mode requires bytes input.

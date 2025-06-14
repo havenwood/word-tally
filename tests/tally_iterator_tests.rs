@@ -2,7 +2,7 @@ use std::{collections::HashMap as StdHashMap, io::Write, sync::Arc};
 
 use hashbrown::HashMap;
 use tempfile::NamedTempFile;
-use word_tally::{Buffered, Count, Options, Sort, TallyMap, Word, WordTally};
+use word_tally::{Count, Options, Sort, TallyMap, Word, WordTally};
 
 fn create_test_tally_with_text(text: &[u8], sort: Sort) -> WordTally {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
@@ -10,8 +10,9 @@ fn create_test_tally_with_text(text: &[u8], sort: Sort) -> WordTally {
 
     let options = Options::default().with_sort(sort);
 
-    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
-    let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+    let tally_map =
+        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+            .expect("create tally map");
     WordTally::from_tally_map(tally_map, &options)
 }
 
@@ -22,8 +23,9 @@ fn test_into_tally() {
     Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Arc::new(Options::default());
-    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
-    let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+    let tally_map =
+        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+            .expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
     let mut expected_counts = HashMap::new();
@@ -52,8 +54,9 @@ fn test_iterator() {
     Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Arc::new(Options::default());
-    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
-    let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+    let tally_map =
+        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+            .expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
     let expected: Vec<(Word, Count)> = vec![(Box::from("double"), 2), (Box::from("trouble"), 1)];
@@ -74,8 +77,9 @@ fn test_iterator_for_loop() {
     Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = Arc::new(Options::default());
-    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
-    let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+    let tally_map =
+        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+            .expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
     let expected: Vec<(Word, Count)> = vec![(Box::from("llama"), 2), (Box::from("pajamas"), 1)];

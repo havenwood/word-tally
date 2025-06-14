@@ -8,8 +8,7 @@ use criterion::BatchSize;
 use fake::{Fake, faker::lorem::en::Words};
 use tempfile::NamedTempFile;
 use word_tally::{
-    Buffered, Case, Filters, Io, Mapped, Options, Sort, TallyMap, WordTally,
-    options::encoding::Encoding,
+    Case, Filters, Io, Mapped, Options, Sort, TallyMap, WordTally, options::encoding::Encoding,
 };
 
 /// Standard Criterion configuration for all benchmarks.
@@ -130,11 +129,12 @@ where
     b.iter_batched(
         || {
             let (path, _) = setup();
-            Buffered::try_from(path.as_ref()).expect("create reader")
+            path
         },
-        |reader| {
+        |path| {
             let tally_map =
-                TallyMap::from_buffered_input(&reader, options).expect("create tally map");
+                TallyMap::from_buffered_input(path.as_ref().to_str().expect("valid path"), options)
+                    .expect("create tally map");
             process_tally(tally_map, options)
         },
         BatchSize::LargeInput,
@@ -150,10 +150,12 @@ where
     b.iter_batched(
         || {
             let (path, _) = setup();
-            Mapped::try_from(path.as_ref()).expect("create view")
+            path
         },
-        |view| {
-            let tally_map = TallyMap::from_mapped_input(&view, options).expect("create tally map");
+        |path| {
+            let tally_map =
+                TallyMap::from_mapped_input(path.as_ref().to_str().expect("valid path"), options)
+                    .expect("create tally map");
             process_tally(tally_map, options)
         },
         BatchSize::LargeInput,
@@ -171,7 +173,7 @@ where
     b.iter_batched(
         || Mapped::from(&bytes[..]),
         |view| {
-            let tally_map = TallyMap::from_mapped_input(&view, options).expect("create tally map");
+            let tally_map = TallyMap::from_mapped(&view, options).expect("create tally map");
             process_tally(tally_map, options)
         },
         BatchSize::LargeInput,
@@ -188,15 +190,16 @@ where
     if let Some(bytes) = bytes {
         let view = Mapped::from(bytes);
         b.iter(|| {
-            let tally_map = TallyMap::from_mapped_input(&view, options).expect("create tally map");
+            let tally_map = TallyMap::from_mapped(&view, options).expect("create tally map");
             process_tally(tally_map, options)
         });
     } else {
         b.iter_batched(
-            || Mapped::try_from(path.as_ref()).expect("create view"),
-            |view| {
+            || path.as_ref(),
+            |path| {
                 let tally_map =
-                    TallyMap::from_mapped_input(&view, options).expect("create tally map");
+                    TallyMap::from_mapped_input(path.to_str().expect("valid path"), options)
+                        .expect("create tally map");
                 process_tally(tally_map, options)
             },
             BatchSize::LargeInput,

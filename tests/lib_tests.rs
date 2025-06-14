@@ -4,7 +4,7 @@ use std::{fs, io::Write, sync::Arc};
 
 use hashbrown::HashSet;
 use word_tally::{
-    Buffered, Case, Count, ExcludeWords, Filters, Io, Mapped, Metadata, Options, Performance,
+    Buffered, Case, Count, ExcludeWords, Filters, Io, Metadata, Options, Performance,
     Serialization, Sort, TallyMap, Word, WordTally, output::Output,
 };
 
@@ -45,8 +45,7 @@ fn word_tally(case: Case, sort: Sort, serialization: Serialization, filters: Fil
         Performance::default(),
     );
 
-    let reader = Buffered::try_from(file_path).expect("create reader");
-    let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+    let tally_map = TallyMap::from_buffered_input(file_path, &options).expect("create tally map");
     WordTally::from_tally_map(tally_map, &options)
 }
 
@@ -288,8 +287,9 @@ fn test_into_tally() {
     Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
-    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
-    let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+    let tally_map =
+        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+            .expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
     // Use deref to get a reference to the slice.
@@ -322,8 +322,9 @@ fn test_iterator() {
     Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
-    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
-    let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+    let tally_map =
+        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+            .expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
     let expected: Vec<(Word, Count)> = vec![(Box::from("double"), 2), (Box::from("trouble"), 1)];
@@ -344,8 +345,9 @@ fn test_iterator_for_loop() {
     Write::write_all(&mut temp_file, input_text).expect("write test data");
 
     let options = make_shared(Options::default());
-    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
-    let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+    let tally_map =
+        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+            .expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
     let expected: Vec<(Word, Count)> = vec![(Box::from("llama"), 2), (Box::from("pajamas"), 1)];
@@ -389,8 +391,7 @@ fn test_parallel_vs_sequential() {
     );
     let seq_options_arc = make_shared(seq_options);
 
-    let seq_reader = Buffered::try_from(file_path).expect("create sequential reader");
-    let seq_tally_map = TallyMap::from_buffered_input(&seq_reader, &seq_options_arc)
+    let seq_tally_map = TallyMap::from_buffered_input(file_path, &seq_options_arc)
         .expect("create sequential tally map");
     let sequential = WordTally::from_tally_map(seq_tally_map, &seq_options_arc);
 
@@ -406,8 +407,7 @@ fn test_parallel_vs_sequential() {
     );
     let par_options_arc = make_shared(par_options);
 
-    let par_reader = Buffered::try_from(file_path).expect("create parallel reader");
-    let par_tally_map = TallyMap::from_buffered_input(&par_reader, &par_options_arc)
+    let par_tally_map = TallyMap::from_buffered_input(file_path, &par_options_arc)
         .expect("create parallel tally map");
     let parallel = WordTally::from_tally_map(par_tally_map, &par_options_arc);
 
@@ -453,15 +453,12 @@ fn test_memory_mapped_vs_streamed() {
     );
 
     // Create inputs with the different I/O modes
-    let mmap_view = Mapped::try_from(file_path).expect("create memory-mapped view");
-    let stream_reader = Buffered::try_from(file_path).expect("create streamed reader");
-
     // Create WordTally instances with the different I/O modes
-    let mmap_tally_map = TallyMap::from_mapped_input(&mmap_view, &mmap_options)
+    let mmap_tally_map = TallyMap::from_mapped_input(file_path, &mmap_options)
         .expect("create memory mapped tally map");
     let memory_mapped = WordTally::from_tally_map(mmap_tally_map, &mmap_options);
 
-    let stream_tally_map = TallyMap::from_buffered_input(&stream_reader, &stream_options)
+    let stream_tally_map = TallyMap::from_buffered_input(file_path, &stream_options)
         .expect("create streamed tally map");
     let streamed = WordTally::from_tally_map(stream_tally_map, &stream_options);
 
@@ -483,8 +480,7 @@ fn test_memory_mapped_vs_streamed() {
     );
 
     // Create input for parallel streamed processing
-    let parallel_reader = Buffered::try_from(file_path).expect("create parallel reader");
-    let parallel_tally_map = TallyMap::from_buffered_input(&parallel_reader, &parallel_options)
+    let parallel_tally_map = TallyMap::from_buffered_input(file_path, &parallel_options)
         .expect("create parallel tally map");
 
     // Create WordTally instance with parallel streamed processing
@@ -504,8 +500,9 @@ fn test_parallel_count() {
 
     let options = Options::default();
 
-    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
-    let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+    let tally_map =
+        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+            .expect("create tally map");
     let parallel = WordTally::from_tally_map(tally_map, &options);
 
     // Only check the counts are positive numbers (actual counts may vary by implementation)
@@ -523,8 +520,9 @@ fn test_merge_maps() {
 
     let options = Options::default();
 
-    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
-    let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+    let tally_map =
+        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+            .expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
 
     assert_eq!(tally.count(), 9);
@@ -595,8 +593,8 @@ mod wordtally_constructor_tests {
     fn with_defaults() {
         let (_temp_dir, file_path) = create_test_file();
         let options = Options::default();
-        let reader = Buffered::try_from(file_path.as_str()).expect("create reader");
-        let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+        let tally_map =
+            TallyMap::from_buffered_input(file_path.as_str(), &options).expect("create tally map");
         let tally = WordTally::from_tally_map(tally_map, &options);
         assert_eq!(tally.count(), 3);
     }
@@ -605,8 +603,8 @@ mod wordtally_constructor_tests {
     fn with_parallel_processing() {
         let (_temp_dir, file_path) = create_test_file();
         let options = Options::default();
-        let reader = Buffered::try_from(file_path.as_str()).expect("create reader");
-        let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+        let tally_map =
+            TallyMap::from_buffered_input(file_path.as_str(), &options).expect("create tally map");
         let tally = WordTally::from_tally_map(tally_map, &options);
         assert_eq!(tally.count(), 3);
     }
@@ -617,8 +615,8 @@ mod wordtally_constructor_tests {
         let options =
             Options::default().with_performance(Performance::default().with_chunk_size(32_768));
 
-        let reader = Buffered::try_from(file_path.as_str()).expect("create reader");
-        let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+        let tally_map =
+            TallyMap::from_buffered_input(file_path.as_str(), &options).expect("create tally map");
         let tally = WordTally::from_tally_map(tally_map, &options);
         assert_eq!(tally.count(), 3);
     }
@@ -633,8 +631,9 @@ fn test_custom_chunk_size() {
     let options =
         Options::default().with_performance(Performance::default().with_chunk_size(32_768));
 
-    let reader = Buffered::try_from(temp_file.path()).expect("create reader");
-    let tally_map = TallyMap::from_buffered_input(&reader, &options).expect("create tally map");
+    let tally_map =
+        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+            .expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
     assert_eq!(tally.count(), 3);
 }

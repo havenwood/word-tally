@@ -134,14 +134,14 @@ impl Output {
     /// # Examples
     ///
     /// ```
-    /// use word_tally::{Io, Mapped, Options, Output, Serialization, TallyMap, WordTally};
+    /// use word_tally::{Io, Options, Output, Serialization, TallyMap, WordTally};
     ///
     /// // Create a tally and write it as JSON to stdout
-    /// let view = Mapped::from("hello world hello".as_bytes());
+    /// let bytes = "hello world hello".as_bytes().to_vec();
     /// let options = Options::default()
     ///     .with_io(Io::ParallelBytes)
     ///     .with_serialization(Serialization::Json);
-    /// let tally_map = TallyMap::from_mapped_input(&view, &options)?;
+    /// let tally_map = TallyMap::from_bytes(bytes, &options)?;
     /// let tally = WordTally::from_tally_map(tally_map, &options);
     ///
     /// let mut output = Output::new(None)?; // Write to stdout

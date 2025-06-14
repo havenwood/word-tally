@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use criterion::{BatchSize, Criterion, criterion_group, criterion_main};
 use tempfile::NamedTempFile;
-use word_tally::{Buffered, Io, Mapped, Options, TallyMap};
+use word_tally::{Io, Options, TallyMap};
 
 #[path = "common.rs"]
 mod common;
@@ -14,25 +14,16 @@ use self::common::{IO_STRATEGIES_FILE, create_benchmark_file, process_tally};
 /// Processes multiple sources following the main.rs pattern
 fn process_multi_file_sources(sources: &[&str], options: &Options) -> anyhow::Result<TallyMap> {
     if options.io() == Io::ParallelMmap {
-        let views: Result<Vec<_>, _> = sources.iter().map(|path| Mapped::try_from(*path)).collect();
-        let views = views?;
-
-        views
+        sources
             .iter()
-            .map(|view| TallyMap::from_mapped_input(view, options))
+            .map(|path| TallyMap::from_mapped_input(path, options))
             .try_fold(TallyMap::new(), |acc, result| {
                 result.map(|tally| acc.merge(tally))
             })
     } else {
-        let readers: Result<Vec<_>, _> = sources
+        sources
             .iter()
-            .map(|path| Buffered::try_from(*path))
-            .collect();
-        let readers = readers?;
-
-        readers
-            .iter()
-            .map(|reader| TallyMap::from_buffered_input(reader, options))
+            .map(|path| TallyMap::from_buffered_input(path, options))
             .try_fold(TallyMap::new(), |acc, result| {
                 result.map(|tally| acc.merge(tally))
             })

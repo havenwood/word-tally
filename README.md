@@ -273,26 +273,24 @@ word-tally = "0.27.0"
 
 ```rust
 use std::collections::HashMap;
-use word_tally::{Case, Filters, Io, Options, Serialization, TallyMap, WordTally, input::{Buffered, Mapped}};
+use word_tally::{Case, Filters, Io, Options, Serialization, TallyMap, WordTally};
 use anyhow::Result;
 
 fn main() -> Result<()> {
-    // Basic usage
+    // Basic usage with file path
     let options = Options::default();
-    let buffered = Buffered::try_from("document.txt")?;
-    let tally_map = TallyMap::from_reader(&buffered, &options)?;
+    let tally_map = TallyMap::from_buffered_input("document.txt", &options)?;
     let word_tally = WordTally::from_tally_map(tally_map, &options);
     println!("Total words: {}", word_tally.count());
 
-    // Custom configuration
+    // Memory-mapped I/O for files
     let options = Options::default()
         .with_case(Case::Lower)
         .with_filters(Filters::default().with_min_chars(3))
         .with_serialization(Serialization::Json)
         .with_io(Io::ParallelMmap);
 
-    let mapped = Mapped::try_from("large-file.txt")?;
-    let tally_map = TallyMap::from_view(&mapped, &options)?;
+    let tally_map = TallyMap::from_mapped_input("large-file.txt", &options)?;
     let tally = WordTally::from_tally_map(tally_map, &options);
 
     // Convert to `HashMap` for fast word lookups

@@ -2,6 +2,8 @@
 
 use std::{
     borrow::Cow,
+    fs,
+    io::{self, Read},
     iter,
     ops::{Deref, DerefMut},
     str,
@@ -47,6 +49,119 @@ impl TallyMap {
         }
     }
 
+    /// Creates a `TallyMap` from a source path and `Options`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file cannot be opened (file not found, permission denied, etc.)
+    /// - The source is "-" but stdin cannot be read
+    /// - The input contains invalid UTF-8 data
+    /// - I/O errors occur during reading
+    /// - `Io::ParallelBytes` is used (requires bytes input)
+    /// - `Io::ParallelMmap` is used with stdin (memory mapping not supported)
+    /// - ASCII encoding is used and non-ASCII bytes are encountered
+    pub fn from_buffered_input(source: &str, options: &Options) -> Result<Self> {
+        let reader = Buffered::try_from(source)?;
+        Self::from_buffered(&reader, options)
+    }
+
+    /// Creates a `TallyMap` from a `Buffered` and `Options`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The input contains invalid UTF-8 data
+    /// - I/O errors occur during reading
+    /// - `Io::ParallelBytes` is used (requires bytes input)
+    /// - `Io::ParallelMmap` is used with stdin (memory mapping not supported)
+    /// - ASCII encoding is used and non-ASCII bytes are encountered
+    pub fn from_buffered(reader: &Buffered, options: &Options) -> Result<Self> {
+        match options.io() {
+            Io::Stream => Self::stream_count_reader(reader, options),
+            Io::ParallelStream => Self::par_stream_count_reader(reader, options),
+            Io::ParallelInMemory => {
+                let bytes = Self::read_to_bytes(reader, options.performance())?;
+                let view = Mapped::from(bytes);
+                Self::from_mapped(&view, options)
+            }
+            Io::ParallelBytes => Err(WordTallyError::BytesRequired.into()),
+            Io::ParallelMmap => Err(WordTallyError::StdinInvalid.into()),
+        }
+    }
+
+    /// Creates a `TallyMap` from a source path and `Options`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file cannot be read (file not found, permission denied, etc.)
+    /// - The file cannot be memory-mapped
+    /// - The input contains invalid UTF-8 data
+    /// - `Io::Stream` or `Io::ParallelStream` is used (requires buffered input)
+    /// - ASCII encoding is used and non-ASCII bytes are encountered
+    pub fn from_mapped_input(source: &str, options: &Options) -> Result<Self> {
+        let view = Mapped::try_from(source)?;
+        Self::from_mapped(&view, options)
+    }
+
+    /// Creates a `TallyMap` from a `Mapped` and `Options`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The input contains invalid UTF-8 data
+    /// - `Io::Stream` or `Io::ParallelStream` is used (requires buffered input)
+    /// - ASCII encoding is used and non-ASCII bytes are encountered
+    pub fn from_mapped(view: &Mapped, options: &Options) -> Result<Self> {
+        match options.io() {
+            Io::Stream | Io::ParallelStream => Err(WordTallyError::Config(
+                "stream mode requires a Buffered, not a Mapped".to_string(),
+            )
+            .into()),
+            Io::ParallelInMemory | Io::ParallelBytes | Io::ParallelMmap => {
+                Self::par_memory_count(view, options)
+            }
+        }
+    }
+
+    /// Creates a `TallyMap` from bytes and `Options`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The input contains invalid UTF-8 data
+    /// - `Io::Stream` or `Io::ParallelStream` is used (requires buffered input)
+    /// - ASCII encoding is used and non-ASCII bytes are encountered
+    pub fn from_bytes(bytes: Vec<u8>, options: &Options) -> Result<Self> {
+        let view = Mapped::from(bytes);
+        Self::from_mapped(&view, options)
+    }
+
+    /// Creates a `TallyMap` from a source path with bytes input handling.
+    ///
+    /// Handles the special case where "-" means stdin, reading the entire
+    /// input into memory as bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file cannot be read (file not found, permission denied, etc.)
+    /// - I/O errors occur while reading stdin
+    /// - The input contains invalid UTF-8 data
+    /// - `Io::Stream` or `Io::ParallelStream` is used (requires buffered input)
+    /// - ASCII encoding is used and non-ASCII bytes are encountered
+    pub fn from_bytes_input(source: &str, options: &Options) -> Result<Self> {
+        let bytes = if source == "-" {
+            let mut buffer = Vec::new();
+            io::stdin().lock().read_to_end(&mut buffer)?;
+            buffer
+        } else {
+            fs::read(source)?
+        };
+        Self::from_bytes(bytes, options)
+    }
+
     /// Extends the tally map with word counts from a string slice.
     ///
     /// # Errors
@@ -59,6 +174,21 @@ impl TallyMap {
             Cow::Borrowed(w) => self.increment(w),
             Cow::Owned(w) => self.increment_owned(w.into_boxed_str()),
         })
+    }
+
+    /// Merge two tally maps, always merging the smaller into the larger.
+    ///
+    /// Returns the merged map containing the combined counts from both input maps.
+    #[must_use]
+    pub fn merge(mut self, mut other: Self) -> Self {
+        // Always merge the smaller map into the larger for better performance
+        if self.len() < other.len() {
+            other.extend(self.inner.drain());
+            other
+        } else {
+            self.extend(other.inner.drain());
+            self
+        }
     }
 
     /// Increments a word's tally by reference to avoid duplicate allocation.
@@ -78,63 +208,6 @@ impl TallyMap {
     #[inline]
     fn increment_owned(&mut self, word: Word) {
         *self.inner.entry(word).or_insert(0) += 1;
-    }
-
-    /// Merge two tally maps, always merging the smaller into the larger.
-    ///
-    /// Returns the merged map containing the combined counts from both input maps.
-    #[must_use]
-    pub fn merge(mut self, mut other: Self) -> Self {
-        // Always merge the smaller map into the larger for better performance
-        if self.len() < other.len() {
-            other.extend(self.inner.drain());
-            other
-        } else {
-            self.extend(other.inner.drain());
-            self
-        }
-    }
-
-    /// Creates a `TallyMap` from a `Buffered` source and `Options`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - Input cannot be read (file not found, permission denied, etc.)
-    /// - Input contains invalid UTF-8 data
-    /// - A configured thread pool cannot be initialized
-    /// - I/O errors occur during reading
-    pub fn from_buffered_input(reader: &Buffered, options: &Options) -> Result<Self> {
-        match options.io() {
-            Io::Stream => Self::stream_count_reader(reader, options),
-            Io::ParallelStream => Self::par_stream_count_reader(reader, options),
-            Io::ParallelInMemory => {
-                let bytes = Self::read_to_bytes(reader, options.performance())?;
-                let view = Mapped::from(bytes);
-                Self::from_mapped_input(&view, options)
-            }
-            Io::ParallelBytes => Err(WordTallyError::BytesRequired.into()),
-            Io::ParallelMmap => Err(WordTallyError::StdinInvalid.into()),
-        }
-    }
-
-    /// Creates a `TallyMap` from a `Mapped` source and `Options`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - Input contains invalid UTF-8 data
-    /// - A configured thread pool cannot be initialized
-    pub fn from_mapped_input(view: &Mapped, options: &Options) -> Result<Self> {
-        match options.io() {
-            Io::Stream | Io::ParallelStream => Err(WordTallyError::Config(
-                "stream mode requires a Buffered, not a Mapped".to_string(),
-            )
-            .into()),
-            Io::ParallelInMemory | Io::ParallelBytes | Io::ParallelMmap => {
-                Self::par_memory_count(view, options)
-            }
-        }
     }
 
     /// Parallel in-memory word tallying.
