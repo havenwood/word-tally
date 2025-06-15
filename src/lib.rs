@@ -62,6 +62,7 @@ pub use input::{Buffered, Mapped};
 pub use options::{
     Options,
     case::Case,
+    delimiters::Delimiters,
     filters::{ExcludeWords, Filters, MinChars, MinCount},
     io::Io,
     patterns::{ExcludeSet, IncludeSet, PatternList},

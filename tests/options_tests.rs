@@ -1,12 +1,11 @@
-use word_tally::{Case, Filters, Io, Options, Performance, Serialization, Sort, Threads};
+use word_tally::{
+    Case, Delimiters, Filters, Io, Options, Performance, Serialization, Sort, Threads,
+};
 
 #[test]
 fn test_options_format_default() {
     let options = Options::default();
-    assert!(matches!(
-        options.serialization(),
-        Serialization::Text { .. }
-    ));
+    assert!(matches!(options.serialization(), Serialization::Text(_)));
 }
 
 #[test]
@@ -34,10 +33,7 @@ fn test_options_display_includes_format() {
 #[test]
 fn test_format_field_in_struct() {
     let options = Options::default();
-    assert!(matches!(
-        options.serialization(),
-        Serialization::Text { .. }
-    ));
+    assert!(matches!(options.serialization(), Serialization::Text(_)));
 
     let options2 = Options::default().with_serialization(Serialization::Json);
     assert_eq!(options2.serialization(), &Serialization::Json);
@@ -155,9 +151,9 @@ fn test_with_performance() {
 
 #[test]
 fn test_with_field_delimiter() {
-    let options =
-        Options::default().with_serialization(Serialization::text().with_field_delimiter("::"));
-    assert_eq!(options.serialization().field_delimiter(), Some("::"));
+    let delimiters = Delimiters::default().with_field_delimiter("::");
+    let options = Options::default().with_serialization(Serialization::Text(delimiters));
+    assert_eq!(options.serialization().field_delimiter_display(), "\"::\"");
 }
 
 #[test]
@@ -202,10 +198,7 @@ fn test_getters() {
 
     assert_eq!(options.case(), Case::Lower);
     assert_eq!(options.sort(), Sort::Asc);
-    assert!(matches!(
-        options.serialization(),
-        Serialization::Text { .. }
-    ));
+    assert!(matches!(options.serialization(), Serialization::Text(_)));
     assert!(matches!(options.filters(), _));
     assert!(matches!(options.performance(), _));
     assert_eq!(options.io(), Io::ParallelStream);
@@ -229,7 +222,7 @@ fn test_builder_chaining() {
     assert_eq!(options.case(), Case::Upper);
     assert_eq!(options.sort(), Sort::Desc);
     assert_eq!(options.serialization(), &Serialization::Json);
-    assert_eq!(options.serialization().field_delimiter(), None);
+    assert_eq!(options.serialization().field_delimiter_display(), "n/a");
     assert_eq!(options.io(), Io::ParallelInMemory);
     assert_eq!(options.performance().threads().count(), 4);
     assert_eq!(options.performance().uniqueness_ratio(), 80);

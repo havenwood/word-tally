@@ -348,3 +348,42 @@ fn test_parallel_flags() {
         .success()
         .stderr(contains("io stream"));
 }
+
+#[test]
+fn delimiter_with_json_format_fails() {
+    word_tally()
+        .write_stdin("test")
+        .arg("--format=json")
+        .arg("--field-delimiter=:")
+        .assert()
+        .failure()
+        .stderr(contains(
+            "--field-delimiter and --entry-delimiter only apply to text format",
+        ));
+}
+
+#[test]
+fn delimiter_with_csv_format_fails() {
+    word_tally()
+        .write_stdin("test")
+        .arg("--format=csv")
+        .arg("--entry-delimiter=;")
+        .assert()
+        .failure()
+        .stderr(contains(
+            "--field-delimiter and --entry-delimiter only apply to text format",
+        ));
+}
+
+#[test]
+fn delimiter_with_text_format_succeeds() {
+    word_tally()
+        .write_stdin("test words")
+        .arg("--format=text")
+        .arg("--field-delimiter=:")
+        .arg("--entry-delimiter=;")
+        .assert()
+        .success()
+        .stdout(contains("test:1"))
+        .stdout(contains("words:1"));
+}

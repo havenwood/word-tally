@@ -44,7 +44,7 @@
 //! - `WORD_TALLY_STDIN_BUFFER_SIZE` (default: 262144)
 
 pub mod case;
-pub mod delimiter;
+pub mod delimiters;
 pub mod encoding;
 pub mod filters;
 pub mod io;

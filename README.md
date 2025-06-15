@@ -33,8 +33,8 @@ Options:
   -i, --include <PATTERNS>       Include only words matching a regex pattern
   -x, --exclude <PATTERNS>       Exclude words matching a regex pattern
   -f, --format <FORMAT>          Output format [default: text] [possible values: text, json, csv]
-  -d, --field-delimiter <VALUE>  Delimiter between field and value [default: " "]
-  -D, --entry-delimiter <VALUE>  Delimiter between entries [default: "\n"]
+  -d, --field-delimiter <VALUE>  Delimiter between field and value [default: " "] (text format only)
+  -D, --entry-delimiter <VALUE>  Delimiter between entries [default: "\n"] (text format only)
   -o, --output <PATH>            Write output to file rather than stdout
   -v, --verbose                  Print verbose details
   -h, --help                     Print help (see more with '--help')
