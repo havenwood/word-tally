@@ -211,7 +211,7 @@ fn verbose_csv_delimiter_formatting() {
 
     assert_eq!(values[delimiter_index], "n/a");
 
-    // Test with custom delimiter
+    // Test that delimiters with non-text formats are rejected
     let output = word_tally()
         .arg("-v")
         .arg("--format=csv")
@@ -219,8 +219,7 @@ fn verbose_csv_delimiter_formatting() {
         .output()
         .expect("failed to execute process");
 
+    assert!(!output.status.success());
     let stderr = String::from_utf8_lossy(&output.stderr);
-    let lines: Vec<&str> = stderr.lines().collect();
-    let new_values: Vec<&str> = lines[1].split(',').collect();
-    assert_eq!(new_values[delimiter_index], "n/a");
+    assert!(stderr.contains("--field-delimiter and --entry-delimiter only apply to text format"));
 }

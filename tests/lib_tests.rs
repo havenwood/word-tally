@@ -4,7 +4,7 @@ use std::{fs, io::Write, sync::Arc};
 
 use hashbrown::HashSet;
 use word_tally::{
-    Buffered, Case, Count, ExcludeWords, Filters, Io, Metadata, Options, Performance,
+    Buffered, Case, Count, Delimiters, ExcludeWords, Filters, Io, Metadata, Options, Performance,
     Serialization, Sort, TallyMap, Word, WordTally, output::Output,
 };
 
@@ -550,8 +550,9 @@ mod serialization_tests {
 
     #[test]
     fn with_field_delimiter() {
-        let delim = Serialization::text().with_field_delimiter("::");
-        assert_eq!(delim.field_delimiter(), Some("::"));
+        let delimiters = Delimiters::default().with_field_delimiter("::");
+        let serialization = Serialization::Text(delimiters);
+        assert_eq!(serialization.field_delimiter_display(), "\"::\"");
     }
 }
 

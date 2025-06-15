@@ -159,10 +159,9 @@ impl Output {
         let tally = word_tally.tally();
 
         match serialization {
-            Serialization::Text {
-                field_delimiter,
-                entry_delimiter,
-            } => self.write_text(tally, field_delimiter.as_str(), entry_delimiter.as_str()),
+            Serialization::Text(delimiters) => {
+                self.write_text(tally, delimiters.field(), delimiters.entry())
+            }
             Serialization::Json => self.write_json(tally),
             Serialization::Csv => self.write_csv(tally),
         }

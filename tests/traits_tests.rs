@@ -84,7 +84,7 @@ fn test_wordtally_deserialize() {
         "options": {
             "case": "lower",
             "sort": "desc",
-            "serialization": {"text": {"field_delimiter": " ", "entry_delimiter": "\n"}},
+            "serialization": {"text": {"field": " ", "entry": "\n"}},
             "filters": {"minChars": null, "minCount": null, "excludeWords": [], "excludePatterns": [], "includePatterns": []},
             "io": "parallelStream",
             "performance": {"uniquenessRatio": 10, "wordsPerKb": 200, "chunkSize": 65536, "baseStdinSize": 262144, "threads": "all"},

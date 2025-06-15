@@ -25,7 +25,7 @@ Tests for the WordTally struct and core functionality:
 Tests for specific modules:
 - `args_tests.rs` - CLI argument parsing
 - `case_tests.rs` - Case normalization functionality
-- `delimiter_tests.rs` - Delimiter escaping/unescaping
+- `delimiters_tests.rs` - Delimiter and Delimiters types
 - `encoding_tests.rs` - ASCII/Unicode handling
 - `exit_code_tests.rs` - Exit code mappings
 - `filters_tests.rs` - Filter configurations
@@ -56,7 +56,7 @@ Tests for specific modules:
 cargo test
 
 # Specific test file
-cargo test --test delimiter_tests
+cargo test --test delimiters_tests
 
 # With output
 cargo test -- --nocapture

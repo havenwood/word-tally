@@ -7,8 +7,8 @@ use clap::{ArgAction, Parser};
 use word_tally::{
     Count, Options, WordTallyError,
     options::{
-        case::Case, encoding::Encoding, filters::Filters, io::Io, performance::Performance,
-        serialization::Serialization, sort::Sort,
+        case::Case, delimiters::Delimiters, encoding::Encoding, filters::Filters, io::Io,
+        performance::Performance, serialization::Serialization, sort::Sort,
     },
 };
 
@@ -70,18 +70,13 @@ pub(crate) struct Args {
     #[arg(short = 'f', long, default_value = "text", value_name = "FORMAT", value_parser = ["text", "json", "csv"])]
     format: String,
 
-    /// Delimiter between field and value.
-    #[arg(
-        short = 'd',
-        long = "field-delimiter",
-        default_value = " ",
-        value_name = "VALUE"
-    )]
-    field_delimiter: String,
+    /// Delimiter between field and value [default: " "] (text format only).
+    #[arg(short = 'd', long = "field-delimiter", value_name = "VALUE")]
+    field_delimiter: Option<String>,
 
-    /// Delimiter between entries.
-    #[arg(short = 'D', long, default_value = "\n", value_name = "VALUE")]
-    entry_delimiter: String,
+    /// Delimiter between entries [default: "\n"] (text format only).
+    #[arg(short = 'D', long, value_name = "VALUE")]
+    entry_delimiter: Option<String>,
 
     /// Write output to file rather than stdout.
     #[arg(short, long, value_name = "PATH")]
@@ -111,6 +106,30 @@ impl Args {
     /// Parse command-line arguments and convert them to word-tally `Options`.
     pub(crate) fn to_options(&self) -> Result<Options, WordTallyError> {
         Options::try_from(self)
+    }
+
+    /// Unescape common escape sequences in a CLI argument.
+    fn unescape(s: &str) -> String {
+        let mut result = String::with_capacity(s.len());
+        let mut chars = s.chars();
+
+        while let Some(ch) = chars.next() {
+            result.push(if ch == '\\' {
+                chars.next().map_or('\\', |escape_code| match escape_code {
+                    '0' => '\0',
+                    'n' => '\n',
+                    'r' => '\r',
+                    't' => '\t',
+                    '\\' => '\\',
+                    '"' => '"',
+                    c => c,
+                })
+            } else {
+                ch
+            });
+        }
+
+        result
     }
 
     /// Helper to create filters from arguments.
@@ -161,10 +180,28 @@ impl TryFrom<&Args> for Options {
     type Error = WordTallyError;
 
     fn try_from(args: &Args) -> Result<Self, Self::Error> {
+        // Validate delimiter usage
+        if args.format != "text"
+            && (args.field_delimiter.is_some() || args.entry_delimiter.is_some())
+        {
+            return Err(WordTallyError::Usage(format!(
+                "--field-delimiter and --entry-delimiter only apply to text format, not {}",
+                args.format
+            )));
+        }
+
         let serialization = match args.format.as_str() {
-            "text" => Serialization::text()
-                .with_field_delimiter(&args.field_delimiter)
-                .with_entry_delimiter(&args.entry_delimiter),
+            "text" => {
+                let field = args
+                    .field_delimiter
+                    .as_deref()
+                    .map_or_else(|| Delimiters::DEFAULT_FIELD.to_string(), Args::unescape);
+                let entry = args
+                    .entry_delimiter
+                    .as_deref()
+                    .map_or_else(|| Delimiters::DEFAULT_ENTRY.to_string(), Args::unescape);
+                Serialization::Text(Delimiters::new(&field, &entry))
+            }
             "json" => Serialization::Json,
             "csv" => Serialization::Csv,
             _ => unreachable!("clap should validate format values"),

@@ -1,6 +1,6 @@
 use std::{io::Write, sync::Arc};
 
-use word_tally::{Case, Options, Serialization, Sort, TallyMap, WordTally};
+use word_tally::{Case, Delimiters, Options, Serialization, Sort, TallyMap, WordTally};
 
 fn make_shared<T>(value: T) -> Arc<T> {
     Arc::new(value)
@@ -99,8 +99,9 @@ fn test_serialization_with_format() {
 
 #[test]
 fn test_serialization_with_field_delimiter() {
-    let delim = Serialization::text().with_field_delimiter("::");
-    assert_eq!(delim.field_delimiter(), Some("::"));
+    let delimiters = Delimiters::default().with_field_delimiter("::");
+    let serialization = Serialization::Text(delimiters);
+    assert_eq!(serialization.field_delimiter_display(), "\"::\"");
 }
 
 #[test]

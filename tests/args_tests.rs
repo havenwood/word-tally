@@ -193,9 +193,7 @@ fn test_io_shorthand_flag() {
 #[test]
 fn test_args_shorthand_flags() {
     word_tally()
-        .args([
-            "-c=upper", "-s=asc", "-f=json", "-d=,", "-m=3", "-n=2", "-v",
-        ])
+        .args(["-c=upper", "-s=asc", "-f=json", "-m=3", "-n=2", "-v"])
         .write_stdin("hello world test")
         .assert()
         .success()
@@ -375,7 +373,6 @@ fn test_args_options_comprehensive() {
         .arg("--sort=desc")
         .arg("--io=parallel-in-memory")
         .arg("--format=csv")
-        .arg("--field-delimiter=;")
         .arg("-v")
         .write_stdin("Test TEST test")
         .assert()
@@ -569,4 +566,90 @@ fn test_args_mmap_alias() {
         .failure()
         .code(64)
         .stderr(contains("memory-mapped I/O requires a file, not stdin"));
+}
+
+//
+// Delimiter Escape Sequence Tests
+//
+
+#[test]
+fn test_args_delimiter_unescape() {
+    // Test escape sequences in field delimiter with different counts to ensure order
+    word_tally()
+        .arg("--field-delimiter=\\t")
+        .write_stdin("hello world hello")
+        .assert()
+        .success()
+        .stdout("hello\t2\nworld\t1\n");
+
+    // Test escape sequences in entry delimiter - just check it contains both entries
+    let output = word_tally()
+        .arg("--entry-delimiter=\\r\\n")
+        .write_stdin("hello world")
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    let output_str = String::from_utf8(output).expect("UTF-8 output");
+    assert!(output_str.contains("hello 1\r\n"));
+    assert!(output_str.contains("world 1\r\n"));
+
+    // Test multiple escape sequences
+    word_tally()
+        .arg("--field-delimiter=\\t")
+        .arg("--entry-delimiter=\\r\\n")
+        .write_stdin("test")
+        .assert()
+        .success()
+        .stdout("test\t1\r\n");
+}
+
+#[test]
+fn test_args_delimiter_escape_sequences() {
+    let test_cases = [
+        ("\\0", "\0"),
+        ("\\t", "\t"),
+        ("\\n", "\n"),
+        ("\\r", "\r"),
+        ("\\\\", "\\"),
+        ("\\\"", "\""),
+        ("\\'", "'"),
+    ];
+
+    for (input, expected) in test_cases {
+        let output = word_tally()
+            .arg(format!("--field-delimiter={input}"))
+            .write_stdin("word")
+            .assert()
+            .success()
+            .get_output()
+            .stdout
+            .clone();
+
+        let output_str = String::from_utf8(output).expect("UTF-8 output");
+        assert!(output_str.contains(&format!("word{expected}1")));
+    }
+}
+
+#[test]
+fn test_args_delimiter_unknown_escape() {
+    // Unknown escape sequences should just use the character
+    word_tally()
+        .arg("--field-delimiter=\\x")
+        .write_stdin("test")
+        .assert()
+        .success()
+        .stdout("testx1\n");
+}
+
+#[test]
+fn test_args_delimiter_trailing_backslash() {
+    // Trailing backslash is kept as literal
+    word_tally()
+        .arg("--field-delimiter=\\")
+        .write_stdin("test")
+        .assert()
+        .success()
+        .stdout("test\\1\n");
 }

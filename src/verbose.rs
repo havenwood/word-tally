@@ -114,10 +114,9 @@ impl Verbose {
         match word_tally.options().serialization() {
             Serialization::Json => self.write_json(&data),
             Serialization::Csv => self.write_csv(&data),
-            Serialization::Text {
-                field_delimiter,
-                entry_delimiter,
-            } => self.write_text(&data, field_delimiter.as_str(), entry_delimiter.as_str()),
+            Serialization::Text(delimiters) => {
+                self.write_text(&data, delimiters.field(), delimiters.entry())
+            }
         }
     }
 
