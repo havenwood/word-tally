@@ -1,6 +1,6 @@
-//! Tests for the `Delimiters` and `Delimiter` types.
+//! Tests for the `Delimiters` type.
 
-use word_tally::options::delimiters::{Delimiter, Delimiters};
+use word_tally::options::delimiters::Delimiters;
 
 #[test]
 fn test_delimiters_new() {
@@ -210,92 +210,4 @@ fn test_delimiters_serde_field_names() {
     assert!(json.contains("\"entry\":"));
     assert!(!json.contains("\"field_delimiter\":"));
     assert!(!json.contains("\"entry_delimiter\":"));
-}
-
-// Tests for `Delimiter` type
-
-#[test]
-fn test_delimiter_from_str() {
-    let delim = Delimiter::from(" ");
-    assert_eq!(&*delim, " ");
-
-    let delim = Delimiter::from("\t");
-    assert_eq!(&*delim, "\t");
-}
-
-#[test]
-fn test_delimiter_display() {
-    let test_cases = [("\t", "\"\\t\""), ("\n", "\"\\n\""), (" ", "\" \"")];
-
-    for (input, expected) in test_cases {
-        assert_eq!(format!("{}", Delimiter::from(input)), expected);
-    }
-}
-
-#[test]
-fn test_delimiter_serialization() {
-    let delim = Delimiter::from("\t");
-    let json = serde_json::to_string(&delim).expect("serialize JSON");
-    assert_eq!(json, r#""\t""#); // Should serialize as actual tab, not escaped
-
-    let deserialized: Delimiter = serde_json::from_str(&json).expect("deserialize JSON");
-    assert_eq!(&*deserialized, "\t");
-}
-
-#[test]
-fn test_delimiter_equality() {
-    let d1 = Delimiter::from(" ");
-    let d2 = Delimiter::from(" ");
-    let d3 = Delimiter::from("\t");
-
-    assert_eq!(d1, d2);
-    assert_ne!(d1, d3);
-}
-
-#[test]
-#[allow(clippy::redundant_clone)]
-// We're specifically testing clone functionality
-fn test_delimiter_clone() {
-    let d1 = Delimiter::from("||");
-    let d2 = d1.clone();
-    assert_eq!(d1, d2);
-    assert_eq!(d1, d2);
-}
-
-#[test]
-fn test_delimiter_empty() {
-    let delim = Delimiter::from("");
-    assert_eq!(&*delim, "");
-    assert_eq!(delim.to_string(), "\"\"");
-}
-
-#[test]
-fn test_delimiter_unicode() {
-    let delim = Delimiter::from("→");
-    assert_eq!(&*delim, "→");
-    assert_eq!(delim.to_string(), "\"→\"");
-}
-
-#[test]
-fn test_delimiter_from_string() {
-    let delim = Delimiter::from("test".to_string());
-    assert_eq!(&*delim, "test");
-
-    let delim = Delimiter::from("another");
-    assert_eq!(&*delim, "another");
-}
-
-#[test]
-fn test_delimiter_deref() {
-    let delim = Delimiter::from("test");
-    assert_eq!(&*delim, "test");
-    assert_eq!(delim.len(), 4);
-    assert!(delim.starts_with("te"));
-}
-
-#[test]
-fn test_delimiter_new() {
-    assert_eq!(&*Delimiter::new("\t"), "\t");
-    assert_eq!(&*Delimiter::new("\n"), "\n");
-    assert_eq!(&*Delimiter::new("test"), "test");
 }
