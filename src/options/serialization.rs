@@ -21,7 +21,7 @@
 //! let text_format = Serialization::Text(
 //!     Delimiters::default()
 //!         .with_field_delimiter("::")
-//!         .with_entry_delimiter(";")
+//!         .with_entry_delimiter(";"),
 //! );
 //!
 //! // JSON format (no delimiter configuration)

@@ -46,7 +46,7 @@
 //! # }
 //! ```
 
-use std::{collections::HashMap, hash::BuildHasher, ops::Deref, path::Path, slice, str};
+use std::{collections::HashMap, hash::BuildHasher, ops::Deref, slice, str};
 
 use serde::{Deserialize, Serialize};
 
@@ -58,7 +58,7 @@ pub mod output;
 pub mod tally_map;
 
 pub use error::Error as WordTallyError;
-pub use input::{Buffered, Mapped};
+pub use input::{Buffered, Mapped, Metadata};
 pub use options::{
     Options,
     case::Case,
@@ -80,15 +80,6 @@ pub type Count = usize;
 pub type Word = Box<str>;
 /// A collection of word-count pairs.
 pub type Tally = Box<[(Word, Count)]>;
-
-/// Provides metadata for data sources.
-pub trait Metadata {
-    /// Returns the file path, if file-based.
-    fn path(&self) -> Option<&Path>;
-
-    /// Returns the size in bytes, if known.
-    fn size(&self) -> Option<u64>;
-}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]

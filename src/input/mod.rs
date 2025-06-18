@@ -18,6 +18,15 @@ use std::{fs::File, io, path::Path};
 pub use self::{buffered::Buffered, mapped::Mapped};
 use crate::WordTallyError;
 
+/// Provides metadata for data sources.
+pub trait Metadata {
+    /// Returns the file path, if file-based.
+    fn path(&self) -> Option<&Path>;
+
+    /// Returns the size in bytes, if known.
+    fn size(&self) -> Option<u64>;
+}
+
 /// Opens a file with enhanced error context.
 ///
 /// # Errors

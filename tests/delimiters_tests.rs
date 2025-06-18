@@ -133,8 +133,10 @@ fn test_delimiters_serialization() {
 
 #[test]
 fn test_delimiters_hash() {
-    use std::collections::hash_map::DefaultHasher;
-    use std::hash::{Hash, Hasher};
+    use std::{
+        collections::hash_map::DefaultHasher,
+        hash::{Hash, Hasher},
+    };
 
     let delimiters1 = Delimiters::default().with_field_delimiter("::");
     let delimiters2 = Delimiters::default().with_field_delimiter("::");

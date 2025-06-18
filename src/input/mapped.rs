@@ -8,8 +8,8 @@ use std::{
 
 use memmap2::Mmap;
 
-use super::open_file_with_error_context;
-use crate::{Metadata, WordTallyError};
+use super::{Metadata, open_file_with_error_context};
+use crate::WordTallyError;
 
 /// Mapped source for direct data access (mmap or bytes).
 #[derive(Debug)]
