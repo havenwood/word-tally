@@ -81,7 +81,7 @@ impl TallyMap {
             Io::Stream => Self::stream_count_reader(reader, options),
             Io::ParallelStream => Self::par_stream_count_reader(reader, options),
             Io::ParallelInMemory => {
-                let bytes = Self::read_to_bytes(reader, options.performance())?;
+                let bytes = Self::read_to_bytes(reader)?;
                 let view = Mapped::from(bytes);
                 Self::from_mapped(&view, options)
             }
@@ -417,16 +417,8 @@ impl TallyMap {
     }
 
     /// Reads the entire input into a byte buffer.
-    fn read_to_bytes(reader: &Buffered, perf: &Performance) -> Result<Vec<u8>> {
-        let mut buffer = Vec::with_capacity(perf.capacity(reader.size()));
-
-        reader.with_buf_read(|buf_read| {
-            buf_read
-                .read_to_end(&mut buffer)
-                .with_context(|| format!("failed to read input into buffer: {reader}"))
-        })??;
-
-        Ok(buffer)
+    fn read_to_bytes(reader: &Buffered) -> Result<Vec<u8>> {
+        reader.read_all_optimized()
     }
 
     /// Calculate batch sizes from optional size.

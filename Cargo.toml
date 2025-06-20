@@ -18,6 +18,7 @@ hashbrown = "0.15.3"
 icu_segmenter = { version = "2.0.0", default-features = false, features = [
     "compiled_data",
 ] }
+monoio = { version = "0.2", features = ["sync"] }
 memchr = "2.7.4"
 memmap2 = "0.9.5"
 rayon = "1.10.0"

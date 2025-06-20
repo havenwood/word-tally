@@ -3,12 +3,12 @@
 use std::{
     fmt::{self, Display, Formatter},
     fs::{self, File},
-    io::{self, BufRead, BufReader, Stdin},
+    io::{self, BufRead, BufReader, Read, Stdin},
     path::{Path, PathBuf},
     sync::Mutex,
 };
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 
 use super::{Metadata, open_file_with_error_context};
 use crate::{WordTallyError, error::Error};
@@ -131,5 +131,123 @@ impl Metadata for Buffered {
     fn size(&self) -> Option<u64> {
         self.path()
             .and_then(|path| fs::metadata(path).ok().map(|metadata| metadata.len()))
+    }
+}
+
+impl Buffered {
+    /// Reads entire contents using Monoio async I/O for better performance.
+    ///
+    /// This method uses:
+    /// - io_uring on Linux for zero-copy operations
+    /// - kqueue on macOS for BSD-style async I/O
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file cannot be opened
+    /// - The async runtime fails to initialize
+    /// - The read operation fails
+    pub fn read_all_async(&self) -> Result<Vec<u8>> {
+        match self {
+            Self::File(path, _) => {
+                // Best practice: Use monoio's optimized fs::read for whole file reading
+                monoio::RuntimeBuilder::<monoio::FusionDriver>::new()
+                    .build()
+                    .map_err(|e| WordTallyError::Config(
+                        format!("monoio runtime initialization failed: {e}")
+                    ))?
+                    .block_on(async {
+                        // Using monoio::fs::read is the recommended approach for reading entire files
+                        monoio::fs::read(path).await
+                            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+                    })
+                    .with_context(|| format!("{}: async read failed", path.display()))
+            }
+            Self::Stdin(_) => {
+                // Fall back to sync read for stdin
+                let mut buffer = Vec::new();
+                self.with_buf_read(|buf_read| {
+                    buf_read.read_to_end(&mut buffer)
+                        .with_context(|| "failed to read from stdin")
+                })??;
+                Ok(buffer)
+            }
+        }
+    }
+    
+    /// Reads entire contents, using async I/O for files.
+    pub fn read_all_optimized(&self) -> Result<Vec<u8>> {
+        self.read_all_async()
+    }
+    
+    /// Reads file in chunks using Monoio for streaming processing.
+    ///
+    /// This method is optimized for large files that shouldn't be loaded
+    /// entirely into memory. It uses positional reads as recommended by Monoio.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    /// - The file cannot be opened
+    /// - Any read operation fails
+    /// - The callback function returns an error
+    #[allow(dead_code)]
+    pub fn read_chunked_async<F>(&self, chunk_size: usize, mut callback: F) -> Result<()>
+    where
+        F: FnMut(&[u8]) -> Result<()>,
+    {
+        match self {
+            Self::File(path, _) => {
+                monoio::RuntimeBuilder::<monoio::FusionDriver>::new()
+                    .build()
+                    .map_err(|e| WordTallyError::Config(
+                        format!("monoio runtime initialization failed: {e}")
+                    ))?
+                    .block_on(async {
+                        let file = monoio::fs::File::open(path).await
+                            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                        
+                        let mut offset = 0u64;
+                        loop {
+                            let buffer = vec![0u8; chunk_size];
+                            
+                            // Use positional read_at as recommended by Monoio docs
+                            let (res, buf) = file.read_at(buffer, offset).await;
+                            match res {
+                                Ok(0) => break, // EOF
+                                Ok(n) => {
+                                    callback(&buf[..n])
+                                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                                    offset += n as u64;
+                                }
+                                Err(e) => {
+                                    // Best practice: Close file even on error
+                                    drop(file.close().await);
+                                    return Err(e);
+                                }
+                            }
+                        }
+                        
+                        // Best practice: Explicitly close the file
+                        file.close().await?;
+                        Ok(())
+                    })
+                    .with_context(|| format!("{}: async chunked read failed", path.display()))
+            }
+            Self::Stdin(_) => {
+                // Fall back to sync chunked read for stdin
+                self.with_buf_read(|buf_read| {
+                    let mut buffer = vec![0u8; chunk_size];
+                    loop {
+                        match Read::read(buf_read, &mut buffer)? {
+                            0 => break,
+                            n => callback(&buffer[..n])?,
+                        }
+                    }
+                    Ok(())
+                })
+                .with_context(|| "failed to read chunks from stdin")?
+            }
+        }
     }
 }
