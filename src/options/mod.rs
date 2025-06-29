@@ -27,7 +27,6 @@
 //! # Components
 //!
 //! - [`Case`] - Word case normalization
-//! - [`encoding::Encoding`] - Text encoding validation and word detection
 //! - [`Sort`] - Result ordering
 //! - [`Serialization`] - Output format
 //! - [`Filters`] - Word filtering rules
@@ -45,7 +44,6 @@
 
 pub mod case;
 pub mod delimiters;
-pub mod encoding;
 pub mod filters;
 pub mod io;
 pub mod patterns;
@@ -59,8 +57,8 @@ use core::fmt::{self, Display, Formatter};
 use serde::{Deserialize, Serialize};
 
 use self::{
-    case::Case, encoding::Encoding, filters::Filters, io::Io, performance::Performance,
-    serialization::Serialization, sort::Sort,
+    case::Case, filters::Filters, io::Io, performance::Performance, serialization::Serialization,
+    sort::Sort,
 };
 use crate::WordTallyError;
 
@@ -87,9 +85,6 @@ pub struct Options {
 
     /// Performance tuning configuration (threads, memory allocation, chunk size).
     performance: Performance,
-
-    /// Text encoding strategy (unicode, ascii).
-    encoding: Encoding,
 }
 
 impl Options {
@@ -127,7 +122,6 @@ impl Options {
             filters,
             io,
             performance,
-            encoding: Encoding::Unicode,
         }
     }
 
@@ -173,13 +167,6 @@ impl Options {
         self
     }
 
-    /// Set text encoding strategy.
-    #[must_use]
-    pub const fn with_encoding(mut self, encoding: Encoding) -> Self {
-        self.encoding = encoding;
-        self
-    }
-
     /// Get the case normalization setting.
     #[must_use]
     pub const fn case(&self) -> Case {
@@ -216,12 +203,6 @@ impl Options {
         self.io
     }
 
-    /// Get the text encoding strategy.
-    #[must_use]
-    pub const fn encoding(&self) -> Encoding {
-        self.encoding
-    }
-
     /// Initialize the thread pool if using a parallel I/O mode.
     ///
     /// This method initializes the global thread pool when using parallel I/O modes
@@ -245,8 +226,8 @@ impl Display for Options {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Options {{ case: {}, sort: {}, serialization: {}, filters: {:?}, io: {}, encoding: {} }}",
-            self.case, self.sort, self.serialization, self.filters, self.io, self.encoding
+            "Options {{ case: {}, sort: {}, serialization: {}, filters: {:?}, io: {} }}",
+            self.case, self.sort, self.serialization, self.filters, self.io
         )
     }
 }

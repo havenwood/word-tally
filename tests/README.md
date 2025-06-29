@@ -26,7 +26,6 @@ Tests for specific modules:
 - `args_tests.rs` - CLI argument parsing
 - `case_tests.rs` - Case normalization functionality
 - `delimiters_tests.rs` - Delimiter and Delimiters types
-- `encoding_tests.rs` - ASCII/Unicode handling
 - `exit_code_tests.rs` - Exit code mappings
 - `filters_tests.rs` - Filter configurations
 - `hash_tests.rs` - Hash implementations
@@ -37,7 +36,6 @@ Tests for specific modules:
 - `output_tests.rs` - Output destinations
 - `patterns_tests.rs` - Regex patterns
 - `performance_tests.rs` - Performance settings
-- `segmentation_tests.rs` - Word segmentation logic
 - `serialization_tests.rs` - Serialization formats
 - `threads_tests.rs` - Thread configuration
 - `verbose_tests.rs` - Verbose output logic

@@ -1,13 +1,11 @@
-//! Feature benchmarks for processing and encoding modes.
+//! Feature benchmarks for processing modes.
 
 use criterion::{Criterion, criterion_group, criterion_main};
 use word_tally::Options;
 
 #[path = "common.rs"]
 mod common;
-use self::common::{
-    ENCODING_OPTIONS, PROCESSING_OPTIONS, bench_word_tally_with_string, medium_text,
-};
+use self::common::{PROCESSING_OPTIONS, bench_word_tally_with_string, medium_text};
 
 /// Benchmarks sequential vs parallel processing.
 fn bench_processing_comparison(c: &mut Criterion) {
@@ -24,24 +22,8 @@ fn bench_processing_comparison(c: &mut Criterion) {
     group.finish();
 }
 
-/// Benchmarks encoding strategies (Unicode vs ASCII).
-fn bench_encoding_comparison(c: &mut Criterion) {
-    let mut group = c.benchmark_group("features/encoding_comparison");
-    let text_sample = medium_text();
-
-    for (encoding, enc_name) in &ENCODING_OPTIONS {
-        let options = Options::default().with_encoding(*encoding);
-        group.bench_function(*enc_name, |b| {
-            bench_word_tally_with_string(b, &text_sample, &options);
-        });
-    }
-
-    group.finish();
-}
-
 fn run_benchmarks(c: &mut Criterion) {
     bench_processing_comparison(c);
-    bench_encoding_comparison(c);
 }
 
 criterion_group! {

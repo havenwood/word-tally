@@ -7,9 +7,7 @@ use std::{fs, hint::black_box, io::Write, path::PathBuf};
 use criterion::BatchSize;
 use fake::{Fake, faker::lorem::en::Words};
 use tempfile::NamedTempFile;
-use word_tally::{
-    Case, Filters, Io, Mapped, Options, Sort, TallyMap, WordTally, options::encoding::Encoding,
-};
+use word_tally::{Case, Filters, Io, Mapped, Options, Sort, TallyMap, WordTally};
 
 /// Standard Criterion configuration for all benchmarks.
 #[must_use]
@@ -221,10 +219,6 @@ pub(crate) const SORT_OPTIONS: [(Sort, &str); 3] = [
     (Sort::Desc, "descending"),
     (Sort::Asc, "ascending"),
 ];
-
-/// Encoding strategies for benchmarks.
-pub(crate) const ENCODING_OPTIONS: [(Encoding, &str); 2] =
-    [(Encoding::Unicode, "unicode"), (Encoding::Ascii, "ascii")];
 
 /// Processing mode options for benchmarks.
 pub(crate) const PROCESSING_OPTIONS: [(Io, &str); 2] =

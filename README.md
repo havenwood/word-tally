@@ -4,7 +4,7 @@
 [![docs.rs](https://img.shields.io/docsrs/word-tally?style=for-the-badge&link=https%3A%2F%2Fdocs.rs%2Fword-tally%2Flatest%2Fword_tally%2F)](https://docs.rs/word-tally/latest/word_tally/)
 [![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/havenwood/word-tally/rust.yml?style=for-the-badge)](https://github.com/havenwood/word-tally/actions/workflows/rust.yml)
 
-Tallies the number of times each word appears in one or more unicode input sources. Use `word-tally` as a command-line tool or `WordTally` via the Rust library interface.
+Tallies the number of times each word appears in one or more Unicode input sources using ICU4X for word boundary detection. Use `word-tally` as a command-line tool or `WordTally` via the Rust library interface.
 
 Four I/O strategies are available:
 - **stream**: Sequential single-threaded streaming with minimal memory usage
@@ -24,7 +24,6 @@ Arguments:
 
 Options:
   -I, --io <STRATEGY>            I/O strategy [default: parallel-stream] [possible values: parallel-stream, stream, parallel-mmap, parallel-in-memory]
-  -e, --encoding <ENCODING>      Text encoding mode [default: unicode] [possible values: unicode, ascii]
   -c, --case <FORMAT>            Case normalization [default: original] [possible values: original, upper, lower]
   -s, --sort <ORDER>             Sort order [default: desc] [possible values: desc, asc, unsorted]
   -m, --min-chars <COUNT>        Exclude words containing fewer than min chars
@@ -76,13 +75,6 @@ word-tally file1.txt file2.txt file3.txt
 # Mix stdin and files
 cat header.txt | word-tally - body.txt footer.txt
 
-# ASCII encoding mode - validates input is ASCII-only, fails on non-ASCII bytes
-# Uses simple ASCII word boundaries (faster than Unicode)
-word-tally --encoding=ascii document.txt
-
-# Unicode encoding mode (default) - accepts any UTF-8 text
-# Uses ICU4X for proper Unicode word boundary detection
-word-tally --encoding=unicode document.txt
 ```
 
 **Note:** Memory mapping (`parallel-mmap`) requires seekable files and cannot be used with stdin or pipes.
@@ -141,26 +133,6 @@ Format and pipe the JSON output to the [wordcloud_cli](https://github.com/amuell
 word-tally --format=json README.md | jq -r 'map(.[0] + " ") | join(" ")' | wordcloud_cli --imagefile wordcloud.png
 ```
 
-### Encoding modes
-
-The `--encoding` flag controls both text validation and word boundary detection:
-
-**Unicode mode (default)**
-- Accepts any valid UTF-8 text
-- Uses ICU4X for Unicode-compliant word segmentation & case conversion
-
-**ASCII mode**
-- Accepts only ASCII text
-- Uses simple ASCII word boundaries (alphanumeric + apostrophes)
-- Faster processing for ASCII-only text
-
-```sh
-# Unicode mode - handles any UTF-8 text
-echo "café naïve 你好" | word-tally --encoding=unicode
-
-# ASCII mode - rejects non-ASCII input
-echo "café" | word-tally --encoding=ascii  # Error: non-ASCII byte at position 3
-```
 
 ### Case normalization
 
@@ -219,7 +191,6 @@ echo "fe fi fi fo fo fo" | word-tally --verbose
 #>> case original
 #>> order desc
 #>> io parallel-stream
-#>> encoding unicode
 #>> min-chars none
 #>> min-count none
 #>> exclude-words none

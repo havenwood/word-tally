@@ -7,8 +7,8 @@ use clap::{ArgAction, Parser};
 use word_tally::{
     Count, Options, WordTallyError,
     options::{
-        case::Case, delimiters::Delimiters, encoding::Encoding, filters::Filters, io::Io,
-        performance::Performance, serialization::Serialization, sort::Sort,
+        case::Case, delimiters::Delimiters, filters::Filters, io::Io, performance::Performance,
+        serialization::Serialization, sort::Sort,
     },
 };
 
@@ -30,10 +30,6 @@ pub(crate) struct Args {
     /// I/O strategy.
     #[arg(short = 'I', long, value_enum, default_value_t = Io::ParallelStream, value_name = "STRATEGY")]
     io: Io,
-
-    /// Text encoding mode for validation and word boundary detection.
-    #[arg(short = 'e', long, value_enum, default_value_t = Encoding::Unicode, value_name = "ENCODING")]
-    encoding: Encoding,
 
     // Output formatting options
     /// Case normalization.
@@ -214,7 +210,6 @@ impl TryFrom<&Args> for Options {
             args.build_filters()?,
             args.io,
             Performance::from_env(),
-        )
-        .with_encoding(args.encoding))
+        ))
     }
 }

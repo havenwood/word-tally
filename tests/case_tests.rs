@@ -95,64 +95,6 @@ fn test_normalize_unicode_upper_case_needs_conversion() {
 }
 
 #[test]
-fn test_normalize_ascii_lower_case() {
-    let case = Case::Lower;
-
-    // Already lowercase - borrowed
-    let borrowed_cases = ["narrow", "fellow123", "", "!@#$%", "narrow_fellow"];
-    for input in borrowed_cases {
-        assert_eq!(case.normalize_ascii(input), Cow::Borrowed(input));
-    }
-
-    // Needs conversion - owned
-    let owned_cases = [
-        ("NARROW", "narrow"),
-        ("NaRrOw", "narrow"),
-        ("ZERO123", "zero123"),
-    ];
-    for (input, expected) in owned_cases {
-        assert_eq!(
-            case.normalize_ascii(input),
-            Cow::Owned::<str>(expected.to_string())
-        );
-    }
-}
-
-#[test]
-fn test_normalize_ascii_upper_case() {
-    let case = Case::Upper;
-
-    // Already uppercase - borrowed
-    let borrowed_cases = ["NARROW", "FELLOW123", "", "!@#$%", "NARROW_FELLOW"];
-    for input in borrowed_cases {
-        assert_eq!(case.normalize_ascii(input), Cow::Borrowed(input));
-    }
-
-    // Needs conversion - owned
-    let owned_cases = [
-        ("narrow", "NARROW"),
-        ("NaRrOw", "NARROW"),
-        ("zero123", "ZERO123"),
-    ];
-    for (input, expected) in owned_cases {
-        assert_eq!(
-            case.normalize_ascii(input),
-            Cow::Owned::<str>(expected.to_string())
-        );
-    }
-}
-
-#[test]
-fn test_normalize_ascii_original_case() {
-    let case = Case::Original;
-    let test_cases = ["narrow", "NARROW", "NaRrOw", "", "123!@#"];
-
-    for input in test_cases {
-        assert_eq!(case.normalize_ascii(input), Cow::Borrowed(input));
-    }
-}
-
-#[test]
 fn test_normalize_unicode_unicode_characters() {
     // Test lowercase conversion with various Unicode characters
     let case = Case::Lower;
@@ -198,42 +140,12 @@ fn test_normalize_unicode_unicode_characters() {
 }
 
 #[test]
-fn test_normalize_ascii_with_non_ascii_chars() {
-    // ASCII normalization with non-ASCII characters
-    // The methods should still work but only affect ASCII characters
-    let case = Case::Lower;
-    assert_eq!(
-        case.normalize_ascii("CAFé"),
-        Cow::Owned::<str>("café".to_string())
-    );
-    assert_eq!(case.normalize_ascii("café"), Cow::Borrowed("café"));
-
-    let case = Case::Upper;
-    assert_eq!(
-        case.normalize_ascii("cafÉ"),
-        Cow::Owned::<str>("CAFÉ".to_string())
-    );
-    assert_eq!(case.normalize_ascii("CAFÉ"), Cow::Borrowed("CAFÉ"));
-}
-
-#[test]
 fn test_normalize_unicode_edge_cases() {
     let no_case_strings = ["12345", "!@#$%^&*()", "   "];
 
     for case in [Case::Lower, Case::Upper] {
         for input in &no_case_strings {
             assert_eq!(case.normalize_unicode(input), Cow::Borrowed(*input));
-        }
-    }
-}
-
-#[test]
-fn test_normalize_ascii_edge_cases() {
-    let no_case_strings = ["12345", "!@#$%^&*()", "   "];
-
-    for case in [Case::Lower, Case::Upper] {
-        for input in &no_case_strings {
-            assert_eq!(case.normalize_ascii(input), Cow::Borrowed(*input));
         }
     }
 }
@@ -280,33 +192,6 @@ fn test_normalize_mixed_content() {
         case.normalize_unicode("CIRCUIT123RIDER!"),
         Cow::Borrowed("CIRCUIT123RIDER!")
     );
-}
-
-#[test]
-fn test_normalize_ascii_preserves_semantics() {
-    // Test that ASCII normalization preserves the same semantics for ASCII strings
-    let test_strings = [
-        "narrow",
-        "NARROW",
-        "NaRrOw",
-        "fellow123",
-        "ZERO",
-        "",
-        "123",
-        "!@#",
-        "narrow_fellow",
-        "ZERO_AT_BONE",
-    ];
-
-    for s in &test_strings {
-        for case in [Case::Original, Case::Lower, Case::Upper] {
-            let unicode_result = case.normalize_unicode(s);
-            let ascii_result = case.normalize_ascii(s);
-
-            // For ASCII strings, both methods should produce the same result
-            assert_eq!(unicode_result.as_ref(), ascii_result.as_ref());
-        }
-    }
 }
 
 #[test]

@@ -82,15 +82,6 @@ pub enum Error {
     #[error("runtime configuration error: {0}")]
     Config(String),
 
-    /// Non-ASCII byte in ASCII-only mode.
-    #[error("non-ASCII byte {byte:#x} at position {position} in ASCII-only mode")]
-    NonAscii {
-        /// The non-ASCII byte value.
-        byte: u8,
-        /// Byte position in input.
-        position: usize,
-    },
-
     /// Internal error: mutex was poisoned.
     #[error("internal error: reader mutex was poisoned")]
     MutexPoisoned,

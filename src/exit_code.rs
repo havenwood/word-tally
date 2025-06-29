@@ -65,8 +65,7 @@ impl From<&WordTallyError> for ExitCode {
             | WordTallyError::Json(_)
             | WordTallyError::Csv(_)
             | WordTallyError::ChunkOverflow { .. }
-            | WordTallyError::BatchOverflow { .. }
-            | WordTallyError::NonAscii { .. } => Self::DataFormat,
+            | WordTallyError::BatchOverflow { .. } => Self::DataFormat,
             WordTallyError::MutexPoisoned => Self::InternalError,
             WordTallyError::Io { source, .. } => Self::from(source),
         }

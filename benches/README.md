@@ -6,7 +6,7 @@ Performance benchmarks for word-tally I/O strategies and core functionality.
 
 - `common.rs` - Shared benchmark utilities with unified I/O handling and text generation
 - `core.rs` - Sorting strategy benchmarks with small text samples
-- `features.rs` - Processing and encoding mode benchmarks
+- `features.rs` - Processing mode benchmarks
 - `io.rs` - I/O strategy benchmarks across different file sizes
 - `multi_file.rs` - Multiple file input processing benchmarks
 
@@ -15,7 +15,7 @@ Performance benchmarks for word-tally I/O strategies and core functionality.
 - **Core**: Sorting strategies (unsorted vs descending) with ~15KB text samples
 - **I/O**: All I/O strategies across file sizes (10KB, 50KB in release builds)
   - `stream`, `parallel-stream`, `parallel-in-memory`, `parallel-mmap`
-- **Features**: Processing modes (default vs sequential) and encoding (Unicode vs ASCII)
+- **Features**: Processing modes (parallel vs sequential)
 - **Multi-file**: File aggregation with different I/O strategies
 
 ## Running Benchmarks
@@ -34,7 +34,6 @@ cargo bench --bench multi_file # Multiple file input benchmarks
 cargo bench -- core/sorting_strategies
 cargo bench -- core/filtering_strategies
 cargo bench -- features/processing_comparison
-cargo bench -- features/encoding_comparison
 cargo bench -- io_strategies/file_size_10kb
 cargo bench -- io_strategies/file_size_50kb      # Release builds only
 cargo bench -- multi_file/processing

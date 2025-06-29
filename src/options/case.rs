@@ -60,6 +60,7 @@ impl Display for Case {
 impl Case {
     /// Normalize text using Unicode case conversion, returning a reference if already normalized or
     /// owned if conversion needed.
+    #[inline]
     #[must_use]
     pub fn normalize_unicode<'a>(&self, content: &'a str) -> Cow<'a, str> {
         match self {
@@ -75,29 +76,6 @@ impl Case {
                     Cow::Borrowed(content)
                 } else {
                     Cow::Owned(content.to_uppercase())
-                }
-            }
-            Self::Original => Cow::Borrowed(content),
-        }
-    }
-
-    /// ASCII-specific normalization for better performance, returning a reference if already
-    /// normalized or owned if conversion needed.
-    #[must_use]
-    pub fn normalize_ascii<'a>(&self, content: &'a str) -> Cow<'a, str> {
-        match self {
-            Self::Lower => {
-                if content.bytes().all(|b| !b.is_ascii_uppercase()) {
-                    Cow::Borrowed(content)
-                } else {
-                    Cow::Owned(content.to_ascii_lowercase())
-                }
-            }
-            Self::Upper => {
-                if content.bytes().all(|b| !b.is_ascii_lowercase()) {
-                    Cow::Borrowed(content)
-                } else {
-                    Cow::Owned(content.to_ascii_uppercase())
                 }
             }
             Self::Original => Cow::Borrowed(content),
