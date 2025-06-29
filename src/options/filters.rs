@@ -96,12 +96,16 @@ impl Filters {
         };
 
         // Add exclude regex patterns if provided
-        if let Some(patterns) = exclude_patterns.filter(|p| !p.is_empty()) {
+        if let Some(patterns) = exclude_patterns
+            && !patterns.is_empty()
+        {
             filters = filters.with_exclude_patterns(&patterns)?;
         }
 
         // Add include regex patterns if provided
-        if let Some(patterns) = include_patterns.filter(|p| !p.is_empty()) {
+        if let Some(patterns) = include_patterns
+            && !patterns.is_empty()
+        {
             filters = filters.with_include_patterns(&patterns)?;
         }
 
