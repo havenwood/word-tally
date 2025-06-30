@@ -28,7 +28,7 @@ pub(crate) struct Args {
 
     // Performance options
     /// I/O strategy.
-    #[arg(short = 'I', long, value_enum, default_value_t = Io::ParallelStream, value_name = "STRATEGY")]
+    #[arg(short = 'I', long, value_enum, default_value_t = Io::Auto, value_name = "STRATEGY")]
     io: Io,
 
     // Output formatting options

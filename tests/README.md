@@ -32,6 +32,8 @@ Tests for specific modules:
 - `buffered_tests.rs` - Buffered input functionality and file I/O
 - `mapped_tests.rs` - Mapped input functionality and memory mapping
 - `io_tests.rs` - I/O strategies
+- `file_type_tests.rs` - File type detection and display
+- `metadata_tests.rs` - Metadata trait for input sources
 - `options_tests.rs` - Options configuration
 - `output_tests.rs` - Output destinations
 - `patterns_tests.rs` - Regex patterns

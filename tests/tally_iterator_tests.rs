@@ -11,7 +11,7 @@ fn create_test_tally_with_text(text: &[u8], sort: Sort) -> WordTally {
     let options = Options::default().with_sort(sort);
 
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     WordTally::from_tally_map(tally_map, &options)
 }
@@ -24,7 +24,7 @@ fn test_into_tally() {
 
     let options = Arc::new(Options::default());
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -55,7 +55,7 @@ fn test_iterator() {
 
     let options = Arc::new(Options::default());
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -78,7 +78,7 @@ fn test_iterator_for_loop() {
 
     let options = Arc::new(Options::default());
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 

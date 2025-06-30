@@ -44,7 +44,7 @@ fn test_parallel_stream_sequential() {
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
 
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -59,7 +59,7 @@ fn test_parallel_stream_parallel() {
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
 
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -74,7 +74,7 @@ fn test_parallel_in_memory_sequential() {
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
 
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -89,7 +89,7 @@ fn test_parallel_in_memory_parallel() {
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
 
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -106,9 +106,8 @@ fn test_new_with_io_combinations() -> anyhow::Result<()> {
     let reader_strategies = [Io::ParallelStream, Io::ParallelInMemory];
     for &io in &reader_strategies {
         let options = make_options(io);
-        let tally_map =
-            TallyMap::from_buffered_input(file_path.to_str().expect("temp file path"), &options)
-                .with_context(|| format!("tally map creation failed with `{io:?}`"))?;
+        let tally_map = TallyMap::from_path(file_path.to_str().expect("temp file path"), &options)
+            .with_context(|| format!("tally map creation failed with `{io:?}`"))?;
         let tally = WordTally::from_tally_map(tally_map, &options);
 
         verify_tally(&tally);
@@ -116,9 +115,8 @@ fn test_new_with_io_combinations() -> anyhow::Result<()> {
 
     // Test mapped-based I/O strategy (mmap)
     let options = make_options(Io::ParallelMmap);
-    let tally_map =
-        TallyMap::from_mapped_input(file_path.to_str().expect("temp file path"), &options)
-            .with_context(|| "tally map creation failed with `ParallelMmap`")?;
+    let tally_map = TallyMap::from_path(file_path.to_str().expect("temp file path"), &options)
+        .with_context(|| "tally map creation failed with `ParallelMmap`")?;
     let tally = WordTally::from_tally_map(tally_map, &options);
 
     verify_tally(&tally);
@@ -155,12 +153,12 @@ fn test_parallel_processing_with_large_text() {
     let sequential_options = make_options(Io::ParallelInMemory);
     let parallel_options = make_options(Io::ParallelInMemory);
 
-    let sequential_tally_map = TallyMap::from_buffered_input(file_path, &sequential_options)
-        .expect("create sequential tally map");
+    let sequential_tally_map =
+        TallyMap::from_path(file_path, &sequential_options).expect("create sequential tally map");
     let sequential_tally = WordTally::from_tally_map(sequential_tally_map, &sequential_options);
 
-    let parallel_tally_map = TallyMap::from_buffered_input(file_path, &parallel_options)
-        .expect("create parallel tally map");
+    let parallel_tally_map =
+        TallyMap::from_path(file_path, &parallel_options).expect("create parallel tally map");
     let parallel_tally = WordTally::from_tally_map(parallel_tally_map, &parallel_options);
 
     assert_eq!(sequential_tally.count(), parallel_tally.count());
@@ -182,8 +180,7 @@ fn test_parallel_mmap_with_real_file() {
     let file_path = temp_file.path().to_str().expect("temp file path");
 
     let mmap_options = make_options(Io::ParallelMmap);
-    let mmap_tally_map =
-        TallyMap::from_mapped_input(file_path, &mmap_options).expect("create tally map");
+    let mmap_tally_map = TallyMap::from_path(file_path, &mmap_options).expect("create tally map");
     let mmap_tally = WordTally::from_tally_map(mmap_tally_map, &mmap_options);
 
     verify_tally(&mmap_tally);
@@ -229,7 +226,7 @@ fn test_bytes_input() {
 fn test_bytes_io_with_input_new() {
     // ParallelBytes is used with Mapped::from() for bytes
     let bytes_mapped = Mapped::from(TEST_TEXT.as_bytes());
-    assert!(matches!(bytes_mapped, Mapped::Bytes(_)));
+    assert!(matches!(bytes_mapped, Mapped::Memory { .. }));
 }
 
 #[test]
@@ -256,7 +253,7 @@ fn test_utf8_boundary_handling() {
         .with_io(Io::ParallelMmap)
         .with_performance(performance);
 
-    let tally_map = TallyMap::from_mapped_input(file_path, &options).expect("create tally map");
+    let tally_map = TallyMap::from_path(file_path, &options).expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
 
     assert!(
@@ -275,11 +272,13 @@ fn test_utf8_boundary_handling() {
 
 #[test]
 fn test_io_default() {
-    assert_eq!(Io::default(), Io::ParallelStream);
+    assert_eq!(Io::default(), Io::Auto);
 }
 
 #[test]
 fn test_io_display_all_variants() {
+    assert_eq!(Io::Auto.to_string(), "auto");
+    assert_eq!(Io::Stream.to_string(), "stream");
     assert_eq!(Io::ParallelStream.to_string(), "parallel-stream");
     assert_eq!(Io::ParallelInMemory.to_string(), "parallel-in-memory");
     assert_eq!(Io::ParallelMmap.to_string(), "parallel-mmap");
@@ -297,14 +296,16 @@ fn test_io_traits_partial_eq() {
 #[test]
 fn test_io_traits_ordering() {
     // Test PartialOrd and Ord (based on enum declaration order)
+    assert!(Io::Auto < Io::ParallelBytes);
+    assert!(Io::ParallelBytes < Io::ParallelMmap);
+    assert!(Io::ParallelMmap < Io::ParallelInMemory);
+    assert!(Io::ParallelInMemory < Io::ParallelStream);
     assert!(Io::ParallelStream < Io::Stream);
-    assert!(Io::Stream < Io::ParallelMmap);
-    assert!(Io::ParallelMmap < Io::ParallelBytes);
-    assert!(Io::ParallelBytes < Io::ParallelInMemory);
 
     assert_eq!(Io::ParallelStream.cmp(&Io::ParallelStream), Ordering::Equal);
     assert_eq!(Io::Stream.cmp(&Io::ParallelStream), Ordering::Greater);
     assert_eq!(Io::ParallelBytes.cmp(&Io::ParallelInMemory), Ordering::Less);
+    assert_eq!(Io::Auto.cmp(&Io::Stream), Ordering::Less);
 }
 
 #[test]
@@ -391,6 +392,8 @@ fn test_parse_io_from_str_value() {
 #[test]
 fn test_io_from_str_trait() {
     // Test valid values
+    assert_eq!(Io::from_str("auto"), Ok(Io::Auto));
+    assert_eq!(Io::from_str("AUTO"), Ok(Io::Auto));
     assert_eq!(Io::from_str("stream"), Ok(Io::Stream));
     assert_eq!(Io::from_str("STREAM"), Ok(Io::Stream));
     assert_eq!(Io::from_str("parallel-stream"), Ok(Io::ParallelStream));
@@ -421,9 +424,39 @@ fn test_env_io_constant() {
 }
 
 #[test]
+fn test_auto_mode_resolution() {
+    use word_tally::FileType;
+
+    // Test Auto mode resolves to appropriate strategies
+    assert_eq!(Io::Auto.resolve(Some(FileType::File)), Io::ParallelMmap);
+    assert_eq!(
+        Io::Auto.resolve(Some(FileType::NamedPipe)),
+        Io::ParallelStream
+    );
+    assert_eq!(Io::Auto.resolve(Some(FileType::Socket)), Io::ParallelStream);
+    assert_eq!(
+        Io::Auto.resolve(Some(FileType::CharacterDevice)),
+        Io::Stream
+    );
+    assert_eq!(
+        Io::Auto.resolve(Some(FileType::Directory)),
+        Io::ParallelStream
+    );
+    assert_eq!(Io::Auto.resolve(None), Io::ParallelStream);
+
+    // Test non-Auto modes don't change
+    assert_eq!(Io::Stream.resolve(Some(FileType::File)), Io::Stream);
+    assert_eq!(
+        Io::ParallelMmap.resolve(Some(FileType::NamedPipe)),
+        Io::ParallelMmap
+    );
+}
+
+#[test]
 fn test_io_exhaustive_matching() {
     // This test ensures all variants are covered
     let test_io = |io: Io| match io {
+        Io::Auto => "auto",
         Io::Stream => "low-memory",
         Io::ParallelMmap => "mmap",
         Io::ParallelStream => "stream",
@@ -431,6 +464,7 @@ fn test_io_exhaustive_matching() {
         Io::ParallelBytes => "parallel-bytes",
     };
 
+    assert_eq!(test_io(Io::Auto), "auto");
     assert_eq!(test_io(Io::Stream), "low-memory");
     assert_eq!(test_io(Io::ParallelMmap), "mmap");
     assert_eq!(test_io(Io::ParallelStream), "stream");
@@ -496,8 +530,7 @@ fn test_streaming_processes_entire_file() -> anyhow::Result<()> {
 
     // Test streaming
     let streaming_options = make_shared(base_options.clone().with_io(Io::ParallelStream));
-    let streaming_tally_map =
-        TallyMap::from_buffered_input(file_path.as_str(), &streaming_options)?;
+    let streaming_tally_map = TallyMap::from_path(file_path.as_str(), &streaming_options)?;
     let streaming_tally = WordTally::from_tally_map(streaming_tally_map, &streaming_options);
     let streaming_count: usize = streaming_tally
         .into_iter()
@@ -506,8 +539,7 @@ fn test_streaming_processes_entire_file() -> anyhow::Result<()> {
 
     // Test in-memory for comparison
     let in_memory_options = make_shared(base_options.with_io(Io::ParallelInMemory));
-    let in_memory_tally_map =
-        TallyMap::from_buffered_input(file_path.as_str(), &in_memory_options)?;
+    let in_memory_tally_map = TallyMap::from_path(file_path.as_str(), &in_memory_options)?;
     let in_memory_tally = WordTally::from_tally_map(in_memory_tally_map, &in_memory_options);
     let in_memory_count: usize = in_memory_tally
         .into_iter()
@@ -540,8 +572,7 @@ fn test_streaming_consistency_across_io_modes() -> anyhow::Result<()> {
     );
     let streaming_options_arc = make_shared(streaming_options);
 
-    let streaming_tally_map =
-        TallyMap::from_buffered_input(file_path.as_str(), &streaming_options_arc)?;
+    let streaming_tally_map = TallyMap::from_path(file_path.as_str(), &streaming_options_arc)?;
     let streaming_tally = WordTally::from_tally_map(streaming_tally_map, &streaming_options_arc);
     let streaming_results: Vec<_> = streaming_tally.into_iter().collect();
 
@@ -556,8 +587,7 @@ fn test_streaming_consistency_across_io_modes() -> anyhow::Result<()> {
     );
     let in_memory_options_arc = make_shared(in_memory_options);
 
-    let in_memory_tally_map =
-        TallyMap::from_buffered_input(file_path.as_str(), &in_memory_options_arc)?;
+    let in_memory_tally_map = TallyMap::from_path(file_path.as_str(), &in_memory_options_arc)?;
     let in_memory_tally = WordTally::from_tally_map(in_memory_tally_map, &in_memory_options_arc);
     let in_memory_results: Vec<_> = in_memory_tally.into_iter().collect();
 
@@ -577,4 +607,41 @@ fn test_streaming_consistency_across_io_modes() -> anyhow::Result<()> {
     );
 
     Ok(())
+}
+
+#[test]
+fn test_auto_mode_selects_mmap_for_files() {
+    let options = make_options(Io::Auto);
+
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("write test text");
+
+    let tally_map =
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
+            .expect("create tally map");
+    let tally = WordTally::from_tally_map(tally_map, &options);
+
+    verify_tally(&tally);
+
+    // The Auto mode should have resolved to use mmap for the regular file
+    // We can't directly test which mode was used since it's internal to from_path,
+    // but we can verify it produces the same results as explicit mmap mode
+    let mmap_options = make_options(Io::ParallelMmap);
+    let mmap_tally_map = TallyMap::from_path(
+        temp_file.path().to_str().expect("temp file path"),
+        &mmap_options,
+    )
+    .expect("create mmap tally map");
+    let mmap_tally = WordTally::from_tally_map(mmap_tally_map, &mmap_options);
+
+    // Results should be identical
+    assert_eq!(tally.count(), mmap_tally.count());
+    assert_eq!(tally.uniq_count(), mmap_tally.uniq_count());
+
+    let auto_results: HashMap<_, _> = tally.into_iter().collect();
+    let mmap_results: HashMap<_, _> = mmap_tally.into_iter().collect();
+    assert_eq!(
+        auto_results, mmap_results,
+        "Auto mode should produce same results as mmap"
+    );
 }

@@ -109,7 +109,7 @@ fn test_wordtally_deserialize() {
 #[test]
 fn test_pathbuf_as_ref() {
     // Test the AsRef pattern that was implemented for PathBuf
-    let path = PathBuf::from("/tmp/output.txt");
+    let path = PathBuf::from("output.txt");
     let option_path = Some(path);
 
     // Access a reference to the inner PathBuf
@@ -120,7 +120,7 @@ fn test_pathbuf_as_ref() {
             .expect("get path ref")
             .to_str()
             .expect("process test"),
-        "/tmp/output.txt"
+        "output.txt"
     );
 
     // Test with None

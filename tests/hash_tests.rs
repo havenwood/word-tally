@@ -335,8 +335,7 @@ fn test_equality_and_hashing() {
                 word_tally::Performance::default(),
             );
 
-            let tally_map =
-                TallyMap::from_buffered_input(file_path, &options).expect("create tally map");
+            let tally_map = TallyMap::from_path(file_path, &options).expect("create tally map");
             WordTally::from_tally_map(tally_map, &options)
         })
         .collect();

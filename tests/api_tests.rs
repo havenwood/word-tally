@@ -28,7 +28,7 @@ fn test_api_basic_functionality() {
     Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).expect("process test");
 
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let word_tally = WordTally::from_tally_map(tally_map, &options);
 

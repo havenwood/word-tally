@@ -7,6 +7,9 @@
 //! ```
 //! use word_tally::{Case, Filters, Io, Options, Serialization};
 //!
+//! // Automatic I/O selection (default)
+//! let auto = Options::default();
+//!
 //! // Fast processing of large files
 //! let fast = Options::default().with_io(Io::ParallelMmap);
 //!
@@ -98,7 +101,7 @@ impl Options {
     ///
     /// // Default configuration
     /// let options = Options::default();
-    /// assert_eq!(options.io(), Io::ParallelStream);
+    /// assert_eq!(options.io(), Io::Auto);
     ///
     /// // Targeted customization with builder methods
     /// let options = Options::default()
@@ -215,9 +218,11 @@ impl Options {
     pub fn init_thread_pool_if_parallel(&self) -> Result<(), WordTallyError> {
         match self.io {
             Io::Stream => Ok(()),
-            Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes => {
-                self.performance.threads().init_pool()
-            }
+            Io::Auto
+            | Io::ParallelStream
+            | Io::ParallelInMemory
+            | Io::ParallelMmap
+            | Io::ParallelBytes => self.performance.threads().init_pool(),
         }
     }
 }

@@ -67,12 +67,12 @@ pub(crate) fn bench_word_tally_with_string(
     let path = temp_file.path().to_path_buf();
 
     match options.io() {
-        Io::Stream | Io::ParallelStream => bench_with_buffered_input(
+        Io::Auto | Io::ParallelMmap => bench_with_mapped_input(
             b,
             || (path.as_path(), Some(text.as_bytes().to_vec())),
             options,
         ),
-        Io::ParallelMmap => bench_with_mapped_input(
+        Io::Stream | Io::ParallelStream => bench_with_buffered_input(
             b,
             || (path.as_path(), Some(text.as_bytes().to_vec())),
             options,
@@ -131,7 +131,7 @@ where
         },
         |path| {
             let tally_map =
-                TallyMap::from_buffered_input(path.as_ref().to_str().expect("valid path"), options)
+                TallyMap::from_path(path.as_ref().to_str().expect("valid path"), options)
                     .expect("create tally map");
             process_tally(tally_map, options)
         },
@@ -152,7 +152,7 @@ where
         },
         |path| {
             let tally_map =
-                TallyMap::from_mapped_input(path.as_ref().to_str().expect("valid path"), options)
+                TallyMap::from_path(path.as_ref().to_str().expect("valid path"), options)
                     .expect("create tally map");
             process_tally(tally_map, options)
         },
@@ -195,9 +195,8 @@ where
         b.iter_batched(
             || path.as_ref(),
             |path| {
-                let tally_map =
-                    TallyMap::from_mapped_input(path.to_str().expect("valid path"), options)
-                        .expect("create tally map");
+                let tally_map = TallyMap::from_path(path.to_str().expect("valid path"), options)
+                    .expect("create tally map");
                 process_tally(tally_map, options)
             },
             BatchSize::LargeInput,
@@ -259,6 +258,10 @@ pub(crate) fn bench_io_with_file(
     };
 
     match io {
+        Io::Auto => {
+            // For benchmarks with files, Auto resolves to ParallelMmap
+            bench_with_mapped_input(b, || (file_path, file_content.clone()), options);
+        }
         Io::Stream | Io::ParallelStream => {
             bench_with_buffered_input(b, || (file_path, file_content.clone()), options);
         }

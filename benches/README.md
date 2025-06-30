@@ -14,7 +14,6 @@ Performance benchmarks for word-tally I/O strategies and core functionality.
 
 - **Core**: Sorting strategies (unsorted vs descending) with ~15KB text samples
 - **I/O**: All I/O strategies across file sizes (10KB, 50KB in release builds)
-  - `stream`, `parallel-stream`, `parallel-in-memory`, `parallel-mmap`
 - **Features**: Processing modes (parallel vs sequential)
 - **Multi-file**: File aggregation with different I/O strategies
 

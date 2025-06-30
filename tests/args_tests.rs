@@ -34,7 +34,7 @@ fn test_args_defaults() {
         .assert()
         .success()
         .stderr(contains("source -"))
-        .stderr(contains("io parallel-stream"))
+        .stderr(contains("io auto"))
         .stderr(contains("case original"))
         .stderr(contains("order desc"))
         .stderr(contains("delimiter \" \""));
@@ -99,7 +99,7 @@ fn test_args_defaults_with_minimal_flags() {
         .stderr(contains("delimiter \" \""))
         .stderr(contains("case original"))
         .stderr(contains("order desc"))
-        .stderr(contains("io parallel-stream"))
+        .stderr(contains("io auto"))
         .stderr(contains("min-chars none"))
         .stderr(contains("min-count none"))
         .stderr(contains("exclude-words none"))
@@ -411,8 +411,8 @@ fn test_args_all_io_modes() {
         .write_stdin("test")
         .assert()
         .failure()
-        .code(64)
-        .stderr(contains("memory-mapped I/O requires a file, not stdin"));
+        .code(64) // EX_USAGE
+        .stderr(contains("cannot memory map stdin"));
 }
 
 #[test]
@@ -564,8 +564,8 @@ fn test_args_mmap_alias() {
         .write_stdin("test")
         .assert()
         .failure()
-        .code(64)
-        .stderr(contains("memory-mapped I/O requires a file, not stdin"));
+        .code(64) // EX_USAGE
+        .stderr(contains("cannot memory map stdin"));
 }
 
 //

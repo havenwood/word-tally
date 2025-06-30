@@ -4,6 +4,13 @@ use std::io;
 
 use thiserror::Error;
 
+use crate::input::FileType;
+
+/// Format an I/O error message with optional file type.
+fn format_io_error(message: &str, file_type: Option<FileType>) -> String {
+    file_type.map_or_else(|| message.to_string(), |ft| format!("{message} ({ft})"))
+}
+
 /// Structured error types for word-tally
 #[derive(Error, Debug)]
 pub enum Error {
@@ -12,8 +19,17 @@ pub enum Error {
     Usage(String),
 
     /// Memory-mapped I/O attempted on stdin.
-    #[error("memory-mapped I/O requires a file, not stdin")]
-    StdinInvalid,
+    #[error("cannot memory map stdin")]
+    StdinNotMappable,
+
+    /// Memory-mapped I/O attempted on non-mappable file type.
+    #[error("cannot memory map {file_type}: {path}")]
+    NotMappable {
+        /// Type of file that cannot be mapped.
+        file_type: FileType,
+        /// Path to the file.
+        path: String,
+    },
 
     /// Byte I/O mode used with file path.
     #[error("byte I/O mode requires bytes input")]
@@ -67,12 +83,14 @@ pub enum Error {
     },
 
     /// I/O error with context.
-    #[error("{message}: {path}")]
+    #[error("{}: {}", format_io_error(message, *file_type), path)]
     Io {
         /// File path where error occurred.
         path: String,
         /// Error description.
         message: String,
+        /// Type of file, if known.
+        file_type: Option<FileType>,
         /// Underlying I/O error.
         #[source]
         source: io::Error,

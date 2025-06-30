@@ -6,13 +6,13 @@
 
 Tallies the number of times each word appears in one or more Unicode input sources using ICU4X for word boundary detection. Use `word-tally` as a command-line tool or `WordTally` via the Rust library interface.
 
-Four I/O strategies are available:
-- **stream**: Sequential single-threaded streaming with minimal memory usage
-- **parallel-stream** (default): Parallel streaming with balanced performance and memory usage
-- **parallel-in-memory**: Load entire input into memory for parallel processing
-- **parallel-mmap**: Memory-mapped I/O for best performance with large files
+Unless an I/O mode is specified, a reasonable strategy is automatically selected based on input type:
 
-All parallel modes use SIMD-accelerated chunk boundary detection. Memory mapping requires seekable file descriptors and won't work with stdin or pipes.
+- **Files**: Parallel memory-mapped I/O for seekable files
+- **Pipes, sockets, stdin, other**: Parallel streaming I/O for data streams
+- **Character/block devices**: Sequential streaming I/O for device compatibility
+
+All parallel modes use SIMD-accelerated chunk boundary detection. Memory mapping requires seekable file descriptors and won't work with stdin, pipes or devices.
 
 ## Usage
 
@@ -23,7 +23,7 @@ Arguments:
   [PATHS]...  File paths to use as input (use "-" for stdin) [default: -]
 
 Options:
-  -I, --io <STRATEGY>            I/O strategy [default: parallel-stream] [possible values: parallel-stream, stream, parallel-mmap, parallel-in-memory]
+  -I, --io <STRATEGY>            I/O strategy [default: auto] [possible values: auto, parallel-mmap, parallel-in-memory, parallel-stream, stream]
   -c, --case <FORMAT>            Case normalization [default: original] [possible values: original, upper, lower]
   -s, --sort <ORDER>             Sort order [default: desc] [possible values: desc, asc, unsorted]
   -m, --min-chars <COUNT>        Exclude words containing fewer than min chars
@@ -53,18 +53,21 @@ cargo install word-tally
 Choose an I/O strategy based on your performance and memory requirements:
 
 ```sh
-# Default: Parallel streaming - balanced performance and memory for files or stdin
-echo "tally me" | word-tally
-word-tally file.txt
+# Default: Auto-selection of a reasonable I/O strategy depending on input type
+echo "tally me" | word-tally # Parallel streamed I/O for stdin
+word-tally file.txt          # Parallel memory-mapped I/O for regular files
 
-# Sequential streaming - minimal memory usage for files or stdin
-word-tally --io=stream large-file.txt
+# Sequential streamed I/O with minimal memory usage
+word-tally --io=stream file.txt
 
-# Parallel memory-mapped - performance for files with efficient memory usage
-word-tally --io=parallel-mmap large-file.txt
+# Parallel streamed I/O
+word-tally --io=parallel-stream file.txt
 
-# Parallel in-memory - performance for stdin with high memory usage
-word-tally --io=parallel-in-memory document.txt
+# Parallel memory-mapped I/O
+word-tally --io=parallel-mmap file.txt
+
+# Parallel fully loaded into memory
+word-tally --io=parallel-in-memory file.txt
 ```
 
 Additional features:
@@ -250,7 +253,7 @@ use anyhow::Result;
 fn main() -> Result<()> {
     // Basic usage with file path
     let options = Options::default();
-    let tally_map = TallyMap::from_buffered_input("document.txt", &options)?;
+    let tally_map = TallyMap::from_path("document.txt", &options)?;
     let word_tally = WordTally::from_tally_map(tally_map, &options);
     println!("Total words: {}", word_tally.count());
 
@@ -261,7 +264,7 @@ fn main() -> Result<()> {
         .with_serialization(Serialization::Json)
         .with_io(Io::ParallelMmap);
 
-    let tally_map = TallyMap::from_mapped_input("large-file.txt", &options)?;
+    let tally_map = TallyMap::from_path("large-file.txt", &options)?;
     let tally = WordTally::from_tally_map(tally_map, &options);
 
     // Convert to `HashMap` for fast word lookups

@@ -34,7 +34,7 @@ fn word_tally(case: Case, sort: Sort, serialization: Serialization, filters: Fil
         Performance::default(),
     );
 
-    let tally_map = TallyMap::from_buffered_input(file_path, &options).expect("create tally map");
+    let tally_map = TallyMap::from_path(file_path, &options).expect("create tally map");
     WordTally::from_tally_map(tally_map, &options)
 }
 
@@ -216,7 +216,7 @@ fn create_test_tally_with_text(input_text: &[u8], sort: Sort) -> WordTally {
 
     let options = Options::default().with_sort(sort);
 
-    let tally_map = TallyMap::from_buffered_input(file_path, &options).expect("create tally map");
+    let tally_map = TallyMap::from_path(file_path, &options).expect("create tally map");
     WordTally::from_tally_map(tally_map, &options)
 }
 

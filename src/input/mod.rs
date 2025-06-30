@@ -11,11 +11,16 @@
 //!   - Used by `ParallelMmap`, `ParallelBytes` and `ParallelInMemory` I/O modes
 
 pub mod buffered;
+pub mod file_type;
 pub mod mapped;
 
-use std::{fs::File, io, path::Path};
+use std::{
+    fs::{self, File},
+    io,
+    path::Path,
+};
 
-pub use self::{buffered::Buffered, mapped::Mapped};
+pub use self::{buffered::Buffered, file_type::FileType, mapped::Mapped};
 use crate::WordTallyError;
 
 /// Provides metadata for data sources.
@@ -25,6 +30,13 @@ pub trait Metadata {
 
     /// Returns the size in bytes, if known.
     fn size(&self) -> Option<u64>;
+
+    /// Returns the file type, if applicable.
+    ///
+    /// Returns `None` for stdin or in-memory data sources.
+    fn file_type(&self) -> Option<FileType> {
+        None
+    }
 }
 
 /// Opens a file with enhanced error context.
@@ -37,18 +49,22 @@ pub trait Metadata {
 /// - Other I/O errors
 pub(super) fn open_file_with_error_context(path: &Path) -> Result<File, WordTallyError> {
     File::open(path).map_err(|source| {
-        let path_buf = path.to_path_buf();
+        let path_str = path.display().to_string();
+
+        // Try to get file type if the file exists
+        let file_type = fs::metadata(path).ok().map(|m| FileType::from(&m));
+
         let message = match source.kind() {
-            io::ErrorKind::NotFound => format!("no such file: {}", path_buf.display()),
-            io::ErrorKind::PermissionDenied => {
-                format!("permission denied: {}", path_buf.display())
-            }
-            _ => format!("failed to open file: {}", path_buf.display()),
+            io::ErrorKind::NotFound => "no such file".to_string(),
+            io::ErrorKind::PermissionDenied => "permission denied".to_string(),
+            io::ErrorKind::IsADirectory => "is a directory".to_string(),
+            _ => "failed to open file".to_string(),
         };
 
         WordTallyError::Io {
-            path: path_buf.display().to_string(),
+            path: path_str,
             message,
+            file_type,
             source,
         }
     })

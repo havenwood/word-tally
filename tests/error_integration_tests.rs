@@ -118,7 +118,7 @@ fn test_input_file_permission_denied_error() {
         .assert();
 
     assert.failure().stderr(predicate::str::contains(format!(
-        "permission denied: {}",
+        "permission denied (file): {}",
         file_path.display()
     )));
 

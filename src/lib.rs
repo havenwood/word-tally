@@ -1,10 +1,15 @@
 //! A tally of words with a count of the number of times each appears.
 //!
-//! `WordTally` tallies the number of times words appear in source input. Parallel streaming
-//! is the default mode for balanced performance and memory usage. Memory-mapped I/O provides
-//! the fastest processing for large files but requires seekable file descriptors. Sequential
-//! streaming mode minimizes memory usage for constrained environments. All modes support both
-//! files and stdin except memory-mapped which requires files.
+//! `WordTally` tallies the number of times words appear in source input. By default, the
+//! I/O strategy is automatically selected based on input type:
+//!
+//! - **Files**: Parallel memory-mapped I/O
+//! - **Character & block devices**: Sequential streaming I/O
+//! - **Pipes, sockets, stdin, et cetera**: Parallel streaming I/O
+//!
+//! You can override this automatic selection with specific modes: sequential streaming minimizes
+//! memory usage, parallel streaming provides balanced performance and memory usage, and
+//! memory-mapped I/O offers the fastest processing for seekable files.
 //!
 //! Word boundaries are determined using the [`icu_segmenter`](https://docs.rs/icu_segmenter/)
 //! crate from ICU4X, which provides Unicode text segmentation following
@@ -24,7 +29,7 @@
 //!
 //! # fn example() -> Result<()> {
 //! let options = Options::default();
-//! let tally_map = TallyMap::from_buffered_input("example.txt", &options)?;
+//! let tally_map = TallyMap::from_path("example.txt", &options)?;
 //! let words = WordTally::from_tally_map(tally_map, &options);
 //! println!("Total words: {}", words.count());
 //! # Ok(())
@@ -40,7 +45,7 @@
 //! let options = Options::default()
 //!     .with_io(Io::ParallelMmap)
 //!     .with_case(Case::Lower);
-//! let tally_map = TallyMap::from_mapped_input("large-file.txt", &options)?;
+//! let tally_map = TallyMap::from_path("large-file.txt", &options)?;
 //! let words = WordTally::from_tally_map(tally_map, &options);
 //! # Ok(())
 //! # }
@@ -58,7 +63,7 @@ pub mod output;
 pub mod tally_map;
 
 pub use error::Error as WordTallyError;
-pub use input::{Buffered, Mapped, Metadata};
+pub use input::{Buffered, FileType, Mapped, Metadata};
 pub use options::{
     Options,
     case::Case,

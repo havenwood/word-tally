@@ -10,7 +10,7 @@ use std::{
 
 use anyhow::Result;
 
-use super::{Metadata, open_file_with_error_context};
+use super::{FileType, Metadata, open_file_with_error_context};
 use crate::{WordTallyError, error::Error};
 
 /// Buffered source for sequential file or stdin input.
@@ -131,5 +131,33 @@ impl Metadata for Buffered {
     fn size(&self) -> Option<u64> {
         self.path()
             .and_then(|path| fs::metadata(path).ok().map(|metadata| metadata.len()))
+    }
+
+    /// Returns the file type if available.
+    fn file_type(&self) -> Option<FileType> {
+        match self {
+            Self::File(path, _) => fs::metadata(path)
+                .ok()
+                .map(|metadata| FileType::from(&metadata)),
+            Self::Stdin(_) => {
+                // Get file type of stdin using file descriptor on Unix
+                #[cfg(unix)]
+                {
+                    use std::os::unix::io::AsFd;
+                    let stdin = io::stdin();
+
+                    // Clone the fd to avoid closing stdin
+                    let owned_fd = stdin.as_fd().try_clone_to_owned().ok()?;
+                    let file = fs::File::from(owned_fd);
+                    file.metadata()
+                        .ok()
+                        .map(|metadata| FileType::from(&metadata))
+                }
+                #[cfg(not(unix))]
+                {
+                    None
+                }
+            }
+        }
     }
 }

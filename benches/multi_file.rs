@@ -16,14 +16,14 @@ fn process_multi_file_sources(sources: &[&str], options: &Options) -> anyhow::Re
     if options.io() == Io::ParallelMmap {
         sources
             .iter()
-            .map(|path| TallyMap::from_mapped_input(path, options))
+            .map(|path| TallyMap::from_path(path, options))
             .try_fold(TallyMap::new(), |acc, result| {
                 result.map(|tally| acc.merge(tally))
             })
     } else {
         sources
             .iter()
-            .map(|path| TallyMap::from_buffered_input(path, options))
+            .map(|path| TallyMap::from_path(path, options))
             .try_fold(TallyMap::new(), |acc, result| {
                 result.map(|tally| acc.merge(tally))
             })

@@ -31,22 +31,14 @@ fn run() -> Result<()> {
     options.init_thread_pool_if_parallel()?;
 
     let tally_map = match options.io() {
+        Io::Auto | Io::ParallelMmap | Io::ParallelStream | Io::ParallelInMemory => sources
+            .par_iter()
+            .map(|source| TallyMap::from_path(source, &options))
+            .try_reduce(TallyMap::new, |acc, tally| Ok(acc.merge(tally))),
         Io::Stream => sources
             .iter()
-            .map(|source| TallyMap::from_buffered_input(source, &options))
+            .map(|source| TallyMap::from_path(source, &options))
             .try_fold(TallyMap::new(), |acc, tally| tally.map(|t| acc.merge(t))),
-        Io::ParallelStream => sources
-            .par_iter()
-            .map(|source| TallyMap::from_buffered_input(source, &options))
-            .try_reduce(TallyMap::new, |acc, tally| Ok(acc.merge(tally))),
-        Io::ParallelMmap => sources
-            .par_iter()
-            .map(|source| TallyMap::from_mapped_input(source, &options))
-            .try_reduce(TallyMap::new, |acc, tally| Ok(acc.merge(tally))),
-        Io::ParallelInMemory => sources
-            .par_iter()
-            .map(|source| TallyMap::from_bytes_input(source, &options))
-            .try_reduce(TallyMap::new, |acc, tally| Ok(acc.merge(tally))),
         Io::ParallelBytes => Err(WordTallyError::PathInvalid.into()),
     }?;
 

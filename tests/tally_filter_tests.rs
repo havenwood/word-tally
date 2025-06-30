@@ -25,7 +25,7 @@ fn test_excluding_words() {
     );
     let options_arc = make_shared(options);
 
-    let tally_map = TallyMap::from_buffered_input(
+    let tally_map = TallyMap::from_path(
         temp_file.path().to_str().expect("temp file path"),
         &options_arc,
     )
@@ -62,7 +62,7 @@ fn test_excluding_patterns() {
     );
     let options_arc = make_shared(options);
 
-    let tally_map = TallyMap::from_buffered_input(
+    let tally_map = TallyMap::from_path(
         temp_file.path().to_str().expect("temp file path"),
         &options_arc,
     )
@@ -106,8 +106,7 @@ fn test_including_patterns() {
     );
     let options_arc = make_shared(options);
 
-    let tally_map =
-        TallyMap::from_buffered_input(file_path, &options_arc).expect("create tally map");
+    let tally_map = TallyMap::from_path(file_path, &options_arc).expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options_arc);
     let result = tally.tally();
 
@@ -154,8 +153,7 @@ fn test_combining_include_exclude_patterns() {
     );
     let options_arc = make_shared(options);
 
-    let tally_map =
-        TallyMap::from_buffered_input(file_path, &options_arc).expect("create tally map");
+    let tally_map = TallyMap::from_path(file_path, &options_arc).expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options_arc);
     let result = tally.tally();
 

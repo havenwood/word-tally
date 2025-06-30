@@ -88,13 +88,21 @@ impl Sort {
             // Parallel unstable sorting
             (
                 Self::Desc,
-                Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes,
+                Io::Auto
+                | Io::ParallelStream
+                | Io::ParallelInMemory
+                | Io::ParallelMmap
+                | Io::ParallelBytes,
             ) => {
                 tally.par_sort_unstable_by_key(|&(_, count)| Reverse(count));
             }
             (
                 Self::Asc,
-                Io::ParallelStream | Io::ParallelInMemory | Io::ParallelMmap | Io::ParallelBytes,
+                Io::Auto
+                | Io::ParallelStream
+                | Io::ParallelInMemory
+                | Io::ParallelMmap
+                | Io::ParallelBytes,
             ) => {
                 tally.par_sort_unstable_by_key(|&(_, count)| count);
             }

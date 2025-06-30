@@ -6,15 +6,20 @@ use std::{env, str::FromStr};
 use clap::ValueEnum;
 use serde::{Deserialize, Serialize};
 
+use crate::FileType;
+
 /// Determines the I/O strategy for processing input.
 ///
 /// Performance characteristics:
 ///
+/// **Automatic selection (default):**
+/// - **`Auto`**: Automatically selects a reasonable I/O strategy based on input type.
+///
 /// **Sequential processing:**
-/// - **Stream**: Single-threaded streaming with minimal memory usage.
+/// - **`Stream`**: Single-threaded streaming with minimal memory usage.
 ///
 /// **Parallel processing:**
-/// - **`ParallelStream`**: Parallel streaming with balanced memory/performance (default).
+/// - **`ParallelStream`**: Parallel streaming with balanced memory/performance.
 /// - **`ParallelInMemory`**: Loads entire content into memory for parallel processing.
 /// - **`ParallelMmap`**: Best performance via OS virtual memory (seekable files only).
 ///
@@ -45,27 +50,30 @@ use serde::{Deserialize, Serialize};
 )]
 #[serde(rename_all = "camelCase")]
 pub enum Io {
-    /// Parallel streaming I/O — balanced memory/performance (default)
-    ParallelStream,
-
-    /// Sequential streaming I/O — minimal memory
-    Stream,
-
-    /// Parallel memory-mapped I/O — high performance but requires files, not stdin
-    #[clap(alias = "mmap")]
-    ParallelMmap,
+    /// Automatically select a reasonable I/O strategy based on input type (default)
+    Auto,
 
     /// Parallel bytes - similar to memory-mapped I/O but directly from bytes not files
     #[clap(skip)]
     ParallelBytes,
 
+    /// Parallel memory-mapped I/O — high performance but requires files, not stdin
+    #[clap(alias = "mmap")]
+    ParallelMmap,
+
     /// Parallel in-memory from I/O — fully loaded into memory, primarily for stdin
     ParallelInMemory,
+
+    /// Parallel streaming I/O — balanced memory/performance
+    ParallelStream,
+
+    /// Sequential streaming I/O — minimal memory
+    Stream,
 }
 
 impl Default for Io {
     fn default() -> Self {
-        Self::ParallelStream
+        Self::Auto
     }
 }
 
@@ -84,11 +92,40 @@ impl Io {
     pub fn from_env() -> Self {
         Self::from_str_value(env::var(Self::ENV_IO).ok().as_deref())
     }
+
+    /// Select a reasonable I/O strategy based on file type.
+    ///
+    /// - Regular files: Use `ParallelMmap` for best performance
+    /// - Pipes, sockets: Use `ParallelStream` for streaming data
+    /// - Directories: Return `ParallelStream` (will fail later with proper error)
+    /// - Character/block devices: Use `Stream` for simple sequential processing
+    /// - Unknown (stdin, bytes): Default to `ParallelStream`
+    #[must_use]
+    pub const fn select_for_file_type(file_type: Option<FileType>) -> Self {
+        match file_type {
+            Some(FileType::File) => Self::ParallelMmap,
+            Some(FileType::CharacterDevice | FileType::BlockDevice) => Self::Stream,
+            Some(
+                FileType::NamedPipe | FileType::Socket | FileType::Directory | FileType::Special,
+            )
+            | None => Self::ParallelStream,
+        }
+    }
+
+    /// Resolve Auto mode to a concrete I/O strategy.
+    #[must_use]
+    pub const fn resolve(self, file_type: Option<FileType>) -> Self {
+        match self {
+            Self::Auto => Self::select_for_file_type(file_type),
+            other => other,
+        }
+    }
 }
 
 impl Display for Io {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
+            Self::Auto => write!(f, "auto"),
             Self::Stream => write!(f, "stream"),
             Self::ParallelStream => write!(f, "parallel-stream"),
             Self::ParallelInMemory => write!(f, "parallel-in-memory"),
@@ -103,6 +140,7 @@ impl FromStr for Io {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         Ok(match s {
+            _ if s.eq_ignore_ascii_case("auto") => Self::Auto,
             _ if s.eq_ignore_ascii_case("stream") => Self::Stream,
             _ if s.eq_ignore_ascii_case("parallel-stream") => Self::ParallelStream,
             _ if s.eq_ignore_ascii_case("parallel-in-memory") => Self::ParallelInMemory,

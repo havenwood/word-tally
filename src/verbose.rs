@@ -4,7 +4,7 @@ use std::io::Write;
 
 use anyhow::{Context, Result};
 use serde::Serialize;
-use word_tally::{Output, Serialization, WordTally, WordTallyError};
+use word_tally::{FileType, Output, Serialization, WordTally, WordTallyError};
 
 /// Handles verbose output formatting and display of word tally results.
 #[derive(Debug)]
@@ -26,6 +26,7 @@ impl Default for Verbose {
 #[serde(rename_all = "camelCase")]
 struct VerboseData<'a> {
     source: &'a str,
+    file_type: Option<FileType>,
     total_words: usize,
     unique_words: usize,
     field_delimiter: String,
@@ -41,14 +42,15 @@ struct VerboseData<'a> {
 }
 
 impl<'a> VerboseData<'a> {
-    /// Create from `WordTally` and source.
-    fn from_tally(tally: &'a WordTally, source: &'a str) -> Self {
+    /// Create from `WordTally`, source, and optional file type.
+    fn from_tally(tally: &'a WordTally, source: &'a str, file_type: Option<FileType>) -> Self {
         let options = tally.options();
         let filters = options.filters();
         let serialization = options.serialization();
 
         Self {
             source,
+            file_type,
             total_words: tally.count(),
             unique_words: tally.uniq_count(),
             field_delimiter: serialization.field_delimiter_display(),
@@ -68,6 +70,11 @@ impl<'a> VerboseData<'a> {
     fn field_pairs(&self) -> impl Iterator<Item = (&'static str, String)> + '_ {
         [
             ("source", self.source.to_string()),
+            (
+                "file-type",
+                self.file_type
+                    .map_or("unknown".to_string(), |ft| ft.to_string()),
+            ),
             ("total-words", self.total_words.to_string()),
             ("unique-words", self.unique_words.to_string()),
             ("delimiter", self.field_delimiter.to_string()),
@@ -106,7 +113,9 @@ impl<'a> VerboseData<'a> {
 impl Verbose {
     /// Writes information for the word tally.
     pub(crate) fn write_info(&mut self, word_tally: &WordTally, source: &str) -> Result<()> {
-        let data = VerboseData::from_tally(word_tally, source);
+        // TODO: Pass file type from input source when available
+        let file_type = None;
+        let data = VerboseData::from_tally(word_tally, source, file_type);
 
         match word_tally.options().serialization() {
             Serialization::Json => self.write_json(&data),

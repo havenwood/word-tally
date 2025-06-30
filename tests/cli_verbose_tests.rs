@@ -56,7 +56,7 @@ fn verbose_without_input() {
         .arg("-v")
         .assert()
         .success()
-        .stderr("source -\ntotal-words 0\nunique-words 0\ndelimiter \" \"\nentry-delimiter \"\\n\"\ncase original\norder desc\nio parallel-stream\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
+        .stderr("source -\nfile-type unknown\ntotal-words 0\nunique-words 0\ndelimiter \" \"\nentry-delimiter \"\\n\"\ncase original\norder desc\nio auto\nmin-chars none\nmin-count none\nexclude-words none\nexclude-patterns none\ninclude-patterns none\n")
         .stdout("");
 }
 
@@ -118,7 +118,7 @@ fn verbose_json_full_output() {
             ("entryDelimiter", serde_json::json!("n/a")),
             ("case", serde_json::json!("original")),
             ("order", serde_json::json!("desc")),
-            ("io", serde_json::json!("parallel-stream")),
+            ("io", serde_json::json!("auto")),
             ("minChars", serde_json::Value::Null),
             ("minCount", serde_json::Value::Null),
             ("excludeWords", serde_json::Value::Null),

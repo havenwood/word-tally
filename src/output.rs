@@ -227,6 +227,7 @@ impl TryFrom<&Path> for Output {
             Self::file(path).map_err(|e| WordTallyError::Io {
                 path: path.display().to_string(),
                 message: "failed to create output file".to_string(),
+                file_type: None,
                 source: e.downcast_ref::<io::Error>().map_or_else(
                     || io::Error::other(e.to_string()),
                     |io_err| io::Error::new(io_err.kind(), io_err.to_string()),

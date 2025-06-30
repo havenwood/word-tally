@@ -15,7 +15,7 @@ fn test_to_json() {
     let options = Options::default();
     let shared_options = make_shared(options);
 
-    let tally_map = TallyMap::from_buffered_input(
+    let tally_map = TallyMap::from_path(
         temp_file.path().to_str().expect("temp file path"),
         &shared_options,
     )
@@ -39,7 +39,7 @@ fn test_from_json() {
 
     let options = Options::default();
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let original = WordTally::from_tally_map(tally_map, &options);
     let json = serde_json::to_string(&original).expect("serialize JSON");
@@ -60,7 +60,7 @@ fn test_json_field_renamed() {
 
     let options = Options::default();
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let original = WordTally::from_tally_map(tally_map, &options);
     let json = serde_json::to_string(&original).expect("serialize JSON");
@@ -77,7 +77,7 @@ fn test_deserialization_with_serde() {
 
     let options = Options::default();
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let original = WordTally::from_tally_map(tally_map, &options);
     let json = serde_json::to_string(&original).expect("serialize JSON");
@@ -130,7 +130,7 @@ fn test_comprehensive_wordtally_serialization() {
         .with_sort(Sort::Desc);
 
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -154,7 +154,7 @@ fn test_json_field_names() {
 
     let options = Options::default();
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let tally = WordTally::from_tally_map(tally_map, &options);
 
@@ -180,7 +180,7 @@ fn test_round_trip_serialization() {
         .with_filters(word_tally::Filters::default().with_min_chars(2));
 
     let tally_map =
-        TallyMap::from_buffered_input(temp_file.path().to_str().expect("temp file path"), &options)
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
             .expect("create tally map");
     let original = WordTally::from_tally_map(tally_map, &options);
 

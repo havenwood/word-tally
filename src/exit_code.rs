@@ -56,7 +56,8 @@ impl From<&WordTallyError> for ExitCode {
     fn from(err: &WordTallyError) -> Self {
         match err {
             WordTallyError::Usage(_)
-            | WordTallyError::StdinInvalid
+            | WordTallyError::StdinNotMappable
+            | WordTallyError::NotMappable { .. }
             | WordTallyError::PathInvalid
             | WordTallyError::BytesRequired
             | WordTallyError::Config(_) => Self::UsageError,

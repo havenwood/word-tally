@@ -20,7 +20,7 @@ thread_local! {
 }
 
 use crate::{
-    Count, Metadata, Word, WordTallyError,
+    Count, FileType, Metadata, Word, WordTallyError,
     input::{Buffered, Mapped},
     options::{Options, case::Case, io::Io, performance::Performance},
 };
@@ -54,20 +54,70 @@ impl TallyMap {
         }
     }
 
-    /// Creates a `TallyMap` from a source path and `Options`.
+    /// Creates a `TallyMap` from a path and `Options`, automatically choosing the
+    /// appropriate input method based on the I/O mode.
     ///
     /// # Errors
     ///
     /// Returns an error if:
-    /// - The file cannot be opened (file not found, permission denied, etc.)
-    /// - The source is "-" but stdin cannot be read
+    /// - The file cannot be read
     /// - The input contains invalid UTF-8 data
-    /// - I/O errors occur during reading
-    /// - `Io::ParallelBytes` is used (requires bytes input)
-    /// - `Io::ParallelMmap` is used with stdin (memory mapping not supported)
-    pub fn from_buffered_input(source: &str, options: &Options) -> Result<Self> {
-        let reader = Buffered::try_from(source)?;
-        Self::from_buffered(&reader, options)
+    /// - `Io::ParallelBytes` is used (requires raw bytes, not a path)
+    pub fn from_path(path: &str, options: &Options) -> Result<Self> {
+        let io_mode = if matches!(options.io(), Io::Auto) {
+            // Get file type to resolve Auto mode
+            let file_type = if path == "-" {
+                None
+            } else {
+                fs::metadata(path).ok().map(|m| FileType::from(&m))
+            };
+            options.io().resolve(file_type)
+        } else {
+            options.io()
+        };
+
+        // Create options with resolved I/O mode if needed
+        let resolved_options = if matches!(options.io(), Io::Auto) {
+            options.clone().with_io(io_mode)
+        } else {
+            options.clone()
+        };
+
+        match io_mode {
+            Io::Auto => unreachable!("Auto mode should have been resolved"),
+            Io::Stream | Io::ParallelStream => {
+                let buffered = Buffered::try_from(path)?;
+                Self::from_buffered(&buffered, &resolved_options)
+            }
+            Io::ParallelMmap => {
+                let mapped = Mapped::try_from(path)?;
+                Self::from_mapped(&mapped, &resolved_options)
+            }
+            Io::ParallelInMemory => {
+                let bytes = if path == "-" {
+                    let mut buffer = Vec::new();
+                    io::stdin().lock().read_to_end(&mut buffer)?;
+                    buffer
+                } else {
+                    fs::read(path).map_err(|source| {
+                        let file_type = fs::metadata(path).ok().map(|m| FileType::from(&m));
+                        let message = match source.kind() {
+                            io::ErrorKind::NotFound => "no such file".to_string(),
+                            io::ErrorKind::PermissionDenied => "permission denied".to_string(),
+                            _ => "failed to read file".to_string(),
+                        };
+                        WordTallyError::Io {
+                            path: path.to_string(),
+                            message,
+                            file_type,
+                            source,
+                        }
+                    })?
+                };
+                Self::from_bytes(bytes, &resolved_options)
+            }
+            Io::ParallelBytes => Err(WordTallyError::PathInvalid.into()),
+        }
     }
 
     /// Creates a `TallyMap` from a `Buffered` and `Options`.
@@ -77,34 +127,20 @@ impl TallyMap {
     /// Returns an error if:
     /// - The input contains invalid UTF-8 data
     /// - I/O errors occur during reading
-    /// - `Io::ParallelBytes` is used (requires bytes input)
-    /// - `Io::ParallelMmap` is used with stdin (memory mapping not supported)
-    pub fn from_buffered(reader: &Buffered, options: &Options) -> Result<Self> {
+    /// - An I/O mode other than `Stream` or `ParallelStream` is used
+    pub fn from_buffered(buffered: &Buffered, options: &Options) -> Result<Self> {
         match options.io() {
-            Io::Stream => Self::stream_count_reader(reader, options),
-            Io::ParallelStream => Self::par_stream_count_reader(reader, options),
-            Io::ParallelInMemory => {
-                let bytes = Self::read_to_bytes(reader, options.performance())?;
-                let view = Mapped::from(bytes);
-                Self::from_mapped(&view, options)
+            Io::Stream => Self::stream_count_reader(buffered, options),
+            Io::ParallelStream => Self::par_stream_count_reader(buffered, options),
+            Io::Auto | Io::ParallelInMemory | Io::ParallelBytes | Io::ParallelMmap => {
+                Err(WordTallyError::Config(
+                    "Stream and ParallelStream modes require buffered input. \
+                     Use from_mapped() for memory-mapped modes."
+                        .to_string(),
+                )
+                .into())
             }
-            Io::ParallelBytes => Err(WordTallyError::BytesRequired.into()),
-            Io::ParallelMmap => Err(WordTallyError::StdinInvalid.into()),
         }
-    }
-
-    /// Creates a `TallyMap` from a source path and `Options`.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - The file cannot be read (file not found, permission denied, etc.)
-    /// - The file cannot be memory-mapped
-    /// - The input contains invalid UTF-8 data
-    /// - `Io::Stream` or `Io::ParallelStream` is used (requires buffered input)
-    pub fn from_mapped_input(source: &str, options: &Options) -> Result<Self> {
-        let view = Mapped::try_from(source)?;
-        Self::from_mapped(&view, options)
     }
 
     /// Creates a `TallyMap` from a `Mapped` and `Options`.
@@ -114,14 +150,16 @@ impl TallyMap {
     /// Returns an error if:
     /// - The input contains invalid UTF-8 data
     /// - `Io::Stream` or `Io::ParallelStream` is used (requires buffered input)
-    pub fn from_mapped(view: &Mapped, options: &Options) -> Result<Self> {
+    pub fn from_mapped(mapped: &Mapped, options: &Options) -> Result<Self> {
         match options.io() {
             Io::Stream | Io::ParallelStream => Err(WordTallyError::Config(
-                "stream mode requires a Buffered, not a Mapped".to_string(),
+                "Memory-mapped input requires ParallelMmap, ParallelBytes, or \
+                 ParallelInMemory mode. Use from_buffered() for streaming modes."
+                    .to_string(),
             )
             .into()),
-            Io::ParallelInMemory | Io::ParallelBytes | Io::ParallelMmap => {
-                Self::par_memory_count(view, options)
+            Io::Auto | Io::ParallelInMemory | Io::ParallelBytes | Io::ParallelMmap => {
+                Self::par_memory_count(mapped, options)
             }
         }
     }
@@ -132,33 +170,18 @@ impl TallyMap {
     ///
     /// Returns an error if:
     /// - The input contains invalid UTF-8 data
-    /// - `Io::Stream` or `Io::ParallelStream` is used (requires buffered input)
+    /// - An I/O mode other than `ParallelBytes` or `ParallelInMemory` is used
     pub fn from_bytes(bytes: Vec<u8>, options: &Options) -> Result<Self> {
-        let view = Mapped::from(bytes);
-        Self::from_mapped(&view, options)
-    }
-
-    /// Creates a `TallyMap` from a source path with bytes input handling.
-    ///
-    /// Handles the special case where "-" means stdin, reading the entire
-    /// input into memory as bytes.
-    ///
-    /// # Errors
-    ///
-    /// Returns an error if:
-    /// - The file cannot be read (file not found, permission denied, etc.)
-    /// - I/O errors occur while reading stdin
-    /// - The input contains invalid UTF-8 data
-    /// - `Io::Stream` or `Io::ParallelStream` is used (requires buffered input)
-    pub fn from_bytes_input(source: &str, options: &Options) -> Result<Self> {
-        let bytes = if source == "-" {
-            let mut buffer = Vec::new();
-            io::stdin().lock().read_to_end(&mut buffer)?;
-            buffer
-        } else {
-            fs::read(source)?
-        };
-        Self::from_bytes(bytes, options)
+        match options.io() {
+            Io::ParallelBytes | Io::ParallelInMemory => {
+                let mapped = Mapped::from(bytes);
+                Self::from_mapped(&mapped, options)
+            }
+            _ => Err(WordTallyError::Config(
+                "from_bytes requires ParallelBytes or ParallelInMemory mode".into(),
+            )
+            .into()),
+        }
     }
 
     /// Extends the tally map with word counts from a string slice.
@@ -252,13 +275,13 @@ impl TallyMap {
     ///
     /// Processes data in chunks without loading the entire input into memory.
     /// Uses chunk-based processing for better performance than line-by-line.
-    fn stream_count_reader(reader: &Buffered, options: &Options) -> Result<Self> {
+    fn stream_count_reader(buffered: &Buffered, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
 
-        // Get metadata before borrowing reader
-        let source = reader.to_string();
-        let size = reader.size();
+        // Get metadata before borrowing buffered
+        let source = buffered.to_string();
+        let size = buffered.size();
         let (batch_size, target_batch_size) = Self::calculate_batch_sizes_from_size(size, perf)?;
         let tally_capacity = perf.chunk_capacity(size.unwrap_or_else(|| perf.base_stdin_size()));
 
@@ -270,7 +293,7 @@ impl TallyMap {
         while !reached_eof || !buffer.is_empty() {
             // Fill buffer
             Self::fill_stream_buffer(
-                reader,
+                buffered,
                 &mut buffer,
                 &mut reached_eof,
                 target_batch_size,
@@ -333,13 +356,13 @@ impl TallyMap {
     /// - Uses memchr SIMD to find whitespace-aligned chunk boundaries
     /// - Stream in chunks, without loading the entire input into memory
     /// - Balances performance and memory usage
-    fn par_stream_count_reader(reader: &Buffered, options: &Options) -> Result<Self> {
+    fn par_stream_count_reader(buffered: &Buffered, options: &Options) -> Result<Self> {
         let perf = options.performance();
         let case = options.case();
 
-        // Get metadata before borrowing reader
-        let source = reader.to_string();
-        let size = reader.size();
+        // Get metadata before borrowing buffered
+        let source = buffered.to_string();
+        let size = buffered.size();
         let (batch_size, target_batch_size) = Self::calculate_batch_sizes_from_size(size, perf)?;
         let tally_capacity = perf.capacity(size);
 
@@ -356,7 +379,7 @@ impl TallyMap {
 
                 // Fill buffer
                 if let Err(e) = Self::fill_stream_buffer(
-                    reader,
+                    buffered,
                     &mut buffer,
                     &mut reached_eof,
                     target_batch_size,
@@ -407,19 +430,6 @@ impl TallyMap {
             .try_reduce(Self::new, |acc, tally| Ok(acc.merge(tally)))
     }
 
-    /// Reads the entire input into a byte buffer.
-    fn read_to_bytes(reader: &Buffered, perf: &Performance) -> Result<Vec<u8>> {
-        let mut buffer = Vec::with_capacity(perf.capacity(reader.size()));
-
-        reader.with_buf_read(|buf_read| {
-            buf_read
-                .read_to_end(&mut buffer)
-                .with_context(|| format!("failed to read input into buffer: {reader}"))
-        })??;
-
-        Ok(buffer)
-    }
-
     /// Calculate batch sizes from optional size.
     fn calculate_batch_sizes_from_size(
         size: Option<u64>,
@@ -447,6 +457,10 @@ impl TallyMap {
 
     /// Find chunk boundaries using efficient backwards search from target positions.
     fn chunk_boundaries(content: &str, num_chunks: usize) -> Vec<usize> {
+        if num_chunks == 0 || content.is_empty() {
+            return vec![0];
+        }
+
         let content_len = content.len();
         let target_chunk_size = content_len.div_ceil(num_chunks);
         let content_bytes = content.as_bytes();
@@ -501,17 +515,17 @@ impl TallyMap {
             .collect()
     }
 
-    /// Fill the buffer with data from the stream reader up to the target size.
+    /// Fill the buffer with data from the stream buffered up to the target size.
     fn fill_stream_buffer(
-        reader: &Buffered,
+        buffered: &Buffered,
         buffer: &mut Vec<u8>,
         reached_eof: &mut bool,
         target_size: usize,
         source: &str,
     ) -> Result<()> {
-        reader.with_buf_read(|buf_read| {
+        buffered.with_buf_read(|buf_read| {
             while buffer.len() < target_size && !*reached_eof {
-                // Fill reader's internal buffer
+                // Fill buffered's internal buffer
                 let available = buf_read
                     .fill_buf()
                     .with_context(|| format!("failed to read from: {source}"))?;
@@ -524,7 +538,7 @@ impl TallyMap {
                 // Copy only what's needed to reach target size
                 let bytes_to_copy = available.len().min(target_size - buffer.len());
                 buffer.extend_from_slice(&available[..bytes_to_copy]);
-                // Mark bytes as consumed in reader
+                // Mark bytes as consumed in buffered
                 buf_read.consume(bytes_to_copy);
             }
             Ok(())

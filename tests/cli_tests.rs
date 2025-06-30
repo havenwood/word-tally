@@ -337,7 +337,7 @@ fn test_parallel_flags() {
         .arg("--verbose")
         .assert()
         .success()
-        .stderr(contains("io parallel-stream"));
+        .stderr(contains("io auto"));
 
     // Test explicit stream mode (sequential)
     word_tally()
