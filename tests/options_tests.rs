@@ -3,13 +3,13 @@ use word_tally::{
 };
 
 #[test]
-fn test_options_format_default() {
+fn options_format_default() {
     let options = Options::default();
     assert!(matches!(options.serialization(), Serialization::Text(_)));
 }
 
 #[test]
-fn test_options_with_format() {
+fn options_with_format() {
     let options = Options::default().with_serialization(Serialization::Json);
     assert_eq!(options.serialization(), &Serialization::Json);
 
@@ -22,7 +22,7 @@ fn test_options_with_format() {
 }
 
 #[test]
-fn test_options_display_includes_format() {
+fn options_display_includes_format() {
     let options = Options::default().with_serialization(Serialization::Json);
     let display_string = options.to_string();
 
@@ -31,7 +31,7 @@ fn test_options_display_includes_format() {
 }
 
 #[test]
-fn test_format_field_in_struct() {
+fn format_field_in_struct() {
     let options = Options::default();
     assert!(matches!(options.serialization(), Serialization::Text(_)));
 
@@ -40,7 +40,7 @@ fn test_format_field_in_struct() {
 }
 
 #[test]
-fn test_format_serialization() {
+fn format_serialization() {
     let options = Options::default().with_serialization(Serialization::Json);
     let serialized = serde_json::to_string(&options).expect("serialize JSON");
 
@@ -51,7 +51,7 @@ fn test_format_serialization() {
 }
 
 #[test]
-fn test_comprehensive_options_serialization() {
+fn comprehensive_options_serialization() {
     let options = Options::default()
         .with_case(Case::Upper)
         .with_sort(Sort::Desc)
@@ -78,7 +78,7 @@ fn test_comprehensive_options_serialization() {
 }
 
 #[test]
-fn test_options_new() {
+fn options_new() {
     let case = Case::Upper;
     let sort = Sort::Desc;
     let serialization = Serialization::default();
@@ -94,7 +94,7 @@ fn test_options_new() {
 }
 
 #[test]
-fn test_options_new_with_default_filters() {
+fn options_new_with_default_filters() {
     let case = Case::Lower;
     let sort = Sort::Asc;
     let serialization = Serialization::default();
@@ -117,80 +117,80 @@ fn test_options_new_with_default_filters() {
 }
 
 #[test]
-fn test_with_case() {
+fn with_case() {
     let options = Options::default().with_case(Case::Upper);
     assert_eq!(options.case(), Case::Upper);
 }
 
 #[test]
-fn test_with_sort() {
+fn with_sort() {
     let options = Options::default().with_sort(Sort::Desc);
     assert_eq!(options.sort(), Sort::Desc);
 }
 
 #[test]
-fn test_with_serialization() {
+fn with_serialization() {
     let serialization = Serialization::Json;
     let options = Options::default().with_serialization(serialization);
     assert_eq!(options.serialization(), &Serialization::Json);
 }
 
 #[test]
-fn test_with_filters() {
+fn with_filters() {
     let filters = Filters::default();
     let options = Options::default().with_filters(filters);
     assert_eq!(options.filters().min_chars(), None);
 }
 
 #[test]
-fn test_with_performance() {
+fn with_performance() {
     let performance = Performance::default().with_threads(Threads::Count(4));
     let options = Options::default().with_performance(performance);
     assert_eq!(options.performance().threads().count(), 4);
 }
 
 #[test]
-fn test_with_field_delimiter() {
+fn with_field_delimiter() {
     let delimiters = Delimiters::default().with_field_delimiter("::");
     let options = Options::default().with_serialization(Serialization::Text(delimiters));
     assert_eq!(options.serialization().field_delimiter_display(), "\"::\"");
 }
 
 #[test]
-fn test_with_io() {
+fn with_io() {
     let options = Options::default().with_io(Io::ParallelMmap);
     assert_eq!(options.io(), Io::ParallelMmap);
 }
 
 #[test]
-fn test_with_threads() {
+fn with_threads() {
     let options =
         Options::default().with_performance(Performance::default().with_threads(Threads::Count(8)));
     assert_eq!(options.performance().threads().count(), 8);
 }
 
 #[test]
-fn test_with_uniqueness_ratio() {
+fn with_uniqueness_ratio() {
     let options =
         Options::default().with_performance(Performance::default().with_uniqueness_ratio(75));
     assert_eq!(options.performance().uniqueness_ratio(), 75);
 }
 
 #[test]
-fn test_with_words_per_kb() {
+fn with_words_per_kb() {
     let options =
         Options::default().with_performance(Performance::default().with_words_per_kb(120));
     assert_eq!(options.performance().words_per_kb(), 120);
 }
 
 #[test]
-fn test_with_chunk_size() {
+fn with_chunk_size() {
     let options = Options::default().with_performance(Performance::default().with_chunk_size(8192));
     assert_eq!(options.performance().chunk_size(), 8192);
 }
 
 #[test]
-fn test_getters() {
+fn getters() {
     let options = Options::default()
         .with_case(Case::Lower)
         .with_sort(Sort::Asc)
@@ -205,7 +205,7 @@ fn test_getters() {
 }
 
 #[test]
-fn test_builder_chaining() {
+fn builder_chaining() {
     let options = Options::default()
         .with_case(Case::Upper)
         .with_sort(Sort::Desc)
@@ -231,21 +231,21 @@ fn test_builder_chaining() {
 }
 
 #[test]
-fn test_as_ref_serialization() {
+fn as_ref_serialization() {
     let options = Options::default().with_serialization(Serialization::Csv);
     let serialization_ref: &Serialization = options.as_ref();
     assert_eq!(serialization_ref, &Serialization::Csv);
 }
 
 #[test]
-fn test_as_ref_filters() {
+fn as_ref_filters() {
     let options = Options::default();
     let filters_ref: &Filters = options.as_ref();
     assert_eq!(filters_ref.min_chars(), None);
 }
 
 #[test]
-fn test_as_ref_performance() {
+fn as_ref_performance() {
     let options =
         Options::default().with_performance(Performance::default().with_threads(Threads::Count(2)));
     let performance_ref: &Performance = options.as_ref();
@@ -253,7 +253,7 @@ fn test_as_ref_performance() {
 }
 
 #[test]
-fn test_options_serde_full() {
+fn options_serde_full() {
     let options = Options::default()
         .with_case(Case::Upper)
         .with_sort(Sort::Desc)

@@ -131,7 +131,7 @@ fn no_words() {
 }
 
 #[test]
-fn test_discard_words() {
+fn discard_words() {
     let input = "Hope is the thing with feathers that perches in the soul.";
     let mut cmd = word_tally();
     cmd.write_stdin(input)
@@ -330,7 +330,7 @@ fn stdin_with_file_as_sources() {
 }
 
 #[test]
-fn test_parallel_flags() {
+fn parallel_flags() {
     // Test default is parallel-stream
     word_tally()
         .write_stdin("test")

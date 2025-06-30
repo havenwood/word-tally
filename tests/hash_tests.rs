@@ -16,7 +16,7 @@ fn calculate_hash<T: Hash>(value: &T) -> u64 {
 }
 
 #[test]
-fn test_wordtally_hash() {
+fn wordtally_hash() {
     let hope_text = "Hope is the thing with";
     let base_options = Options::default().with_io(Io::ParallelBytes);
 
@@ -56,7 +56,7 @@ fn test_wordtally_hash() {
 }
 
 #[test]
-fn test_options_hash() {
+fn options_hash() {
     let lowercase_desc_alpha = Options::default()
         .with_case(Case::Lower)
         .with_sort(Sort::Desc);
@@ -101,7 +101,7 @@ fn test_options_hash() {
 }
 
 #[test]
-fn test_filters_hash() {
+fn filters_hash() {
     let three_chars_twice_alpha = Filters::default().with_min_chars(3).with_min_count(2);
 
     let three_chars_twice_beta = Filters::default().with_min_chars(3).with_min_count(2);
@@ -130,7 +130,7 @@ fn test_filters_hash() {
 }
 
 #[test]
-fn test_components_hash() {
+fn components_hash() {
     let lowercase_alpha = Case::Lower;
     let lowercase_beta = Case::Lower;
     let uppercase = Case::Upper;
@@ -173,7 +173,7 @@ fn test_components_hash() {
 }
 
 #[test]
-fn test_tally_hash() {
+fn tally_hash() {
     let hello_world_alpha: Tally = Box::new([("hello".into(), 5), ("world".into(), 3)]);
 
     let hello_world_beta: Tally = Box::new([("hello".into(), 5), ("world".into(), 3)]);
@@ -191,7 +191,7 @@ fn test_tally_hash() {
 }
 
 #[test]
-fn test_hash_collisions() {
+fn hash_collisions() {
     let lowercase_asc_text = Options::default()
         .with_io(Io::ParallelBytes)
         .with_case(Case::Lower)
@@ -225,7 +225,7 @@ fn test_hash_collisions() {
 }
 
 #[test]
-fn test_wordtally_includes_options_in_hash() {
+fn wordtally_includes_options_in_hash() {
     let success_text = "Success is counted sweetest";
 
     let lowercase_options = Options::default()
@@ -272,7 +272,7 @@ fn test_wordtally_includes_options_in_hash() {
 }
 
 #[test]
-fn test_wordtally_hash_fields() {
+fn wordtally_hash_fields() {
     let text = "The Brain is wider than";
     let options = Options::default().with_io(Io::ParallelBytes);
     let tally_map =
@@ -297,7 +297,7 @@ fn test_wordtally_hash_fields() {
 }
 
 #[test]
-fn test_equality_and_hashing() {
+fn equality_and_hashing() {
     fn assert_hash_eq(tally_a: &WordTally, tally_b: &WordTally) {
         assert_eq!(tally_a, tally_b);
     }

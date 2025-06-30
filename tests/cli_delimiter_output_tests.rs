@@ -7,7 +7,7 @@ fn word_tally() -> Command {
 }
 
 #[test]
-fn test_backslash_output_delimiter() {
+fn backslash_output_delimiter() {
     // Test that escaped backslash can be used as output delimiter
     let output = word_tally()
         .arg("--field-delimiter=\\\\")
@@ -30,7 +30,7 @@ fn test_backslash_output_delimiter() {
 }
 
 #[test]
-fn test_double_escaped_backslash_output_delimiter() {
+fn double_escaped_backslash_output_delimiter() {
     // Test four backslashes produces double backslash in output
     let output = word_tally()
         .arg("--field-delimiter=\\\\\\\\")
@@ -51,7 +51,7 @@ fn test_double_escaped_backslash_output_delimiter() {
 }
 
 #[test]
-fn test_single_backslash_delimiter_succeeds() {
+fn single_backslash_delimiter_succeeds() {
     // Test that single backslash is allowed as literal backslash
     let output = word_tally()
         .arg("--field-delimiter=\\")
@@ -68,7 +68,7 @@ fn test_single_backslash_delimiter_succeeds() {
 }
 
 #[test]
-fn test_backslash_in_input_is_not_word_boundary() {
+fn backslash_in_input_is_not_word_boundary() {
     // Verify that backslash in input is NOT treated as a word delimiter
     // word-tally uses Unicode word segmentation, not custom delimiters for input
     let output = word_tally()
@@ -95,7 +95,7 @@ fn test_backslash_in_input_is_not_word_boundary() {
 }
 
 #[test]
-fn test_backslash_delimiter_with_backslash_in_input() {
+fn backslash_delimiter_with_backslash_in_input() {
     // Test combining backslash in input with backslash output delimiter
     let output = word_tally()
         .arg("--field-delimiter=\\\\")
@@ -122,7 +122,7 @@ fn test_backslash_delimiter_with_backslash_in_input() {
 }
 
 #[test]
-fn test_various_escape_sequences_as_delimiters() {
+fn various_escape_sequences_as_delimiters() {
     // Test tab delimiter
     word_tally()
         .arg("--field-delimiter=\\t")
@@ -141,7 +141,7 @@ fn test_various_escape_sequences_as_delimiters() {
 }
 
 #[test]
-fn test_delimiter_only_affects_output_not_input() {
+fn delimiter_only_affects_output_not_input() {
     // Comprehensive test showing delimiter doesn't affect input parsing
     let input = "test1,test2;test3|test4\\test5:test6 test7\ttest8\ntest9";
 
@@ -198,7 +198,7 @@ fn test_delimiter_only_affects_output_not_input() {
 }
 
 #[test]
-fn test_custom_record_delimiter() {
+fn custom_record_delimiter() {
     // Test custom record delimiter (semicolon)
     word_tally()
         .arg("--entry-delimiter=;")
@@ -218,7 +218,7 @@ fn test_custom_record_delimiter() {
 }
 
 #[test]
-fn test_escaped_record_delimiter() {
+fn escaped_record_delimiter() {
     // Test escaped tab as record delimiter
     word_tally()
         .arg("--entry-delimiter=\\t")

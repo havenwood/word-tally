@@ -4,21 +4,21 @@ use hashbrown::HashSet;
 use word_tally::{ExcludeSet, IncludeSet};
 
 #[test]
-fn test_exclude_patterns_new() {
+fn exclude_patterns_new() {
     let patterns = ExcludeSet::new(vec!["test".to_string()]).expect("process test");
     assert_eq!(patterns.len(), 1);
     assert!(!patterns.is_empty());
 }
 
 #[test]
-fn test_exclude_patterns_empty() {
+fn exclude_patterns_empty() {
     let patterns = ExcludeSet::default();
     assert_eq!(patterns.len(), 0);
     assert!(patterns.is_empty());
 }
 
 #[test]
-fn test_exclude_patterns_matches() {
+fn exclude_patterns_matches() {
     let patterns =
         ExcludeSet::new(vec!["^test".to_string(), "ing$".to_string()]).expect("process test");
 
@@ -35,41 +35,41 @@ fn test_exclude_patterns_matches() {
 }
 
 #[test]
-fn test_exclude_patterns_as_patterns() {
+fn exclude_patterns_as_patterns() {
     let input = vec!["^pre".to_string(), "^un".to_string()];
     let patterns = ExcludeSet::new(input.clone()).expect("process test");
     assert_eq!(patterns.as_patterns(), input.as_slice());
 }
 
 #[test]
-fn test_exclude_patterns_try_from() {
+fn exclude_patterns_try_from() {
     let input = vec!["pattern1".to_string(), "pattern2".to_string()];
     let patterns = ExcludeSet::try_from(input.as_slice()).expect("process test");
     assert_eq!(patterns.len(), 2);
 }
 
 #[test]
-fn test_exclude_patterns_invalid_regex() {
+fn exclude_patterns_invalid_regex() {
     let result = ExcludeSet::new(vec!["[invalid".to_string()]);
     assert!(result.is_err());
 }
 
 #[test]
-fn test_include_patterns_new() {
+fn include_patterns_new() {
     let patterns = IncludeSet::new(vec!["test".to_string()]).expect("process test");
     assert_eq!(patterns.len(), 1);
     assert!(!patterns.is_empty());
 }
 
 #[test]
-fn test_include_patterns_empty() {
+fn include_patterns_empty() {
     let patterns = IncludeSet::default();
     assert_eq!(patterns.len(), 0);
     assert!(patterns.is_empty());
 }
 
 #[test]
-fn test_include_patterns_matches() {
+fn include_patterns_matches() {
     let patterns = IncludeSet::new(vec!["[aeiou]".to_string()]).expect("process test");
 
     let test_cases = [
@@ -85,7 +85,7 @@ fn test_include_patterns_matches() {
 }
 
 #[test]
-fn test_include_patterns_multiple() {
+fn include_patterns_multiple() {
     let patterns =
         IncludeSet::new(vec!["^pre".to_string(), "^un".to_string()]).expect("process test");
 
@@ -102,27 +102,27 @@ fn test_include_patterns_multiple() {
 }
 
 #[test]
-fn test_include_patterns_as_patterns() {
+fn include_patterns_as_patterns() {
     let input = vec!["test1".to_string(), "test2".to_string()];
     let patterns = IncludeSet::new(input.clone()).expect("process test");
     assert_eq!(patterns.as_patterns(), input.as_slice());
 }
 
 #[test]
-fn test_include_patterns_try_from() {
+fn include_patterns_try_from() {
     let input = vec!["^start".to_string(), "end$".to_string()];
     let patterns = IncludeSet::try_from(input.as_slice()).expect("process test");
     assert_eq!(patterns.len(), 2);
 }
 
 #[test]
-fn test_include_patterns_invalid_regex() {
+fn include_patterns_invalid_regex() {
     let result = IncludeSet::new(vec!["[invalid".to_string()]);
     assert!(result.is_err());
 }
 
 #[test]
-fn test_complex_regex_patterns() {
+fn complex_regex_patterns() {
     let patterns = ExcludeSet::new(vec![r"\btest\b".to_string()]).expect("process test");
     assert!(patterns.matches("test"));
     assert!(!patterns.matches("testing"));
@@ -138,7 +138,7 @@ fn test_complex_regex_patterns() {
 }
 
 #[test]
-fn test_exclude_patterns_as_ref() {
+fn exclude_patterns_as_ref() {
     let input = vec!["pattern".to_string()];
     let patterns = ExcludeSet::new(input.clone()).expect("process test");
     let as_ref: &[String] = patterns.as_ref();
@@ -146,7 +146,7 @@ fn test_exclude_patterns_as_ref() {
 }
 
 #[test]
-fn test_include_patterns_as_ref() {
+fn include_patterns_as_ref() {
     let input = vec!["pattern".to_string()];
     let patterns = IncludeSet::new(input.clone()).expect("process test");
     let as_ref: &[String] = patterns.as_ref();
@@ -154,7 +154,7 @@ fn test_include_patterns_as_ref() {
 }
 
 #[test]
-fn test_exclude_patterns_eq() {
+fn exclude_patterns_eq() {
     let patterns1 = ExcludeSet::new(vec!["test".to_string()]).expect("process test");
     let patterns2 = ExcludeSet::new(vec!["test".to_string()]).expect("process test");
     let patterns3 = ExcludeSet::new(vec!["other".to_string()]).expect("process test");
@@ -164,7 +164,7 @@ fn test_exclude_patterns_eq() {
 }
 
 #[test]
-fn test_include_patterns_eq() {
+fn include_patterns_eq() {
     let patterns1 = IncludeSet::new(vec!["test".to_string()]).expect("process test");
     let patterns2 = IncludeSet::new(vec!["test".to_string()]).expect("process test");
     let patterns3 = IncludeSet::new(vec!["other".to_string()]).expect("process test");
@@ -174,7 +174,7 @@ fn test_include_patterns_eq() {
 }
 
 #[test]
-fn test_exclude_patterns_ord() {
+fn exclude_patterns_ord() {
     let patterns1 = ExcludeSet::new(vec!["aaa".to_string()]).expect("process test");
     let patterns2 = ExcludeSet::new(vec!["bbb".to_string()]).expect("process test");
 
@@ -183,7 +183,7 @@ fn test_exclude_patterns_ord() {
 }
 
 #[test]
-fn test_include_patterns_ord() {
+fn include_patterns_ord() {
     let patterns1 = IncludeSet::new(vec!["aaa".to_string()]).expect("process test");
     let patterns2 = IncludeSet::new(vec!["bbb".to_string()]).expect("process test");
 
@@ -192,7 +192,7 @@ fn test_include_patterns_ord() {
 }
 
 #[test]
-fn test_exclude_patterns_hash() {
+fn exclude_patterns_hash() {
     let patterns1 = ExcludeSet::new(vec!["test".to_string()]).expect("process test");
     let patterns2 = ExcludeSet::new(vec!["test".to_string()]).expect("process test");
 
@@ -202,7 +202,7 @@ fn test_exclude_patterns_hash() {
 }
 
 #[test]
-fn test_include_patterns_hash() {
+fn include_patterns_hash() {
     let patterns1 = IncludeSet::new(vec!["test".to_string()]).expect("process test");
     let patterns2 = IncludeSet::new(vec!["test".to_string()]).expect("process test");
 
@@ -212,21 +212,21 @@ fn test_include_patterns_hash() {
 }
 
 #[test]
-fn test_exclude_patterns_display() {
+fn exclude_patterns_display() {
     let patterns = ExcludeSet::new(vec!["pattern1".to_string(), "pattern2".to_string()])
         .expect("process test");
     assert_eq!(patterns.to_string(), "pattern1,pattern2");
 }
 
 #[test]
-fn test_include_patterns_display() {
+fn include_patterns_display() {
     let patterns = IncludeSet::new(vec!["pattern1".to_string(), "pattern2".to_string()])
         .expect("process test");
     assert_eq!(patterns.to_string(), "pattern1,pattern2");
 }
 
 #[test]
-fn test_exclude_patterns_serde() {
+fn exclude_patterns_serde() {
     let patterns =
         ExcludeSet::new(vec!["test1".to_string(), "test2".to_string()]).expect("process test");
 
@@ -238,7 +238,7 @@ fn test_exclude_patterns_serde() {
 }
 
 #[test]
-fn test_include_patterns_serde() {
+fn include_patterns_serde() {
     let patterns =
         IncludeSet::new(vec!["test1".to_string(), "test2".to_string()]).expect("process test");
 
@@ -250,21 +250,21 @@ fn test_include_patterns_serde() {
 }
 
 #[test]
-fn test_exclude_patterns_deserialize_error() {
+fn exclude_patterns_deserialize_error() {
     let invalid = r#"["[invalid"]"#;
     let result: Result<ExcludeSet, _> = serde_json::from_str(invalid);
     assert!(result.is_err());
 }
 
 #[test]
-fn test_include_patterns_deserialize_error() {
+fn include_patterns_deserialize_error() {
     let invalid = r#"["[invalid"]"#;
     let result: Result<IncludeSet, _> = serde_json::from_str(invalid);
     assert!(result.is_err());
 }
 
 #[test]
-fn test_patterns_with_special_chars() {
+fn patterns_with_special_chars() {
     let patterns = ExcludeSet::new(vec![r"\$\d+".to_string()]).expect("process test");
     assert!(patterns.matches("$100"));
     assert!(!patterns.matches("100"));

@@ -8,7 +8,7 @@ use word_tally::{
 };
 
 #[test]
-fn test_display_implementations() {
+fn display_implementations() {
     // Test Io Display
     assert_eq!(format!("{}", Io::ParallelStream), "parallel-stream");
     assert_eq!(format!("{}", Io::ParallelInMemory), "parallel-in-memory");
@@ -36,7 +36,7 @@ fn test_display_implementations() {
 }
 
 #[test]
-fn test_newtype_conversions() {
+fn newtype_conversions() {
     // Test ExcludeWords conversions
     let words = vec!["a".to_string(), "the".to_string()];
     let exclude_words = ExcludeWords::from(words);
@@ -46,14 +46,14 @@ fn test_newtype_conversions() {
 }
 
 #[test]
-fn test_thread_conversions() {
+fn thread_conversions() {
     // Test From<u16> for Threads
     let threads: Threads = 8u16.into();
     assert_eq!(threads, Threads::Count(8));
 }
 
 #[test]
-fn test_ordering_traits() {
+fn ordering_traits() {
     let fmt1 = Serialization::default();
     let fmt2 = Serialization::Json;
     assert!(fmt1 < fmt2);
@@ -70,14 +70,14 @@ fn test_ordering_traits() {
 }
 
 #[test]
-fn test_pattern_ordering() {
+fn pattern_ordering() {
     let filters1 = word_tally::Filters::default();
     let filters2 = word_tally::Filters::default().with_min_chars(5);
     assert!(filters1 < filters2);
 }
 
 #[test]
-fn test_wordtally_deserialize() {
+fn wordtally_deserialize() {
     // Create a simple JSON representation of a WordTally
     let json = r#"{
         "tally": [["hello", 5], ["world", 3]],
@@ -107,7 +107,7 @@ fn test_wordtally_deserialize() {
 }
 
 #[test]
-fn test_pathbuf_as_ref() {
+fn pathbuf_as_ref() {
     // Test the AsRef pattern that was implemented for PathBuf
     let path = PathBuf::from("output.txt");
     let option_path = Some(path);
@@ -129,7 +129,7 @@ fn test_pathbuf_as_ref() {
 }
 
 #[test]
-fn test_input_display() {
+fn input_display() {
     // Create a temp file so the input can be created successfully
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     std::io::Write::write_all(&mut temp_file, b"test").expect("write test data");
@@ -143,7 +143,7 @@ fn test_input_display() {
 }
 
 #[test]
-fn test_const_format_fn() {
+fn const_format_fn() {
     let options = Options::default();
     let serialization = options.serialization();
     assert!(matches!(serialization, Serialization::Text { .. }));

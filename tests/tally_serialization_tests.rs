@@ -7,7 +7,7 @@ fn make_shared<T>(value: T) -> Arc<T> {
 }
 
 #[test]
-fn test_to_json() {
+fn to_json() {
     let input_text = b"wombat wombat bat";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -32,7 +32,7 @@ fn test_to_json() {
 }
 
 #[test]
-fn test_from_json() {
+fn from_json() {
     let input_text = b"wombat wombat bat";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -53,7 +53,7 @@ fn test_from_json() {
 }
 
 #[test]
-fn test_json_field_renamed() {
+fn json_field_renamed() {
     let input_text = b"test json field renaming";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -70,7 +70,7 @@ fn test_json_field_renamed() {
 }
 
 #[test]
-fn test_deserialization_with_serde() {
+fn deserialization_with_serde() {
     let input_text = b"wombat wombat bat";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -92,20 +92,20 @@ fn test_deserialization_with_serde() {
 }
 
 #[test]
-fn test_serialization_with_format() {
+fn serialization_with_format() {
     let format_only = Serialization::Json;
     assert_eq!(format_only, Serialization::Json);
 }
 
 #[test]
-fn test_serialization_with_field_delimiter() {
+fn serialization_with_field_delimiter() {
     let delimiters = Delimiters::default().with_field_delimiter("::");
     let serialization = Serialization::Text(delimiters);
     assert_eq!(serialization.field_delimiter_display(), "\"::\"");
 }
 
 #[test]
-fn test_deserialization_errors() {
+fn deserialization_errors() {
     let invalid_json = "this is not json";
     let result: Result<WordTally, _> = serde_json::from_str(invalid_json);
     assert!(result.is_err());
@@ -120,7 +120,7 @@ fn test_deserialization_errors() {
 }
 
 #[test]
-fn test_comprehensive_wordtally_serialization() {
+fn comprehensive_wordtally_serialization() {
     let content = b"apple banana apple cherry banana apple";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, content).expect("write test data");
@@ -147,7 +147,7 @@ fn test_comprehensive_wordtally_serialization() {
 }
 
 #[test]
-fn test_json_field_names() {
+fn json_field_names() {
     let content = b"test words for json";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, content).expect("write test data");
@@ -168,7 +168,7 @@ fn test_json_field_names() {
 }
 
 #[test]
-fn test_round_trip_serialization() {
+fn round_trip_serialization() {
     let content = b"one two three one two one";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, content).expect("write test data");

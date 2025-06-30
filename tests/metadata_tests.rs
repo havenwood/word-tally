@@ -5,7 +5,7 @@ use std::fs;
 use word_tally::{Buffered, FileType, Mapped, Metadata};
 
 #[test]
-fn test_buffered_file_type() {
+fn buffered_file_type() {
     let temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     let buffered = Buffered::try_from(temp_file.path()).expect("create buffered");
 
@@ -13,7 +13,7 @@ fn test_buffered_file_type() {
 }
 
 #[test]
-fn test_buffered_stdin_file_type() {
+fn buffered_stdin_file_type() {
     let stdin_buffered = Buffered::stdin();
 
     // On Unix, stdin might return a file type (e.g., CharacterDevice for terminal)
@@ -31,7 +31,7 @@ fn test_buffered_stdin_file_type() {
 }
 
 #[test]
-fn test_mapped_file_type() {
+fn mapped_file_type() {
     let temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     fs::write(temp_file.path(), b"test data").expect("write test data");
     let mapped = Mapped::try_from(temp_file.path()).expect("create mapped");
@@ -40,7 +40,7 @@ fn test_mapped_file_type() {
 }
 
 #[test]
-fn test_mapped_memory_file_type() {
+fn mapped_memory_file_type() {
     let bytes = b"test data";
     let mapped = Mapped::from(bytes.as_slice());
 
@@ -49,7 +49,7 @@ fn test_mapped_memory_file_type() {
 }
 
 #[test]
-fn test_mapped_directory_file_type() {
+fn mapped_directory_file_type() {
     let temp_dir = tempfile::tempdir().expect("create temp dir");
     let result = Mapped::try_from(temp_dir.path());
 
@@ -63,7 +63,7 @@ fn test_mapped_directory_file_type() {
 
 #[cfg(unix)]
 #[test]
-fn test_buffered_directory_file_type() {
+fn buffered_directory_file_type() {
     let temp_dir = tempfile::tempdir().expect("create temp dir");
     let buffered = Buffered::try_from(temp_dir.path()).expect("create buffered");
 
@@ -72,7 +72,7 @@ fn test_buffered_directory_file_type() {
 
 #[cfg(unix)]
 #[test]
-fn test_stdin_file_type_when_terminal() {
+fn stdin_file_type_when_terminal() {
     use std::io::IsTerminal;
 
     let stdin_buffered = Buffered::stdin();

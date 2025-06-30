@@ -18,7 +18,7 @@ fn has_word(tally: &TallyMap, word: &str) -> bool {
 }
 
 #[test]
-fn test_filters_new() {
+fn filters_new() {
     let min_chars = Some(3);
     let min_count = Some(2);
     let exclude_words = Some(vec!["the".to_string(), "and".to_string()]);
@@ -102,7 +102,7 @@ fn test_filters_new() {
 }
 
 #[test]
-fn test_filters_with_empty_patterns() {
+fn filters_with_empty_patterns() {
     let min_chars = Some(3);
     let min_count = Some(2);
     let exclude_words = Some(vec!["the".to_string(), "and".to_string()]);
@@ -126,7 +126,7 @@ fn test_filters_with_empty_patterns() {
 }
 
 #[test]
-fn test_serialization_with_patterns() {
+fn serialization_with_patterns() {
     use serde_json;
 
     let min_chars = Some(3);
@@ -178,7 +178,7 @@ fn test_serialization_with_patterns() {
 }
 
 #[test]
-fn test_multiple_regexp_patterns() {
+fn multiple_regexp_patterns() {
     let multiple_patterns = vec![
         r"^[aeiou].*".to_string(),
         r".*ing$".to_string(),
@@ -205,7 +205,7 @@ fn test_multiple_regexp_patterns() {
 }
 
 #[test]
-fn test_patterns_accessors() {
+fn patterns_accessors() {
     let exclude_patterns = vec![r"bad".to_string()];
     let include_patterns = vec![r"good".to_string()];
 
@@ -225,7 +225,7 @@ fn test_patterns_accessors() {
 }
 
 #[test]
-fn test_builder() {
+fn builder() {
     let min_chars = Some(4);
     let min_count = Some(3);
     let exclude_words = vec!["stop".to_string(), "the".to_string()];
@@ -240,7 +240,7 @@ fn test_builder() {
 }
 
 #[test]
-fn test_default() {
+fn default() {
     let filters = Filters::default();
 
     assert_eq!(filters.min_chars(), None);
@@ -249,7 +249,7 @@ fn test_default() {
 }
 
 #[test]
-fn test_pattern_serialization() {
+fn pattern_serialization() {
     use serde_json;
 
     let multi_patterns = vec![
@@ -272,7 +272,7 @@ fn test_pattern_serialization() {
 }
 
 #[test]
-fn test_filter_combination() {
+fn filter_combination() {
     let exclude_words = vec!["the".to_string(), "and".to_string()];
     let exclude_patterns = vec![r"\d+".to_string()];
     let include_patterns = vec![r"^test.*".to_string()];
@@ -304,7 +304,7 @@ fn test_filter_combination() {
 }
 
 #[test]
-fn test_invalid_include_patterns() {
+fn invalid_include_patterns() {
     use word_tally::PatternList;
 
     let invalid_pattern: PatternList = vec![r"[".to_string()];
@@ -313,7 +313,7 @@ fn test_invalid_include_patterns() {
 }
 
 #[test]
-fn test_case_sensitive_exclude_patterns() {
+fn case_sensitive_exclude_patterns() {
     let exclude_patterns = vec![r"Test".to_string()];
 
     let filters = Filters::default()
@@ -331,7 +331,7 @@ fn test_case_sensitive_exclude_patterns() {
 }
 
 #[test]
-fn test_min_chars_filter() {
+fn min_chars_filter() {
     let mut tally_map = tally_map_from_counts(&[("a", 5), ("ab", 4), ("abc", 3), ("abcd", 2)]);
 
     let filters = Filters::default().with_min_chars(3);
@@ -345,7 +345,7 @@ fn test_min_chars_filter() {
 }
 
 #[test]
-fn test_min_count_filter() {
+fn min_count_filter() {
     let mut tally_map =
         tally_map_from_counts(&[("hello", 5), ("world", 3), ("test", 2), ("example", 4)]);
 
@@ -360,7 +360,7 @@ fn test_min_count_filter() {
 }
 
 #[test]
-fn test_exclude_words_filter() {
+fn exclude_words_filter() {
     let mut tally_map =
         tally_map_from_counts(&[("the", 10), ("quick", 5), ("brown", 3), ("fox", 7)]);
 
@@ -376,7 +376,7 @@ fn test_exclude_words_filter() {
 }
 
 #[test]
-fn test_overlapping_patterns() {
+fn overlapping_patterns() {
     let mut tally_map =
         tally_map_from_counts(&[("good", 3), ("goodbye", 4), ("goodness", 5), ("great", 6)]);
 
@@ -390,7 +390,7 @@ fn test_overlapping_patterns() {
 }
 
 #[test]
-fn test_include_exclude_patterns_combination() {
+fn include_exclude_patterns_combination() {
     let mut tally_map = tally_map_from_counts(&[("good", 3), ("goodbye", 4), ("bad", 5)]);
 
     let filters = Filters::default()
@@ -406,7 +406,7 @@ fn test_include_exclude_patterns_combination() {
 }
 
 #[test]
-fn test_case_normalization_with_exclude_words() {
+fn case_normalization_with_exclude_words() {
     // Create a TallyMap with case-normalized words
     let mut tally_map = TallyMap::new();
     tally_map.add_words(
@@ -423,7 +423,7 @@ fn test_case_normalization_with_exclude_words() {
 }
 
 #[test]
-fn test_exclude_empty_patterns() {
+fn exclude_empty_patterns() {
     let empty_patterns: Vec<String> = vec![];
     let filters = Filters::default()
         .with_exclude_patterns(&empty_patterns)
@@ -433,7 +433,7 @@ fn test_exclude_empty_patterns() {
 }
 
 #[test]
-fn test_include_empty_patterns() {
+fn include_empty_patterns() {
     let empty_patterns: Vec<String> = vec![];
     let filters = Filters::default()
         .with_include_patterns(&empty_patterns)
@@ -443,7 +443,7 @@ fn test_include_empty_patterns() {
 }
 
 #[test]
-fn test_pattern_precedence() {
+fn pattern_precedence() {
     let mut tally_map =
         tally_map_from_counts(&[("test", 3), ("testing", 2), ("tester", 4), ("rest", 1)]);
 
@@ -463,7 +463,7 @@ fn test_pattern_precedence() {
 }
 
 #[test]
-fn test_complex_filter_combination() {
+fn complex_filter_combination() {
     let mut tally_map1 = tally_map_from_counts(&[
         ("hello", 5),
         ("world", 3),
@@ -498,7 +498,7 @@ fn test_complex_filter_combination() {
 }
 
 #[test]
-fn test_with_exclude_words() {
+fn with_exclude_words() {
     let words = vec!["the".to_string(), "and".to_string(), "is".to_string()];
 
     let filters = Filters::default().with_exclude_words(words);
@@ -513,14 +513,14 @@ fn test_with_exclude_words() {
 }
 
 #[test]
-fn test_display_exclude_words() {
+fn display_exclude_words() {
     let words = vec!["hello".to_string(), "world".to_string()];
     let exclude_words = ExcludeWords::from(words);
     assert_eq!(format!("{exclude_words}"), "hello,world");
 }
 
 #[test]
-fn test_filters_display() {
+fn filters_display() {
     let filters = Filters::default().with_min_chars(3).with_min_count(2);
 
     assert!(format!("{filters:?}").contains("min_chars: Some(3)"));

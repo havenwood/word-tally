@@ -10,41 +10,41 @@ use tempfile::NamedTempFile;
 use word_tally::Output;
 
 #[test]
-fn test_output_new_with_none() {
+fn output_new_with_none() {
     let _output = Output::new(None).expect("process test");
 }
 
 #[test]
-fn test_output_new_with_dash() {
+fn output_new_with_dash() {
     let path = PathBuf::from("-");
     let _output = Output::new(Some(path.as_path())).expect("process test");
 }
 
 #[test]
-fn test_output_new_with_file_path() {
+fn output_new_with_file_path() {
     let temp_file = NamedTempFile::new().expect("create temp file");
     let path = temp_file.path();
     let _output = Output::new(Some(path)).expect("process test");
 }
 
 #[test]
-fn test_output_stdout() {
+fn output_stdout() {
     let _output = Output::stdout();
 }
 
 #[test]
-fn test_output_stderr() {
+fn output_stderr() {
     let _output = Output::stderr();
 }
 
 #[test]
-fn test_output_file() {
+fn output_file() {
     let temp_file = NamedTempFile::new().expect("create temp file");
     let _output = Output::file(temp_file.path()).expect("process test");
 }
 
 #[test]
-fn test_output_write_bytes() {
+fn output_write_bytes() {
     let temp_file = NamedTempFile::new().expect("create temp file");
     let mut output = Output::file(temp_file.path()).expect("process test");
     output
@@ -57,12 +57,12 @@ fn test_output_write_bytes() {
 }
 
 #[test]
-fn test_output_default() {
+fn output_default() {
     let _output = Output::default();
 }
 
 #[test]
-fn test_output_write_trait() {
+fn output_write_trait() {
     let temp_file = NamedTempFile::new().expect("create temp file");
     let mut output = Output::file(temp_file.path()).expect("process test");
     output
@@ -75,7 +75,7 @@ fn test_output_write_trait() {
 }
 
 #[test]
-fn test_write_bytes_succeeds() {
+fn write_bytes_succeeds() {
     let temp_file = NamedTempFile::new().expect("create temp file");
     let mut output = Output::file(temp_file.path()).expect("process test");
 
@@ -99,7 +99,7 @@ fn test_write_bytes_succeeds() {
 }
 
 #[test]
-fn test_write_bytes_with_newlines() {
+fn write_bytes_with_newlines() {
     let temp_file = NamedTempFile::new().expect("create temp file");
     let mut output = Output::file(temp_file.path()).expect("process test");
 
@@ -121,7 +121,7 @@ fn test_write_bytes_with_newlines() {
 
 #[test]
 #[cfg(unix)]
-fn test_broken_pipe_simulation() {
+fn broken_pipe_simulation() {
     use std::{
         io::Write,
         process::{Command, Stdio},
@@ -147,7 +147,7 @@ fn test_broken_pipe_simulation() {
 }
 
 #[test]
-fn test_flush_can_fail() {
+fn flush_can_fail() {
     use std::io::{self, Write};
 
     struct FailingWriter {

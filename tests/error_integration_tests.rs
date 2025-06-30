@@ -10,7 +10,7 @@ use predicates::prelude::*;
 use tempfile::{NamedTempFile, TempDir};
 
 #[test]
-fn test_permission_denied_error() {
+fn permission_denied_error() {
     // Create a temporary directory for our test
     let temp_dir = TempDir::new().expect("process test");
     let output_path = temp_dir.path().join("test-output.txt");
@@ -59,7 +59,7 @@ fn test_permission_denied_error() {
 }
 
 #[test]
-fn test_nonexistent_path_error() {
+fn nonexistent_path_error() {
     // Create a path to a nonexistent directory
     let temp_dir = TempDir::new().expect("process test");
     let nonexistent_dir = temp_dir.path().join("does_not_exist");
@@ -83,7 +83,7 @@ fn test_nonexistent_path_error() {
 }
 
 #[test]
-fn test_input_file_not_found_error() {
+fn input_file_not_found_error() {
     let assert = Command::cargo_bin("word-tally")
         .expect("execute operation")
         .arg("/nonexistent/file.txt")
@@ -95,7 +95,7 @@ fn test_input_file_not_found_error() {
 }
 
 #[test]
-fn test_input_file_permission_denied_error() {
+fn input_file_permission_denied_error() {
     let temp_dir = TempDir::new().expect("process test");
     let file_path = temp_dir.path().join("no_read_permission.txt");
 
@@ -134,7 +134,7 @@ fn test_input_file_permission_denied_error() {
 }
 
 #[test]
-fn test_new_invalid_utf8_error() {
+fn new_invalid_utf8_error() {
     let mut file = NamedTempFile::new().expect("create temp file");
     // Write invalid UTF-8 sequence
     file.write_all(&[0xFF, 0xFE, 0xFD])

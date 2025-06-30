@@ -1,7 +1,7 @@
 use word_tally::Threads;
 
 #[test]
-fn test_threads_count() {
+fn threads_count() {
     // Test Count variant
     let threads_4 = Threads::Count(4);
     assert_eq!(threads_4.count(), 4);
@@ -22,13 +22,13 @@ fn test_threads_count() {
 }
 
 #[test]
-fn test_threads_default() {
+fn threads_default() {
     let default_threads = Threads::default();
     assert_eq!(default_threads, Threads::All);
 }
 
 #[test]
-fn test_threads_init_pool() {
+fn threads_init_pool() {
     // The global thread pool can only be initialized once across all tests
     // So we test that the function exists and returns ok for reasonable inputs
     // Note: Some tests may have already initialized the pool
@@ -48,14 +48,14 @@ fn test_threads_init_pool() {
 }
 
 #[test]
-fn test_threads_from_u16() {
+fn threads_from_u16() {
     let threads: Threads = 6u16.into();
     assert_eq!(threads, Threads::Count(6));
     assert_eq!(threads.count(), 6);
 }
 
 #[test]
-fn test_threads_display() {
+fn threads_display() {
     let threads_3 = Threads::Count(3);
     assert_eq!(format!("{threads_3}"), "3");
 
@@ -65,7 +65,7 @@ fn test_threads_display() {
 }
 
 #[test]
-fn test_threads_edge_cases() {
+fn threads_edge_cases() {
     // Test with 1 thread
     let threads_1 = Threads::Count(1);
     assert_eq!(threads_1.count(), 1);
@@ -79,7 +79,7 @@ fn test_threads_edge_cases() {
 }
 
 #[test]
-fn test_threads_traits() {
+fn threads_traits() {
     let threads_a = Threads::Count(4);
     let threads_b = Threads::Count(4);
     let threads_c = Threads::Count(8);
@@ -100,7 +100,7 @@ fn test_threads_traits() {
 }
 
 #[test]
-fn test_threads_serialization() {
+fn threads_serialization() {
     // Test serialization
     let threads = Threads::Count(4);
     let json = serde_json::to_string(&threads).expect("serialize JSON");

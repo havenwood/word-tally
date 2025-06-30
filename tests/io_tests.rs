@@ -37,7 +37,7 @@ fn verify_tally(tally: &WordTally) {
 }
 
 #[test]
-fn test_parallel_stream_sequential() {
+fn parallel_stream_sequential() {
     let options = make_options(Io::ParallelStream);
 
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
@@ -52,7 +52,7 @@ fn test_parallel_stream_sequential() {
 }
 
 #[test]
-fn test_parallel_stream_parallel() {
+fn parallel_stream_parallel() {
     let options = make_options(Io::ParallelStream);
 
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
@@ -67,7 +67,7 @@ fn test_parallel_stream_parallel() {
 }
 
 #[test]
-fn test_parallel_in_memory_sequential() {
+fn parallel_in_memory_sequential() {
     let options = make_options(Io::ParallelInMemory);
 
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
@@ -82,7 +82,7 @@ fn test_parallel_in_memory_sequential() {
 }
 
 #[test]
-fn test_parallel_in_memory_parallel() {
+fn parallel_in_memory_parallel() {
     let options = make_options(Io::ParallelInMemory);
 
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
@@ -97,7 +97,7 @@ fn test_parallel_in_memory_parallel() {
 }
 
 #[test]
-fn test_new_with_io_combinations() -> anyhow::Result<()> {
+fn new_with_io_combinations() -> anyhow::Result<()> {
     let mut temp_file = tempfile::NamedTempFile::new()?;
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes())?;
     let file_path = temp_file.path();
@@ -145,7 +145,7 @@ Nullam efficitur, mi at dapibus tincidunt, risus orci vulputate lacus, et vehicu
 ";
 
 #[test]
-fn test_parallel_processing_with_large_text() {
+fn parallel_processing_with_large_text() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, LARGE_TEST_TEXT.as_bytes()).expect("process test");
     let file_path = temp_file.path().to_str().expect("temp file path");
@@ -174,7 +174,7 @@ fn test_parallel_processing_with_large_text() {
 }
 
 #[test]
-fn test_parallel_mmap_with_real_file() {
+fn parallel_mmap_with_real_file() {
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, TEST_TEXT.as_bytes()).expect("process test");
     let file_path = temp_file.path().to_str().expect("temp file path");
@@ -187,7 +187,7 @@ fn test_parallel_mmap_with_real_file() {
 }
 
 #[test]
-fn test_read_trait_with_all_io_strategies() {
+fn read_trait_with_all_io_strategies() {
     let temp_dir = tempfile::tempdir().expect("process test");
     let file_path = temp_dir.path().join("test_io.txt");
     fs::write(&file_path, TEST_TEXT).expect("process test");
@@ -214,7 +214,7 @@ fn test_read_trait_with_all_io_strategies() {
 }
 
 #[test]
-fn test_bytes_input() {
+fn bytes_input() {
     let options = make_options(Io::ParallelBytes);
     let tally_map =
         TallyMap::from_bytes(TEST_TEXT.as_bytes().to_vec(), &options).expect("create tally map");
@@ -223,14 +223,14 @@ fn test_bytes_input() {
 }
 
 #[test]
-fn test_bytes_io_with_input_new() {
+fn bytes_io_with_input_new() {
     // ParallelBytes is used with Mapped::from() for bytes
     let bytes_mapped = Mapped::from(TEST_TEXT.as_bytes());
     assert!(matches!(bytes_mapped, Mapped::Memory { .. }));
 }
 
 #[test]
-fn test_nonexistent_file_handling() {
+fn nonexistent_file_handling() {
     use std::{fs::File, path::PathBuf};
 
     let path = PathBuf::from("/nonexistent/file/path");
@@ -239,7 +239,7 @@ fn test_nonexistent_file_handling() {
 }
 
 #[test]
-fn test_utf8_boundary_handling() {
+fn utf8_boundary_handling() {
     let test_text = "æ æ æ æ";
 
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
@@ -271,12 +271,12 @@ fn test_utf8_boundary_handling() {
 //
 
 #[test]
-fn test_io_default() {
+fn io_default() {
     assert_eq!(Io::default(), Io::Auto);
 }
 
 #[test]
-fn test_io_display_all_variants() {
+fn io_display_all_variants() {
     assert_eq!(Io::Auto.to_string(), "auto");
     assert_eq!(Io::Stream.to_string(), "stream");
     assert_eq!(Io::ParallelStream.to_string(), "parallel-stream");
@@ -286,7 +286,7 @@ fn test_io_display_all_variants() {
 }
 
 #[test]
-fn test_io_traits_partial_eq() {
+fn io_traits_partial_eq() {
     assert_eq!(Io::ParallelStream, Io::ParallelStream);
     assert_ne!(Io::ParallelStream, Io::ParallelInMemory);
     assert_ne!(Io::ParallelInMemory, Io::ParallelMmap);
@@ -294,7 +294,7 @@ fn test_io_traits_partial_eq() {
 }
 
 #[test]
-fn test_io_traits_ordering() {
+fn io_traits_ordering() {
     // Test PartialOrd and Ord (based on enum declaration order)
     assert!(Io::Auto < Io::ParallelBytes);
     assert!(Io::ParallelBytes < Io::ParallelMmap);
@@ -309,7 +309,7 @@ fn test_io_traits_ordering() {
 }
 
 #[test]
-fn test_io_traits_hash() {
+fn io_traits_hash() {
     use std::{
         collections::hash_map::DefaultHasher,
         hash::{Hash, Hasher},
@@ -335,7 +335,7 @@ fn test_io_traits_hash() {
 }
 
 #[test]
-fn test_io_traits_clone_copy() {
+fn io_traits_clone_copy() {
     let io1 = Io::ParallelMmap;
     let io2 = io1; // Copy trait
     let io3 = io1; // Clone trait
@@ -346,7 +346,7 @@ fn test_io_traits_clone_copy() {
 }
 
 #[test]
-fn test_io_serialization() {
+fn io_serialization() {
     // Test Serialize
     let io = Io::ParallelMmap;
     let serialized = serde_json::to_string(&io).expect("serialize JSON");
@@ -364,7 +364,7 @@ fn test_io_serialization() {
 }
 
 #[test]
-fn test_parse_io_from_str_value() {
+fn parse_io_from_str_value() {
     // Test with no value (should return default)
     assert_eq!(Io::from_str_value(None), Io::default());
 
@@ -390,7 +390,7 @@ fn test_parse_io_from_str_value() {
 }
 
 #[test]
-fn test_io_from_str_trait() {
+fn io_from_str_trait() {
     // Test valid values
     assert_eq!(Io::from_str("auto"), Ok(Io::Auto));
     assert_eq!(Io::from_str("AUTO"), Ok(Io::Auto));
@@ -419,12 +419,12 @@ fn test_io_from_str_trait() {
 }
 
 #[test]
-fn test_env_io_constant() {
+fn env_io_constant() {
     assert_eq!(Io::ENV_IO, "WORD_TALLY_IO");
 }
 
 #[test]
-fn test_auto_mode_resolution() {
+fn auto_mode_resolution() {
     use word_tally::FileType;
 
     // Test Auto mode resolves to appropriate strategies
@@ -453,7 +453,7 @@ fn test_auto_mode_resolution() {
 }
 
 #[test]
-fn test_io_exhaustive_matching() {
+fn io_exhaustive_matching() {
     // This test ensures all variants are covered
     let test_io = |io: Io| match io {
         Io::Auto => "auto",
@@ -473,7 +473,7 @@ fn test_io_exhaustive_matching() {
 }
 
 #[test]
-fn test_io_debug_format() {
+fn io_debug_format() {
     // Test Debug trait
     assert_eq!(format!("{:?}", Io::ParallelStream), "ParallelStream");
     assert_eq!(format!("{:?}", Io::ParallelInMemory), "ParallelInMemory");
@@ -513,7 +513,7 @@ fn create_test_file_with_size(dir: &TempDir, size_mb: usize) -> anyhow::Result<S
 }
 
 #[test]
-fn test_streaming_processes_entire_file() -> anyhow::Result<()> {
+fn streaming_processes_entire_file() -> anyhow::Result<()> {
     let temp_dir = TempDir::new()?;
 
     // Create a 5MB file - larger than typical batch size
@@ -555,7 +555,7 @@ fn test_streaming_processes_entire_file() -> anyhow::Result<()> {
 }
 
 #[test]
-fn test_streaming_consistency_across_io_modes() -> anyhow::Result<()> {
+fn streaming_consistency_across_io_modes() -> anyhow::Result<()> {
     let temp_dir = TempDir::new()?;
     let file_path = create_test_file_with_size(&temp_dir, 2)?; // 2MB file
 
@@ -610,7 +610,7 @@ fn test_streaming_consistency_across_io_modes() -> anyhow::Result<()> {
 }
 
 #[test]
-fn test_auto_mode_selects_mmap_for_files() {
+fn auto_mode_selects_mmap_for_files() {
     let options = make_options(Io::Auto);
 
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");

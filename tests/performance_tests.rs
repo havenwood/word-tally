@@ -6,25 +6,25 @@ use std::{
 use word_tally::{Performance, Threads};
 
 #[test]
-fn test_constants() {
+fn constants() {
     assert_eq!(Performance::base_stdin_tally_capacity(), 1024);
 }
 
 #[test]
-fn test_with_base_stdin_size() {
+fn with_base_stdin_size() {
     let perf = Performance::default().with_base_stdin_size(512 * 1024);
     assert_eq!(perf.base_stdin_size(), 512 * 1024);
 }
 
 #[test]
-fn test_clone() {
+fn clone() {
     let perf1 = Performance::default().with_chunk_size(32768);
     let perf2 = perf1;
     assert_eq!(perf1, perf2);
 }
 
 #[test]
-fn test_partial_eq() {
+fn partial_eq() {
     let perf1 = Performance::default();
     let perf2 = Performance::default();
     assert_eq!(perf1, perf2);
@@ -34,14 +34,14 @@ fn test_partial_eq() {
 }
 
 #[test]
-fn test_ord() {
+fn ord() {
     let perf1 = Performance::default().with_uniqueness_ratio(5);
     let perf2 = Performance::default().with_uniqueness_ratio(10);
     assert!(perf1 < perf2);
 }
 
 #[test]
-fn test_hash() {
+fn hash() {
     let perf1 = Performance::default();
     let perf2 = Performance::default();
 
@@ -55,7 +55,7 @@ fn test_hash() {
 }
 
 #[test]
-fn test_serde() {
+fn serde() {
     let perf = Performance::default().with_chunk_size(32768);
 
     let json = serde_json::to_string(&perf).expect("serialize JSON");
@@ -65,7 +65,7 @@ fn test_serde() {
 }
 
 #[test]
-fn test_environment_logic() {
+fn environment_logic() {
     let perf = Performance::from_env();
 
     // Should get defaults when no env vars are set

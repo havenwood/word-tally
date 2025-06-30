@@ -16,28 +16,28 @@ fn make_tally(words: &[(&str, usize)]) -> TallyMap {
 }
 
 #[test]
-fn test_new() {
+fn new() {
     let tally = TallyMap::new();
     assert!(tally.is_empty());
     assert_eq!(tally.len(), 0);
 }
 
 #[test]
-fn test_with_capacity() {
+fn with_capacity() {
     let tally = TallyMap::with_capacity(100);
     assert!(tally.is_empty());
     assert_eq!(tally.len(), 0);
 }
 
 #[test]
-fn test_reserve() {
+fn reserve() {
     let mut tally = TallyMap::new();
     tally.reserve(50);
     assert!(tally.is_empty());
 }
 
 #[test]
-fn test_is_empty() {
+fn is_empty() {
     let mut tally = TallyMap::new();
     assert!(tally.is_empty());
 
@@ -46,7 +46,7 @@ fn test_is_empty() {
 }
 
 #[test]
-fn test_len() {
+fn len() {
     let mut tally = TallyMap::new();
     assert_eq!(tally.len(), 0);
 
@@ -61,7 +61,7 @@ fn test_len() {
 }
 
 #[test]
-fn test_values() {
+fn values() {
     let tally = make_tally(&[("hello", 3), ("world", 1)]);
     let values: Vec<&usize> = tally.values().collect();
     assert_eq!(values.len(), 2);
@@ -70,7 +70,7 @@ fn test_values() {
 }
 
 #[test]
-fn test_retain() {
+fn retain() {
     let mut tally = make_tally(&[("a", 1), ("ab", 2), ("abc", 3), ("abcd", 4)]);
     tally.retain(|word, _| word.len() >= 3);
     assert_eq!(tally.len(), 2);
@@ -81,7 +81,7 @@ fn test_retain() {
 }
 
 #[test]
-fn test_into_tally() {
+fn into_tally() {
     let tally = make_tally(&[("hello", 3), ("world", 1)]);
     let result: Box<[(Box<str>, usize)]> = tally.into_iter().collect();
     assert_eq!(result.len(), 2);
@@ -93,7 +93,7 @@ fn test_into_tally() {
 }
 
 #[test]
-fn test_add_words_original_case() {
+fn add_words_original_case() {
     let mut tally = TallyMap::new();
     tally.add_words("Hello WORLD hello", Case::Original);
     assert_eq!(tally.len(), 3);
@@ -105,7 +105,7 @@ fn test_add_words_original_case() {
 }
 
 #[test]
-fn test_add_words_lower_case() {
+fn add_words_lower_case() {
     let mut tally = TallyMap::new();
     tally.add_words("Hello WORLD hello", Case::Lower);
     assert_eq!(tally.len(), 2);
@@ -126,7 +126,7 @@ fn test_add_words_lower_case() {
 }
 
 #[test]
-fn test_add_words_upper_case() {
+fn add_words_upper_case() {
     let mut tally = TallyMap::new();
     tally.add_words("Hello WORLD hello", Case::Upper);
     assert_eq!(tally.len(), 2);
@@ -147,7 +147,7 @@ fn test_add_words_upper_case() {
 }
 
 #[test]
-fn test_into_iterator() {
+fn into_iterator() {
     let tally = make_tally(&[("hello", 3), ("world", 1)]);
     let mut count = 0;
     for (word, cnt) in tally {
@@ -159,7 +159,7 @@ fn test_into_iterator() {
 }
 
 #[test]
-fn test_from_iterator() {
+fn from_iterator() {
     let items: Vec<(Word, Count)> = vec![("hello".into(), 3), ("world".into(), 1)];
 
     let tally: TallyMap = items.into_iter().collect();
@@ -174,7 +174,7 @@ fn test_from_iterator() {
 }
 
 #[test]
-fn test_from_mapped_with_parallel_bytes() {
+fn from_mapped_with_parallel_bytes() {
     let content = b"I celebrate myself and sing myself";
     let view = Mapped::from(&content[..]);
     let options = Options::default().with_io(Io::ParallelBytes);
@@ -187,7 +187,7 @@ fn test_from_mapped_with_parallel_bytes() {
 }
 
 #[test]
-fn test_from_mapped_with_parallel_in_memory() {
+fn from_mapped_with_parallel_in_memory() {
     let content = b"I celebrate myself and sing myself";
     let view = Mapped::from(&content[..]);
     let options = Options::default().with_io(Io::ParallelInMemory);
@@ -200,14 +200,14 @@ fn test_from_mapped_with_parallel_in_memory() {
 }
 
 #[test]
-fn test_default() {
+fn default() {
     let tally = TallyMap::default();
     assert!(tally.is_empty());
     assert_eq!(tally.len(), 0);
 }
 
 #[test]
-fn test_clone() {
+fn clone() {
     let tally1 = make_tally(&[("hello", 3), ("world", 1)]);
     // Test requires clone to verify original isn't consumed
     #[allow(clippy::redundant_clone)]
@@ -218,7 +218,7 @@ fn test_clone() {
 }
 
 #[test]
-fn test_debug() {
+fn debug() {
     let tally = make_tally(&[("hello", 3)]);
     let debug_str = format!("{tally:?}");
     assert!(debug_str.contains("TallyMap"));
@@ -226,7 +226,7 @@ fn test_debug() {
 }
 
 #[test]
-fn test_partial_eq() {
+fn partial_eq() {
     let tally1 = make_tally(&[("hello", 3), ("world", 1)]);
     let tally2 = make_tally(&[("hello", 3), ("world", 1)]);
     let tally3 = make_tally(&[("hello", 2), ("world", 1)]);
@@ -236,7 +236,7 @@ fn test_partial_eq() {
 }
 
 #[test]
-fn test_deref_contains_key() {
+fn deref_contains_key() {
     let mut tally = TallyMap::new();
     tally.add_words("rust", Case::default());
 
@@ -245,7 +245,7 @@ fn test_deref_contains_key() {
 }
 
 #[test]
-fn test_deref_get() {
+fn deref_get() {
     let mut tally = TallyMap::new();
     tally.add_words("hello world hello", Case::default());
 
@@ -255,7 +255,7 @@ fn test_deref_get() {
 }
 
 #[test]
-fn test_deref_keys() {
+fn deref_keys() {
     let mut tally = TallyMap::new();
     tally.add_words("apple banana", Case::default());
 
@@ -265,7 +265,7 @@ fn test_deref_keys() {
 }
 
 #[test]
-fn test_deref_iter() {
+fn deref_iter() {
     let mut tally = TallyMap::new();
     tally.add_words("x y y", Case::default());
 
@@ -279,13 +279,13 @@ fn test_deref_iter() {
 }
 
 #[test]
-fn test_deref_capacity() {
+fn deref_capacity() {
     let tally = TallyMap::with_capacity(100);
     assert!(tally.capacity() >= 100);
 }
 
 #[test]
-fn test_deref_clear() {
+fn deref_clear() {
     let mut tally = make_tally(&[("hello", 3), ("world", 1)]);
 
     assert_eq!(tally.len(), 2);
@@ -295,7 +295,7 @@ fn test_deref_clear() {
 }
 
 #[test]
-fn test_deref_shrink_to_fit() {
+fn deref_shrink_to_fit() {
     let mut tally = TallyMap::with_capacity(100);
     tally.add_words("only_one", Case::default());
 
@@ -307,7 +307,7 @@ fn test_deref_shrink_to_fit() {
 }
 
 #[test]
-fn test_deref_entry() {
+fn deref_entry() {
     let mut tally = TallyMap::new();
 
     // Test entry API is accessible through Deref

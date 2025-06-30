@@ -7,7 +7,7 @@ fn make_shared<T>(value: T) -> Arc<T> {
 }
 
 #[test]
-fn test_excluding_words() {
+fn excluding_words() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -39,7 +39,7 @@ fn test_excluding_words() {
 }
 
 #[test]
-fn test_excluding_patterns() {
+fn excluding_patterns() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -82,7 +82,7 @@ fn test_excluding_patterns() {
 }
 
 #[test]
-fn test_including_patterns() {
+fn including_patterns() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -125,7 +125,7 @@ fn test_including_patterns() {
 }
 
 #[test]
-fn test_combining_include_exclude_patterns() {
+fn combining_include_exclude_patterns() {
     let input_text = "The tree that would grow to heaven must send its roots to hell.".as_bytes();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -166,7 +166,7 @@ fn test_combining_include_exclude_patterns() {
 }
 
 #[test]
-fn test_min_count_graphemes() {
+fn min_count_graphemes() {
     let input_text = b"e\xCC\x81"; // An `"é"` is only one char
 
     let filters = Filters::default().with_min_chars(2);

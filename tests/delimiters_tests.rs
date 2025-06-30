@@ -3,7 +3,7 @@
 use word_tally::options::delimiters::Delimiters;
 
 #[test]
-fn test_delimiters_new() {
+fn delimiters_new() {
     let delimiters = Delimiters::new(" ", "\n");
     assert_eq!(delimiters.field(), " ");
     assert_eq!(delimiters.entry(), "\n");
@@ -20,34 +20,34 @@ fn test_delimiters_new() {
 }
 
 #[test]
-fn test_delimiters_default() {
+fn delimiters_default() {
     let delimiters = Delimiters::default();
     assert_eq!(delimiters.field(), Delimiters::DEFAULT_FIELD);
     assert_eq!(delimiters.entry(), Delimiters::DEFAULT_ENTRY);
 }
 
 #[test]
-fn test_delimiters_constants() {
+fn delimiters_constants() {
     assert_eq!(Delimiters::DEFAULT_FIELD, " ");
     assert_eq!(Delimiters::DEFAULT_ENTRY, "\n");
 }
 
 #[test]
-fn test_delimiters_with_field_delimiter() {
+fn delimiters_with_field_delimiter() {
     let delimiters = Delimiters::default().with_field_delimiter("::");
     assert_eq!(delimiters.field(), "::");
     assert_eq!(delimiters.entry(), "\n");
 }
 
 #[test]
-fn test_delimiters_with_entry_delimiter() {
+fn delimiters_with_entry_delimiter() {
     let delimiters = Delimiters::default().with_entry_delimiter(";;");
     assert_eq!(delimiters.field(), " ");
     assert_eq!(delimiters.entry(), ";;");
 }
 
 #[test]
-fn test_delimiters_with_literal_delimiters() {
+fn delimiters_with_literal_delimiters() {
     let delimiters = Delimiters::default()
         .with_field_delimiter("\t")
         .with_entry_delimiter("\r\n");
@@ -56,7 +56,7 @@ fn test_delimiters_with_literal_delimiters() {
 }
 
 #[test]
-fn test_delimiters_chaining() {
+fn delimiters_chaining() {
     let delimiters = Delimiters::default()
         .with_field_delimiter("first")
         .with_entry_delimiter("second")
@@ -66,7 +66,7 @@ fn test_delimiters_chaining() {
 }
 
 #[test]
-fn test_delimiters_field_display() {
+fn delimiters_field_display() {
     let delimiters = Delimiters::default().with_field_delimiter("\t");
     assert_eq!(delimiters.field_display(), "\"\\t\"");
 
@@ -75,7 +75,7 @@ fn test_delimiters_field_display() {
 }
 
 #[test]
-fn test_delimiters_entry_display() {
+fn delimiters_entry_display() {
     let delimiters = Delimiters::default().with_entry_delimiter("\n");
     assert_eq!(delimiters.entry_display(), "\"\\n\"");
 
@@ -84,7 +84,7 @@ fn test_delimiters_entry_display() {
 }
 
 #[test]
-fn test_delimiters_display() {
+fn delimiters_display() {
     let delimiters = Delimiters::default();
     assert_eq!(format!("{delimiters}"), "field=\" \", entry=\"\\n\"");
 
@@ -97,7 +97,7 @@ fn test_delimiters_display() {
 #[test]
 #[allow(clippy::redundant_clone)]
 // We're specifically testing clone functionality
-fn test_delimiters_clone() {
+fn delimiters_clone() {
     let delimiters1 = Delimiters::default()
         .with_field_delimiter("::")
         .with_entry_delimiter("||");
@@ -107,7 +107,7 @@ fn test_delimiters_clone() {
 }
 
 #[test]
-fn test_delimiters_equality() {
+fn delimiters_equality() {
     let delimiters1 = Delimiters::default().with_field_delimiter("::");
     let delimiters2 = Delimiters::default().with_field_delimiter("::");
     let delimiters3 = Delimiters::default().with_field_delimiter("||");
@@ -117,7 +117,7 @@ fn test_delimiters_equality() {
 }
 
 #[test]
-fn test_delimiters_serialization() {
+fn delimiters_serialization() {
     let delimiters = Delimiters::default()
         .with_field_delimiter("\t")
         .with_entry_delimiter("\r\n");
@@ -132,7 +132,7 @@ fn test_delimiters_serialization() {
 }
 
 #[test]
-fn test_delimiters_hash() {
+fn delimiters_hash() {
     use std::{
         collections::hash_map::DefaultHasher,
         hash::{Hash, Hasher},
@@ -153,7 +153,7 @@ fn test_delimiters_hash() {
 }
 
 #[test]
-fn test_delimiters_ord() {
+fn delimiters_ord() {
     let delimiters1 = Delimiters::default().with_field_delimiter("a");
     let delimiters2 = Delimiters::default().with_field_delimiter("b");
 
@@ -162,7 +162,7 @@ fn test_delimiters_ord() {
 }
 
 #[test]
-fn test_delimiters_empty_delimiters() {
+fn delimiters_empty_delimiters() {
     let delimiters = Delimiters::default()
         .with_field_delimiter("")
         .with_entry_delimiter("");
@@ -173,7 +173,7 @@ fn test_delimiters_empty_delimiters() {
 }
 
 #[test]
-fn test_delimiters_unicode() {
+fn delimiters_unicode() {
     let delimiters = Delimiters::default()
         .with_field_delimiter("→")
         .with_entry_delimiter("❯");
@@ -182,7 +182,7 @@ fn test_delimiters_unicode() {
 }
 
 #[test]
-fn test_delimiters_preserves_literal_backslash() {
+fn delimiters_preserves_literal_backslash() {
     let delimiters = Delimiters::default()
         .with_field_delimiter("\\")
         .with_entry_delimiter("\\\\");
@@ -191,7 +191,7 @@ fn test_delimiters_preserves_literal_backslash() {
 }
 
 #[test]
-fn test_delimiters_debug() {
+fn delimiters_debug() {
     let delimiters = Delimiters::default()
         .with_field_delimiter("::")
         .with_entry_delimiter("||");
@@ -202,7 +202,7 @@ fn test_delimiters_debug() {
 }
 
 #[test]
-fn test_delimiters_serde_field_names() {
+fn delimiters_serde_field_names() {
     let delimiters = Delimiters::default()
         .with_field_delimiter("::")
         .with_entry_delimiter("||");

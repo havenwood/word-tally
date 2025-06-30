@@ -221,7 +221,7 @@ fn create_test_tally_with_text(input_text: &[u8], sort: Sort) -> WordTally {
 }
 
 #[test]
-fn test_sort_mutates_tally() {
+fn sort_mutates_tally() {
     let input_text = b"revery circuit narrow revery circuit revery narrow narrow narrow narrow";
 
     // Test ascending sort
@@ -250,7 +250,7 @@ fn test_sort_mutates_tally() {
 }
 
 #[test]
-fn test_tally_with_punctuation() {
+fn tally_with_punctuation() {
     let input_text = b"Hello, world! Hello world. World? World!";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 
@@ -269,7 +269,7 @@ fn test_tally_with_punctuation() {
 }
 
 #[test]
-fn test_large_input() {
+fn large_input() {
     let mut input = Vec::new();
     let words = ["Eternity", "Immortal", "Beyond", "Forever", "Infinite"];
     for i in 0..1000 {
@@ -289,7 +289,7 @@ fn test_large_input() {
 }
 
 #[test]
-fn test_edge_case_empty() {
+fn edge_case_empty() {
     let input_text = b"";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 
@@ -299,7 +299,7 @@ fn test_edge_case_empty() {
 }
 
 #[test]
-fn test_edge_case_only_whitespace() {
+fn edge_case_only_whitespace() {
     let input_text = b"    \n\t\r\n  ";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 
@@ -309,7 +309,7 @@ fn test_edge_case_only_whitespace() {
 }
 
 #[test]
-fn test_edge_case_single_word() {
+fn edge_case_single_word() {
     let input_text = b"Nobody";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 
@@ -321,7 +321,7 @@ fn test_edge_case_single_word() {
 }
 
 #[test]
-fn test_numeric_sorting() {
+fn numeric_sorting() {
     let input_text = b"10 100 20 30 200 1 2 3 11";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 
@@ -347,7 +347,7 @@ fn test_numeric_sorting() {
 }
 
 #[test]
-fn test_null_bytes() {
+fn null_bytes() {
     let input_text = b"word1\0word2\0word3";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 
@@ -359,7 +359,7 @@ fn test_null_bytes() {
 }
 
 #[test]
-fn test_mixed_line_endings() {
+fn mixed_line_endings() {
     let input_text = b"word1\nword2\r\nword3\rword4";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 

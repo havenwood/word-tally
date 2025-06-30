@@ -22,7 +22,7 @@ fn verify_api_example_tally(tally: &WordTally) {
 }
 
 #[test]
-fn test_api_basic_functionality() {
+fn api_basic_functionality() {
     let options = Options::default();
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, API_EXAMPLE_TEXT.as_bytes()).expect("process test");
@@ -36,7 +36,7 @@ fn test_api_basic_functionality() {
 }
 
 #[test]
-fn test_from_bytes_api() {
+fn from_bytes_api() {
     let view = Mapped::from(API_EXAMPLE_TEXT.as_bytes());
     let options = Options::default().with_io(Io::ParallelBytes);
     let tally_map = TallyMap::from_mapped(&view, &options).expect("create tally map");

@@ -27,7 +27,7 @@ fn test_verbose_command(args: &[&str], stdin: &str, expected_patterns: &[&str]) 
 //
 
 #[test]
-fn test_args_defaults() {
+fn args_defaults() {
     word_tally()
         .arg("-v")
         .write_stdin("test")
@@ -41,7 +41,7 @@ fn test_args_defaults() {
 }
 
 #[test]
-fn test_args_default_filters() {
+fn args_default_filters() {
     word_tally()
         .arg("-v")
         .write_stdin("test")
@@ -55,7 +55,7 @@ fn test_args_default_filters() {
 }
 
 #[test]
-fn test_args_default_verbose() {
+fn args_default_verbose() {
     word_tally()
         .write_stdin("test")
         .assert()
@@ -65,7 +65,7 @@ fn test_args_default_verbose() {
 }
 
 #[test]
-fn test_args_default_output() {
+fn args_default_output() {
     word_tally()
         .write_stdin("test")
         .assert()
@@ -74,7 +74,7 @@ fn test_args_default_output() {
 }
 
 #[test]
-fn test_args_all_defaults() {
+fn args_all_defaults() {
     word_tally()
         .write_stdin("This is a test")
         .assert()
@@ -86,7 +86,7 @@ fn test_args_all_defaults() {
 }
 
 #[test]
-fn test_args_defaults_with_minimal_flags() {
+fn args_defaults_with_minimal_flags() {
     word_tally()
         .arg("-v")
         .write_stdin("Test")
@@ -112,7 +112,7 @@ fn test_args_defaults_with_minimal_flags() {
 //
 
 #[test]
-fn test_get_options() {
+fn get_options() {
     word_tally()
         .args([
             "--case=upper",
@@ -130,7 +130,7 @@ fn test_get_options() {
 }
 
 #[test]
-fn test_get_performance() {
+fn get_performance() {
     word_tally()
         .arg("-v")
         .write_stdin("hello world")
@@ -139,7 +139,7 @@ fn test_get_performance() {
 }
 
 #[test]
-fn test_get_formatting() {
+fn get_formatting() {
     word_tally()
         .args(["--case=upper", "--sort=asc", "--format=json", "-v"])
         .write_stdin("hello")
@@ -150,7 +150,7 @@ fn test_get_formatting() {
 }
 
 #[test]
-fn test_get_filters() {
+fn get_filters() {
     word_tally()
         .args([
             "--min-chars=3",
@@ -167,7 +167,7 @@ fn test_get_filters() {
 }
 
 #[test]
-fn test_get_filters_with_patterns() {
+fn get_filters_with_patterns() {
     word_tally()
         .args(["--include=^h", "--exclude=\\d+", "-v"])
         .write_stdin("hello 123 world")
@@ -181,7 +181,7 @@ fn test_get_filters_with_patterns() {
 //
 
 #[test]
-fn test_io_shorthand_flag() {
+fn io_shorthand_flag() {
     word_tally()
         .args(["-I=parallel-in-memory", "-v"])
         .write_stdin("hello world")
@@ -191,7 +191,7 @@ fn test_io_shorthand_flag() {
 }
 
 #[test]
-fn test_args_shorthand_flags() {
+fn args_shorthand_flags() {
     word_tally()
         .args(["-c=upper", "-s=asc", "-f=json", "-m=3", "-n=2", "-v"])
         .write_stdin("hello world test")
@@ -204,7 +204,7 @@ fn test_args_shorthand_flags() {
 }
 
 #[test]
-fn test_args_exclude_words_list() {
+fn args_exclude_words_list() {
     word_tally()
         .arg("-w=the,a,an,and,or")
         .arg("-v")
@@ -215,7 +215,7 @@ fn test_args_exclude_words_list() {
 }
 
 #[test]
-fn test_args_multiple_include_patterns() {
+fn args_multiple_include_patterns() {
     word_tally()
         .arg("-i=^h")
         .arg("-i=^w")
@@ -227,7 +227,7 @@ fn test_args_multiple_include_patterns() {
 }
 
 #[test]
-fn test_args_multiple_exclude_patterns() {
+fn args_multiple_exclude_patterns() {
     word_tally()
         .arg("-x=ing$")
         .arg("-x=ed$")
@@ -239,7 +239,7 @@ fn test_args_multiple_exclude_patterns() {
 }
 
 #[test]
-fn test_args_output_file_shorthand() {
+fn args_output_file_shorthand() {
     let temp_file = NamedTempFile::new().expect("create temp file");
 
     word_tally()
@@ -259,7 +259,7 @@ fn test_args_output_file_shorthand() {
 //
 
 #[test]
-fn test_args_input_from_file() {
+fn args_input_from_file() {
     let temp_file = NamedTempFile::new().expect("create temp file");
     fs::write(&temp_file, "test content").expect("test file should be writable");
 
@@ -274,7 +274,7 @@ fn test_args_input_from_file() {
 }
 
 #[test]
-fn test_args_output_to_file() {
+fn args_output_to_file() {
     let temp_file = NamedTempFile::new().expect("create temp file");
 
     word_tally()
@@ -290,7 +290,7 @@ fn test_args_output_to_file() {
 }
 
 #[test]
-fn test_args_stdin_explicit() {
+fn args_stdin_explicit() {
     word_tally()
         .arg("-")
         .arg("-v")
@@ -305,7 +305,7 @@ fn test_args_stdin_explicit() {
 //
 
 #[test]
-fn test_args_verbose_flag() {
+fn args_verbose_flag() {
     word_tally()
         .arg("-v")
         .write_stdin("test")
@@ -319,7 +319,7 @@ fn test_args_verbose_flag() {
 //
 
 #[test]
-fn test_args_filters_comprehensive() {
+fn args_filters_comprehensive() {
     word_tally()
         .arg("--min-chars=5")
         .arg("--min-count=1")
@@ -337,7 +337,7 @@ fn test_args_filters_comprehensive() {
 }
 
 #[test]
-fn test_args_escaped_words() {
+fn args_escaped_words() {
     word_tally()
         .arg("--exclude-words=\\t,\\n")
         .arg("-v")
@@ -348,7 +348,7 @@ fn test_args_escaped_words() {
 }
 
 #[test]
-fn test_args_multiple_patterns() {
+fn args_multiple_patterns() {
     word_tally()
         .arg("--include=^t")
         .arg("--include=^w")
@@ -367,7 +367,7 @@ fn test_args_multiple_patterns() {
 //
 
 #[test]
-fn test_args_options_comprehensive() {
+fn args_options_comprehensive() {
     word_tally()
         .arg("--case=lower")
         .arg("--sort=desc")
@@ -386,7 +386,7 @@ fn test_args_options_comprehensive() {
 //
 
 #[test]
-fn test_args_all_io_modes() {
+fn args_all_io_modes() {
     // Test stream modes with stdin
     let stdin_modes = [
         ("stream", "stream"),
@@ -416,7 +416,7 @@ fn test_args_all_io_modes() {
 }
 
 #[test]
-fn test_args_case_modes() {
+fn args_case_modes() {
     for case in ["original", "upper", "lower"] {
         word_tally()
             .args([&format!("--case={case}"), "-v"])
@@ -428,7 +428,7 @@ fn test_args_case_modes() {
 }
 
 #[test]
-fn test_args_sort_modes() {
+fn args_sort_modes() {
     for sort in ["unsorted", "asc", "desc"] {
         test_verbose_command(
             &[&format!("--sort={sort}"), "-v"],
@@ -439,7 +439,7 @@ fn test_args_sort_modes() {
 }
 
 #[test]
-fn test_args_format_modes() {
+fn args_format_modes() {
     for format in ["text", "json", "csv"] {
         test_verbose_command(&[&format!("--format={format}"), "-v"], "test", &["source"]);
     }
@@ -450,7 +450,7 @@ fn test_args_format_modes() {
 //
 
 #[test]
-fn test_args_delimiter_edge_cases() {
+fn args_delimiter_edge_cases() {
     // Empty delimiter
     word_tally()
         .arg("--field-delimiter=")
@@ -477,7 +477,7 @@ fn test_args_delimiter_edge_cases() {
 //
 
 #[test]
-fn test_args_io_bytes_error() {
+fn args_io_bytes_error() {
     word_tally()
         .arg("--io=bytes")
         .write_stdin("test")
@@ -487,7 +487,7 @@ fn test_args_io_bytes_error() {
 }
 
 #[test]
-fn test_args_invalid_min_count() {
+fn args_invalid_min_count() {
     word_tally()
         .arg("--min-count=invalid")
         .write_stdin("test")
@@ -506,13 +506,13 @@ fn test_invalid_enum_value(arg: &str) {
 }
 
 #[test]
-fn test_args_invalid_enum_values() {
+fn args_invalid_enum_values() {
     test_invalid_enum_value("--case=invalid");
     test_invalid_enum_value("--sort=invalid");
 }
 
 #[test]
-fn test_args_invalid_regex_exclude() {
+fn args_invalid_regex_exclude() {
     word_tally()
         .arg("--exclude=[")
         .write_stdin("test")
@@ -522,7 +522,7 @@ fn test_args_invalid_regex_exclude() {
 }
 
 #[test]
-fn test_args_invalid_regex_include() {
+fn args_invalid_regex_include() {
     word_tally()
         .arg("--include=(?P<")
         .write_stdin("test")
@@ -536,7 +536,7 @@ fn test_args_invalid_regex_include() {
 //
 
 #[test]
-fn test_args_environment_interaction() {
+fn args_environment_interaction() {
     word_tally()
         .env("WORD_TALLY_TALLY_CAPACITY", "100")
         .arg("-v")
@@ -547,7 +547,7 @@ fn test_args_environment_interaction() {
 }
 
 #[test]
-fn test_args_mmap_alias() {
+fn args_mmap_alias() {
     let temp_file = NamedTempFile::new().expect("create temp file");
     fs::write(temp_file.path(), "test content").expect("write test content");
 
@@ -573,7 +573,7 @@ fn test_args_mmap_alias() {
 //
 
 #[test]
-fn test_args_delimiter_unescape() {
+fn args_delimiter_unescape() {
     // Test escape sequences in field delimiter with different counts to ensure order
     word_tally()
         .arg("--field-delimiter=\\t")
@@ -606,7 +606,7 @@ fn test_args_delimiter_unescape() {
 }
 
 #[test]
-fn test_args_delimiter_escape_sequences() {
+fn args_delimiter_escape_sequences() {
     let test_cases = [
         ("\\0", "\0"),
         ("\\t", "\t"),
@@ -633,7 +633,7 @@ fn test_args_delimiter_escape_sequences() {
 }
 
 #[test]
-fn test_args_delimiter_unknown_escape() {
+fn args_delimiter_unknown_escape() {
     // Unknown escape sequences should just use the character
     word_tally()
         .arg("--field-delimiter=\\x")
@@ -644,7 +644,7 @@ fn test_args_delimiter_unknown_escape() {
 }
 
 #[test]
-fn test_args_delimiter_trailing_backslash() {
+fn args_delimiter_trailing_backslash() {
     // Trailing backslash is kept as literal
     word_tally()
         .arg("--field-delimiter=\\")

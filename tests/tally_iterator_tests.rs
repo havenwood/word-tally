@@ -17,7 +17,7 @@ fn create_test_tally_with_text(text: &[u8], sort: Sort) -> WordTally {
 }
 
 #[test]
-fn test_into_tally() {
+fn into_tally() {
     let input_text = b"Hope is the thing with feathers that perches in the soul";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -48,7 +48,7 @@ fn test_into_tally() {
 }
 
 #[test]
-fn test_iterator() {
+fn iterator() {
     let input_text = b"double trouble double";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -71,7 +71,7 @@ fn test_iterator() {
 }
 
 #[test]
-fn test_iterator_for_loop() {
+fn iterator_for_loop() {
     let input_text = b"llama llama pajamas";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -92,7 +92,7 @@ fn test_iterator_for_loop() {
 }
 
 #[test]
-fn test_into_tally_consumes() {
+fn into_tally_consumes() {
     let input_text = b"circumference plash slant bequest";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 
@@ -109,7 +109,7 @@ fn test_into_tally_consumes() {
 }
 
 #[test]
-fn test_into_iterator_trait() {
+fn into_iterator_trait() {
     let input_text = b"phosphor alabaster cochineal phosphor alabaster phosphor";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 
@@ -133,7 +133,7 @@ fn test_into_iterator_trait() {
 }
 
 #[test]
-fn test_from_trait_into_vec() {
+fn from_trait_into_vec() {
     let input_text = b"diadem syllable finite diadem syllable diadem";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 
@@ -149,7 +149,7 @@ fn test_from_trait_into_vec() {
 }
 
 #[test]
-fn test_from_trait_into_hashmap() {
+fn from_trait_into_hashmap() {
     let input_text = b"perennial amaranth perennial amaranth perennial";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 
@@ -175,7 +175,7 @@ fn test_from_trait_into_hashmap() {
 }
 
 #[test]
-fn test_readme_hashmap_pattern() {
+fn readme_hashmap_pattern() {
     let input_text = b"seraph celestial seraph celestial seraph";
     let tally = create_test_tally_with_text(input_text, Sort::Desc);
 

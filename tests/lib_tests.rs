@@ -281,7 +281,7 @@ fn vec_from() {
 }
 
 #[test]
-fn test_into_tally() {
+fn into_tally() {
     let input_text = b"Hope is the thing with feathers that perches in the soul";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -316,7 +316,7 @@ fn test_into_tally() {
 }
 
 #[test]
-fn test_iterator() {
+fn iterator() {
     let input_text = b"double trouble double";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -339,7 +339,7 @@ fn test_iterator() {
 }
 
 #[test]
-fn test_iterator_for_loop() {
+fn iterator_for_loop() {
     let input_text = b"llama llama pajamas";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -360,7 +360,7 @@ fn test_iterator_for_loop() {
 }
 
 #[test]
-fn test_input_size() {
+fn input_size() {
     let temp_file = create_test_data_file();
     let file_reader = Buffered::try_from(temp_file.path()).expect("create file reader");
     let size = file_reader.size();
@@ -372,7 +372,7 @@ fn test_input_size() {
 }
 
 #[test]
-fn test_parallel_vs_sequential() {
+fn parallel_vs_sequential() {
     let input_text = b"I taste a liquor never brewed. I taste a liquor.";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -424,7 +424,7 @@ fn test_parallel_vs_sequential() {
 }
 
 #[test]
-fn test_memory_mapped_vs_streamed() {
+fn memory_mapped_vs_streamed() {
     // Use the test file
     let test_file = create_test_data_file();
     let file_path = test_file.path().to_str().expect("temp file path");
@@ -492,7 +492,7 @@ fn test_memory_mapped_vs_streamed() {
 }
 
 #[test]
-fn test_parallel_count() {
+fn parallel_count() {
     // Instead of using environment variables, just test the parallel function works
     let input_text = b"Test with default settings for chunk size and thread count";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
@@ -513,7 +513,7 @@ fn test_parallel_count() {
 }
 
 #[test]
-fn test_merge_maps() {
+fn merge_maps() {
     let input_text = b"This is a test of the map merging functionality";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -530,7 +530,7 @@ fn test_merge_maps() {
 }
 
 #[test]
-fn test_words_exclude_from() {
+fn words_exclude_from() {
     let words = vec!["beep".to_string(), "boop".to_string()];
     let exclude_words = ExcludeWords::from(words);
     assert_eq!(exclude_words.len(), 2);
@@ -624,7 +624,7 @@ mod wordtally_constructor_tests {
 }
 
 #[test]
-fn test_custom_chunk_size() {
+fn custom_chunk_size() {
     let input_text = b"test convenience constructors";
     let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, input_text).expect("write test data");
@@ -640,7 +640,7 @@ fn test_custom_chunk_size() {
 }
 
 #[test]
-fn test_exclude_words_from_trait() {
+fn exclude_words_from_trait() {
     let words = vec!["beep".to_string(), "boop".to_string()];
     let exclude_words = ExcludeWords::from(words);
     assert_eq!(exclude_words.len(), 2);
@@ -649,7 +649,7 @@ fn test_exclude_words_from_trait() {
 }
 
 #[test]
-fn test_wordtally_deref() {
+fn wordtally_deref() {
     let options = Options::default();
     let mut tally_map = TallyMap::new();
     tally_map.insert("hello".into(), 5);

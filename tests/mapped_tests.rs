@@ -6,7 +6,7 @@ use tempfile::NamedTempFile;
 use word_tally::{Mapped, Metadata};
 
 #[test]
-fn test_view_from_mmap() {
+fn view_from_mmap() {
     let test_data = b"Mmap test data";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, test_data).expect("write test data");
@@ -18,7 +18,7 @@ fn test_view_from_mmap() {
 }
 
 #[test]
-fn test_view_from_bytes() {
+fn view_from_bytes() {
     let test_data = b"Bytes test data";
     let view = Mapped::from(&test_data[..]);
     assert_eq!(view.path(), None);
@@ -28,7 +28,7 @@ fn test_view_from_bytes() {
 }
 
 #[test]
-fn test_view_from_vec() {
+fn view_from_vec() {
     let vec_data: Vec<u8> = vec![1, 2, 3, 4, 5];
     let view = Mapped::from(vec_data);
     assert_eq!(view.len(), 5);
@@ -36,7 +36,7 @@ fn test_view_from_vec() {
 }
 
 #[test]
-fn test_view_from_slice() {
+fn view_from_slice() {
     let slice_data: &[u8] = &[1, 2, 3, 4, 5];
     let view = Mapped::from(slice_data);
     assert_eq!(view.len(), 5);
@@ -45,14 +45,14 @@ fn test_view_from_slice() {
 }
 
 #[test]
-fn test_view_from_string_bytes() {
+fn view_from_string_bytes() {
     let string_data = String::from("Hello, world!");
     let view = Mapped::from(string_data.as_bytes());
     assert_eq!(view.len(), 13);
 }
 
 #[test]
-fn test_view_display() {
+fn view_display() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, b"test").expect("write test data");
 
@@ -65,7 +65,7 @@ fn test_view_display() {
 }
 
 #[test]
-fn test_view_mmap_nonexistent_file() {
+fn view_mmap_nonexistent_file() {
     // Use a path that's guaranteed not to exist on any platform
     let temp_dir = std::env::temp_dir();
     let nonexistent_path = temp_dir.join("nonexistent_word_tally_test_file_12345.txt");
@@ -80,7 +80,7 @@ fn test_view_mmap_nonexistent_file() {
 }
 
 #[test]
-fn test_view_file_not_found_error_message() {
+fn view_file_not_found_error_message() {
     // Use a path that's guaranteed not to exist on any platform
     let temp_dir = std::env::temp_dir();
     let nonexistent_path = temp_dir.join("nonexistent_word_tally_test_file_67890.txt");
@@ -103,7 +103,7 @@ fn test_view_file_not_found_error_message() {
 }
 
 #[test]
-fn test_view_mmap_dash_error() {
+fn view_mmap_dash_error() {
     // "-" represents stdin, which cannot be memory-mapped
     let result = Mapped::try_from("-");
     assert!(result.is_err());
@@ -112,7 +112,7 @@ fn test_view_mmap_dash_error() {
 }
 
 #[test]
-fn test_view_mmap_thread_safety() {
+fn view_mmap_thread_safety() {
     let test_data = b"Thread safety test data for memory-mapped view";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, test_data).expect("write test data");
@@ -148,7 +148,7 @@ fn test_view_mmap_thread_safety() {
 }
 
 #[test]
-fn test_view_as_ref() {
+fn view_as_ref() {
     let test_data = b"AsRef test data";
 
     // Test with bytes view
@@ -164,7 +164,7 @@ fn test_view_as_ref() {
 }
 
 #[test]
-fn test_not_mappable_error_directory() {
+fn not_mappable_error_directory() {
     let temp_dir = std::env::temp_dir();
     let result = Mapped::try_from(temp_dir.as_path());
     assert!(result.is_err());
@@ -177,7 +177,7 @@ fn test_not_mappable_error_directory() {
 
 #[cfg(unix)]
 #[test]
-fn test_not_mappable_error_character_device() {
+fn not_mappable_error_character_device() {
     // This test uses Unix-specific /dev/null to test character device error handling
     let result = Mapped::try_from("/dev/null");
     assert!(result.is_err());
@@ -191,7 +191,7 @@ fn test_not_mappable_error_character_device() {
 
 #[cfg(unix)]
 #[test]
-fn test_not_mappable_error_fifo() {
+fn not_mappable_error_fifo() {
     use std::process::Command;
 
     // Create a named pipe in temp directory

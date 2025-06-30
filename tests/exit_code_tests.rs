@@ -10,31 +10,31 @@ fn create_io_error(kind: io::ErrorKind) -> Error {
 }
 
 #[test]
-fn test_io_error_not_found() {
+fn io_error_not_found() {
     let err = create_io_error(io::ErrorKind::NotFound);
     assert_eq!(ExitCode::from(&err), ExitCode::InputNotFound);
 }
 
 #[test]
-fn test_io_error_permission_denied() {
+fn io_error_permission_denied() {
     let err = create_io_error(io::ErrorKind::PermissionDenied);
     assert_eq!(ExitCode::from(&err), ExitCode::PermissionDenied);
 }
 
 #[test]
-fn test_io_error_already_exists() {
+fn io_error_already_exists() {
     let err = create_io_error(io::ErrorKind::AlreadyExists);
     assert_eq!(ExitCode::from(&err), ExitCode::OutputFailed);
 }
 
 #[test]
-fn test_io_error_other() {
+fn io_error_other() {
     let err = create_io_error(io::ErrorKind::ConnectionRefused);
     assert_eq!(ExitCode::from(&err), ExitCode::IoError);
 }
 
 #[test]
-fn test_clap_help() {
+fn clap_help() {
     let clap_err = clap::Command::new("test")
         .disable_help_flag(true) // Disable the automatic help flag
         .arg(
@@ -49,7 +49,7 @@ fn test_clap_help() {
 }
 
 #[test]
-fn test_clap_version() {
+fn clap_version() {
     let clap_err = clap::Command::new("test")
         .version("1.0")
         .try_get_matches_from(vec!["test", "--version"])
@@ -59,13 +59,13 @@ fn test_clap_version() {
 }
 
 #[test]
-fn test_generic_error() {
+fn generic_error() {
     let err: Error = anyhow!("generic error");
     assert_eq!(ExitCode::from(&err), ExitCode::Failure);
 }
 
 #[test]
-fn test_exit_code_values() {
+fn exit_code_values() {
     assert_eq!(ExitCode::Success as u8, 0);
     assert_eq!(ExitCode::Failure as u8, 1);
     assert_eq!(ExitCode::UsageError as u8, 64);
@@ -78,7 +78,7 @@ fn test_exit_code_values() {
 }
 
 #[test]
-fn test_exit_code_from_io_error_trait() {
+fn exit_code_from_io_error_trait() {
     let not_found = io::Error::new(io::ErrorKind::NotFound, "test");
     assert_eq!(ExitCode::from(&not_found), ExitCode::InputNotFound);
 
@@ -96,7 +96,7 @@ fn test_exit_code_from_io_error_trait() {
 }
 
 #[test]
-fn test_exit_code_from_clap_error_trait() {
+fn exit_code_from_clap_error_trait() {
     let help_err = clap::Command::new("test")
         .disable_help_flag(true)
         .arg(
@@ -116,7 +116,7 @@ fn test_exit_code_from_clap_error_trait() {
 }
 
 #[test]
-fn test_exit_code_from_anyhow_error_trait() {
+fn exit_code_from_anyhow_error_trait() {
     let io_err = io::Error::new(io::ErrorKind::NotFound, "test");
     let anyhow_err: Error = io_err.into();
     assert_eq!(ExitCode::from(&anyhow_err), ExitCode::InputNotFound);
@@ -126,7 +126,7 @@ fn test_exit_code_from_anyhow_error_trait() {
 }
 
 #[test]
-fn test_mutex_poisoned_exit_code() {
+fn mutex_poisoned_exit_code() {
     let mutex_err = WordTallyError::MutexPoisoned;
     let anyhow_err: Error = mutex_err.into();
     assert_eq!(ExitCode::from(&anyhow_err), ExitCode::InternalError);

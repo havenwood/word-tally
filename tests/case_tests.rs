@@ -5,7 +5,7 @@ use std::borrow::Cow;
 use word_tally::options::case::Case;
 
 #[test]
-fn test_normalize_unicode_original_case() {
+fn normalize_unicode_original_case() {
     let case = Case::Original;
     let test_cases = [
         ("narrow", "narrow"),
@@ -21,7 +21,7 @@ fn test_normalize_unicode_original_case() {
 }
 
 #[test]
-fn test_normalize_unicode_lower_case_already_lower() {
+fn normalize_unicode_lower_case_already_lower() {
     let case = Case::Lower;
     let test_cases = [
         "narrow",
@@ -39,7 +39,7 @@ fn test_normalize_unicode_lower_case_already_lower() {
 }
 
 #[test]
-fn test_normalize_unicode_lower_case_needs_conversion() {
+fn normalize_unicode_lower_case_needs_conversion() {
     let case = Case::Lower;
     let test_cases = [
         ("NARROW", "narrow"),
@@ -58,7 +58,7 @@ fn test_normalize_unicode_lower_case_needs_conversion() {
 }
 
 #[test]
-fn test_normalize_unicode_upper_case_already_upper() {
+fn normalize_unicode_upper_case_already_upper() {
     let case = Case::Upper;
     let test_cases = [
         "NARROW",
@@ -76,7 +76,7 @@ fn test_normalize_unicode_upper_case_already_upper() {
 }
 
 #[test]
-fn test_normalize_unicode_upper_case_needs_conversion() {
+fn normalize_unicode_upper_case_needs_conversion() {
     let case = Case::Upper;
     let test_cases = [
         ("narrow", "NARROW"),
@@ -95,7 +95,7 @@ fn test_normalize_unicode_upper_case_needs_conversion() {
 }
 
 #[test]
-fn test_normalize_unicode_unicode_characters() {
+fn normalize_unicode_unicode_characters() {
     // Test lowercase conversion with various Unicode characters
     let case = Case::Lower;
     assert_eq!(
@@ -140,7 +140,7 @@ fn test_normalize_unicode_unicode_characters() {
 }
 
 #[test]
-fn test_normalize_unicode_edge_cases() {
+fn normalize_unicode_edge_cases() {
     let no_case_strings = ["12345", "!@#$%^&*()", "   "];
 
     for case in [Case::Lower, Case::Upper] {
@@ -151,7 +151,7 @@ fn test_normalize_unicode_edge_cases() {
 }
 
 #[test]
-fn test_normalize_unicode_special_case_mappings() {
+fn normalize_unicode_special_case_mappings() {
     // Test special Unicode case mappings
     let case = Case::Lower;
     assert_eq!(
@@ -171,7 +171,7 @@ fn test_normalize_unicode_special_case_mappings() {
 }
 
 #[test]
-fn test_normalize_mixed_content() {
+fn normalize_mixed_content() {
     // Test strings with mixed content (letters, numbers, symbols)
     let case = Case::Lower;
     assert_eq!(
@@ -195,13 +195,13 @@ fn test_normalize_mixed_content() {
 }
 
 #[test]
-fn test_case_display() {
+fn case_display() {
     assert_eq!(Case::Lower.to_string(), "lower");
     assert_eq!(Case::Upper.to_string(), "upper");
     assert_eq!(Case::Original.to_string(), "original");
 }
 
 #[test]
-fn test_case_default() {
+fn case_default() {
     assert_eq!(Case::default(), Case::Original);
 }

@@ -1,7 +1,7 @@
 use word_tally::{Case, Io, MinChars, Sort};
 
 #[test]
-fn test_format_enum_as_string() {
+fn format_enum_as_string() {
     // Test direct string formatting using Display trait
     let case = Case::Lower;
     assert_eq!(case.to_string(), "lower");
@@ -14,7 +14,7 @@ fn test_format_enum_as_string() {
 }
 
 #[test]
-fn test_format_option() {
+fn format_option() {
     // Test formatting of options
     let some_min_chars: Option<MinChars> = Some(3);
     assert_eq!(

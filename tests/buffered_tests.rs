@@ -6,7 +6,7 @@ use tempfile::NamedTempFile;
 use word_tally::{Buffered, Metadata};
 
 #[test]
-fn test_reader_from_file() {
+fn reader_from_file() {
     let test_data = b"File test data";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, test_data).expect("write test data");
@@ -17,7 +17,7 @@ fn test_reader_from_file() {
 }
 
 #[test]
-fn test_reader_from_stdin() {
+fn reader_from_stdin() {
     let reader = Buffered::stdin();
     assert_eq!(reader.path(), None);
     assert_eq!(reader.size(), None);
@@ -25,14 +25,14 @@ fn test_reader_from_stdin() {
 }
 
 #[test]
-fn test_reader_try_from_str_stdin() {
+fn reader_try_from_str_stdin() {
     let reader = Buffered::try_from("-").expect("create stdin reader");
     assert_eq!(reader.path(), None);
     assert_eq!(reader.to_string(), "-");
 }
 
 #[test]
-fn test_reader_try_from_pathbuf() {
+fn reader_try_from_pathbuf() {
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, b"test").expect("write test data");
 
@@ -42,7 +42,7 @@ fn test_reader_try_from_pathbuf() {
 }
 
 #[test]
-fn test_reader_with_buf_read() {
+fn reader_with_buf_read() {
     let test_data = b"Line 1\nLine 2\nLine 3";
     let mut temp_file = NamedTempFile::new().expect("create temp file");
     Write::write_all(&mut temp_file, test_data).expect("write test data");
@@ -62,7 +62,7 @@ fn test_reader_with_buf_read() {
 }
 
 #[test]
-fn test_reader_display() {
+fn reader_display() {
     let stdin_reader = Buffered::stdin();
     assert_eq!(format!("{stdin_reader}"), "-");
 
@@ -75,7 +75,7 @@ fn test_reader_display() {
 }
 
 #[test]
-fn test_reader_file_not_found() {
+fn reader_file_not_found() {
     let nonexistent_path = "/nonexistent/path/to/file.txt";
 
     let reader_result = Buffered::try_from(nonexistent_path);
