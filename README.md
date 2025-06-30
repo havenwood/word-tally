@@ -242,7 +242,7 @@ Parallel processing configuration:
 
 ```toml
 [dependencies]
-word-tally = "0.27.0"
+word-tally = "0.28.0"
 ```
 
 ```rust
