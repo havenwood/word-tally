@@ -317,3 +317,35 @@ fn deref_entry() {
     tally.entry("new".into()).and_modify(|count| *count += 1);
     assert_eq!(tally.get("new"), Some(&6));
 }
+
+#[test]
+fn sum_owned_tallies() {
+    let tally1 = make_tally(&[("burnished", 2), ("carriage", 1)]);
+    let tally2 = make_tally(&[("burnished", 1), ("rose", 3)]);
+    let tally3 = make_tally(&[("carriage", 2), ("rose", 1)]);
+
+    let tallies = vec![tally1, tally2, tally3];
+    let sum: TallyMap = tallies.into_iter().sum();
+
+    assert_eq!(sum.get("burnished"), Some(&3));
+    assert_eq!(sum.get("carriage"), Some(&3));
+    assert_eq!(sum.get("rose"), Some(&4));
+    assert_eq!(sum.len(), 3);
+}
+
+#[test]
+fn sum_empty_iterator() {
+    let tallies: Vec<TallyMap> = vec![];
+    let sum: TallyMap = tallies.into_iter().sum();
+    assert!(sum.is_empty());
+}
+
+#[test]
+fn sum_single_tally() {
+    let tally = make_tally(&[("rapture", 5), ("cupidity", 3)]);
+    let sum: TallyMap = vec![tally].into_iter().sum();
+
+    assert_eq!(sum.get("rapture"), Some(&5));
+    assert_eq!(sum.get("cupidity"), Some(&3));
+    assert_eq!(sum.len(), 2);
+}

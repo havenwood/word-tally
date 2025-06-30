@@ -4,7 +4,7 @@ use std::{
     borrow::Cow,
     fs,
     io::{self, Read},
-    iter,
+    iter::{self, Sum},
     ops::{Deref, DerefMut},
     str,
 };
@@ -266,7 +266,7 @@ impl TallyMap {
                 chunks: total_chunks,
             })?;
         let boundaries = boundary_fn(content, num_chunks);
-        let tally = Self::process_chunks(content, &boundaries, case)?;
+        let tally = Self::process_chunks(content, &boundaries, case);
 
         Ok(tally)
     }
@@ -414,7 +414,7 @@ impl TallyMap {
     }
 
     /// Process content in parallel using provided chunk boundaries.
-    fn process_chunks(content: &str, boundaries: &[usize], case: Case) -> Result<Self> {
+    fn process_chunks(content: &str, boundaries: &[usize], case: Case) -> Self {
         boundaries
             .windows(2)
             .par_bridge()
@@ -425,9 +425,9 @@ impl TallyMap {
             .map(|chunk| {
                 let mut tally = Self::new();
                 tally.add_words(chunk, case);
-                Ok(tally)
+                tally
             })
-            .try_reduce(Self::new, |acc, tally| Ok(acc.merge(tally)))
+            .sum()
     }
 
     /// Calculate batch sizes from optional size.
@@ -584,7 +584,7 @@ impl TallyMap {
                 // Multiple chunks: process in parallel
                 let process_end = chunk_boundaries[chunk_boundaries.len() - 1];
                 let content = Self::parse_utf8_slice(&buffer[..process_end])?;
-                let batch_result = Self::process_chunks(content, &chunk_boundaries, case)?;
+                let batch_result = Self::process_chunks(content, &chunk_boundaries, case);
                 Ok(Some((batch_result, process_end)))
             }
         }
@@ -628,6 +628,20 @@ impl TallyMap {
     }
 }
 
+impl Deref for TallyMap {
+    type Target = HashMap<Word, Count>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl DerefMut for TallyMap {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
+    }
+}
+
 impl IntoIterator for TallyMap {
     type Item = (Word, Count);
     type IntoIter = hash_map::IntoIter<Word, Count>;
@@ -664,16 +678,8 @@ impl Extend<(Word, Count)> for TallyMap {
     }
 }
 
-impl Deref for TallyMap {
-    type Target = HashMap<Word, Count>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl DerefMut for TallyMap {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
+impl Sum for TallyMap {
+    fn sum<I: Iterator<Item = Self>>(iter: I) -> Self {
+        iter.fold(Self::new(), Self::merge)
     }
 }
