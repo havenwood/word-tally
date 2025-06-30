@@ -12,7 +12,7 @@ use std::{
 use anyhow::{Context, Result};
 use hashbrown::{HashMap, hash_map};
 use icu_segmenter::{WordSegmenter, options::WordBreakInvariantOptions};
-use memchr::memchr2_iter;
+use memchr::memchr3_iter;
 use rayon::prelude::*;
 
 thread_local! {
@@ -451,8 +451,8 @@ impl TallyMap {
         if target_pos >= content_bytes.len() {
             return content_bytes.len();
         }
-        let search_region = &content_bytes[..target_pos];
-        memchr::memrchr2(b' ', b'\n', search_region).map_or(target_pos, |pos| pos + 1)
+        let haystack = &content_bytes[..target_pos];
+        memchr::memrchr3(b' ', b'\n', b'\t', haystack).map_or(target_pos, |pos| pos + 1)
     }
 
     /// Find chunk boundaries using efficient backwards search from target positions.
@@ -556,7 +556,7 @@ impl TallyMap {
         perf: &Performance,
     ) -> Result<Option<(Self, usize)>> {
         // Find all whitespace positions with SIMD search
-        let whitespace_positions: Vec<usize> = memchr2_iter(b' ', b'\n', buffer).collect();
+        let whitespace_positions: Vec<usize> = memchr3_iter(b' ', b'\n', b'\t', buffer).collect();
 
         // Wait for more data if buffer is incomplete and not at EOF
         if whitespace_positions.is_empty() && !reached_eof && buffer.len() < target_batch_size {
