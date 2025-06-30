@@ -193,14 +193,12 @@ fn not_mappable_error_character_device() {
 #[test]
 fn not_mappable_error_fifo() {
     use std::process::Command;
+    use tempfile::TempDir;
 
-    // Create a named pipe in temp directory
-    let temp_dir = std::env::temp_dir();
-    let fifo_path = temp_dir.join("test_fifo");
+    // Create a temporary directory that will be cleaned up automatically
+    let temp_dir = TempDir::new().expect("failed to create temp dir");
+    let fifo_path = temp_dir.path().join("test_fifo");
     let fifo_path_str = fifo_path.to_str().expect("path should be valid utf-8");
-
-    // Remove any existing FIFO
-    drop(std::fs::remove_file(&fifo_path));
 
     // Create FIFO
     let output = Command::new("mkfifo")
@@ -208,7 +206,11 @@ fn not_mappable_error_fifo() {
         .output()
         .expect("failed to execute mkfifo");
 
-    assert!(output.status.success(), "mkfifo command should succeed");
+    assert!(
+        output.status.success(),
+        "mkfifo command failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
 
     // Test error message
     let result = Mapped::try_from(fifo_path.as_path());
@@ -219,7 +221,4 @@ fn not_mappable_error_fifo() {
         error.to_string(),
         format!("cannot memory map named pipe: {fifo_path_str}")
     );
-
-    // Cleanup
-    drop(std::fs::remove_file(&fifo_path));
 }
