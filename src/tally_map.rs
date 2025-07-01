@@ -249,24 +249,14 @@ impl TallyMap {
     fn par_memory_count(bytes: &[u8], options: &Options) -> Result<Self> {
         let perf = options.performance();
         let content = Self::parse_utf8_slice(bytes)?;
-
-        Self::process_content_parallel(content, perf, options.case(), Self::chunk_boundaries)
-    }
-
-    /// Common logic for parallel content processing.
-    fn process_content_parallel(
-        content: &str,
-        perf: &Performance,
-        case: Case,
-        boundary_fn: fn(&str, usize) -> Vec<usize>,
-    ) -> Result<Self> {
         let total_chunks = perf.total_chunks(content.len() as u64);
         let num_chunks =
             usize::try_from(total_chunks).map_err(|_| WordTallyError::ChunkOverflow {
                 chunks: total_chunks,
             })?;
-        let boundaries = boundary_fn(content, num_chunks);
-        let tally = Self::process_chunks(content, &boundaries, case);
+
+        let boundaries = Self::whitespace_boundaries(content.as_bytes(), num_chunks);
+        let tally = Self::process_chunks(content, &boundaries, options.case());
 
         Ok(tally)
     }
@@ -300,18 +290,22 @@ impl TallyMap {
                 &source,
             )?;
 
-            // Find the last whitespace (space or newline) to ensure we don't split words
+            // Find the last whitespace to ensure we don't split words
             let process_until = if reached_eof {
-                buffer.len()
+                Some(buffer.len())
             } else {
-                Self::find_whitespace_boundary(&buffer, buffer.len())
-                    .min(buffer.len())
-                    .max(0)
+                let boundary = Self::last_whitespace_boundary_before(&buffer, buffer.len());
+                // Only process if we found actual whitespace (not just the end of buffer)
+                if boundary < buffer.len() {
+                    Some(boundary)
+                } else {
+                    None // Wait for more data if no whitespace found
+                }
             };
 
-            if process_until > 0 {
+            if let Some(end) = process_until {
                 // Process content
-                let chunk = &buffer[..process_until];
+                let chunk = &buffer[..end];
                 let content = if remainder.is_empty() {
                     simdutf8::compat::from_utf8(chunk)
                 } else {
@@ -325,18 +319,11 @@ impl TallyMap {
                         remainder.clear();
                     }
                     Err(e) => {
-                        Self::handle_utf8_error(
-                            e,
-                            &mut tally,
-                            case,
-                            &mut remainder,
-                            &buffer,
-                            process_until,
-                        )?;
+                        Self::handle_utf8_error(e, &mut tally, case, &mut remainder, &buffer, end)?;
                     }
                 }
 
-                buffer.drain(..process_until);
+                buffer.drain(..end);
             }
         }
 
@@ -446,73 +433,72 @@ impl TallyMap {
         Ok((batch_size, target_batch_size))
     }
 
-    /// Find whitespace-aligned boundary at or before the target position.
-    fn find_whitespace_boundary(content_bytes: &[u8], target_pos: usize) -> usize {
-        if target_pos >= content_bytes.len() {
-            return content_bytes.len();
-        }
-        let haystack = &content_bytes[..target_pos];
-        memchr::memrchr3(b' ', b'\n', b'\t', haystack).map_or(target_pos, |pos| pos + 1)
-    }
-
-    /// Find chunk boundaries using efficient backwards search from target positions.
-    fn chunk_boundaries(content: &str, num_chunks: usize) -> Vec<usize> {
+    /// Returns boundaries for roughly equal chunks aligned at whitespace.
+    fn whitespace_boundaries(content: &[u8], num_chunks: usize) -> Vec<usize> {
         if num_chunks == 0 || content.is_empty() {
             return vec![0];
         }
 
         let content_len = content.len();
         let target_chunk_size = content_len.div_ceil(num_chunks);
-        let content_bytes = content.as_bytes();
 
-        iter::once(0)
-            .chain((1..=num_chunks).map(|i| {
-                let target_pos = i * target_chunk_size;
-                Self::find_whitespace_boundary(content_bytes, target_pos)
-            }))
-            .collect()
+        let mut boundaries = vec![0];
+        let mut last_boundary = 0;
+
+        for i in 1..num_chunks {
+            let target_pos = i * target_chunk_size;
+            let found_boundary = Self::last_whitespace_boundary_before(content, target_pos);
+
+            // Only use this boundary if we found whitespace and it's past the last boundary
+            if found_boundary < target_pos && found_boundary > last_boundary {
+                boundaries.push(found_boundary);
+                last_boundary = found_boundary;
+            }
+            // Skip boundary if no whitespace found (would split a word)
+        }
+
+        if boundaries.last() != Some(&content_len) {
+            boundaries.push(content_len);
+        }
+        boundaries
     }
 
-    /// Calculate chunk boundaries within a streamed batch based on whitespace positions.
-    fn streamed_boundaries(
-        buffer: &[u8],
-        whitespace_positions: &[usize],
-        target_batch_size: usize,
-        reached_eof: bool,
+    /// Filters whitespace positions to create boundaries with minimum chunk size.
+    fn boundaries_from_positions(
+        positions: &[usize],
+        min_chunk_size: usize,
+        eof_position: Option<usize>,
     ) -> Vec<usize> {
-        let chunk_size = target_batch_size / Performance::PAR_CHUNKS_PER_THREAD as usize;
-        let mut boundaries =
-            Self::calculate_boundaries_from_positions(whitespace_positions, chunk_size, 0);
+        let mut boundaries = vec![0];
+        let mut last_boundary = 0;
 
-        // Add the end of buffer at end of file if needed
-        if reached_eof && boundaries.last() < Some(&buffer.len()) {
-            boundaries.push(buffer.len());
+        // Convert whitespace positions to boundaries (position after whitespace)
+        for &pos in positions {
+            if pos - last_boundary >= min_chunk_size {
+                boundaries.push(pos + 1);
+                last_boundary = pos + 1;
+            }
+        }
+
+        if let Some(eof) = eof_position {
+            if boundaries.last() != Some(&eof) {
+                boundaries.push(eof);
+            }
         }
 
         boundaries
     }
 
-    /// Calculate boundaries from positions based on minimum chunk size.
-    fn calculate_boundaries_from_positions(
-        positions: &[usize],
-        min_chunk_size: usize,
-        start_pos: usize,
-    ) -> Vec<usize> {
-        iter::once(start_pos)
-            .chain(
-                positions
-                    .iter()
-                    .scan(start_pos, |last_boundary, &pos| {
-                        if pos - *last_boundary >= min_chunk_size {
-                            *last_boundary = pos + 1;
-                            Some(Some(pos + 1))
-                        } else {
-                            Some(None)
-                        }
-                    })
-                    .flatten(),
-            )
-            .collect()
+    /// Finds the boundary after the last whitespace before `target_pos`.
+    ///
+    /// Returns the position after the last whitespace character found before `target_pos`,
+    /// or `target_pos` itself if no whitespace exists (clamped to content length).
+    #[inline]
+    fn last_whitespace_boundary_before(content: &[u8], target_pos: usize) -> usize {
+        let search_end = target_pos.min(content.len());
+
+        memchr::memrchr3(b' ', b'\n', b'\t', &content[..search_end])
+            .map_or(search_end, |pos| pos + 1)
     }
 
     /// Fill the buffer with data from the stream buffered up to the target size.
@@ -564,12 +550,10 @@ impl TallyMap {
         }
 
         // Calculate chunk boundaries aligned to whitespace for parallel processing
-        let chunk_boundaries = Self::streamed_boundaries(
-            buffer,
-            &whitespace_positions,
-            target_batch_size,
-            reached_eof,
-        );
+        let chunk_size = target_batch_size / Performance::PAR_CHUNKS_PER_THREAD as usize;
+        let eof_position = reached_eof.then_some(buffer.len());
+        let chunk_boundaries =
+            Self::boundaries_from_positions(&whitespace_positions, chunk_size, eof_position);
 
         match chunk_boundaries.len() {
             0 => Ok(None),

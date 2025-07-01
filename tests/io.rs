@@ -645,3 +645,71 @@ fn auto_mode_selects_mmap_for_files() {
         "Auto mode should produce same results as mmap"
     );
 }
+
+#[test]
+fn chunks_only_split_on_whitespace() {
+    let content = "supercalifragilisticexpialidocious"; // 34 chars, no whitespace
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, content.as_bytes()).expect("write test data");
+
+    // A `chunk_size` of 8 give 5 chunks
+    let options = Options::default()
+        .with_io(Io::ParallelMmap)
+        .with_performance(Performance::default().with_chunk_size(8));
+
+    let tally_map =
+        TallyMap::from_path(temp_file.path().to_str().expect("temp file path"), &options)
+            .expect("create tally map");
+    let tally = WordTally::from_tally_map(tally_map, &options);
+
+    // Should find exactly one word (not split)
+    assert_eq!(tally.uniq_count(), 1, "Word should not be split");
+    assert_eq!(tally.count(), 1, "Should count as single word");
+    assert_eq!(
+        tally.tally()[0].0.as_ref(),
+        "supercalifragilisticexpialidocious",
+        "Word should be intact"
+    );
+
+    // Also test with streaming
+    let stream_options = Options::default().with_io(Io::ParallelStream);
+    let stream_tally_map = TallyMap::from_path(
+        temp_file.path().to_str().expect("temp file path"),
+        &stream_options,
+    )
+    .expect("create stream tally map");
+    let stream_tally = WordTally::from_tally_map(stream_tally_map, &stream_options);
+
+    assert_eq!(
+        stream_tally.uniq_count(),
+        1,
+        "Streaming should not split word"
+    );
+    assert_eq!(
+        stream_tally.count(),
+        1,
+        "Streaming should count as single word"
+    );
+}
+
+#[test]
+fn words_are_not_split_across_chunks() {
+    // A 45-character word, then we'll set a tiny chunk size
+    let long_word = "pneumonoultramicroscopicsilicovolcanoconiosis";
+    let mut temp_file = tempfile::NamedTempFile::new().expect("create temp file");
+    Write::write_all(&mut temp_file, long_word.as_bytes()).expect("write test data");
+
+    // A `chunk_size` of 5 gives 9 chunks
+    let options = Options::default()
+        .with_io(Io::ParallelMmap)
+        .with_performance(Performance::default().with_chunk_size(5));
+
+    let tally = WordTally::from_tally_map(
+        TallyMap::from_path(temp_file.path().to_str().expect("path"), &options)
+            .expect("create tally map"),
+        &options,
+    );
+
+    assert_eq!(tally.uniq_count(), 1, "Long word should remain intact");
+    assert_eq!(tally.tally()[0].0.as_ref(), long_word);
+}
