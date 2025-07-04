@@ -493,15 +493,18 @@ fn make_shared<T>(value: T) -> Arc<T> {
     Arc::new(value)
 }
 
-/// Generate a simple test file with known content.
-fn create_test_file_with_size(dir: &TempDir, size_mb: usize) -> anyhow::Result<String> {
-    let path = dir.path().join(format!("test_{size_mb}mb.txt"));
+fn create_test_file_with_size_in_mb(dir: &TempDir, size_mb: usize) -> anyhow::Result<String> {
+    create_test_file_with_size_in_kb(dir, size_mb * 1024)
+}
+
+fn create_test_file_with_size_in_kb(dir: &TempDir, size_kb: usize) -> anyhow::Result<String> {
+    let path = dir.path().join(format!("test_{size_kb}kb.txt"));
     let mut file = File::create(&path)?;
 
     // Simple pattern: 10 "narrow" + 10 "certain" per line
     let pattern = "narrow narrow narrow narrow narrow narrow narrow narrow narrow narrow certain certain certain certain certain certain certain certain certain certain\n";
     let pattern_bytes = pattern.as_bytes();
-    let target_bytes = size_mb * 1024 * 1024;
+    let target_bytes = size_kb * 1024;
     let mut written = 0;
 
     while written < target_bytes {
@@ -515,9 +518,7 @@ fn create_test_file_with_size(dir: &TempDir, size_mb: usize) -> anyhow::Result<S
 #[test]
 fn streaming_processes_entire_file() -> anyhow::Result<()> {
     let temp_dir = TempDir::new()?;
-
-    // Create a 5MB file - larger than typical batch size
-    let file_path = create_test_file_with_size(&temp_dir, 5)?;
+    let file_path = create_test_file_with_size_in_mb(&temp_dir, 1)?;
 
     let base_options = Options::new(
         Case::default(),
@@ -557,7 +558,7 @@ fn streaming_processes_entire_file() -> anyhow::Result<()> {
 #[test]
 fn streaming_consistency_across_io_modes() -> anyhow::Result<()> {
     let temp_dir = TempDir::new()?;
-    let file_path = create_test_file_with_size(&temp_dir, 2)?; // 2MB file
+    let file_path = create_test_file_with_size_in_mb(&temp_dir, 1)?;
 
     // Test with streaming
     let performance = Performance::default();

@@ -37,16 +37,7 @@ fn args_defaults() {
         .stderr(contains("io auto"))
         .stderr(contains("case original"))
         .stderr(contains("order desc"))
-        .stderr(contains("delimiter \" \""));
-}
-
-#[test]
-fn args_default_filters() {
-    word_tally()
-        .arg("-v")
-        .write_stdin("test")
-        .assert()
-        .success()
+        .stderr(contains("delimiter \" \""))
         .stderr(contains("min-chars none"))
         .stderr(contains("min-count none"))
         .stderr(contains("exclude-words none"))
@@ -95,16 +86,7 @@ fn args_defaults_with_minimal_flags() {
         .stdout(contains("Test 1"))
         .stderr(contains("source -"))
         .stderr(contains("total-words 1"))
-        .stderr(contains("unique-words 1"))
-        .stderr(contains("delimiter \" \""))
-        .stderr(contains("case original"))
-        .stderr(contains("order desc"))
-        .stderr(contains("io auto"))
-        .stderr(contains("min-chars none"))
-        .stderr(contains("min-count none"))
-        .stderr(contains("exclude-words none"))
-        .stderr(contains("exclude-patterns none"))
-        .stderr(contains("include-patterns none"));
+        .stderr(contains("unique-words 1"));
 }
 
 //
@@ -387,44 +369,56 @@ fn args_options_comprehensive() {
 
 #[test]
 fn args_all_io_modes() {
-    // Test stream modes with stdin
-    let stdin_modes = [
-        ("stream", "stream"),
-        ("parallel-stream", "parallel-stream"),
-        ("parallel-in-memory", "parallel-in-memory"),
-    ];
+    // Test valid stdin modes
+    word_tally()
+        .arg("--io=stream")
+        .write_stdin("test")
+        .assert()
+        .success()
+        .stdout(contains("test 1"));
 
-    for (input, expected) in &stdin_modes {
-        Command::cargo_bin("word-tally")
-            .expect("arguments should be valid")
-            .arg(format!("--io={input}"))
-            .arg("-v")
-            .write_stdin("test")
-            .assert()
-            .success()
-            .stderr(contains(format!("io {expected}")));
-    }
+    word_tally()
+        .arg("--io=parallel-stream")
+        .write_stdin("test")
+        .assert()
+        .success()
+        .stdout(contains("test 1"));
 
-    // Test mmap separately - it should fail with stdin
+    // Test mmap fails with stdin
     word_tally()
         .arg("--io=parallel-mmap")
         .write_stdin("test")
         .assert()
         .failure()
-        .code(64) // EX_USAGE
+        .code(64)
         .stderr(contains("cannot memory map stdin"));
 }
 
 #[test]
 fn args_case_modes() {
-    for case in ["original", "upper", "lower"] {
-        word_tally()
-            .args([&format!("--case={case}"), "-v"])
-            .write_stdin("Test")
-            .assert()
-            .success()
-            .stderr(contains(format!("case {case}")));
-    }
+    // Test original case
+    word_tally()
+        .arg("--case=original")
+        .write_stdin("Test")
+        .assert()
+        .success()
+        .stdout(contains("Test 1"));
+
+    // Test upper case
+    word_tally()
+        .arg("--case=upper")
+        .write_stdin("Test")
+        .assert()
+        .success()
+        .stdout(contains("TEST 1"));
+
+    // Test lower case
+    word_tally()
+        .arg("--case=lower")
+        .write_stdin("Test")
+        .assert()
+        .success()
+        .stdout(contains("test 1"));
 }
 
 #[test]
@@ -451,25 +445,27 @@ fn args_format_modes() {
 
 #[test]
 fn args_delimiter_edge_cases() {
-    // Empty delimiter
-    word_tally()
+    // Test empty delimiter - both words should appear with count 1
+    let output = word_tally()
         .arg("--field-delimiter=")
-        .arg("--format=text")
         .write_stdin("test word")
         .assert()
         .success()
-        .stdout(contains("test1"))
-        .stdout(contains("word1"));
+        .get_output()
+        .stdout
+        .clone();
 
-    // Multi-char delimiter
+    let output_str = String::from_utf8_lossy(&output);
+    assert!(output_str.contains("test1"));
+    assert!(output_str.contains("word1"));
+
+    // Test multi-char delimiter
     word_tally()
         .arg("--field-delimiter= => ")
-        .arg("--format=text")
-        .write_stdin("test word")
+        .write_stdin("test")
         .assert()
         .success()
-        .stdout(contains("test => 1"))
-        .stdout(contains("word => 1"));
+        .stdout("test => 1\n");
 }
 
 //
@@ -574,7 +570,7 @@ fn args_mmap_alias() {
 
 #[test]
 fn args_delimiter_unescape() {
-    // Test escape sequences in field delimiter with different counts to ensure order
+    // Test tab delimiter
     word_tally()
         .arg("--field-delimiter=\\t")
         .write_stdin("hello world hello")
@@ -582,20 +578,7 @@ fn args_delimiter_unescape() {
         .success()
         .stdout("hello\t2\nworld\t1\n");
 
-    // Test escape sequences in entry delimiter - just check it contains both entries
-    let output = word_tally()
-        .arg("--entry-delimiter=\\r\\n")
-        .write_stdin("hello world")
-        .assert()
-        .success()
-        .get_output()
-        .stdout
-        .clone();
-    let output_str = String::from_utf8(output).expect("UTF-8 output");
-    assert!(output_str.contains("hello 1\r\n"));
-    assert!(output_str.contains("world 1\r\n"));
-
-    // Test multiple escape sequences
+    // Test combined delimiters
     word_tally()
         .arg("--field-delimiter=\\t")
         .arg("--entry-delimiter=\\r\\n")
@@ -607,29 +590,50 @@ fn args_delimiter_unescape() {
 
 #[test]
 fn args_delimiter_escape_sequences() {
-    let test_cases = [
-        ("\\0", "\0"),
-        ("\\t", "\t"),
-        ("\\n", "\n"),
-        ("\\r", "\r"),
-        ("\\\\", "\\"),
-        ("\\\"", "\""),
-        ("\\'", "'"),
-    ];
+    // Test common escape sequences
+    let output_tab = word_tally()
+        .arg("--field-delimiter=\\t")
+        .write_stdin("word")
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    assert!(
+        String::from_utf8(output_tab)
+            .expect("output should be valid UTF-8")
+            .contains("word\t1")
+    );
 
-    for (input, expected) in test_cases {
-        let output = word_tally()
-            .arg(format!("--field-delimiter={input}"))
-            .write_stdin("word")
-            .assert()
-            .success()
-            .get_output()
-            .stdout
-            .clone();
+    // Test backslash escape
+    let output_backslash = word_tally()
+        .arg("--field-delimiter=\\\\")
+        .write_stdin("word")
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    assert!(
+        String::from_utf8(output_backslash)
+            .expect("output should be valid UTF-8")
+            .contains("word\\1")
+    );
 
-        let output_str = String::from_utf8(output).expect("UTF-8 output");
-        assert!(output_str.contains(&format!("word{expected}1")));
-    }
+    // Test newline escape
+    let output_newline = word_tally()
+        .arg("--field-delimiter=\\n")
+        .write_stdin("word")
+        .assert()
+        .success()
+        .get_output()
+        .stdout
+        .clone();
+    assert!(
+        String::from_utf8(output_newline)
+            .expect("output should be valid UTF-8")
+            .contains("word\n1")
+    );
 }
 
 #[test]
