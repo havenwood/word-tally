@@ -159,7 +159,8 @@ impl TallyMap {
             )
             .into()),
             Io::Auto | Io::ParallelInMemory | Io::ParallelBytes | Io::ParallelMmap => {
-                Self::par_memory_count(mapped, options)
+                let source = mapped.to_string();
+                Self::par_memory_count(mapped.as_ref(), &source, options)
             }
         }
     }
@@ -246,9 +247,9 @@ impl TallyMap {
     /// - Works with both memory-mapped files and byte arrays
     /// - Validates UTF-8 once upfront using SIMD
     /// - Uses efficient backwards search for chunk boundaries
-    fn par_memory_count(bytes: &[u8], options: &Options) -> Result<Self> {
+    fn par_memory_count(bytes: &[u8], source: &str, options: &Options) -> Result<Self> {
         let perf = options.performance();
-        let content = Self::parse_utf8_slice(bytes)?;
+        let content = Self::parse_utf8_slice(bytes, source)?;
         let total_chunks = perf.total_chunks(content.len() as u64);
         let num_chunks =
             usize::try_from(total_chunks).map_err(|_| WordTallyError::ChunkOverflow {
@@ -319,7 +320,7 @@ impl TallyMap {
                         remainder.clear();
                     }
                     Err(e) => {
-                        Self::handle_utf8_error(e, &mut tally, case, &mut remainder, &buffer, end)?;
+                        return Err(Self::utf8_error(e, chunk, &source).into());
                     }
                 }
 
@@ -329,8 +330,8 @@ impl TallyMap {
 
         // Process any remaining data
         if !remainder.is_empty() {
-            let final_text = simdutf8::basic::from_utf8(&remainder)
-                .with_context(|| format!("invalid UTF-8 in stream from: {source}"))?;
+            let final_text = simdutf8::compat::from_utf8(&remainder)
+                .map_err(|e| Self::utf8_error(e, &remainder, &source))?;
             tally.add_words(final_text, case);
         }
 
@@ -382,6 +383,7 @@ impl TallyMap {
                     reached_eof,
                     case,
                     perf,
+                    &source,
                 ) {
                     Ok(Some((tally_update, processed_bytes))) => {
                         buffer.drain(..processed_bytes);
@@ -540,6 +542,7 @@ impl TallyMap {
         reached_eof: bool,
         case: Case,
         perf: &Performance,
+        source: &str,
     ) -> Result<Option<(Self, usize)>> {
         // Find all whitespace positions with SIMD search
         let whitespace_positions: Vec<usize> = memchr3_iter(b' ', b'\n', b'\t', buffer).collect();
@@ -559,7 +562,7 @@ impl TallyMap {
             0 => Ok(None),
             1 if reached_eof && !buffer.is_empty() => {
                 // Final chunk: process sequentially
-                let remaining = Self::parse_utf8_slice(buffer)?;
+                let remaining = Self::parse_utf8_slice(buffer, source)?;
                 let mut tally = Self::with_capacity(perf.chunk_capacity(buffer.len() as u64));
                 tally.add_words(remaining, case);
                 Ok(Some((tally, buffer.len())))
@@ -567,48 +570,52 @@ impl TallyMap {
             _ => {
                 // Multiple chunks: process in parallel
                 let process_end = chunk_boundaries[chunk_boundaries.len() - 1];
-                let content = Self::parse_utf8_slice(&buffer[..process_end])?;
+                let content = Self::parse_utf8_slice(&buffer[..process_end], source)?;
                 let batch_result = Self::process_chunks(content, &chunk_boundaries, case);
                 Ok(Some((batch_result, process_end)))
             }
         }
     }
 
-    /// Parse a UTF-8 slice with fast validation.
+    /// Validates UTF-8 with detailed error reporting.
     #[inline]
-    fn parse_utf8_slice(buffer: &[u8]) -> Result<&str> {
-        simdutf8::basic::from_utf8(buffer).map_err(|_| {
-            WordTallyError::Utf8 {
-                byte: 0,
-                message: "invalid UTF-8 sequence".into(),
-            }
-            .into()
-        })
+    fn parse_utf8_slice<'a>(buffer: &'a [u8], source: &str) -> Result<&'a str> {
+        simdutf8::compat::from_utf8(buffer).map_err(|e| Self::utf8_error(e, buffer, source).into())
     }
 
-    /// Handle UTF-8 decoding errors by processing valid portion and preserving invalid bytes.
-    fn handle_utf8_error(
-        e: simdutf8::compat::Utf8Error,
-        tally: &mut Self,
-        case: Case,
-        remainder: &mut Vec<u8>,
+    /// Creates a UTF-8 error with context showing surrounding valid text.
+    fn utf8_error(
+        error: simdutf8::compat::Utf8Error,
         buffer: &[u8],
-        process_until: usize,
-    ) -> Result<()> {
-        let valid_up_to = e.valid_up_to();
-        if valid_up_to > 0 {
-            // simdutf8 guarantees this is valid UTF-8
-            let valid =
-                str::from_utf8(&buffer[..valid_up_to]).map_err(|_| WordTallyError::Utf8 {
-                    byte: valid_up_to,
-                    message: "simdutf8 validation inconsistency".to_string(),
-                })?;
-            tally.add_words(valid, case);
+        source: &str,
+    ) -> WordTallyError {
+        const PRIOR_CHARS_TO_SHOW: usize = 8;
+        let position = error.valid_up_to();
+
+        // Get valid UTF-8 text before the error position
+        let valid_text = str::from_utf8(&buffer[..position])
+            .expect("buffer[..position] should be valid UTF-8 per error.valid_up_to()");
+
+        // Show last few characters for context
+        let chars: Vec<char> = valid_text.chars().collect();
+        let start = chars.len().saturating_sub(PRIOR_CHARS_TO_SHOW);
+        let display_prefix: String = chars[start..].iter().collect();
+
+        let message = match buffer.get(position) {
+            Some(&byte) => {
+                if display_prefix.is_empty() {
+                    format!("invalid byte 0x{byte:02X} at start of input: {source}")
+                } else {
+                    format!("\"{display_prefix}\" followed by invalid byte 0x{byte:02X}: {source}")
+                }
+            }
+            None => format!("unexpected end of input: {source}"),
+        };
+
+        WordTallyError::Utf8 {
+            byte: position,
+            message,
         }
-        // Keep invalid portion for next iteration
-        remainder.clear();
-        remainder.extend_from_slice(&buffer[valid_up_to..process_until]);
-        Ok(())
     }
 }
 

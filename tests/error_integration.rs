@@ -136,8 +136,27 @@ fn input_file_permission_denied_error() {
 #[test]
 fn new_invalid_utf8_error() {
     let mut file = NamedTempFile::new().expect("create temp file");
-    // Write invalid UTF-8 sequence
+    // Write invalid UTF-8 sequence at start
     file.write_all(&[0xFF, 0xFE, 0xFD])
+        .expect("write invalid UTF-8");
+    file.flush().expect("flush file");
+
+    let assert = Command::cargo_bin("word-tally")
+        .expect("execute operation")
+        .arg(file.path())
+        .assert();
+
+    assert.failure().stderr(predicate::str::contains(
+        "invalid byte 0xFF at start of input",
+    ));
+}
+
+#[test]
+fn invalid_utf8_with_prefix() {
+    let mut file = NamedTempFile::new().expect("create temp file");
+    // Write some valid text followed by invalid UTF-8
+    file.write_all(b"hello world").expect("write valid text");
+    file.write_all(&[0xC3, 0x28]) // Invalid UTF-8: incomplete sequence
         .expect("write invalid UTF-8");
     file.flush().expect("flush file");
 
@@ -148,5 +167,5 @@ fn new_invalid_utf8_error() {
 
     assert
         .failure()
-        .stderr(predicate::str::contains("invalid UTF-8"));
+        .stderr(predicate::str::contains("followed by invalid byte"));
 }
