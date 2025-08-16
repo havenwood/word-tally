@@ -73,37 +73,39 @@ impl<'a> VerboseData<'a> {
             (
                 "file-type",
                 self.file_type
-                    .map_or("unknown".to_string(), |ft| ft.to_string()),
+                    .map_or_else(|| "unknown".to_string(), |ft| ft.to_string()),
             ),
             ("total-words", self.total_words.to_string()),
             ("unique-words", self.unique_words.to_string()),
-            ("delimiter", self.field_delimiter.to_string()),
-            ("entry-delimiter", self.entry_delimiter.to_string()),
-            ("case", self.case.to_string()),
-            ("order", self.order.to_string()),
-            ("io", self.io.to_string()),
+            ("delimiter", self.field_delimiter.clone()),
+            ("entry-delimiter", self.entry_delimiter.clone()),
+            ("case", self.case.clone()),
+            ("order", self.order.clone()),
+            ("io", self.io.clone()),
             (
                 "min-chars",
-                self.min_chars.map_or("none".to_string(), |v| v.to_string()),
+                self.min_chars
+                    .map_or_else(|| "none".to_string(), |v| v.to_string()),
             ),
             (
                 "min-count",
-                self.min_count.map_or("none".to_string(), |v| v.to_string()),
+                self.min_count
+                    .map_or_else(|| "none".to_string(), |v| v.to_string()),
             ),
             (
                 "exclude-words",
                 self.exclude_words
-                    .map_or("none".to_string(), ToString::to_string),
+                    .map_or_else(|| "none".to_string(), ToString::to_string),
             ),
             (
                 "exclude-patterns",
                 self.exclude_patterns
-                    .map_or("none".to_string(), ToString::to_string),
+                    .map_or_else(|| "none".to_string(), ToString::to_string),
             ),
             (
                 "include-patterns",
                 self.include_patterns
-                    .map_or("none".to_string(), ToString::to_string),
+                    .map_or_else(|| "none".to_string(), ToString::to_string),
             ),
         ]
         .into_iter()

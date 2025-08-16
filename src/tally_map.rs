@@ -482,10 +482,10 @@ impl TallyMap {
             }
         }
 
-        if let Some(eof) = eof_position {
-            if boundaries.last() != Some(&eof) {
-                boundaries.push(eof);
-            }
+        if let Some(eof) = eof_position
+            && boundaries.last() != Some(&eof)
+        {
+            boundaries.push(eof);
         }
 
         boundaries
